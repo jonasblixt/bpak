@@ -1,0 +1,13 @@
+language: c
+compiler: gcc
+dist: bionic
+before_install:
+  - sudo apt-get install git lcov libmbedtls-dev
+script:
+    - autoreconf -fi && ./configure --enable-code-coverage && make check
+jobs:
+    include:
+        -   stage: Code Coverage
+            after_success:
+                - cd src/
+                - bash <(curl -s https://codecov.io/bash)

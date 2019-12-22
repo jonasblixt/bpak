@@ -1,5 +1,8 @@
-SUBDIRS=src lib test
+
+SUBDIRS = lib src test
 
 EXTRA_DIST = LICENSE README.rst
 
 ACLOCAL_AMFLAGS = -I m4
+
+@CODE_COVERAGE_RULES@
