@@ -5,9 +5,12 @@
 .. image:: https://travis-ci.org/jonasblixt/bpak.svg?branch=master
     :target: https://travis-ci.org/jonasblixt/bpak
 
-Bitpacker is a tool and library for efficiently and securely package and
-distribute binary images. Bitpacker primarily solves problems for
-embedded systems where there is a clear cost attached to transferring data.
+------------
+Introduction
+------------
+
+Bitpacker or bpak for short is a tool and library for creating firmware archives.
+
 
 ------------
 Key features

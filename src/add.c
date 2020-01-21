@@ -681,6 +681,9 @@ int action_add(int argc, char **argv)
             memcpy(meta_data, from_string, strlen(from_string));
         }
 
+        if (bpak_get_verbosity() > 2)
+            printf("Meta data array pointer = %p\n", meta_data);
+
         rc = bpak_io_seek(io, 0, BPAK_IO_SEEK_SET);
 
         if (rc != BPAK_OK)

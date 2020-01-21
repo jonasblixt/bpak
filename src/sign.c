@@ -373,10 +373,16 @@ int action_sign(int argc, char **argv)
 
     struct bpak_hash_context hash;
 
+    if (bpak_get_verbosity() > 1)
+        printf("Initializing hash context\n");
+
     rc = bpak_hash_init(&hash, h->hash_kind);
 
     if (rc != BPAK_OK)
         goto err_free_header_out;
+
+    if (bpak_get_verbosity() > 1)
+        printf("Zeroing out existing signature data\n");
 
     /* Remove existing signature */
     bpak_foreach_meta(h, m)

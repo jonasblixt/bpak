@@ -12,7 +12,8 @@ check_PROGRAMS = test_core_meta \
 				 test_basic_io \
 				 test_file_ops \
 				 test_crypto \
-				 test_alg_heatshrink
+				 test_alg_heatshrink \
+				 test_merkle
 
 test_core_meta_SOURCES = test_core_meta.c
 test_core_meta_LDADD = libnala.la $(top_builddir)/lib/libbpak.la
@@ -42,12 +43,17 @@ test_alg_heatshrink_SOURCES = test_alg_heatshrink.c
 test_alg_heatshrink_LDADD = libnala.la $(top_builddir)/lib/libbpak.la
 test_alg_heatshrink_CFLAGS = $(COMMON_TEST_CFLAGS)
 
+test_merkle_SOURCES = test_merkle.c
+test_merkle_LDADD = libnala.la $(top_builddir)/lib/libbpak.la
+test_merkle_CFLAGS = $(COMMON_TEST_CFLAGS)
+
 TESTS = test_core_meta \
 		test_core_part \
 		test_alignment \
 		test_basic_io \
 		test_file_ops \
 		test_crypto \
-		test_alg_heatshrink
+		test_alg_heatshrink \
+		test_merkle
 
 

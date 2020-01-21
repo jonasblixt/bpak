@@ -26,6 +26,12 @@ int bpak_hash_init(struct bpak_hash_context *ctx, enum bpak_hash_kind kind)
             mbedtls_sha256_init(ctx->priv);
             mbedtls_sha256_starts_ret(ctx->priv, 0);
         break;
+        case BPAK_HASH_SHA384:
+            ctx->priv = malloc(sizeof(mbedtls_sha512_context));
+            ctx->size = 48;
+            mbedtls_sha512_init(ctx->priv);
+            mbedtls_sha512_starts_ret(ctx->priv, 1);
+        break;
         case BPAK_HASH_SHA512:
             ctx->priv = malloc(sizeof(mbedtls_sha512_context));
             ctx->size = 64;
@@ -45,6 +51,10 @@ int bpak_hash_update(struct bpak_hash_context *ctx, void *ptr, size_t size)
     {
         case BPAK_HASH_SHA256:
             if (mbedtls_sha256_update_ret(ctx->priv, (void *) ptr, size) != 0)
+                return -BPAK_FAILED;
+        break;
+        case BPAK_HASH_SHA384:
+            if (mbedtls_sha512_update_ret(ctx->priv, (void *) ptr, size) != 0)
                 return -BPAK_FAILED;
         break;
         case BPAK_HASH_SHA512:
@@ -67,6 +77,10 @@ int bpak_hash_out(struct bpak_hash_context *ctx, uint8_t *out, size_t size)
     {
         case BPAK_HASH_SHA256:
             if (mbedtls_sha256_finish_ret(ctx->priv, ctx->hash) != 0)
+                return -BPAK_FAILED;
+        break;
+        case BPAK_HASH_SHA384:
+            if (mbedtls_sha512_finish_ret(ctx->priv, ctx->hash) != 0)
                 return -BPAK_FAILED;
         break;
         case BPAK_HASH_SHA512:
