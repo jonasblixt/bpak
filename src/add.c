@@ -585,80 +585,92 @@ int action_add(int argc, char **argv)
         if (part_ref)
             part_ref_id = bpak_id(part_ref);
 
-        if (strcmp(encoder, "uuid") == 0)
+        if (encoder)
         {
-            uuid_t uu;
-            char uuid_text[37];
-            rc = uuid_parse(from_string, uu);
-
-            if (rc != 0)
+            if (strcmp(encoder, "uuid") == 0)
             {
+                uuid_t uu;
+                char uuid_text[37];
+                rc = uuid_parse(from_string, uu);
+
+                if (rc != 0)
+                {
+                    rc = -BPAK_FAILED;
+                    printf("Error: Could not convert UUID string\n");
+                    goto err_close_io_out;
+                }
+
+                rc = bpak_add_meta(h, id(meta_name), part_ref_id,
+                                                (void **) &meta_data, 16);
+
+                if (rc != BPAK_OK)
+                {
+                    printf("Error: Could not add meta data\n");
+                    goto err_close_io_out;
+                }
+
+                memcpy(meta_data, uu, 16);
+
+                if(bpak_get_verbosity())
+                {
+                    uuid_unparse(meta_data, uuid_text);
+                    printf("Adding %s <%s>\n", meta_name, uuid_text);
+                }
+            }
+            else if (strcmp(encoder, "integer") == 0)
+            {
+                long value = strtol(from_string, NULL, 0);
+
+                rc = bpak_add_meta(h, id(meta_name), part_ref_id,
+                                        (void **) &meta_data, sizeof(value));
+
+                if (rc != BPAK_OK)
+                {
+                    printf("Error: Could not add meta data\n");
+                    goto err_close_io_out;
+                }
+
+                memcpy(meta_data, &value, sizeof(value));
+
+                if(bpak_get_verbosity())
+                {
+                    printf("Adding %s <0x%lx>\n", meta_name, value);
+                }
+            }
+            else if (strcmp(encoder, "id") == 0)
+            {
+                uint32_t value = id(from_string);
+
+                rc = bpak_add_meta(h, id(meta_name), part_ref_id,
+                                        (void **) &meta_data, sizeof(value));
+
+                if (rc != BPAK_OK)
+                {
+                    printf("Error: Could not add meta data\n");
+                    goto err_close_io_out;
+                }
+
+                memcpy(meta_data, &value, sizeof(value));
+
+                if(bpak_get_verbosity())
+                {
+                    printf("Adding %s <%x>\n", meta_name, value);
+                }
+            }
+            else
+            {
+                printf("Error: Unknown encoder\n");
                 rc = -BPAK_FAILED;
-                printf("Error: Could not convert UUID string\n");
                 goto err_close_io_out;
-            }
-
-            rc = bpak_add_meta(h, id(meta_name), part_ref_id,
-                                            (void **) &meta_data, 16);
-
-            if (rc != BPAK_OK)
-            {
-                printf("Error: Could not add meta data\n");
-                goto err_close_io_out;
-            }
-
-            memcpy(meta_data, uu, 16);
-
-            if(bpak_get_verbosity())
-            {
-                uuid_unparse(meta_data, uuid_text);
-                printf("Adding %s <%s>\n", meta_name, uuid_text);
-            }
-        }
-        else if (strcmp(encoder, "integer") == 0)
-        {
-            long value = strtol(from_string, NULL, 0);
-
-            rc = bpak_add_meta(h, id(meta_name), part_ref_id,
-                                    (void **) &meta_data, sizeof(value));
-
-            if (rc != BPAK_OK)
-            {
-                printf("Error: Could not add meta data\n");
-                goto err_close_io_out;
-            }
-
-            memcpy(meta_data, &value, sizeof(value));
-
-            if(bpak_get_verbosity())
-            {
-                printf("Adding %s <0x%lx>\n", meta_name, value);
-            }
-        }
-        else if (strcmp(encoder, "id") == 0)
-        {
-            uint32_t value = id(from_string);
-
-            rc = bpak_add_meta(h, id(meta_name), part_ref_id,
-                                    (void **) &meta_data, sizeof(value));
-
-            if (rc != BPAK_OK)
-            {
-                printf("Error: Could not add meta data\n");
-                goto err_close_io_out;
-            }
-
-            memcpy(meta_data, &value, sizeof(value));
-
-            if(bpak_get_verbosity())
-            {
-                printf("Adding %s <%x>\n", meta_name, value);
             }
         }
         else
         {
+            if (bpak_get_verbosity())
+                printf("Adding '%s' with id '%s'\n", from_string, meta_name);
+
             rc = bpak_add_meta(h, id(meta_name), part_ref_id,
-                                (void **) &meta_data, strlen(from_string));
+                                (void **) &meta_data, strlen(from_string) + 1);
 
             if (rc != BPAK_OK)
             {
