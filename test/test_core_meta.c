@@ -83,10 +83,12 @@ TEST(iterate_meta)
         ASSERT_EQ(rc, BPAK_OK);
 
         (*v) = 0x11223300 + i;
+        printf ("v %p\n", v);
     }
 
     while (bpak_get_meta(&h, bpak_id("test-meta"), (void **) &out) == BPAK_OK)
     {
+        printf("out %p\n", out);
         ASSERT_EQ(*out, 0x11223300 + c);
         c++;
     }
@@ -154,6 +156,7 @@ TEST(too_much_metadata)
         printf("%i\n", i);
         rc = bpak_add_meta(&h, bpak_id("test-meta"), 0, (void **) &v,
                                             BPAK_METADATA_BYTES/BPAK_MAX_META);
+        printf("v %p\n", v);
         ASSERT_EQ(rc, BPAK_OK);
     }
 

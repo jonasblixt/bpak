@@ -19,6 +19,7 @@
 #define BPAK_MAX_META 32
 #define BPAK_METADATA_BYTES 2048
 #define BPAK_PART_ALIGN 512
+#define BPAK_META_ALIGN 8
 
 enum bpak_hash_kind
 {
