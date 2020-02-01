@@ -72,7 +72,7 @@ static size_t bpak_io_file_read(struct bpak_io *io, void *ptr, size_t size)
     return bytes_read;
 }
 
-static int bpak_io_file_seek(struct bpak_io *io, uint64_t offset)
+static int bpak_io_file_seek(struct bpak_io *io, int64_t offset)
 {
     struct bpak_io_file_ctx *ctx = GET_FILE_CTX(io);
 
@@ -196,4 +196,11 @@ int bpak_io_replace_file(struct bpak_io *replacee, struct bpak_io *src)
     } while(read_bytes);
 
     return BPAK_OK;
+}
+
+
+int bpak_io_file_to_fd(struct bpak_io *io)
+{
+    struct bpak_io_file_ctx *ctx = GET_FILE_CTX(io);
+    return fileno(ctx->fp);
 }

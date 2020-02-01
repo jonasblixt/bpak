@@ -23,6 +23,7 @@ static int transport_process(struct bpak_transport_meta *tm,
                                  struct bpak_header *h,
                                  uint32_t part_ref_id,
                                  struct bpak_io *io,
+                                 struct bpak_io *origin,
                                  uint8_t *state_buffer,
                                  size_t size,
                                  bool decode_flag)
@@ -38,7 +39,13 @@ static int transport_process(struct bpak_transport_meta *tm,
     size_t written_bytes = 0;
     uint32_t alg_id = 0;
 
-    bpak_get_part(h, part_ref_id, &p);
+    rc = bpak_get_part(h, part_ref_id, &p);
+
+    if (rc != BPAK_OK)
+    {
+        printf("Error could not get part with ref %x\n", part_ref_id);
+        return rc;
+    }
 
     if (decode_flag)
         alg_id = tm->alg_id_decode;
@@ -66,7 +73,7 @@ static int transport_process(struct bpak_transport_meta *tm,
     rc = bpak_io_init_random_file(&tmp);
 
     if (rc != BPAK_OK)
-        goto err_free_alg_out;
+        goto err_close_io_out;
 
     if (bpak_get_verbosity() > 1)
         printf("Created temporary file: %s\n", bpak_io_filename(tmp));
@@ -100,7 +107,7 @@ static int transport_process(struct bpak_transport_meta *tm,
 
     bpak_io_seek(io, bpak_part_offset(h, p), BPAK_IO_SEEK_SET);
 
-    rc = bpak_alg_init(&ins, alg_id, p, h, state_buffer, size, io, tmp, NULL);
+    rc = bpak_alg_init(&ins, alg_id, p, h, state_buffer, size, io, tmp, origin);
 
     if (rc != BPAK_OK)
     {
@@ -121,14 +128,16 @@ static int transport_process(struct bpak_transport_meta *tm,
 
     if (rc != BPAK_OK)
         goto err_close_io_out;
- 
+
+    bpak_alg_free(&ins);
+
     if (bpak_get_verbosity())
         printf("Done processing, output size %li bytes\n", ins.output_size);
 
     /* Position input stream at the end of the part in intereset */
     rc = bpak_io_seek(io, bpak_part_offset(h, p) + bpak_part_size(p),
                                         BPAK_IO_SEEK_SET);
-    
+
     if (rc != BPAK_OK)
     {
         printf("Error: Could not seek 1\n");
@@ -185,9 +194,6 @@ static int transport_process(struct bpak_transport_meta *tm,
 
 err_close_io_out:
     bpak_io_close(tmp);
-err_free_alg_out:
-    bpak_alg_free(&ins);
-
     return rc;
 }
 
@@ -294,6 +300,7 @@ int action_transport(int argc, char **argv)
     }
 
     struct bpak_io *io = NULL;
+    struct bpak_io *origin = NULL;
     struct bpak_header *h = malloc(sizeof(struct bpak_header));
 
     rc = bpak_io_init_file(&io, filename, "rb+");
@@ -302,6 +309,17 @@ int action_transport(int argc, char **argv)
     {
         printf("Error: Could not open file\n");
         goto err_free_header_out;
+    }
+
+    if (origin_file)
+    {
+        rc = bpak_io_init_file(&origin, origin_file, "rb+");
+
+        if (rc != BPAK_OK)
+        {
+            printf("Error: Could not open file\n");
+            goto err_free_header_out;
+        }
     }
 
     bpak_io_seek(io, 0, BPAK_IO_SEEK_SET);
@@ -341,8 +359,8 @@ int action_transport(int argc, char **argv)
             {
                 bpak_get_meta(h, mh->id, (void **) &tm);
 
-                rc = transport_process(tm, h, mh->part_id_ref, 
-                        io, state_buffer, 1024*1024, decode_flag);
+                rc = transport_process(tm, h, mh->part_id_ref,
+                        io, origin, state_buffer, 1024*1024, decode_flag);
 
                 if (rc != BPAK_OK)
                     break;

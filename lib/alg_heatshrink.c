@@ -44,7 +44,10 @@ static int bpak_alg_hse_init(struct bpak_alg_instance *ins,
     struct bpak_alg_hse_state *s = (struct bpak_alg_hse_state *) ins->state;
     memset(s, 0, sizeof(*s));
     heatshrink_encoder_reset(&(s->hse));
-    s->bytes_to_process = ins->part->size;
+
+    if (ins->part)
+        s->bytes_to_process = ins->part->size;
+
     s->in = in;
     s->out = out;
     return BPAK_OK;
@@ -62,22 +65,23 @@ static int bpak_alg_hse_process(struct bpak_alg_instance *ins)
     HSE_sink_res sres = 0;
     HSE_finish_res fres = 0;
 
-    chunk_sz = (s->bytes_to_process > BPAK_HSD_BUF_SZ)?  \
-                            BPAK_HSD_BUF_SZ:s->bytes_to_process;
+    if (ins->part)
+    {
+        chunk_sz = (s->bytes_to_process > BPAK_HSE_BUF_SZ)?  \
+                                BPAK_HSE_BUF_SZ:s->bytes_to_process;
+    }
+    else
+    {
+        chunk_sz = BPAK_HSE_BUF_SZ;
+    }
 
     chunk_sz = bpak_io_read(s->in, s->in_buf, chunk_sz);
-    s->bytes_to_process -= chunk_sz;
 
-    if (chunk_sz == 0)
-    {
-        fres = heatshrink_encoder_finish(&s->hse);
+    if (ins->part)
+        s->bytes_to_process -= chunk_sz;
 
-        if (fres == HSER_FINISH_DONE)
-        {
-            ins->done = true;
-            return BPAK_OK;
-        }
-    }
+    if (chunk_sz == -1)
+        chunk_sz = 0;
 
     memset(s->out_buf, 0, BPAK_HSE_BUF_SZ);
     sunk = 0;
@@ -93,6 +97,7 @@ static int bpak_alg_hse_process(struct bpak_alg_instance *ins)
                 return -BPAK_FAILED;
 
             sunk += sink_sz;
+
         }
 
         do
@@ -118,6 +123,7 @@ static int bpak_alg_hse_process(struct bpak_alg_instance *ins)
             if (fres == HSER_FINISH_DONE)
                 ins->done = true;
         }
+
     } while(sunk < chunk_sz);
 
     return rc;
@@ -134,8 +140,6 @@ static int bpak_alg_hsd_init(struct bpak_alg_instance *ins,
     heatshrink_decoder_reset(&(s->hsd));
     s->bytes_to_process = ins->part->transport_size;
 
-    if (!(ins->part->flags & BPAK_FLAG_TRANSPORT))
-        return -BPAK_FAILED;
     s->in = in;
     s->out = out;
     return BPAK_OK;
@@ -209,6 +213,7 @@ static int bpak_alg_hsd_process(struct bpak_alg_instance *ins)
             if (fres == HSDR_FINISH_DONE)
                 ins->done = true;
         }
+
     } while(sunk < chunk_sz);
 
     return rc;

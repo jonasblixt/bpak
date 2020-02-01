@@ -45,7 +45,7 @@ size_t bpak_io_write(struct bpak_io *io, const void *ptr, size_t size)
     return written_bytes;
 }
 
-int bpak_io_seek(struct bpak_io *io, uint64_t position,
+int bpak_io_seek(struct bpak_io *io, int64_t position,
                     enum bpak_io_seek seekop)
 {
     uint64_t new_position;
@@ -67,7 +67,7 @@ int bpak_io_seek(struct bpak_io *io, uint64_t position,
         default:
             return -BPAK_FAILED;
     }
-    
+
     /* Check alignment of new position */
 
     if ((new_position % io->alignment) != 0)
@@ -77,9 +77,10 @@ int bpak_io_seek(struct bpak_io *io, uint64_t position,
     if ( (new_position < io->start_position) ||
          (new_position > io->end_position))
     {
+        printf("error boundaries %li %li\n", new_position, io->end_position);
         return -BPAK_SEEK_ERROR;
     }
-    
+
     if (io->on_seek)
     {
         if (io->on_seek(io, new_position) != BPAK_OK)
@@ -102,8 +103,6 @@ int bpak_io_close(struct bpak_io *io)
 
     if (io->on_close)
         rc = io->on_close(io);
-
-    io->position = 0;
 
     return rc;
 }

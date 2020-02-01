@@ -44,7 +44,7 @@ struct bpak_io
 int bpak_io_init(struct bpak_io *io, void *priv);
 size_t bpak_io_read(struct bpak_io *io, void *ptr, size_t size);
 size_t bpak_io_write(struct bpak_io *io, const void *ptr, size_t size);
-int bpak_io_seek(struct bpak_io *io, uint64_t position,
+int bpak_io_seek(struct bpak_io *io, int64_t position,
                     enum bpak_io_seek seekop);
 uint64_t bpak_io_tell(struct bpak_io *io);
 int bpak_io_close(struct bpak_io *io);

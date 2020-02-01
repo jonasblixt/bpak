@@ -25,11 +25,12 @@ struct bpak_alg
 {
     uint32_t id;
     uint32_t block_size;
+    uint32_t parameter;
     bpak_alg_free_t on_free;
     bpak_alg_init_t on_init;
     bpak_alg_process_t on_process;
     size_t state_size;
-    const char name[];
+    const char *name;
 };
 
 struct bpak_alg_instance
