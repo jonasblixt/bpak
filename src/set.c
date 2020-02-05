@@ -36,7 +36,7 @@ int action_set(int argc, char **argv)
         {"help",        no_argument,       0,  'h' },
         {"verbose",     no_argument,       0,  'v' },
         {"meta",        required_argument, 0,  'm' },
-        {"from_string", required_argument, 0,  's' },
+        {"from-string", required_argument, 0,  's' },
         {"encoder",     required_argument, 0,  'e' },
         {0,             0,                 0,   0  }
     };

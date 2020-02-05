@@ -150,8 +150,8 @@ void print_add_usage(void)
     printf("Add options:\n");
     printf("    -p, --part=id                   Add part with id 'id'\n");
     printf("    -m, --meta=id                   Add metadata with id 'id'\n");
-    printf("    -f, --from_file=filename        Load file\n");
-    printf("    -s, --from_string=string        Load from string\n");
+    printf("    -f, --from-file=filename        Load file\n");
+    printf("    -s, --from-string=string        Load from string\n");
     printf("    -e, --encoder=encoder           Use 'encoder' to code data\n");
     printf("    -F, --set-flag=flag             Set flag 'flag' for this part\n");
     printf("\n");
@@ -160,12 +160,12 @@ void print_add_usage(void)
     printf("    dont-hash                       Exclude part from hashing context\n");
     printf("\n");
 
-    printf("Encoders that can be used together with --from_string:\n");
+    printf("Encoders that can be used together with --from-string:\n");
     printf("    integer                         Encode as integer\n");
     printf("    uuid                            Encode as UUID\n");
     printf("\n");
 
-    printf("Encoders that can be used together with --from_file:\n");
+    printf("Encoders that can be used together with --from-file:\n");
     printf("    key                             Encode as DER key\n");
     printf("    merkle                          Encode as merkle tree\n");
     printf("\n");
