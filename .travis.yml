@@ -2,9 +2,9 @@ language: c
 compiler: gcc
 dist: bionic
 before_install:
-  - sudo apt-get install git lcov libmbedtls-dev
+  - sudo apt-get install git lcov libmbedtls-dev uuid-runtime
 script:
-    - autoreconf -fi && ./configure --enable-code-coverage && make check
+    - autoreconf -fi && ./configure --enable-code-coverage && make check || cat test/test-suite.log
 jobs:
     include:
         -   stage: Code Coverage

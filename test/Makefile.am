@@ -66,6 +66,7 @@ TESTS = test_core_meta \
 		test_alg_heatshrink \
 		test_merkle \
 		test_struct_sz \
-		test_meta_align
+		test_meta_align \
+		test_create.sh
 
 
