@@ -77,7 +77,7 @@ static void merkle_status(struct bpak_merkle_context *ctx)
     }
 }
 
-TEST(merkle)
+TEST(merkle_odd)
 {
     int rc;
     struct bpak_merkle_context ctx;
@@ -90,8 +90,7 @@ TEST(merkle)
     for (int i = 0; i < (1024*1023); i += 16)
         memcpy(&input_data[i], "0123456789abcdef", 16);
 
-
-    FILE *fp = fopen("arne", "w");
+    FILE *fp = fopen("merkle_input_odd", "w");
     fwrite(input_data, 1024, 1023, fp);
     fclose(fp);
 
@@ -169,6 +168,11 @@ TEST(merkle)
     rc = bpak_merkle_out(&ctx, hash);
     ASSERT_EQ(rc, BPAK_OK);
 
+
+    fp = fopen("merkle_out_odd", "wb");
+    fwrite(merkle_buf, 1, merkle_sz, fp);
+    fclose(fp);
+
     char root_hash_str[65];
     char salt_str[65];
 
@@ -179,6 +183,118 @@ TEST(merkle)
 
     ASSERT_EQ((char *)root_hash_str, \
         "74d62b0b4eb3358e9079a52800b3f066576c63c4ed8fccc3a7510da992212bd7");
+
+    free(merkle_buf);
+    free(input_data);
+}
+
+TEST(merkle_even)
+{
+    int rc;
+    struct bpak_merkle_context ctx;
+    char *input_data = malloc(1024*1024);
+    size_t merkle_sz = bpak_merkle_compute_size(1024*1024, -1, true);
+    char *merkle_buf = malloc(merkle_sz);
+
+    memset(&ctx, 0, sizeof(ctx));
+
+    for (int i = 0; i < (1024*1024); i += 16)
+        memcpy(&input_data[i], "0123456789abcdef", 16);
+
+
+    FILE *fp = fopen("merkle_input_even", "w");
+    fwrite(input_data, 1024, 1024, fp);
+    fclose(fp);
+
+    memset(merkle_buf, 0, merkle_sz);
+
+    printf("Allocated %li bytes for merkle tree\n", merkle_sz);
+
+    char salt[] =
+    {
+        0x65,
+        0x49,
+        0x8d,
+        0x38,
+        0x7f,
+        0x3c,
+        0x28,
+        0x38,
+        0x27,
+        0x52,
+        0x72,
+        0x1c,
+        0x5a,
+        0x4e,
+        0x5a,
+        0x55,
+        0x1c,
+        0x1b,
+        0x33,
+        0x70,
+        0xb7,
+        0x96,
+        0x74,
+        0x58,
+        0xde,
+        0x7c,
+        0x7c,
+        0x4f,
+        0x2c,
+        0xd2,
+        0xe9,
+        0x7a,
+    };
+
+/* 8effc062924445d3389c6b360b29cf1c142d29497df783a63eabcea6f7779436*/
+    rc = bpak_merkle_init(&ctx, 1024*1024, salt,
+                            merkle_wr, merkle_rd, merkle_buf);
+
+    for (int i = 0; i < ctx.no_of_levels; i++)
+        printf("Level %i size %li bytes\n", i,
+                bpak_merkle_compute_size(1024*1024, i, false));
+
+    bpak_merkle_set_status_cb(&ctx, merkle_status);
+
+    uint32_t data_to_process = 1024*1024;
+    uint32_t pos = 0;
+    while(data_to_process)
+    {
+        uint32_t chunk = (data_to_process > MERKLE_BLOCK_SZ) ? \
+                                    MERKLE_BLOCK_SZ:data_to_process;
+        rc = bpak_merkle_process(&ctx, &input_data[pos], chunk);
+        pos += chunk;
+        data_to_process -= chunk;
+
+        ASSERT_EQ(rc, BPAK_OK);
+    }
+
+    while (!bpak_merkle_done(&ctx))
+    {
+        rc = bpak_merkle_process(&ctx, NULL, 0);
+        ASSERT_EQ(rc, BPAK_OK);
+    }
+
+    bpak_merkle_hash_t hash;
+
+    rc = bpak_merkle_out(&ctx, hash);
+    ASSERT_EQ(rc, BPAK_OK);
+
+    fp = fopen("merkle_out_even", "wb");
+    fwrite(merkle_buf, 1, merkle_sz, fp);
+    fclose(fp);
+
+    char root_hash_str[65];
+    char salt_str[65];
+
+    bpak_bin2hex(salt, 32, salt_str, sizeof(salt_str));
+    bpak_bin2hex(hash, 32, root_hash_str, sizeof(salt_str));
+    printf("Salt:      %s\n", salt_str);
+    printf("Root hash: %s\n", root_hash_str);
+
+    ASSERT_EQ((char *)root_hash_str, \
+        "8effc062924445d3389c6b360b29cf1c142d29497df783a63eabcea6f7779436");
+
 
     free(merkle_buf);
     free(input_data);
