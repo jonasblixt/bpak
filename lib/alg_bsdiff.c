@@ -33,6 +33,7 @@ struct bpak_bsdiff_private
     struct bpak_io *compressor_pipe;
     uint8_t compressor_buffer[1024*32];
     struct bpak_alg_instance compressor;
+    char suffix_fn[64];
 };
 
 #define BSDIFF_PRIVATE(__ins) ((struct bpak_bsdiff_private *) __ins->state)
@@ -392,8 +393,12 @@ static int bpak_alg_bsdiff_init(struct bpak_alg_instance *ins,
         rc = -BPAK_FAILED;
         goto err_munmap_old;
     }
+
+    snprintf(priv->suffix_fn, sizeof(priv->suffix_fn),
+                "/tmp/.bpak_tmp_%x", rand());
+
     priv->suffix_array_fd = \
-            open("/tmp/bpak_suffix_array", O_RDWR | O_TRUNC | O_CREAT, 0600);
+            open(priv->suffix_fn, O_RDWR | O_TRUNC | O_CREAT, 0600);
 
     if (priv->suffix_array_fd < 0)
     {
@@ -463,6 +468,7 @@ static int bpak_alg_bsdiff_free(struct bpak_alg_instance *ins)
     munmap(priv->suffix_array, priv->suffix_array_size);
     close(priv->suffix_array_fd);
     bpak_io_close(priv->compressor_pipe);
+    remove(priv->suffix_fn);
     return BPAK_OK;
 }
 
