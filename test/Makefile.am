@@ -14,7 +14,8 @@ check_PROGRAMS = test_core_meta \
 				 test_crypto \
 				 test_alg_heatshrink \
 				 test_merkle \
-				 test_struct_sz
+				 test_struct_sz \
+				 test_meta_align
 
 test_core_meta_SOURCES = test_core_meta.c
 test_core_meta_LDADD = libnala.la $(top_builddir)/lib/libbpak.la
@@ -52,6 +53,10 @@ test_struct_sz_SOURCES = test_struct_sz.c
 test_struct_sz_LDADD = libnala.la $(top_builddir)/lib/libbpak.la
 test_struct_sz_CFLAGS = $(COMMON_TEST_CFLAGS)
 
+test_meta_align_SOURCES = test_meta_align.c
+test_meta_align_LDADD = libnala.la $(top_builddir)/lib/libbpak.la
+test_meta_align_CFLAGS = $(COMMON_TEST_CFLAGS)
+
 TESTS = test_core_meta \
 		test_core_part \
 		test_alignment \
@@ -60,6 +65,7 @@ TESTS = test_core_meta \
 		test_crypto \
 		test_alg_heatshrink \
 		test_merkle \
-		test_struct_sz
+		test_struct_sz \
+		test_meta_align
 
 
