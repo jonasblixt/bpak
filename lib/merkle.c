@@ -41,7 +41,6 @@ static int bpak_merkle_next_level(struct bpak_merkle_context *ctx)
                 (MERKLE_BLOCK_SZ - (ctx->current.size % MERKLE_BLOCK_SZ));
     ctx->current.byte_counter = 0;
     ctx->current.offset = bpak_merkle_offset(ctx, ctx->current.level);
-    printf("merkle_next_level: %li\n", ctx->current.size);
     return BPAK_OK;
 }
 
@@ -168,13 +167,6 @@ int bpak_merkle_process(struct bpak_merkle_context *ctx,
     bpak_hash_update(&hash, ctx->buffer, MERKLE_BLOCK_SZ);
     bpak_hash_out(&hash, hash_tmp, 32);
 
-    char hash_str[65];
-
-    if (ctx->current.level > 0)
-    {
-        bpak_bin2hex(hash_tmp, 32, hash_str, sizeof(hash_str));
-        printf("\n%i : Hash: %s\n", ctx->current.level, hash_str);
-    }
     bpak_hash_free(&hash);
 
     pos = ctx->current.offset + ctx->current.byte_counter;

@@ -24,12 +24,10 @@ $BPAK add $IMG --part pb-development \
                --from-file $srcdir/dev_rsa_public.der \
                --encoder key
 
-
 $BPAK add $IMG --meta bpak-key-id --from-string bpak-test-key --encoder id
 $BPAK add $IMG --meta bpak-key-store --from-string bpak-internal --encoder id
 
 $BPAK generate keystore $IMG --name internal
-
 
 $BPAK show $IMG --hash | openssl pkeyutl -sign -inkey $PRI_KEY \
                     -keyform PEM > /tmp/sig.data

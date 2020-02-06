@@ -17,6 +17,8 @@
 #include <sys/stat.h>
 #include <uuid.h>
 
+#include <bpak/pkg.h>
+
 #include <mbedtls/config.h>
 #include <mbedtls/platform.h>
 #include <mbedtls/sha256.h>
@@ -655,6 +657,101 @@ int action_add(int argc, char **argv)
                 if(bpak_get_verbosity())
                 {
                     printf("Adding %s <%x>\n", meta_name, value);
+                }
+            }
+            else if (strcmp(encoder, "version") == 0)
+            {
+                struct bpak_version v;
+
+                rc = bpak_add_meta(h, id(meta_name), 0,
+                          (void **) &meta_data, sizeof(struct bpak_version));
+
+                if (rc != BPAK_OK)
+                {
+                    printf("Error: Could not add meta data\n");
+                    goto err_close_io_out;
+                }
+
+                rc = sscanf(from_string, "%hhi.%hhi.%hi", &v.major,
+                                                          &v.minor,
+                                                          &v.patch);
+
+                if (rc != 3)
+                {
+                    rc = -BPAK_FAILED;
+                    printf("Error: Could not decode version\n");
+                    goto err_close_io_out;
+                }
+
+                memcpy(meta_data, &v, sizeof(v));
+
+                if(bpak_get_verbosity())
+                {
+                    printf("Adding %s <%s>\n", meta_name, from_string);
+                }
+            }
+            else if (strcmp(encoder, "dependency") == 0)
+            {
+                struct bpak_dependency d;
+
+                char uuid_text[37];
+                char *kind_ptr = &from_string[36];
+                char *ver_ptr = NULL;
+
+                memset(uuid_text, 0, sizeof(uuid_text));
+                memcpy(uuid_text, from_string, 36);
+
+                rc = uuid_parse(uuid_text, d.uuid);
+
+                if (rc != 0)
+                {
+                    rc = -BPAK_FAILED;
+                    printf("Error: Could not convert UUID string\n");
+                    goto err_close_io_out;
+                }
+
+
+
+                rc = bpak_add_meta(h, id(meta_name), 0,
+                          (void **) &meta_data, sizeof(struct bpak_dependency));
+
+                if (rc != BPAK_OK)
+                {
+                    printf("Error: Could not add meta data\n");
+                    goto err_close_io_out;
+                }
+
+                if (strncmp(kind_ptr, ">=", 2) == 0)
+                {
+                    d.kind = BPAK_DEP_GTE;
+                    ver_ptr = kind_ptr + 2;
+                }
+                else if (strncmp(kind_ptr, "==", 2) == 0)
+                {
+                    d.kind = BPAK_DEP_EQ;
+                    ver_ptr = kind_ptr + 2;
+                }
+                else if (strncmp(kind_ptr, ">", 1) == 0)
+                {
+                    d.kind = BPAK_DEP_GT;
+                    ver_ptr = kind_ptr + 1;
+                }
+
+                rc = sscanf(ver_ptr, "%hhi.%hhi.%hi", &d.version.major,
+                                                      &d.version.minor,
+                                                      &d.version.patch);
+
+                if (rc != 3)
+                {
+                    rc = -BPAK_FAILED;
+                    printf("Error: Could not decode version\n");
+                    goto err_close_io_out;
+                }
+                memcpy(meta_data, &d, sizeof(d));
+
+                if(bpak_get_verbosity())
+                {
+                    printf("Adding dependency %s\n", from_string);
                 }
             }
             else

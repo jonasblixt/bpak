@@ -75,6 +75,7 @@ static int64_t search(int64_t *sa_p,
                      from_size - sa_p[from_begin],
                      to_p,
                      to_size);
+
         y = matchlen(from_p + sa_p[from_end],
                      from_size - sa_p[from_end],
                      to_p,
@@ -108,20 +109,20 @@ static int64_t search(int64_t *sa_p,
 
 static void offtout(int64_t x, uint8_t *buf)
 {
-	int64_t y;
+    int64_t y;
 
-	if(x<0) y=-x; else y=x;
+    if(x<0) y=-x; else y=x;
 
-	buf[0]=y%256;y-=buf[0];
-	y=y/256;buf[1]=y%256;y-=buf[1];
-	y=y/256;buf[2]=y%256;y-=buf[2];
-	y=y/256;buf[3]=y%256;y-=buf[3];
-	y=y/256;buf[4]=y%256;y-=buf[4];
-	y=y/256;buf[5]=y%256;y-=buf[5];
-	y=y/256;buf[6]=y%256;y-=buf[6];
-	y=y/256;buf[7]=y%256;
+    buf[0]=y%256;y-=buf[0];
+    y=y/256;buf[1]=y%256;y-=buf[1];
+    y=y/256;buf[2]=y%256;y-=buf[2];
+    y=y/256;buf[3]=y%256;y-=buf[3];
+    y=y/256;buf[4]=y%256;y-=buf[4];
+    y=y/256;buf[5]=y%256;y-=buf[5];
+    y=y/256;buf[6]=y%256;y-=buf[6];
+    y=y/256;buf[7]=y%256;
 
-	if(x<0) buf[7]|=0x80;
+    if(x<0) buf[7]|=0x80;
 }
 
 static int write_data(struct bpak_alg_instance *ins, uint8_t *bfr, size_t size)
@@ -425,9 +426,9 @@ static int bpak_alg_bsdiff_init(struct bpak_alg_instance *ins,
     }
 
     priv->suffix_array_size = priv->old_size * sizeof(int64_t);
-    ftruncate(priv->suffix_array_fd, priv->suffix_array_size);
+    ftruncate(priv->suffix_array_fd, priv->suffix_array_size + 1);
 
-    priv->suffix_array = mmap(NULL, priv->suffix_array_size,
+    priv->suffix_array = mmap(NULL, priv->suffix_array_size + 1,
                                 PROT_READ | PROT_WRITE, MAP_SHARED,
                                 priv->suffix_array_fd, 0);
 
@@ -477,7 +478,6 @@ static int bpak_alg_bsdiff_process(struct bpak_alg_instance *ins)
     struct bpak_bsdiff_private *p = BSDIFF_PRIVATE(ins);
     int rc;
 
-
     if (p->scan >= p->new_size)
     {
         ins->done = true;
@@ -500,6 +500,7 @@ static int bpak_alg_bsdiff_process(struct bpak_alg_instance *ins)
 
     for (int64_t scsc = p->scan; p->scan < p->new_size; p->scan++)
     {
+
         p->len = search(p->suffix_array,
                              p->old,
                              p->old_size,

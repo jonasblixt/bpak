@@ -40,15 +40,28 @@ void print_common_usage(void)
 {
     printf("Common options:\n");
     printf("    -v, --verbose                   Verbose output\n");
-//    printf("    -N, --nested <id>               Nested bpak file with id <id>\n");
-//    printf("                                     Can be issued multiple times.\n");
-//    printf("    -S, --stream <index>            Concatenated bpak files\n");
     printf("\n");
 
     printf("Help options:\n");
     printf("    -h, --help                      Show this help message\n");
     printf("    -V, --version                   Display version\n");
     printf("\n");
+}
+
+void print_set_usage(void)
+{
+    print_version();
+    printf("\n");
+    printf("bpak set <filename.bpak>\n");
+    printf("\n");
+
+    printf("Set options:\n");
+    printf("    -m, --meta                      Update meta data\n");
+    printf("    -s, --from-string               String input\n");
+    printf("    -e, --encoder\n");
+    printf("\n");
+
+    print_common_usage();
 }
 
 void print_create_usage(void)

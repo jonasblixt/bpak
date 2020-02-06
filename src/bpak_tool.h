@@ -30,6 +30,7 @@ void print_show_usage(void);
 void print_generate_usage(void);
 void print_transport_usage(void);
 void print_compare_usage(void);
+void print_set_usage(void);
 
 uint32_t id(const char *s);
 

@@ -178,9 +178,19 @@ int action_generate(int argc, char **argv)
             printf("const struct bpak_key keystore_%s_key%i =\n",
                                                     keystore_name_copy,
                                                     key_index);
+
+            uint32_t *key_mask = NULL;
+
+            rc = bpak_get_meta_with_ref(h, bpak_id("bpak-key-mask"),
+                                           p->id, (void **) &key_mask);
+
             printf("{\n");
             printf("    .id = 0x%x,\n", p->id);
             printf("    .size = %li,\n", p->size);
+            if (rc == BPAK_OK)
+                printf("    .key_mask = 0x%x,\n", *key_mask);
+            else
+                printf("    .key_mask = 0x00,\n");
 
             bpak_io_seek(io, p->offset, BPAK_IO_SEEK_SET);
             read_bytes = bpak_io_read(io, key_buffer, p->size);

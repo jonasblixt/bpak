@@ -47,7 +47,7 @@ int action_set(int argc, char **argv)
         switch (opt)
         {
             case 'h':
-                printf("Implement me!\n");
+                print_set_usage();
                 return 0;
             case 'v':
                 bpak_inc_verbosity();

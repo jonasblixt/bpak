@@ -3,6 +3,7 @@
 #include <bpak/bpak.h>
 #include <bpak/utils.h>
 #include <bpak/crc.h>
+#include <bpak/pkg.h>
 
 uint32_t bpak_id(const char *str)
 {
@@ -117,6 +118,48 @@ int bpak_meta_to_string(struct bpak_header *h, struct bpak_meta_header *m,
     {
         uint64_t *entry_addr = (uint64_t *) &(h->metadata[m->offset]);
         snprintf(buf, size, "Entry: %p", (void *) *entry_addr);
+    }
+    else if (m->id == bpak_id("bpak-version"))
+    {
+        struct bpak_version *v = NULL;
+        bpak_get_meta(h, m->id, (void **) &v);
+        snprintf(buf, size, "%i.%i.%i", v->major, v->minor, v->patch);
+    }
+    else if (m->id == bpak_id("bpak-dependency"))
+    {
+        char uuid_tmp[37];
+        char dep_kind[16];
+
+        struct bpak_dependency *d = \
+                   (struct bpak_dependency *) &(h->metadata[m->offset]);
+
+        switch (d->kind)
+        {
+            case BPAK_DEP_EQ:
+                snprintf(dep_kind, sizeof(dep_kind), "==");
+            break;
+            case BPAK_DEP_GT:
+                snprintf(dep_kind, sizeof(dep_kind), "> ");
+            break;
+            case BPAK_DEP_GTE:
+                snprintf(dep_kind, sizeof(dep_kind), ">=");
+            break;
+            default:
+                snprintf(dep_kind, sizeof(dep_kind), "??");
+            break;
+        }
+
+        bpak_uuid_to_string(d->uuid, uuid_tmp, sizeof(uuid_tmp));
+
+        snprintf(buf, size, "%s %s %i.%i.%i", uuid_tmp, dep_kind,
+                                                       d->version.major,
+                                                       d->version.minor,
+                                                       d->version.patch);
+    }
+    else if (m->id == bpak_id("bpak-key-mask"))
+    {
+        uint64_t *key_mask = (uint64_t *) &(h->metadata[m->offset]);
+        snprintf(buf, size, "mask: 0x%8.8x", (uint32_t) *key_mask);
     }
     else
     {
