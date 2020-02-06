@@ -11,7 +11,8 @@ bpak_SOURCES  = main.c \
 				generate.c \
 				transport.c \
 				compare.c \
-				set.c
+				set.c \
+				mbedtls.c
 
 bpak_CFLAGS  = -I$(top_srcdir)/include \
 				$(CODE_COVERAGE_CFLAGS) \

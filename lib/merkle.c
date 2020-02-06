@@ -9,8 +9,9 @@
 
 #include <string.h>
 #include <bpak/bpak.h>
-#include <bpak/crypto.h>
 #include <bpak/merkle.h>
+
+#include "sha256.h"
 
 static size_t bpak_merkle_offset(struct bpak_merkle_context *ctx, int level)
 {
@@ -131,9 +132,9 @@ int bpak_merkle_process(struct bpak_merkle_context *ctx,
                             uint8_t *input, uint16_t sz)
 {
     int rc;
-    struct bpak_hash_context hash;
+    struct sha256_ctx hash;
     uint16_t chunk_sz = 0;
-    char hash_tmp[32];
+    uint8_t *hash_tmp;
     uint64_t pos;
     int16_t pad = 0;
 
@@ -162,12 +163,11 @@ int bpak_merkle_process(struct bpak_merkle_context *ctx,
         ctx->previous.byte_counter += chunk_sz;
     }
 
-    bpak_hash_init(&hash, BPAK_HASH_SHA256);
-    bpak_hash_update(&hash, ctx->salt, 32);
-    bpak_hash_update(&hash, ctx->buffer, MERKLE_BLOCK_SZ);
-    bpak_hash_out(&hash, hash_tmp, 32);
+    SHA256_init(&hash);
+    SHA256_update(&hash, ctx->salt, 32);
+    SHA256_update(&hash, ctx->buffer, MERKLE_BLOCK_SZ);
+    hash_tmp = SHA256_final(&hash);
 
-    bpak_hash_free(&hash);
 
     pos = ctx->current.offset + ctx->current.byte_counter;
     ctx->wr(ctx, pos, hash_tmp, 32, ctx->priv);
@@ -212,18 +212,17 @@ bool bpak_merkle_done(struct bpak_merkle_context *ctx)
 int bpak_merkle_out(struct bpak_merkle_context *ctx,
                         bpak_merkle_hash_t roothash)
 {
-    struct bpak_hash_context hash;
+    struct sha256_ctx hash;
     uint64_t pos = ctx->current.offset;
 
     ctx->rd(ctx, pos, ctx->buffer, MERKLE_BLOCK_SZ, ctx->priv);
 
-    bpak_hash_init(&hash, BPAK_HASH_SHA256);
-    bpak_hash_update(&hash, ctx->salt, 32);
-    bpak_hash_update(&hash, ctx->buffer, MERKLE_BLOCK_SZ);
-    bpak_hash_out(&hash, ctx->hash, 32);
-    bpak_hash_free(&hash);
+    SHA256_init(&hash);
+    SHA256_update(&hash, ctx->salt, 32);
+    SHA256_update(&hash, ctx->buffer, MERKLE_BLOCK_SZ);
+    uint8_t *p = SHA256_final(&hash);
 
-    memcpy(roothash, ctx->hash, sizeof(bpak_merkle_hash_t));
+    memcpy(roothash, p, sizeof(bpak_merkle_hash_t));
 
     if (bpak_merkle_done(ctx))
         return BPAK_OK;

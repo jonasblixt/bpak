@@ -1,7 +1,6 @@
 #include <string.h>
 #include <stdlib.h>
 #include <bpak/bpak.h>
-#include <bpak/crypto.h>
 #include <bpak/merkle.h>
 #include <bpak/alg.h>
 #include <bpak/crc.h>

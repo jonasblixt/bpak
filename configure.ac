@@ -42,19 +42,6 @@ if test "$disable_tool" != "no"; then
     AC_SUBST(UUID_LIBS)
 fi
 
-dnl Crypto backend
-
-AC_MSG_CHECKING(--crypto-backend)
-AC_ARG_WITH([cryptoapi],
-             AS_HELP_STRING([--with-cryptoapi], [Choose crypto backend]),
-             [cryptoapi=$withval],
-             [cryptoapi="mbedtls"])
-
-AC_MSG_RESULT($cryptoapi)
-
-AM_CONDITIONAL([CRYPTO_API_MBEDTLS], [test "$cryptoapi" = "mbedtls"])
-AM_CONDITIONAL([CRYPTO_API_KCAPI], [test "$cryptoapi" = "kcapi"])
-
 AC_CONFIG_FILES([Makefile
                 src/Makefile
                 lib/Makefile

@@ -1,7 +1,7 @@
 #include <string.h>
 #include <bpak/bpak.h>
 #include <bpak/io.h>
-#include <bpak/crypto.h>
+#include "crypto.h"
 
 #include <mbedtls/config.h>
 #include <mbedtls/platform.h>

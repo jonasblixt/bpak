@@ -9,6 +9,7 @@ libbpak_la_SOURCES = bpak.c \
 					 pipe.c \
 					 keystore.c \
 					 merkle.c \
+					 sha256.c \
 					 alg.c \
 					 utils.c \
 					 sais.c \
@@ -21,15 +22,6 @@ libbpak_la_SOURCES = bpak.c \
 					 alg_bsdiff.c
 
 libbpak_la_LDFLAGS = 
-
-if CRYPTO_API_MBEDTLS
-libbpak_la_SOURCES += mbedtls.c
-libbpak_la_LDFLAGS += -lmbedtls -lmbedcrypto
-endif
-
-if CRYPTO_API_KCAPI
-libbpak_la_SOURCES += kcapi.c
-endif
 
 libbpak_la_CFLAGS = -I$(top_srcdir)/include \
                      $(CODE_COVERAGE_CFLAGS)
@@ -45,7 +37,6 @@ pkginclude_HEADERS = $(top_srcdir)/include/bpak/bpak.h \
                   $(top_srcdir)/include/bpak/file.h \
                   $(top_srcdir)/include/bpak/pipe.h \
                   $(top_srcdir)/include/bpak/keystore.h \
-                  $(top_srcdir)/include/bpak/crypto.h \
                   $(top_srcdir)/include/bpak/merkle.h \
                   $(top_srcdir)/include/bpak/utils.h \
                   $(top_srcdir)/include/bpak/alg.h

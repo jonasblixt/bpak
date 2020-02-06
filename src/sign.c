@@ -23,8 +23,8 @@
 
 #include <bpak/bpak.h>
 #include <bpak/io.h>
-#include <bpak/crypto.h>
 
+#include "crypto.h"
 #include "bpak_tool.h"
 
 static int load_private_key(const char *filename, struct bpak_key **k)
