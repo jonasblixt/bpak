@@ -67,6 +67,11 @@ TESTS = test_core_meta \
 		test_merkle \
 		test_struct_sz \
 		test_meta_align \
-		test_create.sh
+		test_create.sh \
+		test_transport.sh \
+		test_keystore_gen.sh \
+		test_signec256.sh \
+		test_signec384.sh \
+		test_signec521.sh
 
 
