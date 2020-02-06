@@ -72,6 +72,8 @@ TESTS = test_core_meta \
 		test_keystore_gen.sh \
 		test_signec256.sh \
 		test_signec384.sh \
-		test_signec521.sh
+		test_signec521.sh \
+		test_generate_id.sh \
+		test_sign_openssl.sh
 
 

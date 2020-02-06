@@ -1,7 +1,6 @@
 #!/bin/sh
 BPAK=../src/bpak
 echo Creating simple archive
-pwd
 set -e
 
 $BPAK --help
@@ -78,6 +77,8 @@ cp vB_transport.bpak vB_install.bpak
 
 $BPAK transport vB_install.bpak --decode --origin $IMG_A -vvv
 
+$BPAK compare vB.bpak vB_install.bpak -vv
+
 #sha256sum $IMG_B
 #sha256sum vB_install.bpak
 first_sha256=$(sha256sum vB.bpak | cut -d ' ' -f 1)
@@ -89,4 +90,5 @@ then
     exit 1
 fi
 
-set
+$BPAK show vB_transport.bpak -vvv
+$BPAK show vB.bpak -vvv

@@ -14,7 +14,6 @@ libbpak_la_SOURCES = bpak.c \
 					 sais.c \
 					 heatshrink/heatshrink_decoder.c \
 					 heatshrink/heatshrink_encoder.c \
-					 lz4.c \
 					 alg_heatshrink.c \
 					 alg_remove.c \
 					 alg_merkle.c \
