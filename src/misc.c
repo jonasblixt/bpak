@@ -95,11 +95,13 @@ void print_transport_usage(void)
 {
     print_version();
     printf("\n");
-    printf("bpak transport <filename.bpak> (--add || --install || --generate) [options]    Transport operations\n");
+    printf("bpak transport <filename.bpak> (--add || --encode || --decode) [options]    Transport operations\n");
     printf("\n");
 
     printf("Transport commands:\n");
     printf("    -a, --add           Add transport meta data\n");
+    printf("    -E, --encode        Encode archive for transport\n");
+    printf("    -D, --decode        Decode package\n");
     printf("\n");
 
     printf("Add options:\n");
@@ -108,13 +110,9 @@ void print_transport_usage(void)
     printf("    -d, --decode        Decoder algorithm to use\n");
     printf("\n");
 
-    printf("Install options:\n");
-    printf("    -s, --source        Source data to use during installation\n");
-    printf("    -o, --output        Output\n");
-    printf("\n");
-
-    printf("Generate options:\n");
-    printf("    -o, --output        Output\n");
+    printf("Encode/Decode options:\n");
+    printf("    -O, --origin        Source data to use during encoding/decoding\n");
+    /* printf("    -o, --output        Output\n"); */
     printf("\n");
 
     print_common_usage();
@@ -144,9 +142,10 @@ void print_generate_usage(void)
 
     printf("Generators:\n");
     printf("    keystore                        Generate keystore code\n");
+    printf("    id                              Translate strings to id's\n");
     printf("\n");
 
-    printf("Options:\n");
+    printf("Keystore options:\n");
     printf("    -n, --name                      Output name\n");
     printf("\n");
 
@@ -167,6 +166,7 @@ void print_add_usage(void)
     printf("    -s, --from-string=string        Load from string\n");
     printf("    -e, --encoder=encoder           Use 'encoder' to code data\n");
     printf("    -F, --set-flag=flag             Set flag 'flag' for this part\n");
+    printf("    -r, --part-ref=ref              Reference part\n");
     printf("\n");
 
     printf("Optional flags:\n");
@@ -196,8 +196,9 @@ void print_sign_usage(void)
     printf("Sign options:\n");
     printf("    -f, --signature <filename>       Write precomputed signature\n");
     printf("    -k, --key <key>                  Sign using key <key>\n");
-    printf("    -e, --key-hint <key-hint>        Set key hint\n");
-    printf("    -t, --trust-store <truststore>   Key from <truststore>\n");
+    printf("    -i, --key-id <id>                Set key id\n");
+    printf("    -s, --key-store <id>             Key from key-store with id <id>\n");
+    printf("    -H, --hash                       Output binary hash\n");
 }
 
 void print_verify_usage(void)

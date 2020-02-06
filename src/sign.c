@@ -541,27 +541,23 @@ int action_verify(int argc, char **argv)
     {
         {"help",        no_argument,       0,  'h' },
         {"verbose",     no_argument,       0,  'v' },
-        {"hash",        required_argument, 0,  'H' },
         {"key",         required_argument, 0,  'k' },
         {0,             0,                 0,   0  }
     };
 
-    while ((opt = getopt_long(argc, argv, "hvk:H:",
+    while ((opt = getopt_long(argc, argv, "hvk:",
                    long_options, &long_index )) != -1)
     {
         switch (opt)
         {
             case 'h':
-                print_sign_usage();
+                print_verify_usage();
                 return 0;
             case 'v':
                 bpak_inc_verbosity();
             break;
             case 'k':
                 key_source = (const char *) optarg;
-            break;
-            case 'H':
-                hash_alg = (const char *) optarg;
             break;
             case '?':
                 printf("Unknown option: %c\n", optopt);

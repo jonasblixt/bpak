@@ -33,7 +33,7 @@ int action_create(int argc, char **argv)
         {0,           0,                 0,   0  }
     };
 
-    while ((opt = getopt_long(argc, argv, "hvn:Y",
+    while ((opt = getopt_long(argc, argv, "hvYH:S:",
                    long_options, &long_index )) != -1)
     {
         switch (opt)
@@ -41,9 +41,6 @@ int action_create(int argc, char **argv)
             case 'h':
                 print_create_usage();
                 return 0;
-            break;
-            case 'n':
-                max_parts = strtol(optarg, NULL, 10);
             break;
             case 'v':
                 bpak_inc_verbosity();
