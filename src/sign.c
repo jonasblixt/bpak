@@ -23,9 +23,31 @@
 
 #include <bpak/bpak.h>
 #include <bpak/io.h>
+#include <bpak/pkg.h>
 
-#include "crypto.h"
 #include "bpak_tool.h"
+
+static int hash_kind(int bpak_hash_kind)
+{
+    int hash_kind = 0;
+
+    switch (bpak_hash_kind)
+    {
+        case BPAK_HASH_SHA256:
+            hash_kind = MBEDTLS_MD_SHA256;
+        break;
+        case BPAK_HASH_SHA384:
+            hash_kind = MBEDTLS_MD_SHA384;
+        break;
+        case BPAK_HASH_SHA512:
+            hash_kind = MBEDTLS_MD_SHA512;
+        break;
+        default:
+            return -BPAK_FAILED;
+    }
+
+    return hash_kind;
+}
 
 static int load_private_key(const char *filename, struct bpak_key **k)
 {
@@ -192,6 +214,11 @@ int action_sign(int argc, char **argv)
     size_t size = sizeof(sig);
     int rc = 0;
 
+    const char *pers = "mbedtls_pk_sign";
+    mbedtls_pk_context ctx;
+    mbedtls_entropy_context entropy;
+    mbedtls_ctr_drbg_context ctr_drbg;
+
     struct option long_options[] =
     {
         {"help",        no_argument,       0,  'h' },
@@ -253,73 +280,34 @@ int action_sign(int argc, char **argv)
         return -1;
     }
 
-    struct bpak_io *io = NULL;
-    struct bpak_header *h = malloc(sizeof(struct bpak_header));
-
-    rc = bpak_io_init_file(&io, filename, "r+");
-
-    if (rc != BPAK_OK)
-        goto err_free_header_out;
-
-    bpak_io_seek(io, 0, BPAK_IO_SEEK_SET);
-
-    size_t read_bytes = bpak_io_read(io, h, sizeof(*h));
-
-    if (read_bytes != sizeof(*h))
-    {
-        rc = -BPAK_FAILED;
-        printf("Error: Could not read header %li\n", read_bytes);
-        goto err_close_io_out;
-    }
-
-
-    rc = bpak_valid_header(h);
-
-    if (rc != BPAK_OK)
-    {
-        printf("Error: Invalid header. Not a BPAK file?\n");
-        goto err_close_io_out;
-    }
 
     if (!key_id || !key_store)
     {
         printf("Error: Missing argument key-id or key-store\n");
-        rc = -BPAK_FAILED;
-        goto err_close_io_out;
+        return -BPAK_FAILED;
     }
 
-    uint32_t *key_id_ptr = NULL;
-    uint32_t *key_store_ptr = NULL;
+    struct bpak_package *pkg = NULL;
+    uint8_t hash_output[128];
 
-    rc = bpak_get_meta(h, id("bpak-key-id"), (void **) &key_id_ptr);
-
-    if (rc != BPAK_OK)
-        rc = bpak_add_meta(h, id("bpak-key-id"), 0, (void **) &key_id_ptr,
-                        sizeof(uint32_t));
+    rc = bpak_pkg_open(&pkg, filename, "r+");
 
     if (rc != BPAK_OK)
     {
-        printf("Error: Could not add bpak-key-id\n");
-        goto err_close_io_out;
+        printf("Error: Could not open package\n");
+        return -BPAK_FAILED;
     }
 
-    rc = bpak_get_meta(h, id("bpak-key-store"), (void **) &key_store_ptr);
-
-    if (rc != BPAK_OK)
-        rc = bpak_add_meta(h, id("bpak-key-store"), 0, (void **) &key_store_ptr,
-                                sizeof(uint32_t));
-
-    if (rc != BPAK_OK)
-    {
-        printf("Error: Could not add bpak-key-store\n");
-        goto err_close_io_out;
-    }
-
-    *key_id_ptr = id(key_id);
-    *key_store_ptr = id(key_store);
+    struct bpak_header *h = bpak_pkg_header(pkg);
 
     FILE *sig_fp = NULL;
 
+    rc = bpak_pkg_sign_init(pkg, bpak_id(key_id), bpak_id(key_store));
+
+    if (rc != BPAK_OK)
+        goto err_out;
+
+    /* Set pre-computed signature */
     if (signature_file)
     {
         sig_fp = fopen(signature_file, "r");
@@ -330,165 +318,75 @@ int action_sign(int argc, char **argv)
         if (bpak_get_verbosity())
             printf("Loaded signature %li bytes\n", size);
 
-        if (bpak_get_verbosity() > 1)
+    }
+    else
+    {
+        size_t hash_size = sizeof(hash_output);
+        bpak_pkg_compute_hash(pkg, hash_output, &hash_size);
+
+        if (bpak_get_verbosity())
         {
-            printf("Signature: ");
-            for (int i = 0; i < size; i++)
-                printf("%2.2x", sig[i] & 0xff);
+            printf("Computed hash: ");
+            for (int i = 0; i < hash_size; i++)
+                printf("%2.2x", (char ) hash_output[i] & 0xff);
             printf("\n");
         }
 
-        bpak_io_seek(io, 0, BPAK_IO_SEEK_SET);
+        struct bpak_key *sign_key = NULL;
 
-        uint8_t *signature_ptr = NULL;
-
-        bpak_foreach_meta(h, m)
-        {
-            if (m->id == id("bpak-signature"))
-            {
-                uint8_t *ptr = &h->metadata[m->offset];
-                memset(ptr, 0, m->size);
-                memset(m, 0, sizeof(*m));
-                m->id = id("bpak-signature");
-                m->size = size;
-                break;
-            }
-        }
-
-        bpak_get_meta(h, id("bpak-signature"), (void **) &signature_ptr);
-
-        if (!signature_ptr)
-        {
-            bpak_add_meta(h, id("bpak-signature"), 0,
-                                (void **) &signature_ptr, size);
-        }
-
-        memcpy(signature_ptr, sig, size);
-
-        bpak_io_write(io, h, sizeof(*h));
-
-        rc = BPAK_OK;
-        goto err_close_io_out;
-    }
-
-    struct bpak_hash_context hash;
-
-    if (bpak_get_verbosity() > 1)
-        printf("Initializing hash context\n");
-
-    rc = bpak_hash_init(&hash, h->hash_kind);
-
-    if (rc != BPAK_OK)
-        goto err_free_header_out;
-
-    if (bpak_get_verbosity() > 1)
-        printf("Zeroing out existing signature data\n");
-
-    /* Remove existing signature */
-    bpak_foreach_meta(h, m)
-    {
-        if (m->id == id("bpak-signature"))
-        {
-            uint8_t *ptr = &h->metadata[m->offset];
-            memset(ptr, 0, m->size);
-            memset(m, 0, sizeof(*m));
-        }
-    }
-
-    bpak_hash_update(&hash, h, sizeof(*h));
-
-    char hash_buffer[512];
-    char hash_output[65];
-
-    rc = bpak_io_seek(io, sizeof(*h), BPAK_IO_SEEK_SET);
-
-    if (rc != BPAK_OK)
-    {
-        printf("Seek error\n");
-    }
-
-    bpak_foreach_part(h, p)
-    {
-        size_t bytes_to_read = p->size + p->pad_bytes;
-        size_t chunk = 0;
-
-        if (!p->id)
-            continue;
-
-        if (p->flags & BPAK_FLAG_EXCLUDE_FROM_HASH)
-            continue;
-
-        if (bpak_get_verbosity() > 1)
-        {
-            printf("Hashing part %x, %li bytes\n", p->id, p->size);
-        }
-
-        rc = bpak_io_seek(io, bpak_part_offset(h, p), BPAK_IO_SEEK_SET);
+        rc = load_private_key(key_source, &sign_key);
 
         if (rc != BPAK_OK)
         {
-            printf("Seek error\n");
-            printf("    offset:  %li\n", bpak_part_offset(h, p));
-            printf("    pos:     %li\n", bpak_io_tell(io));
-            break;
+            goto err_out;
         }
 
-        do
+        if (bpak_get_verbosity() > 1)
         {
-            chunk = (bytes_to_read > sizeof(hash_buffer))?
-                        sizeof(hash_buffer):bytes_to_read;
+            for (int i = 0; i < sign_key->size; i++)
+                printf("%2.2x ", sign_key->data[i] & 0xff);
+            printf("\n");
+        }
 
-            bpak_io_read(io, hash_buffer, chunk);
-            bpak_hash_update(&hash, hash_buffer, chunk);
-            bytes_to_read -= chunk;
-        } while (bytes_to_read);
+        mbedtls_entropy_init(&entropy);
+        mbedtls_ctr_drbg_init(&ctr_drbg);
+        mbedtls_pk_init(&ctx);
+
+
+        rc = mbedtls_ctr_drbg_seed(&ctr_drbg, mbedtls_entropy_func, &entropy,
+                                   (const unsigned char *) pers,
+                                   strlen(pers));
+
+        if (rc != 0)
+        {
+            rc = -BPAK_FAILED;
+            free(sign_key);
+            goto err_out;;
+        }
+
+
+        rc = mbedtls_pk_parse_key(&ctx, sign_key->data, sign_key->size,
+                                    NULL, 0);
+
+        if (rc != 0)
+        {
+            printf("Error: Uknown key type\n");
+            free(sign_key);
+            rc = -BPAK_FAILED;
+            goto err_out;
+        }
+
+        rc = mbedtls_pk_sign(&ctx, hash_kind(pkg->header.hash_kind),
+                            hash_output, hash_size,
+                            sig, &size,
+                            mbedtls_ctr_drbg_random, &ctr_drbg);
+
+        if (rc != BPAK_OK)
+        {
+            printf("Error: Signing failed\n");
+        }
     }
 
-    if (rc != BPAK_OK)
-        goto err_close_io_out;
-
-    bpak_hash_out(&hash, hash_output, sizeof(hash_output));
-
-    if (bpak_get_verbosity())
-    {
-        printf("Computed hash: ");
-        for (int i = 0; i < hash.size; i++)
-            printf("%2.2x", (char ) hash_output[i] & 0xff);
-        printf("\n");
-    }
-
-    struct bpak_key *sign_key = NULL;
-
-    rc = load_private_key(key_source, &sign_key);
-
-    if (rc != BPAK_OK)
-       goto err_free_sign_key;
-
-    if (bpak_get_verbosity() > 1)
-    {
-        for (int i = 0; i < sign_key->size; i++)
-            printf("%2.2x ", sign_key->data[i] & 0xff);
-        printf("\n");
-    }
-
-    struct bpak_sign_context ctx_sign;
-
-    rc = bpak_sign_init(&ctx_sign, sign_key);
-
-    if (rc != BPAK_OK)
-    {
-        printf("Error: Could not initialize signing context\n");
-        goto err_free_sign_key;
-    }
-
-
-    rc = bpak_sign(&ctx_sign, &hash, sig, &size);
-
-    if (rc != BPAK_OK)
-    {
-        printf("Error: Signing failed\n");
-        goto err_free_sign_ctx;
-    }
 
     if (bpak_get_verbosity() > 1)
     {
@@ -498,31 +396,11 @@ int action_sign(int argc, char **argv)
         printf("\n");
     }
 
-    bpak_io_seek(io, 0, BPAK_IO_SEEK_SET);
+    rc = bpak_pkg_sign(pkg, sig, size);
 
-    uint8_t *signature_ptr = NULL;
+err_out:
 
-    bpak_get_meta(h, id("bpak-signature"), (void **) &signature_ptr);
-
-    if (!signature_ptr)
-    {
-        bpak_add_meta(h, id("bpak-signature"), 0, (void **) &signature_ptr, size);
-    }
-
-    memcpy(signature_ptr, sig, size);
-
-    bpak_io_write(io, h, sizeof(*h));
-
-err_free_sign_ctx:
-    bpak_sign_free(&ctx_sign);
-err_free_sign_key:
-    free(sign_key);
-err_free_hash_ctx:
-    bpak_hash_free(&hash);
-err_free_header_out:
-    free(h);
-err_close_io_out:
-    bpak_io_close(io);
+    bpak_pkg_close(pkg);
     return rc;
 }
 
@@ -535,6 +413,10 @@ int action_verify(int argc, char **argv)
     const char *key_source = NULL;
     const char *hash_alg = NULL;
 
+    const char *pers = "mbedtls_pk_sign";
+    mbedtls_pk_context ctx;
+    mbedtls_entropy_context entropy;
+    mbedtls_ctr_drbg_context ctr_drbg;
     int rc = 0;
 
     struct option long_options[] =
@@ -582,98 +464,35 @@ int action_verify(int argc, char **argv)
         return -1;
     }
 
-    struct bpak_io *io = NULL;
-    struct bpak_header *h = malloc(sizeof(struct bpak_header));
+    struct bpak_package *pkg = NULL;
+    uint8_t hash_output[128];
+    uint8_t sig[1024];
+    size_t sig_size;
 
-    rc = bpak_io_init_file(&io, filename, "r+");
-
-    if (rc != BPAK_OK)
-        goto err_free_header_out;
-
-    bpak_io_seek(io, 0, BPAK_IO_SEEK_SET);
-    size_t read_bytes = bpak_io_read(io, h, sizeof(*h));
-
-    if (read_bytes != sizeof(*h))
-    {
-        rc = -BPAK_FAILED;
-        printf("Error: Could not read header %li\n", read_bytes);
-        goto err_close_io_out;
-    }
-
-    rc = bpak_valid_header(h);
+    rc = bpak_pkg_open(&pkg, filename, "r+");
 
     if (rc != BPAK_OK)
     {
-        printf("Error: Invalid header. Not a BPAK file?\n");
-        goto err_close_io_out;
+        printf("Error: Could not open package\n");
+        return -BPAK_FAILED;
     }
 
-    struct bpak_hash_context hash;
+    sig_size = sizeof(sig);
 
-    rc = bpak_hash_init(&hash, h->hash_kind);
+    rc = bpak_pkg_read_signature(pkg, sig, &sig_size);
 
     if (rc != BPAK_OK)
-        goto err_free_header_out;
+        goto err_out;
 
-    uint8_t signature[1024];
-    uint8_t signature_sz = 0;
+    struct bpak_header *h = bpak_pkg_header(pkg);
 
-    /* Copy and zero out the signature metadata before hasing header */
-    bpak_foreach_meta(h, m)
-    {
-        if (m->id == id("bpak-signature"))
-        {
-            uint8_t *ptr = &h->metadata[m->offset];
-            signature_sz = m->size;
-            memcpy(signature, ptr, m->size);
-            memset(ptr, 0, m->size);
-            memset(m, 0, sizeof(*m));
-        }
-    }
-
-    bpak_hash_update(&hash, h, sizeof(*h));
-
-    char hash_buffer[512];
-    char hash_output[64];
-
-    bpak_foreach_part(h, p)
-    {
-        size_t bytes_to_read = p->size + p->pad_bytes;
-        size_t chunk = 0;
-
-        if (!p->id)
-            continue;
-
-        if (p->flags & BPAK_FLAG_EXCLUDE_FROM_HASH)
-        {
-            if (bpak_get_verbosity())
-                printf("Skipping part %x\n", p->id);
-            bpak_io_seek(io, p->size, BPAK_IO_SEEK_FWD);
-            continue;
-        }
-
-        if (bpak_get_verbosity())
-        {
-            printf("Hashing part %x, %li bytes\n", p->id, p->size);
-        }
-
-        do
-        {
-            chunk = (bytes_to_read > sizeof(hash_buffer))?
-                        sizeof(hash_buffer):bytes_to_read;
-
-            bpak_io_read(io, hash_buffer, chunk);
-            bpak_hash_update(&hash, hash_buffer, chunk);
-            bytes_to_read -= chunk;
-        } while (bytes_to_read);
-    }
-
-    bpak_hash_out(&hash, hash_output, sizeof(hash_output));
+    size_t hash_size = sizeof(hash_output);
+    bpak_pkg_compute_hash(pkg, hash_output, &hash_size);
 
     if (bpak_get_verbosity() > 1)
     {
         printf("Computed hash: ");
-        for (int i = 0; i < 32; i++)
+        for (int i = 0; i < hash_size; i++)
             printf("%2.2x", (char ) hash_output[i] & 0xff);
         printf("\n");
     }
@@ -692,35 +511,49 @@ int action_verify(int argc, char **argv)
         printf("\n");
     }
 
-    struct bpak_sign_context ctx_sign;
+    mbedtls_entropy_init(&entropy);
+    mbedtls_ctr_drbg_init(&ctr_drbg);
+    mbedtls_pk_init(&ctx);
 
-    rc = bpak_sign_init(&ctx_sign, sign_key);
+    rc = mbedtls_ctr_drbg_seed(&ctr_drbg, mbedtls_entropy_func, &entropy,
+                               (const unsigned char *) pers,
+                               strlen(pers));
 
-    if (rc != BPAK_OK)
+    if (rc != 0)
     {
-        printf("Error: Could not initialize signing context\n");
-        goto err_free_sign_key;
+        rc = -BPAK_FAILED;
+        free(sign_key);
+        goto err_out;;
     }
 
-    rc = bpak_verify(&ctx_sign, &hash, signature, signature_sz);
+
+    rc = mbedtls_pk_parse_public_key(&ctx, sign_key->data,
+                                        sign_key->size);
+
+    if (rc != 0)
+    {
+        printf("Error: Uknown key type\n");
+        free(sign_key);
+        rc = -BPAK_FAILED;
+        goto err_out;
+    }
+
+    rc = mbedtls_pk_verify(&ctx, hash_kind(pkg->header.hash_kind),
+                            hash_output, hash_size,
+                            sig, sig_size);
 
     if (rc != BPAK_OK)
     {
         printf("Error: Verification failed\n");
-        goto err_free_sign_ctx;
+        rc = -BPAK_FAILED;
+        goto err_out;
     }
 
     printf("Verification OK\n");
 
-err_free_sign_ctx:
-    bpak_sign_free(&ctx_sign);
 err_free_sign_key:
     free(sign_key);
-err_free_hash_ctx:
-    bpak_hash_free(&hash);
-err_free_header_out:
-    free(h);
-err_close_io_out:
-    bpak_io_close(io);
+err_out:
+    bpak_pkg_close(pkg);
     return rc;
 }

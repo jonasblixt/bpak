@@ -10,9 +10,11 @@ libbpak_la_SOURCES = bpak.c \
 					 keystore.c \
 					 merkle.c \
 					 sha256.c \
+					 sha512.c \
 					 alg.c \
 					 utils.c \
 					 sais.c \
+					 pkg.c \
 					 heatshrink/heatshrink_decoder.c \
 					 heatshrink/heatshrink_encoder.c \
 					 alg_heatshrink.c \

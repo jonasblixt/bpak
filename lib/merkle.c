@@ -132,9 +132,9 @@ int bpak_merkle_process(struct bpak_merkle_context *ctx,
                             uint8_t *input, uint16_t sz)
 {
     int rc;
-    struct sha256_ctx hash;
+    mbedtls_sha256_context hash;
     uint16_t chunk_sz = 0;
-    uint8_t *hash_tmp;
+    uint8_t hash_tmp[32];
     uint64_t pos;
     int16_t pad = 0;
 
@@ -163,11 +163,11 @@ int bpak_merkle_process(struct bpak_merkle_context *ctx,
         ctx->previous.byte_counter += chunk_sz;
     }
 
-    SHA256_init(&hash);
-    SHA256_update(&hash, ctx->salt, 32);
-    SHA256_update(&hash, ctx->buffer, MERKLE_BLOCK_SZ);
-    hash_tmp = SHA256_final(&hash);
-
+    mbedtls_sha256_init(&hash);
+    mbedtls_sha256_starts_ret(&hash, 0);
+    mbedtls_sha256_update_ret(&hash, ctx->salt, 32);
+    mbedtls_sha256_update_ret(&hash, ctx->buffer, MERKLE_BLOCK_SZ);
+    mbedtls_sha256_finish_ret(&hash, hash_tmp);
 
     pos = ctx->current.offset + ctx->current.byte_counter;
     ctx->wr(ctx, pos, hash_tmp, 32, ctx->priv);
@@ -212,17 +212,16 @@ bool bpak_merkle_done(struct bpak_merkle_context *ctx)
 int bpak_merkle_out(struct bpak_merkle_context *ctx,
                         bpak_merkle_hash_t roothash)
 {
-    struct sha256_ctx hash;
+    mbedtls_sha256_context hash;
     uint64_t pos = ctx->current.offset;
 
     ctx->rd(ctx, pos, ctx->buffer, MERKLE_BLOCK_SZ, ctx->priv);
 
-    SHA256_init(&hash);
-    SHA256_update(&hash, ctx->salt, 32);
-    SHA256_update(&hash, ctx->buffer, MERKLE_BLOCK_SZ);
-    uint8_t *p = SHA256_final(&hash);
-
-    memcpy(roothash, p, sizeof(bpak_merkle_hash_t));
+    mbedtls_sha256_init(&hash);
+    mbedtls_sha256_starts_ret(&hash, 0);
+    mbedtls_sha256_update_ret(&hash, ctx->salt, 32);
+    mbedtls_sha256_update_ret(&hash, ctx->buffer, MERKLE_BLOCK_SZ);
+    mbedtls_sha256_finish_ret(&hash, roothash);
 
     if (bpak_merkle_done(ctx))
         return BPAK_OK;

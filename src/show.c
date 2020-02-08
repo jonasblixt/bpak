@@ -16,68 +16,8 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <uuid.h>
-
+#include <bpak/pkg.h>
 #include "bpak_tool.h"
-
-static int calc_hash(struct bpak_header *h, struct bpak_io *io,
-                    char *output, size_t *size)
-{
-    int rc;
-    struct bpak_hash_context hash;
-
-    rc = bpak_hash_init(&hash, h->hash_kind);
-
-    if (rc != BPAK_OK)
-        return rc;
-
-    /* Zero out signature if it exists */
-    bpak_foreach_meta(h, m)
-    {
-        if (m->id == id("bpak-signature"))
-        {
-            uint8_t *ptr = &h->metadata[m->offset];
-            memset(ptr, 0, m->size);
-            memset(m, 0, sizeof(*m));
-        }
-    }
-
-    bpak_hash_update(&hash, h, sizeof(*h));
-
-    char hash_buffer[512];
-    char hash_output[64];
-
-    bpak_io_seek(io, sizeof(*h), BPAK_IO_SEEK_SET);
-
-    bpak_foreach_part(h, p)
-    {
-        size_t bytes_to_read = bpak_part_size(p);
-        size_t chunk = 0;
-
-        if (!p->id)
-            continue;
-
-        if (p->flags & BPAK_FLAG_EXCLUDE_FROM_HASH)
-        {
-            bpak_io_seek(io, bpak_part_size(p), BPAK_IO_SEEK_FWD);
-            continue;
-        }
-
-        do
-        {
-            chunk = (bytes_to_read > sizeof(hash_buffer))?
-                        sizeof(hash_buffer):bytes_to_read;
-
-            bpak_io_read(io, hash_buffer, chunk);
-            bpak_hash_update(&hash, hash_buffer, chunk);
-            bytes_to_read -= chunk;
-        } while (bytes_to_read);
-    }
-
-    bpak_hash_out(&hash, output, *size);
-    *size = hash.size;
-
-    return rc;
-}
 
 int action_show(int argc, char **argv)
 {
@@ -145,24 +85,17 @@ int action_show(int argc, char **argv)
         return -1;
     }
 
-    struct bpak_io *io = NULL;
-    struct bpak_header *h = malloc(sizeof(struct bpak_header));
+    struct bpak_package *pkg = NULL;
 
-    if (!h)
-        return -BPAK_FAILED;
-
-    rc = bpak_io_init_file(&io, filename, "rb");
+    rc = bpak_pkg_open(&pkg, filename, "rb");
 
     if (rc != BPAK_OK)
-        goto err_free_header_out;
-
-    size_t read_bytes = bpak_io_read(io, h, sizeof(*h));
-
-    if (read_bytes != sizeof(*h))
     {
-        rc = -BPAK_FAILED;
-        goto err_free_io_out;
+        printf("Error: Could not open package\n");
+        return -BPAK_FAILED;
     }
+
+    struct bpak_header *h = bpak_pkg_header(pkg);
 
     if (meta_name)
     {
@@ -170,7 +103,7 @@ int action_show(int argc, char **argv)
 
         bpak_foreach_meta(h, m)
         {
-            if (m->id == id(meta_name))
+            if (m->id == bpak_id(meta_name))
             {
                 printf("Found 0x%x, %i bytes\n", m->id, m->size);
                 rc = BPAK_OK;
@@ -183,7 +116,7 @@ int action_show(int argc, char **argv)
             printf("Error: Could not find meta '%s'\n", meta_name);
         }
 
-        goto err_free_io_out;
+        goto err_pkg_close;
     }
 
     if (part_name)
@@ -192,7 +125,7 @@ int action_show(int argc, char **argv)
 
         bpak_foreach_part(h, p)
         {
-            if (p->id == id(part_name))
+            if (p->id == bpak_id(part_name))
             {
                 printf("Found 0x%x, %li bytes\n", p->id, p->size);
                 rc = BPAK_OK;
@@ -203,18 +136,18 @@ int action_show(int argc, char **argv)
         if (rc != BPAK_OK)
         {
             printf("Error: Could not find part '%s'\n", part_name);
+            goto err_pkg_close;
         }
-
-        goto err_free_io_out;
     }
 
     if (binary_hash_output)
     {
-        rc = calc_hash(h, io, hash_output, &hash_size);
+        hash_size = sizeof(hash_output);
+        bpak_pkg_compute_hash(pkg, hash_output, &hash_size);
 
         for (int i = 0; i < hash_size; i++)
             printf("%c", hash_output[i]);
-        goto err_free_io_out;
+        goto err_pkg_close;
     }
 
     printf("BPAK File: %s\n", filename);
@@ -225,7 +158,7 @@ int action_show(int argc, char **argv)
     printf("\nMetadata:\n");
     printf("    ID         Size   Meta ID              Part Ref   Data\n");
 
-    char string_output[65];
+    char string_output[128];
 
     bpak_foreach_meta(h, m)
     {
@@ -275,12 +208,13 @@ int action_show(int argc, char **argv)
         }
     }
 
-    rc = calc_hash(h, io, hash_output, &hash_size);
 
-    printf("\nHash: ");
-    for (int i = 0; i < hash_size; i++)
-        printf("%2.2x", (char ) hash_output[i] & 0xff);
-    printf("\n");
+    hash_size = sizeof(hash_output);
+    bpak_pkg_compute_hash(pkg, hash_output, &hash_size);
+
+    char hash_str[128];
+    bpak_bin2hex(hash_output, hash_size, hash_str, sizeof(hash_str));
+    printf("\nHash: %s\n", hash_str);
 
     if (bpak_get_verbosity())
     {
@@ -296,25 +230,10 @@ int action_show(int argc, char **argv)
         printf ("Metadata usage: %i/%li bytes\n", meta_size,
                     sizeof(h->metadata));
 
-        size_t installed_size = 0;
-        size_t transport_size = 0;
-
-        bpak_foreach_part(h, p)
-        {
-            if (p->flags & BPAK_FLAG_TRANSPORT)
-                transport_size += p->transport_size;
-            else
-                transport_size += p->size;
-            installed_size += p->size + p->pad_bytes;
-        }
-        transport_size += sizeof(struct bpak_header);
-        printf("Transport size: %li bytes\n", transport_size);
-        printf("Installed size: %li bytes\n", installed_size);
+        printf("Transport size: %li bytes\n", bpak_pkg_size(pkg));
+        printf("Installed size: %li bytes\n", bpak_pkg_installed_size(pkg));
     }
-
-err_free_io_out:
-    bpak_io_close(io);
-err_free_header_out:
-    free(h);
+err_pkg_close:
+    bpak_pkg_close(pkg);
     return rc;
 }

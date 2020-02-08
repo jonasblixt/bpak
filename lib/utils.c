@@ -98,7 +98,6 @@ int bpak_meta_to_string(struct bpak_header *h, struct bpak_meta_header *m,
     {
         struct bpak_transport_meta *transport_meta =
             (struct bpak_transport_meta *) &(h->metadata[m->offset]);
-        //bpak_get_meta(h, m->id, (void **) &transport_meta);
 
         snprintf(buf, size, "Encode: %8.8x, Decode: %8.8x",
                         transport_meta->alg_id_encode,
@@ -127,8 +126,9 @@ int bpak_meta_to_string(struct bpak_header *h, struct bpak_meta_header *m,
     }
     else if (m->id == bpak_id("bpak-dependency"))
     {
-        char uuid_tmp[37];
-        char dep_kind[16];
+
+        uint8_t uuid_str[64];
+        char *dep_kind;
 
         struct bpak_dependency *d = \
                    (struct bpak_dependency *) &(h->metadata[m->offset]);
@@ -136,22 +136,22 @@ int bpak_meta_to_string(struct bpak_header *h, struct bpak_meta_header *m,
         switch (d->kind)
         {
             case BPAK_DEP_EQ:
-                snprintf(dep_kind, sizeof(dep_kind), "==");
+                dep_kind = "==";
             break;
             case BPAK_DEP_GT:
-                snprintf(dep_kind, sizeof(dep_kind), "> ");
+                dep_kind = "> ";
             break;
             case BPAK_DEP_GTE:
-                snprintf(dep_kind, sizeof(dep_kind), ">=");
+                dep_kind = ">=";
             break;
             default:
-                snprintf(dep_kind, sizeof(dep_kind), "??");
+                dep_kind = "??";
             break;
         }
 
-        bpak_uuid_to_string(d->uuid, uuid_tmp, sizeof(uuid_tmp));
+        bpak_uuid_to_string(d->uuid, uuid_str, sizeof(uuid_str));
 
-        snprintf(buf, size, "%s %s %i.%i.%i", uuid_tmp, dep_kind,
+        snprintf(buf, size, "%s %s %i.%i.%i", uuid_str, dep_kind,
                                                        d->version.major,
                                                        d->version.minor,
                                                        d->version.patch);

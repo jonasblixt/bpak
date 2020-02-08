@@ -7,8 +7,7 @@
 #include <bpak/merkle.h>
 #include <bpak/alg.h>
 #include <bpak/utils.h>
-
-#include "crypto.h"
+#include <bpak/keystore.h>
 
 int action_add(int argc, char **argv);
 int action_show(int argc, char **argv);

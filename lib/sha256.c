@@ -1,223 +1,399 @@
-/* SHA-256 and SHA-512 implementation based on code by Oliver Gay
- * <olivier.gay@a3.epfl.ch> under a BSD-style license. See below.
+/*
+ *  FIPS-180-2 compliant SHA-256 implementation
+ *
+ *  Copyright (C) 2006-2015, ARM Limited, All Rights Reserved
+ *  SPDX-License-Identifier: Apache-2.0
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License"); you may
+ *  not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *  http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ *
+ *  This file is part of mbed TLS (https://tls.mbed.org)
  */
 /*
- * FIPS 180-2 SHA-224/256/384/512 implementation
- * Last update: 02/02/2007
- * Issue date:  04/30/2005
+ *  The SHA-256 Secure Hash Standard was published by NIST in 2002.
  *
- * Copyright (C) 2005, 2007 Olivier Gay <olivier.gay@a3.epfl.ch>
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. Neither the name of the project nor the names of its contributors
- *    may be used to endorse or promote products derived from this software
- *    without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE PROJECT AND CONTRIBUTORS ``AS IS'' AND
- * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED.  IN NO EVENT SHALL THE PROJECT OR CONTRIBUTORS BE LIABLE
- * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
- * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
- * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
- * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
- * SUCH DAMAGE.
+ *  http://csrc.nist.gov/publications/fips/fips180-2/fips180-2.pdf
  */
 
+#include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <assert.h>
 #include "sha256.h"
 
-#define SHFR(x, n)    (x >> n)
-#define ROTR(x, n)   ((x >> n) | (x << ((sizeof(x) << 3) - n)))
-#define ROTL(x, n)   ((x << n) | (x >> ((sizeof(x) << 3) - n)))
-#define CH(x, y, z)  ((x & y) ^ (~x & z))
-#define MAJ(x, y, z) ((x & y) ^ (x & z) ^ (y & z))
-#define SHA256_F1(x) (ROTR(x,  2) ^ ROTR(x, 13) ^ ROTR(x, 22))
-#define SHA256_F2(x) (ROTR(x,  6) ^ ROTR(x, 11) ^ ROTR(x, 25))
-#define SHA256_F3(x) (ROTR(x,  7) ^ ROTR(x, 18) ^ SHFR(x,  3))
-#define SHA256_F4(x) (ROTR(x, 17) ^ ROTR(x, 19) ^ SHFR(x, 10))
-#define UNPACK32(x, str)				\
-	{						\
-		*((str) + 3) = (uint8_t) ((x));		\
-		*((str) + 2) = (uint8_t) ((x) >>  8);	\
-		*((str) + 1) = (uint8_t) ((x) >> 16);	\
-		*((str) + 0) = (uint8_t) ((x) >> 24);	\
-	}
-#define PACK32(str, x)						\
-	{							\
-		*(x) = ((uint32_t) *((str) + 3))		\
-			| ((uint32_t) *((str) + 2) <<  8)	\
-			| ((uint32_t) *((str) + 1) << 16)	\
-			| ((uint32_t) *((str) + 0) << 24);	\
-	}
-/* Macros used for loops unrolling */
-#define SHA256_SCR(i)						\
-	{							\
-		w[i] =  SHA256_F4(w[i -  2]) + w[i -  7]	\
-			+ SHA256_F3(w[i - 15]) + w[i - 16];	\
-	}
-#define SHA256_EXP(a, b, c, d, e, f, g, h, j)				\
-	{								\
-		t1 = wv[h] + SHA256_F2(wv[e]) + CH(wv[e], wv[f], wv[g])	\
-			+ sha256_k[j] + w[j];				\
-		t2 = SHA256_F1(wv[a]) + MAJ(wv[a], wv[b], wv[c]);	\
-		wv[d] += t1;						\
-		wv[h] = t1 + t2;					\
-	}
+#define mbedtls_printf printf
+#define mbedtls_calloc    calloc
+#define mbedtls_free       free
 
-static const uint32_t sha256_h0[8] = {
-	0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,
-	0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19};
+#define MBEDTLS_PARAM_FAILED( cond ) assert( cond )
 
-static const uint32_t sha256_k[64] = {
-	0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5,
-	0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
-	0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3,
-	0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
-	0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc,
-	0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
-	0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7,
-	0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
-	0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13,
-	0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
-	0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3,
-	0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
-	0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5,
-	0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
-	0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208,
-	0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2};
+/* Internal macro meant to be called only from within the library. */
+#define MBEDTLS_INTERNAL_VALIDATE( cond )           \
+    do {                                            \
+        if( !(cond) )                               \
+        {                                           \
+            MBEDTLS_PARAM_FAILED( cond );           \
+            return;                                 \
+        }                                           \
+    } while( 0 )
 
-void SHA256_init(struct sha256_ctx *ctx)
+#define MBEDTLS_INTERNAL_VALIDATE_RET( cond, ret )  \
+    do {                                            \
+        if( !(cond) )                               \
+        {                                           \
+            MBEDTLS_PARAM_FAILED( cond );           \
+            return( ret );                          \
+        }                                           \
+    } while( 0 )
+
+#define SHA256_VALIDATE_RET(cond)                           \
+    MBEDTLS_INTERNAL_VALIDATE_RET( cond, MBEDTLS_ERR_SHA256_BAD_INPUT_DATA )
+#define SHA256_VALIDATE(cond)  MBEDTLS_INTERNAL_VALIDATE( cond )
+
+
+/*
+ * 32-bit integer manipulation macros (big endian)
+ */
+#ifndef GET_UINT32_BE
+#define GET_UINT32_BE(n,b,i)                            \
+do {                                                    \
+    (n) = ( (uint32_t) (b)[(i)    ] << 24 )             \
+        | ( (uint32_t) (b)[(i) + 1] << 16 )             \
+        | ( (uint32_t) (b)[(i) + 2] <<  8 )             \
+        | ( (uint32_t) (b)[(i) + 3]       );            \
+} while( 0 )
+#endif
+
+#ifndef PUT_UINT32_BE
+#define PUT_UINT32_BE(n,b,i)                            \
+do {                                                    \
+    (b)[(i)    ] = (unsigned char) ( (n) >> 24 );       \
+    (b)[(i) + 1] = (unsigned char) ( (n) >> 16 );       \
+    (b)[(i) + 2] = (unsigned char) ( (n) >>  8 );       \
+    (b)[(i) + 3] = (unsigned char) ( (n)       );       \
+} while( 0 )
+#endif
+
+static void mbedtls_platform_zeroize( void *buf, size_t len )
 {
-	int i;
-	for (i = 0; i < 8; i++)
-		ctx->h[i] = sha256_h0[i];
-	ctx->len = 0;
-	ctx->tot_len = 0;
+    memset(buf, 0, len);
 }
 
-static void SHA256_transform(struct sha256_ctx *ctx, const uint8_t *message,
-			     unsigned int block_nb)
+void mbedtls_sha256_init( mbedtls_sha256_context *ctx )
 {
-	/* Note: this function requires a considerable amount of stack */
-	uint32_t w[64];
-	uint32_t wv[8];
-	uint32_t t1, t2;
-	const unsigned char *sub_block;
-	int i, j;
-	for (i = 0; i < (int) block_nb; i++) {
-		sub_block = message + (i << 6);
-		for (j = 0; j < 16; j++)
-			PACK32(&sub_block[j << 2], &w[j]);
-#ifdef CONFIG_SHA256_UNROLLED
-		for (j = 16; j < 64; j += 8) {
-			SHA256_SCR(j);
-			SHA256_SCR(j+1);
-			SHA256_SCR(j+2);
-			SHA256_SCR(j+3);
-			SHA256_SCR(j+4);
-			SHA256_SCR(j+5);
-			SHA256_SCR(j+6);
-			SHA256_SCR(j+7);
-		}
-#else
-		for (j = 16; j < 64; j++)
-			SHA256_SCR(j);
-#endif
-		for (j = 0; j < 8; j++)
-			wv[j] = ctx->h[j];
-#ifdef CONFIG_SHA256_UNROLLED
-		for (j = 0; j < 64; j += 8) {
-			SHA256_EXP(0, 1, 2, 3, 4, 5, 6, 7, j);
-			SHA256_EXP(7, 0, 1, 2, 3, 4, 5, 6, j+1);
-			SHA256_EXP(6, 7, 0, 1, 2, 3, 4, 5, j+2);
-			SHA256_EXP(5, 6, 7, 0, 1, 2, 3, 4, j+3);
-			SHA256_EXP(4, 5, 6, 7, 0, 1, 2, 3, j+4);
-			SHA256_EXP(3, 4, 5, 6, 7, 0, 1, 2, j+5);
-			SHA256_EXP(2, 3, 4, 5, 6, 7, 0, 1, j+6);
-			SHA256_EXP(1, 2, 3, 4, 5, 6, 7, 0, j+7);
-		}
-#else
-		for (j = 0; j < 64; j++) {
-			t1 = wv[7] + SHA256_F2(wv[4]) + CH(wv[4], wv[5], wv[6])
-				+ sha256_k[j] + w[j];
-			t2 = SHA256_F1(wv[0]) + MAJ(wv[0], wv[1], wv[2]);
-			wv[7] = wv[6];
-			wv[6] = wv[5];
-			wv[5] = wv[4];
-			wv[4] = wv[3] + t1;
-			wv[3] = wv[2];
-			wv[2] = wv[1];
-			wv[1] = wv[0];
-			wv[0] = t1 + t2;
-		}
-#endif
-		for (j = 0; j < 8; j++)
-			ctx->h[j] += wv[j];
-	}
+    SHA256_VALIDATE( ctx != NULL );
+
+    memset( ctx, 0, sizeof( mbedtls_sha256_context ) );
 }
 
-void SHA256_update(struct sha256_ctx *ctx, const uint8_t *data, uint32_t len)
+void mbedtls_sha256_free( mbedtls_sha256_context *ctx )
 {
-	unsigned int block_nb;
-	unsigned int new_len, rem_len, tmp_len;
-	const uint8_t *shifted_data;
-	tmp_len = SHA256_BLOCK_SIZE - ctx->len;
-	rem_len = len < tmp_len ? len : tmp_len;
-	memcpy(&ctx->block[ctx->len], data, rem_len);
-	if (ctx->len + len < SHA256_BLOCK_SIZE) {
-		ctx->len += len;
-		return;
-	}
-	new_len = len - rem_len;
-	block_nb = new_len / SHA256_BLOCK_SIZE;
-	shifted_data = data + rem_len;
-	SHA256_transform(ctx, ctx->block, 1);
-	SHA256_transform(ctx, shifted_data, block_nb);
-	rem_len = new_len % SHA256_BLOCK_SIZE;
-	memcpy(ctx->block, &shifted_data[block_nb << 6], rem_len);
-	ctx->len = rem_len;
-	ctx->tot_len += (block_nb + 1) << 6;
+    if( ctx == NULL )
+        return;
+
+    mbedtls_platform_zeroize( ctx, sizeof( mbedtls_sha256_context ) );
+}
+
+void mbedtls_sha256_clone( mbedtls_sha256_context *dst,
+                           const mbedtls_sha256_context *src )
+{
+    SHA256_VALIDATE( dst != NULL );
+    SHA256_VALIDATE( src != NULL );
+
+    *dst = *src;
 }
 
 /*
- * Specialized SHA256_init + SHA256_update that takes the first data block of
- * size SHA256_BLOCK_SIZE as input.
+ * SHA-256 context setup
  */
-static void SHA256_init_1b(struct sha256_ctx *ctx, const uint8_t *data)
+int mbedtls_sha256_starts_ret( mbedtls_sha256_context *ctx, int is224 )
 {
-	int i;
-	for (i = 0; i < 8; i++)
-		ctx->h[i] = sha256_h0[i];
-	SHA256_transform(ctx, data, 1);
-	ctx->len = 0;
-	ctx->tot_len = SHA256_BLOCK_SIZE;
+    SHA256_VALIDATE_RET( ctx != NULL );
+    SHA256_VALIDATE_RET( is224 == 0 || is224 == 1 );
+
+    ctx->total[0] = 0;
+    ctx->total[1] = 0;
+
+    if( is224 == 0 )
+    {
+        /* SHA-256 */
+        ctx->state[0] = 0x6A09E667;
+        ctx->state[1] = 0xBB67AE85;
+        ctx->state[2] = 0x3C6EF372;
+        ctx->state[3] = 0xA54FF53A;
+        ctx->state[4] = 0x510E527F;
+        ctx->state[5] = 0x9B05688C;
+        ctx->state[6] = 0x1F83D9AB;
+        ctx->state[7] = 0x5BE0CD19;
+    }
+    else
+    {
+        /* SHA-224 */
+        ctx->state[0] = 0xC1059ED8;
+        ctx->state[1] = 0x367CD507;
+        ctx->state[2] = 0x3070DD17;
+        ctx->state[3] = 0xF70E5939;
+        ctx->state[4] = 0xFFC00B31;
+        ctx->state[5] = 0x68581511;
+        ctx->state[6] = 0x64F98FA7;
+        ctx->state[7] = 0xBEFA4FA4;
+    }
+
+    ctx->is224 = is224;
+
+    return( 0 );
 }
 
-uint8_t *SHA256_final(struct sha256_ctx *ctx)
+static const uint32_t K[] =
 {
-	unsigned int block_nb;
-	unsigned int pm_len;
-	unsigned int len_b;
-	int i;
-	block_nb = (1 + ((SHA256_BLOCK_SIZE - 9)
-			 < (ctx->len % SHA256_BLOCK_SIZE)));
-	len_b = (ctx->tot_len + ctx->len) << 3;
-	pm_len = block_nb << 6;
-	memset(ctx->block + ctx->len, 0, pm_len - ctx->len);
-	ctx->block[ctx->len] = 0x80;
-	UNPACK32(len_b, ctx->block + pm_len - 4);
-	SHA256_transform(ctx, ctx->block, block_nb);
-	for (i = 0; i < 8; i++)
-		UNPACK32(ctx->h[i], &ctx->buf[i << 2]);
-	return ctx->buf;
+    0x428A2F98, 0x71374491, 0xB5C0FBCF, 0xE9B5DBA5,
+    0x3956C25B, 0x59F111F1, 0x923F82A4, 0xAB1C5ED5,
+    0xD807AA98, 0x12835B01, 0x243185BE, 0x550C7DC3,
+    0x72BE5D74, 0x80DEB1FE, 0x9BDC06A7, 0xC19BF174,
+    0xE49B69C1, 0xEFBE4786, 0x0FC19DC6, 0x240CA1CC,
+    0x2DE92C6F, 0x4A7484AA, 0x5CB0A9DC, 0x76F988DA,
+    0x983E5152, 0xA831C66D, 0xB00327C8, 0xBF597FC7,
+    0xC6E00BF3, 0xD5A79147, 0x06CA6351, 0x14292967,
+    0x27B70A85, 0x2E1B2138, 0x4D2C6DFC, 0x53380D13,
+    0x650A7354, 0x766A0ABB, 0x81C2C92E, 0x92722C85,
+    0xA2BFE8A1, 0xA81A664B, 0xC24B8B70, 0xC76C51A3,
+    0xD192E819, 0xD6990624, 0xF40E3585, 0x106AA070,
+    0x19A4C116, 0x1E376C08, 0x2748774C, 0x34B0BCB5,
+    0x391C0CB3, 0x4ED8AA4A, 0x5B9CCA4F, 0x682E6FF3,
+    0x748F82EE, 0x78A5636F, 0x84C87814, 0x8CC70208,
+    0x90BEFFFA, 0xA4506CEB, 0xBEF9A3F7, 0xC67178F2,
+};
+
+#define  SHR(x,n) (((x) & 0xFFFFFFFF) >> (n))
+#define ROTR(x,n) (SHR(x,n) | ((x) << (32 - (n))))
+
+#define S0(x) (ROTR(x, 7) ^ ROTR(x,18) ^  SHR(x, 3))
+#define S1(x) (ROTR(x,17) ^ ROTR(x,19) ^  SHR(x,10))
+
+#define S2(x) (ROTR(x, 2) ^ ROTR(x,13) ^ ROTR(x,22))
+#define S3(x) (ROTR(x, 6) ^ ROTR(x,11) ^ ROTR(x,25))
+
+#define F0(x,y,z) (((x) & (y)) | ((z) & ((x) | (y))))
+#define F1(x,y,z) ((z) ^ ((x) & ((y) ^ (z))))
+
+#define R(t)                                    \
+    (                                           \
+        W[t] = S1(W[(t) -  2]) + W[(t) -  7] +  \
+               S0(W[(t) - 15]) + W[(t) - 16]    \
+    )
+
+#define P(a,b,c,d,e,f,g,h,x,K)                          \
+    do                                                  \
+    {                                                   \
+        temp1 = (h) + S3(e) + F1((e),(f),(g)) + (K) + (x);      \
+        temp2 = S2(a) + F0((a),(b),(c));                        \
+        (d) += temp1; (h) = temp1 + temp2;              \
+    } while( 0 )
+
+int mbedtls_internal_sha256_process( mbedtls_sha256_context *ctx,
+                                const unsigned char data[64] )
+{
+    uint32_t temp1, temp2, W[64];
+    uint32_t A[8];
+    unsigned int i;
+
+    SHA256_VALIDATE_RET( ctx != NULL );
+    SHA256_VALIDATE_RET( (const unsigned char *)data != NULL );
+
+    for( i = 0; i < 8; i++ )
+        A[i] = ctx->state[i];
+
+    for( i = 0; i < 16; i++ )
+        GET_UINT32_BE( W[i], data, 4 * i );
+
+    for( i = 0; i < 16; i += 8 )
+    {
+        P( A[0], A[1], A[2], A[3], A[4], A[5], A[6], A[7], W[i+0], K[i+0] );
+        P( A[7], A[0], A[1], A[2], A[3], A[4], A[5], A[6], W[i+1], K[i+1] );
+        P( A[6], A[7], A[0], A[1], A[2], A[3], A[4], A[5], W[i+2], K[i+2] );
+        P( A[5], A[6], A[7], A[0], A[1], A[2], A[3], A[4], W[i+3], K[i+3] );
+        P( A[4], A[5], A[6], A[7], A[0], A[1], A[2], A[3], W[i+4], K[i+4] );
+        P( A[3], A[4], A[5], A[6], A[7], A[0], A[1], A[2], W[i+5], K[i+5] );
+        P( A[2], A[3], A[4], A[5], A[6], A[7], A[0], A[1], W[i+6], K[i+6] );
+        P( A[1], A[2], A[3], A[4], A[5], A[6], A[7], A[0], W[i+7], K[i+7] );
+    }
+
+    for( i = 16; i < 64; i += 8 )
+    {
+        P( A[0], A[1], A[2], A[3], A[4], A[5], A[6], A[7], R(i+0), K[i+0] );
+        P( A[7], A[0], A[1], A[2], A[3], A[4], A[5], A[6], R(i+1), K[i+1] );
+        P( A[6], A[7], A[0], A[1], A[2], A[3], A[4], A[5], R(i+2), K[i+2] );
+        P( A[5], A[6], A[7], A[0], A[1], A[2], A[3], A[4], R(i+3), K[i+3] );
+        P( A[4], A[5], A[6], A[7], A[0], A[1], A[2], A[3], R(i+4), K[i+4] );
+        P( A[3], A[4], A[5], A[6], A[7], A[0], A[1], A[2], R(i+5), K[i+5] );
+        P( A[2], A[3], A[4], A[5], A[6], A[7], A[0], A[1], R(i+6), K[i+6] );
+        P( A[1], A[2], A[3], A[4], A[5], A[6], A[7], A[0], R(i+7), K[i+7] );
+    }
+
+    for( i = 0; i < 8; i++ )
+        ctx->state[i] += A[i];
+
+    return( 0 );
 }
+
+
+/*
+ * SHA-256 process buffer
+ */
+int mbedtls_sha256_update_ret( mbedtls_sha256_context *ctx,
+                               const unsigned char *input,
+                               size_t ilen )
+{
+    int ret;
+    size_t fill;
+    uint32_t left;
+
+    SHA256_VALIDATE_RET( ctx != NULL );
+    SHA256_VALIDATE_RET( ilen == 0 || input != NULL );
+
+    if( ilen == 0 )
+        return( 0 );
+
+    left = ctx->total[0] & 0x3F;
+    fill = 64 - left;
+
+    ctx->total[0] += (uint32_t) ilen;
+    ctx->total[0] &= 0xFFFFFFFF;
+
+    if( ctx->total[0] < (uint32_t) ilen )
+        ctx->total[1]++;
+
+    if( left && ilen >= fill )
+    {
+        memcpy( (void *) (ctx->buffer + left), input, fill );
+
+        if( ( ret = mbedtls_internal_sha256_process( ctx, ctx->buffer ) ) != 0 )
+            return( ret );
+
+        input += fill;
+        ilen  -= fill;
+        left = 0;
+    }
+
+    while( ilen >= 64 )
+    {
+        if( ( ret = mbedtls_internal_sha256_process( ctx, input ) ) != 0 )
+            return( ret );
+
+        input += 64;
+        ilen  -= 64;
+    }
+
+    if( ilen > 0 )
+        memcpy( (void *) (ctx->buffer + left), input, ilen );
+
+    return( 0 );
+}
+
+/*
+ * SHA-256 final digest
+ */
+int mbedtls_sha256_finish_ret( mbedtls_sha256_context *ctx,
+                               unsigned char output[32] )
+{
+    int ret;
+    uint32_t used;
+    uint32_t high, low;
+
+    SHA256_VALIDATE_RET( ctx != NULL );
+    SHA256_VALIDATE_RET( (unsigned char *)output != NULL );
+
+    /*
+     * Add padding: 0x80 then 0x00 until 8 bytes remain for the length
+     */
+    used = ctx->total[0] & 0x3F;
+
+    ctx->buffer[used++] = 0x80;
+
+    if( used <= 56 )
+    {
+        /* Enough room for padding + length in current block */
+        memset( ctx->buffer + used, 0, 56 - used );
+    }
+    else
+    {
+        /* We'll need an extra block */
+        memset( ctx->buffer + used, 0, 64 - used );
+
+        if( ( ret = mbedtls_internal_sha256_process( ctx, ctx->buffer ) ) != 0 )
+            return( ret );
+
+        memset( ctx->buffer, 0, 56 );
+    }
+
+    /*
+     * Add message length
+     */
+    high = ( ctx->total[0] >> 29 )
+         | ( ctx->total[1] <<  3 );
+    low  = ( ctx->total[0] <<  3 );
+
+    PUT_UINT32_BE( high, ctx->buffer, 56 );
+    PUT_UINT32_BE( low,  ctx->buffer, 60 );
+
+    if( ( ret = mbedtls_internal_sha256_process( ctx, ctx->buffer ) ) != 0 )
+        return( ret );
+
+    /*
+     * Output final state
+     */
+    PUT_UINT32_BE( ctx->state[0], output,  0 );
+    PUT_UINT32_BE( ctx->state[1], output,  4 );
+    PUT_UINT32_BE( ctx->state[2], output,  8 );
+    PUT_UINT32_BE( ctx->state[3], output, 12 );
+    PUT_UINT32_BE( ctx->state[4], output, 16 );
+    PUT_UINT32_BE( ctx->state[5], output, 20 );
+    PUT_UINT32_BE( ctx->state[6], output, 24 );
+
+    if( ctx->is224 == 0 )
+        PUT_UINT32_BE( ctx->state[7], output, 28 );
+
+    return( 0 );
+}
+
+/*
+ * output = SHA-256( input buffer )
+ */
+int mbedtls_sha256_ret( const unsigned char *input,
+                        size_t ilen,
+                        unsigned char output[32],
+                        int is224 )
+{
+    int ret;
+    mbedtls_sha256_context ctx;
+
+    SHA256_VALIDATE_RET( is224 == 0 || is224 == 1 );
+    SHA256_VALIDATE_RET( ilen == 0 || input != NULL );
+    SHA256_VALIDATE_RET( (unsigned char *)output != NULL );
+
+    mbedtls_sha256_init( &ctx );
+
+    if( ( ret = mbedtls_sha256_starts_ret( &ctx, is224 ) ) != 0 )
+        goto exit;
+
+    if( ( ret = mbedtls_sha256_update_ret( &ctx, input, ilen ) ) != 0 )
+        goto exit;
+
+    if( ( ret = mbedtls_sha256_finish_ret( &ctx, output ) ) != 0 )
+        goto exit;
+
+exit:
+    mbedtls_sha256_free( &ctx );
+
+    return( ret );
+}
+

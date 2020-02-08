@@ -1,5 +1,6 @@
 #include <string.h>
 #include <bpak/bpak.h>
+#include <bpak/utils.h>
 #include "nala.h"
 
 TEST(header)

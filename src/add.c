@@ -392,6 +392,7 @@ static int add_merkle(struct bpak_header *h,
 
     memcpy(m, salt, sizeof(bpak_merkle_hash_t));
 
+    m = NULL;
     rc = bpak_add_meta(h, id("merkle-root-hash"), bpak_id(part_name),
                         (void **) &m, sizeof(bpak_merkle_hash_t));
 
