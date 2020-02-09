@@ -38,5 +38,7 @@ $BPAK sign $IMG_A --key $srcdir/secp256r1-key-pair.pem \
                   --key-id pb-development \
                   --key-store pb-internal -v
 
-$BPAK show $IMG_A
-$BPAK verify $IMG_A --key $srcdir/secp256r1-pub-key.der 
+$BPAK show $IMG_A -vvv
+$BPAK verify $IMG_A --key $srcdir/secp256r1-pub-key.der -vvv
+$BPAK show $IMG_A --part fs -vvv
+$BPAK show $IMG_A --meta bpak-package -vvv

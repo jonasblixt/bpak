@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdarg.h>
 #include <time.h>
 #include <string.h>
 #include <stdlib.h>
@@ -6,6 +7,18 @@
 #include <stdbool.h>
 
 #include "bpak_tool.h"
+
+int bpak_printf(int verbosity, const char *fmt, ...)
+{
+    if (bpak_get_verbosity() < verbosity)
+        return BPAK_OK;
+
+    va_list args;
+    va_start(args, fmt);
+    vprintf(fmt, args);
+    va_end(args);
+    return BPAK_OK;
+}
 
 int main(int argc, char **argv)
 {

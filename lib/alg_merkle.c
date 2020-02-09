@@ -126,7 +126,7 @@ static int bpak_alg_merkle_init(struct bpak_alg_instance *ins,
     char c = 0;
     for (int i = 0; i < ctx->hash_tree->size; i++)
     {
-        rc = bpak_io_write(ctx->out, &c, 1); 
+        rc = bpak_io_write(ctx->out, &c, 1);
         if (rc != 1)
             return -BPAK_FAILED;
     }

@@ -1,4 +1,3 @@
-#include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
@@ -149,7 +148,7 @@ static int write_data(struct bpak_alg_instance *ins, uint8_t *bfr, size_t size)
         if (rc != chunk)
         {
             rc = -BPAK_FAILED;
-            printf("Error: Write error\n");
+            bpak_printf(0, "Error: Write error\n");
             return rc;
         }
 
@@ -157,7 +156,7 @@ static int write_data(struct bpak_alg_instance *ins, uint8_t *bfr, size_t size)
 
         if (rc != BPAK_OK)
         {
-            printf("Error: compressor alg error\n");
+            bpak_printf(0, "Error: compressor alg error\n");
             return rc;
         }
 
@@ -267,7 +266,7 @@ static int write_diff_extra_and_adjustment(struct bpak_alg_instance *ins)
     extra_size = (p->scan - lenb - extra_pos);
 
     /* Write control data*/
-    printf("diff: %10li %10li %10li\n", diff_size, extra_size,
+    bpak_printf(2, "diff: %10li %10li %10li\n", diff_size, extra_size,
                 (p->pos - lenb) - (last_pos + diff_size));
 
     offtout(diff_size, p->buffer);
@@ -311,7 +310,7 @@ static int write_diff_extra_and_adjustment(struct bpak_alg_instance *ins)
         if (res != chunk)
         {
             res = -BPAK_FAILED;
-            printf("Error: Write error\n");
+            bpak_printf(0, "Error: Write error\n");
             return res;
         }
 
@@ -319,7 +318,7 @@ static int write_diff_extra_and_adjustment(struct bpak_alg_instance *ins)
 
         if (res != BPAK_OK)
         {
-            printf("Error: compressor alg error\n");
+            bpak_printf(0, "Error: compressor alg error\n");
             return res;
         }
 
@@ -354,7 +353,7 @@ static int bpak_alg_bsdiff_init(struct bpak_alg_instance *ins,
 
     memset(priv, 0, sizeof(*priv));
 
-    printf("bsdiff init, part: %x, %li, %li\n", ins->part->id,
+    bpak_printf(1, "bsdiff init, part: %x, %li, %li\n", ins->part->id,
                         bpak_part_size(ins->part),
                         bpak_part_offset(ins->header, ins->part));
 
@@ -368,13 +367,13 @@ static int bpak_alg_bsdiff_init(struct bpak_alg_instance *ins,
     if (rc != BPAK_OK)
         return rc;
 
-    printf("Read origin header\n");
+    bpak_printf(2, "Read origin header\n");
     rc = bpak_get_part(&h, ins->part->id, &p);
 
     if (rc != BPAK_OK)
         return rc;
 
-    printf("Found origin part, %li %li\n", bpak_part_size(p),
+    bpak_printf(2, "Found origin part, %li %li\n", bpak_part_size(p),
                                         bpak_part_offset(&h, p));
     priv->old_size = bpak_part_size(p);
     priv->old = mmap(NULL, priv->old_size, PROT_READ,
@@ -421,7 +420,7 @@ static int bpak_alg_bsdiff_init(struct bpak_alg_instance *ins,
 
     if (rc != BPAK_OK)
     {
-        printf("Error: Could not initialize compressor\n");
+        bpak_printf(0, "Error: Could not initialize compressor\n");
         return rc;
     }
 

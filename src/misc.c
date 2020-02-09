@@ -26,11 +26,6 @@ int bpak_get_verbosity(void)
     return verbosity;
 }
 
-uint32_t id(const char *s)
-{
-    return bpak_id(s);
-}
-
 void print_version(void)
 {
     printf("BitPacker v%s\n", PACKAGE_VERSION);

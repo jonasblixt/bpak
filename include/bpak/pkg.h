@@ -46,4 +46,14 @@ int bpak_pkg_sign_init(struct bpak_package *pkg, uint32_t key_id,
                             int32_t keystore_id);
 int bpak_pkg_read_signature(struct bpak_package *pkg, uint8_t *sig,
                                 size_t *sig_size);
+
+int bpak_pkg_add_transport(struct bpak_package *pkg, uint32_t part_ref,
+                                uint32_t encoder_id, uint32_t decoder_id);
+
+int bpak_pkg_transport_encode(struct bpak_package *pkg,
+                              struct bpak_package *origin,
+                              int rate_limit_us);
+int bpak_pkg_transport_decode(struct bpak_package *pkg,
+                              struct bpak_package *origin,
+                              int rate_limit_us);
 #endif  // INCLUDE_BPAK_PKG_H_

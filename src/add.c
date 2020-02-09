@@ -88,7 +88,7 @@ static int add_file(struct bpak_header *h,
         new_offset += (p->size + p->pad_bytes);
     }
 
-    rc = bpak_add_part(h, id(part_name), &p);
+    rc = bpak_add_part(h, bpak_id(part_name), &p);
 
     if (rc != BPAK_OK)
     {
@@ -96,7 +96,7 @@ static int add_file(struct bpak_header *h,
         return rc;
     }
 
-    p->id = id(part_name);
+    p->id = bpak_id(part_name);
     p->offset = new_offset;
     p->flags = flags;
     p->size = statbuf.st_size;
@@ -208,7 +208,7 @@ static int add_key(struct bpak_header *h,
         new_offset += (p->size + p->pad_bytes);
     }
 
-    rc = bpak_add_part(h, id(part_name), &p);
+    rc = bpak_add_part(h, bpak_id(part_name), &p);
 
     if (rc != BPAK_OK)
     {
@@ -216,7 +216,7 @@ static int add_key(struct bpak_header *h,
         return rc;
     }
 
-    p->id = id(part_name);
+    p->id = bpak_id(part_name);
     p->offset = new_offset;
     p->flags = 0;
     p->size = len;
@@ -384,7 +384,7 @@ static int add_merkle(struct bpak_header *h,
     uint8_t *m = NULL;
     char tmp[512];
 
-    rc = bpak_add_meta(h, id("merkle-salt"), bpak_id(part_name), (void **) &m,
+    rc = bpak_add_meta(h, bpak_id("merkle-salt"), bpak_id(part_name), (void **) &m,
                             sizeof(bpak_merkle_hash_t));
 
     if (rc != BPAK_OK)
@@ -393,7 +393,7 @@ static int add_merkle(struct bpak_header *h,
     memcpy(m, salt, sizeof(bpak_merkle_hash_t));
 
     m = NULL;
-    rc = bpak_add_meta(h, id("merkle-root-hash"), bpak_id(part_name),
+    rc = bpak_add_meta(h, bpak_id("merkle-root-hash"), bpak_id(part_name),
                         (void **) &m, sizeof(bpak_merkle_hash_t));
 
     if (rc != BPAK_OK)
@@ -404,7 +404,7 @@ static int add_merkle(struct bpak_header *h,
     struct bpak_part_header *p = NULL;
 
     snprintf(tmp, sizeof(tmp), "%s-hash-tree", part_name);
-    rc = bpak_add_part(h, id(tmp), &p);
+    rc = bpak_add_part(h, bpak_id(tmp), &p);
 
     if (rc != BPAK_OK)
     {
@@ -603,7 +603,7 @@ int action_add(int argc, char **argv)
                     goto err_close_io_out;
                 }
 
-                rc = bpak_add_meta(h, id(meta_name), part_ref_id,
+                rc = bpak_add_meta(h, bpak_id(meta_name), part_ref_id,
                                                 (void **) &meta_data, 16);
 
                 if (rc != BPAK_OK)
@@ -624,7 +624,7 @@ int action_add(int argc, char **argv)
             {
                 long value = strtol(from_string, NULL, 0);
 
-                rc = bpak_add_meta(h, id(meta_name), part_ref_id,
+                rc = bpak_add_meta(h, bpak_id(meta_name), part_ref_id,
                                         (void **) &meta_data, sizeof(value));
 
                 if (rc != BPAK_OK)
@@ -642,9 +642,9 @@ int action_add(int argc, char **argv)
             }
             else if (strcmp(encoder, "id") == 0)
             {
-                uint32_t value = id(from_string);
+                uint32_t value = bpak_id(from_string);
 
-                rc = bpak_add_meta(h, id(meta_name), part_ref_id,
+                rc = bpak_add_meta(h, bpak_id(meta_name), part_ref_id,
                                         (void **) &meta_data, sizeof(value));
 
                 if (rc != BPAK_OK)
@@ -664,7 +664,7 @@ int action_add(int argc, char **argv)
             {
                 struct bpak_version v;
 
-                rc = bpak_add_meta(h, id(meta_name), 0,
+                rc = bpak_add_meta(h, bpak_id(meta_name), 0,
                           (void **) &meta_data, sizeof(struct bpak_version));
 
                 if (rc != BPAK_OK)
@@ -713,7 +713,7 @@ int action_add(int argc, char **argv)
 
 
 
-                rc = bpak_add_meta(h, id(meta_name), 0,
+                rc = bpak_add_meta(h, bpak_id(meta_name), 0,
                           (void **) &meta_data, sizeof(struct bpak_dependency));
 
                 if (rc != BPAK_OK)
@@ -767,7 +767,7 @@ int action_add(int argc, char **argv)
             if (bpak_get_verbosity())
                 printf("Adding '%s' with id '%s'\n", from_string, meta_name);
 
-            rc = bpak_add_meta(h, id(meta_name), part_ref_id,
+            rc = bpak_add_meta(h, bpak_id(meta_name), part_ref_id,
                                 (void **) &meta_data, strlen(from_string) + 1);
 
             if (rc != BPAK_OK)

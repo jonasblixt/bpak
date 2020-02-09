@@ -103,8 +103,8 @@ process_more:
             memcpy(buf, &p->ctrl_buf[16], 8);
             p->adjust = offtin(buf);
 
-            printf("Patch: %10li %10li %10li\n", p->diff_sz, p->extra_sz,
-                        p->adjust);
+            bpak_printf(2, "Patch: %10li %10li %10li\n", p->diff_sz,
+                            p->extra_sz, p->adjust);
 
 
             p->state = PATCH_STATE_APPLY_DIFF;
@@ -118,8 +118,7 @@ process_more:
         {
             size_t data_to_process = (bytes_available < p->patch_pos) ? \
                                      bytes_available:p->patch_pos;
-            //printf("Processing diff data %li %li %li\n",
-            //            data_to_process, p->patch_pos, bytes_available);
+
             p->patch_pos -= data_to_process;
             bytes_available -= data_to_process;
 
@@ -127,7 +126,8 @@ process_more:
 
             if (rc != data_to_process)
             {
-                printf("Could not read %li bytes from origin\n", data_to_process);
+                bpak_printf(0, "Could not read %li bytes from origin\n",
+                                data_to_process);
                 p->state = PATCH_STATE_ERROR;
                 break;
             }
@@ -143,10 +143,10 @@ process_more:
 
             if (rc != data_to_process)
             {
-                printf("Could not write to output file\n");
+                bpak_printf(0, "Could not write to output file\n");
                 p->state = PATCH_STATE_ERROR;
                 break;
-            }        
+            }
 
             ins->output_size += data_to_process;
 
@@ -164,7 +164,8 @@ process_more:
                     if (rc != BPAK_OK)
                     {
                         p->state = PATCH_STATE_ERROR;
-                        printf("Could not seek %li %i\n", p->adjust, rc);
+                        bpak_printf(0, "Could not seek %li %i\n",
+                                            p->adjust, rc);
                         break;
                     }
                     p->state = PATCH_STATE_FILL_CTRL_BUF;
@@ -180,7 +181,6 @@ process_more:
         case PATCH_STATE_APPLY_EXTRA:
         {
             size_t data_to_process = bytes_available < p->patch_pos?bytes_available:p->patch_pos;
-            //printf("Processing extra data %li\n", data_to_process);
             p->patch_pos -= data_to_process;
             bytes_available -= data_to_process;
 
@@ -188,10 +188,10 @@ process_more:
 
             if (rc != data_to_process)
             {
-                printf("Could not write to output file\n");
+                bpak_printf(0, "Could not write to output file\n");
                 p->state = PATCH_STATE_ERROR;
                 break;
-            }        
+            }
 
             pp += data_to_process;
             ins->output_size += data_to_process;
@@ -207,7 +207,7 @@ process_more:
                 if (rc != BPAK_OK)
                 {
                     p->state = PATCH_STATE_ERROR;
-                    printf("Could not seek %li %i\n", p->adjust, rc);
+                    bpak_printf(0, "Could not seek %li %i\n", p->adjust, rc);
                     break;
                 }
 
@@ -277,7 +277,8 @@ static int bpak_alg_bspatch_init(struct bpak_alg_instance *ins,
         return rc;
     }
 
-    printf("bspatch init, part: %x, %li (%li), %li\n", ins->part->id,
+    bpak_printf(1, "bspatch init, part: %x, %li (%li), %li\n",
+                        ins->part->id,
                         bpak_part_size(ins->part),
                         ins->part->size,
                         bpak_part_offset(ins->header, ins->part));
@@ -286,13 +287,13 @@ static int bpak_alg_bspatch_init(struct bpak_alg_instance *ins,
     p->patch_count = bpak_part_size(ins->part);
     p->new_size = ins->part->size;
 
-    printf("Read origin header\n");
+    bpak_printf(2, "Read origin header\n");
     rc = bpak_get_part(&p->oh, ins->part->id, &p->op);
 
     if (rc != BPAK_OK)
         return rc;
 
-    printf("Found origin part, %li %li\n", bpak_part_size(p->op),
+    bpak_printf(2, "Found origin part, %li %li\n", bpak_part_size(p->op),
                                         bpak_part_offset(&p->oh, p->op));
 
     rc = bpak_io_init(&p->compressor_io, ins);
@@ -303,14 +304,15 @@ static int bpak_alg_bspatch_init(struct bpak_alg_instance *ins,
     p->compressor_io.on_read = compressor_read;
     p->compressor_io.on_write = compressor_write;
 
-    printf("Seeking to %li\n", bpak_part_offset(ins->header, ins->part));
+    bpak_printf(2, "Seeking to %li\n",
+                        bpak_part_offset(ins->header, ins->part));
 
     rc = bpak_io_seek(p->in, bpak_part_offset(ins->header, ins->part),
                     BPAK_IO_SEEK_SET);
 
     if (rc != BPAK_OK)
     {
-        printf("Error: Failed to seek\n");
+        bpak_printf(0, "Error: Failed to seek\n");
         return rc;
     }
 
@@ -321,7 +323,7 @@ static int bpak_alg_bspatch_init(struct bpak_alg_instance *ins,
 
     if (rc != BPAK_OK)
     {
-        printf("Error: Could not initialize compressor (%x)\n",
+        bpak_printf(0, "Error: Could not initialize compressor (%x)\n",
                         ins->alg->parameter);
         return rc;
     }
@@ -337,7 +339,7 @@ static int bpak_alg_bspatch_init(struct bpak_alg_instance *ins,
     bpak_io_seek(p->out, out_pos, BPAK_IO_SEEK_SET);
 
 
-    printf("origin pos: %li\n", bpak_io_tell(p->origin));
+    bpak_printf(2, "origin pos: %li\n", bpak_io_tell(p->origin));
     return BPAK_OK;
 }
 

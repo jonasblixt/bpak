@@ -523,7 +523,7 @@ int action_verify(int argc, char **argv)
     {
         rc = -BPAK_FAILED;
         free(sign_key);
-        goto err_out;;
+        goto err_out;
     }
 
 

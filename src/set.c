@@ -18,7 +18,6 @@
 
 #include "bpak_tool.h"
 
-
 int action_set(int argc, char **argv)
 {
     int opt;
@@ -125,7 +124,7 @@ int action_set(int argc, char **argv)
     void *meta = NULL;
     struct bpak_meta_header *meta_header = NULL;
 
-    rc = bpak_get_meta_and_header(h, id(meta_name), 0, &meta, &meta_header);
+    rc = bpak_get_meta_and_header(h, bpak_id(meta_name), 0, &meta, &meta_header);
 
     if (rc != BPAK_OK || meta == NULL)
     {
@@ -152,7 +151,7 @@ int action_set(int argc, char **argv)
             goto err_close_io_out;
         }
         uint32_t *val = (uint32_t *) meta;
-        (*val) = id(from_string);
+        (*val) = bpak_id(from_string);
     }
     else
     {

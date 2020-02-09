@@ -68,12 +68,14 @@ $BPAK sign $IMG_B --key $srcdir/secp256r1-key-pair.pem \
                   --key-store pb-internal -v
 
 # Test Transport encoding / decoding
-echo Transport encoding/decoding
+echo Transport encoding
 cp $IMG_B vB_transport.bpak
 
 $BPAK transport vB_transport.bpak --encode --origin $IMG_A -vvv
 
 cp vB_transport.bpak vB_install.bpak
+
+echo Transport decoding
 
 $BPAK transport vB_install.bpak --decode --origin $IMG_A -vvv
 

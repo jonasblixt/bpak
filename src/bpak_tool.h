@@ -32,8 +32,6 @@ void print_transport_usage(void);
 void print_compare_usage(void);
 void print_set_usage(void);
 
-uint32_t id(const char *s);
-
 int bpak_get_verbosity(void);
 void bpak_inc_verbosity(void);
 

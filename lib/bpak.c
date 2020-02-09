@@ -280,3 +280,7 @@ const char *bpak_hash_kind(uint8_t hash_kind)
     }
 }
 
+__attribute__ ((weak)) int bpak_printf(int verbosity, const char *fmt, ...)
+{
+    return BPAK_OK;
+}

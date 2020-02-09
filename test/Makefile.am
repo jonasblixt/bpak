@@ -20,7 +20,7 @@ test_core_meta_SOURCES = test_core_meta.c common.c
 test_core_meta_LDADD = libnala.la $(top_builddir)/lib/libbpak.la
 test_core_meta_CFLAGS = $(COMMON_TEST_CFLAGS)
 
-test_core_part_SOURCES = test_core_part.c common.c 
+test_core_part_SOURCES = test_core_part.c common.c
 test_core_part_LDADD = libnala.la $(top_builddir)/lib/libbpak.la
 test_core_part_CFLAGS = $(COMMON_TEST_CFLAGS)
 
@@ -72,6 +72,7 @@ TESTS = test_core_meta \
         test_sign_openssl2.sh \
         test_dep_version.sh \
         test_help_output.sh \
-		test_sign_rsa4096.sh
+        test_sign_rsa4096.sh \
+        test_misc.sh
 
 

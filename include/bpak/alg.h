@@ -21,6 +21,10 @@ typedef int (*bpak_alg_init_t)(struct bpak_alg_instance *ins,
 
 typedef int (*bpak_alg_process_t)(struct bpak_alg_instance *ins);
 
+typedef int (*bpak_alg_print_t)(struct bpak_alg_instance *ins,
+                                int verbosity,
+                                const char *fmt, ...);
+
 struct bpak_alg
 {
     uint32_t id;

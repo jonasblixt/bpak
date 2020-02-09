@@ -88,7 +88,7 @@ int action_generate(int argc, char **argv)
             return -1;
         }
 
-        printf("id(\"%s\") = 0x%8.8x\n", id_string, id(id_string));
+        printf("id(\"%s\") = 0x%8.8x\n", id_string, bpak_id(id_string));
         rc = BPAK_OK;
     }
     else if (strcmp(generator, "keystore") == 0)
@@ -130,7 +130,7 @@ int action_generate(int argc, char **argv)
 
         char *package_id = NULL;
 
-        rc = bpak_get_meta(h, id("bpak-package"), (void **) &package_id);
+        rc = bpak_get_meta(h, bpak_id("bpak-package"), (void **) &package_id);
 
         if (rc != BPAK_OK)
         {
@@ -271,7 +271,7 @@ int action_generate(int argc, char **argv)
         printf("const struct bpak_keystore keystore_%s =\n",
                                                     keystore_name_copy);
         printf("{\n");
-        printf("    .id = 0x%x,\n", id(keystore_name));
+        printf("    .id = 0x%x,\n", bpak_id(keystore_name));
         printf("    .no_of_keys = %i,\n", key_index);
         printf("    .verified = true,\n");
         printf("    .keys =\n");
