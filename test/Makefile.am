@@ -14,7 +14,8 @@ check_PROGRAMS = test_core_meta \
                  test_alg_heatshrink \
                  test_merkle \
                  test_struct_sz \
-                 test_meta_align
+                 test_meta_align \
+				 test_basic_file_io
 
 test_core_meta_SOURCES = test_core_meta.c common.c
 test_core_meta_LDADD = libnala.la $(top_builddir)/lib/libbpak.la
@@ -52,6 +53,10 @@ test_meta_align_SOURCES = test_meta_align.c common.c
 test_meta_align_LDADD = libnala.la $(top_builddir)/lib/libbpak.la
 test_meta_align_CFLAGS = $(COMMON_TEST_CFLAGS)
 
+test_basic_file_io_SOURCES = test_basic_file_io.c common.c
+test_basic_file_io_LDADD = libnala.la $(top_builddir)/lib/libbpak.la
+test_basic_file_io_CFLAGS = $(COMMON_TEST_CFLAGS)
+
 TESTS = test_core_meta \
         test_core_part \
         test_alignment \
@@ -61,6 +66,7 @@ TESTS = test_core_meta \
         test_merkle \
         test_struct_sz \
         test_meta_align \
+		test_basic_file_io \
         test_create.sh \
         test_transport.sh \
         test_keystore_gen.sh \

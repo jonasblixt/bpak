@@ -130,7 +130,9 @@ int bpak_io_init_file(struct bpak_io **io_, const char *filename,
     io->on_close = bpak_io_file_cleanup;
 
     return rc;
+
 err_free_ctx_out:
+    free(ctx->filename);
     free(io->priv);
 err_free_io_out:
     free(io);
