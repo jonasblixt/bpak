@@ -70,8 +70,8 @@ uint32_t bpak_uuid_to_string(uint8_t *uuid_in, char *out, size_t size)
 int bpak_meta_to_string(struct bpak_header *h, struct bpak_meta_header *m,
                         char *buf, size_t size)
 {
-    uint32_t *id_ptr;
-    uint8_t *byte_ptr;
+    uint32_t *id_ptr = NULL;
+    uint8_t *byte_ptr = NULL;
 
     if (m->id == bpak_id("bpak-key-id"))
     {
@@ -85,14 +85,13 @@ int bpak_meta_to_string(struct bpak_header *h, struct bpak_meta_header *m,
     }
     else if (m->id == bpak_id("bpak-package"))
     {
-        bpak_get_meta(h, m->id, (void **) &id_ptr);
-        bpak_uuid_to_string((uint8_t *) id_ptr, buf, size);
+        bpak_get_meta(h, m->id, (void **) &byte_ptr);
+        bpak_uuid_to_string(byte_ptr, buf, size);
     }
     else if (m->id == bpak_id("bpak-package-uid"))
     {
-        bpak_get_meta(h, m->id, (void **) &id_ptr);
-
-        bpak_uuid_to_string((uint8_t *) id_ptr, buf, size);
+        bpak_get_meta(h, m->id, (void **) &byte_ptr);
+        bpak_uuid_to_string(byte_ptr, buf, size);
     }
     else if (m->id == bpak_id("bpak-transport"))
     {
