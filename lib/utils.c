@@ -5,6 +5,8 @@
 #include <bpak/crc.h>
 #include <bpak/pkg.h>
 
+#include "uuid/uuid.h"
+
 uint32_t bpak_id(const char *str)
 {
     return bpak_crc32(0, (const uint8_t *) str, strlen(str));
@@ -32,37 +34,12 @@ int bpak_bin2hex(uint8_t *data, size_t data_sz, char *buf, size_t buf_sz)
     return BPAK_OK;
 }
 
-uint32_t bpak_uuid_to_string(uint8_t *uuid_in, char *out, size_t size)
+int bpak_uuid_to_string(const uint8_t *data, char *buf, size_t size)
 {
-    uint8_t uuid[16];
+    if (size < 37)
+        return -BPAK_FAILED;
 
-    memcpy(uuid, uuid_in, 16);
-
-    uint32_t *u0 = (uint32_t *) &uuid[0];
-    uint16_t *u1 = (uint16_t *) &uuid[4];
-    uint16_t *u2 = (uint16_t *) &uuid[6];
-    uint16_t *u3 = (uint16_t *) &uuid[8];
-    uint16_t *u4 = (uint16_t *) &uuid[10];
-    uint32_t *u5 = (uint32_t *) &uuid[12];
-
-    *u0 = ((*u0 >> 24) & 0xff) |
-          ((*u0 << 8)  & 0xff0000) |
-          ((*u0 >> 8)  & 0xff00) |
-          ((*u0 << 24) & 0xff000000);
-
-
-    *u1 = (*u1 >> 8) | (*u1 << 8);
-    *u2 = (*u2 >> 8) | (*u2 << 8);
-    *u3 = (*u3 >> 8) | (*u3 << 8);
-    *u4 = (*u4 >> 8) | (*u4 << 8);
-
-    *u5 = ((*u5 >> 24) & 0xff) |
-          ((*u5 << 8)  & 0xff0000) |
-          ((*u5 >> 8)  & 0xff00) |
-          ((*u5 << 24) & 0xff000000);
-
-    snprintf(out, size, "%08x-%04x-%04x-%04x-%04x%08x",
-                *u0, *u1, *u2, *u3, *u4, *u5);
+    uuid_unparse(data, buf);
 
     return BPAK_OK;
 }
@@ -87,6 +64,7 @@ int bpak_meta_to_string(struct bpak_header *h, struct bpak_meta_header *m,
     {
         bpak_get_meta(h, m->id, (void **) &byte_ptr);
         bpak_uuid_to_string(byte_ptr, buf, size);
+
     }
     else if (m->id == bpak_id("bpak-package-uid"))
     {

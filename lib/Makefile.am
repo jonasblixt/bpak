@@ -20,7 +20,9 @@ libbpak_la_SOURCES = bpak.c \
                      alg_remove.c \
                      alg_merkle.c \
                      alg_bspatch.c \
-                     alg_bsdiff.c
+                     alg_bsdiff.c \
+					 uuid/unparse.c \
+					 uuid/unpack.c
 
 libbpak_la_CFLAGS = -I$(top_srcdir)/include \
                      $(CODE_COVERAGE_CFLAGS)

@@ -20,9 +20,10 @@ typedef union
 
 int bpak_meta_to_string(struct bpak_header *h, struct bpak_meta_header *m,
                         char *buf, size_t size);
-uint32_t bpak_uuid_to_string(uint8_t *uuid_in, char *out, size_t size);
 
 int bpak_bin2hex(uint8_t *data, size_t data_sz, char *buf, size_t buf_sz);
+
+int bpak_uuid_to_string(const uint8_t *data, char *buf, size_t size);
 
 /* Translate a string to id value */
 uint32_t bpak_id(const char *str);
