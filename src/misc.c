@@ -28,7 +28,7 @@ int bpak_get_verbosity(void)
 
 void print_version(void)
 {
-    printf("BitPacker v%s\n", PACKAGE_VERSION);
+    printf("BitPacker %s\n", PACKAGE_VERSION);
 }
 
 void print_common_usage(void)
