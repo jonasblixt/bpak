@@ -5,6 +5,7 @@
 #include <bpak/bpak.h>
 #include <bpak/io.h>
 #include <bpak/file.h>
+#include <bpak/utils.h>
 #include "nala.h"
 
 TEST(file_basic)

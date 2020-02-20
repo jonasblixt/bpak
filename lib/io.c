@@ -77,7 +77,6 @@ int bpak_io_seek(struct bpak_io *io, int64_t position,
     if ( (new_position < io->start_position) ||
          (new_position > io->end_position))
     {
-        printf("error boundaries %li %li\n", new_position, io->end_position);
         return -BPAK_SEEK_ERROR;
     }
 

@@ -317,7 +317,7 @@ static int bpak_alg_bspatch_init(struct bpak_alg_instance *ins,
     }
 
     rc = bpak_alg_init(&p->compressor, ins->alg->parameter,
-                        ins->header, ins->part,
+                        ins->part, ins->header,
                         p->compressor_buffer, sizeof(p->compressor_buffer),
                         &p->compressor_io, &p->compressor_io, NULL);
 

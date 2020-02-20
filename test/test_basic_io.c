@@ -3,6 +3,7 @@
 #include <string.h>
 #include <bpak/bpak.h>
 #include <bpak/io.h>
+#include <bpak/utils.h>
 #include "nala.h"
 
 #define TEST_BFR_SZ 1024*16

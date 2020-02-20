@@ -25,7 +25,7 @@ struct bpak_io;
 
 typedef int (*on_bpak_close_t) (struct bpak_io *io);
 typedef size_t (*on_bpak_io_t) (struct bpak_io *io, void *ptr, size_t size);
-typedef int (*on_bpak_seek_t) (struct bpak_io *io, uint64_t position);
+typedef int (*on_bpak_seek_t) (struct bpak_io *io, int64_t position);
 
 struct bpak_io
 {
