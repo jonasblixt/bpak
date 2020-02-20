@@ -1,4 +1,3 @@
-#define _GNU_SOURCE
 #include <fcntl.h>
 #include <unistd.h>
 #include <string.h>
@@ -67,7 +66,19 @@ int bpak_io_init_pipe(struct bpak_io **io_)
     if (rc != BPAK_OK)
         goto err_free_ctx_out;
 
-    rc = pipe2(ctx->fds, O_NONBLOCK);
+    rc = pipe(ctx->fds);
+
+    if (fcntl(ctx->fds[0], F_SETFL, O_NONBLOCK) < 0)
+    {
+        rc = -BPAK_FAILED;
+        goto err_free_ctx_out;
+    }
+
+    if (fcntl(ctx->fds[1], F_SETFL, O_NONBLOCK) < 0)
+    {
+        rc = -BPAK_FAILED;
+        goto err_free_ctx_out;
+    }
 
     if (rc != 0)
     {
