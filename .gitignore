@@ -36,3 +36,4 @@ aminclude_static.am
 config.guess
 config.sub
 ltmain.sh
+/*.sh
