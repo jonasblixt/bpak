@@ -99,11 +99,11 @@ static PyObject * package_id(BPAKPackage *self)
 static PyObject * package_version(BPAKPackage *self)
 {
     struct bpak_header *h = bpak_pkg_header(self->pkg);
-    struct bpak_version *v = NULL;
+    char *version = NULL;
     int rc = 0;
 
                           /* bpak-version */
-    rc = bpak_get_meta(h, 0x9a5bab69, (void **) &v);
+    rc = bpak_get_meta(h, 0x9a5bab69, (void **) &version);
 
     if (rc != BPAK_OK)
     {
@@ -111,7 +111,7 @@ static PyObject * package_version(BPAKPackage *self)
         return NULL;
     }
 
-    return Py_BuildValue("iii", v->major, v->minor, v->patch);
+    return Py_BuildValue("s", version);
 }
 
 static PyObject * package_transport_encode(BPAKPackage *self,
@@ -174,12 +174,7 @@ static PyObject * package_deps(BPAKPackage *self)
 
             bpak_uuid_to_string(d->uuid, uuid_str, sizeof(uuid_str));
 
-            PyObject *dep = Py_BuildValue("si(iii)",
-                                            uuid_str,
-                                            d->kind,
-                                            d->version.major,
-                                            d->version.minor,
-                                            d->version.patch);
+            PyObject *dep = Py_BuildValue("s s", uuid_str, d->constraint);
 
             PyTuple_SetItem(result, n++, dep);
         }
