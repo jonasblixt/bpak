@@ -15,19 +15,19 @@ $BPAK add $IMG --meta bpak-package --from-string $PKG_UUID --encoder uuid $V
 $BPAK add $IMG --meta bpak-package-uid --from-string $PKG_UNIQUE_ID_A \
                  --encoder uuid $V
 
-$BPAK add $IMG --meta bpak-version --from-string 1.2.3 --encoder version $V
+$BPAK add $IMG --meta bpak-version --from-string "1.2.3" $V
 echo Adding first dep
 $BPAK add $IMG --meta bpak-dependency \
-               --from-string f862352d-2444-41c2-96d8-538de6442162==0.1.0 \
-               --encoder dependency $V
+               --from-string "f862352d-2444-41c2-96d8-538de6442162:>=0.1.0 <1.0.0" \
+               $V
 echo Adding second dep
 $BPAK add $IMG --meta bpak-dependency \
-               --from-string 3d7eda1e-a4b3-431b-abf6-1cff2e21f9db\>=2.1.0 \
-               --encoder dependency $V
+               --from-string "3d7eda1e-a4b3-431b-abf6-1cff2e21f9db:>=2.1.0 <3.0.0" \
+               $V
 
 echo Adding third dep
 $BPAK add $IMG --meta bpak-dependency \
-               --from-string 3d7eda1e-a4b3-431b-abf6-1cff2e21f9db\>3.1.0 \
-               --encoder dependency $V
+               --from-string "3d7eda1e-a4b3-431b-abf6-1cff2e21f9db:>3.1.0 <4.0.0" \
+               $V
 
 $BPAK show $IMG $V

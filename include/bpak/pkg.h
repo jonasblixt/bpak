@@ -11,18 +11,10 @@ enum
     BPAK_DEP_GTE,       /* >= Greater than or equal */
 };
 
-struct bpak_version
-{
-    uint8_t major;
-    uint8_t minor;
-    uint16_t patch;
-} __attribute__ ((packed));
-
 struct bpak_dependency
 {
     uint8_t uuid[16];
-    struct bpak_version version;
-    uint8_t kind;
+    char constraint[];
 } __attribute__ ((packed));
 
 
