@@ -36,12 +36,6 @@ AC_ARG_ENABLE([tool],
 AC_MSG_RESULT($enable_tool)
 AM_CONDITIONAL([BUILD_BPAK_TOOL], [test x$enable_tool = xyes])
 
-if test "$disable_tool" != "no"; then
-    PKG_CHECK_MODULES(UUID, [uuid >= 2.0])
-    AC_SUBST(UUID_CFLAGS)
-    AC_SUBST(UUID_LIBS)
-fi
-
 AC_CONFIG_FILES([Makefile
                 src/Makefile
                 lib/Makefile

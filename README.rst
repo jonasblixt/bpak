@@ -41,6 +41,8 @@ The bpak archives containes a fixed 4kByte header for metadata.
 The metadata contains the physical layout of the archive and can contain custom
 metadata, for example: version information, dependencies and custom data.
 
---------
-Examples
---------
+----------
+Versioning
+----------
+
+Bitpacker uses semver 2.0.0

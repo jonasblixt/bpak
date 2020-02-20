@@ -6,7 +6,6 @@
 #include <getopt.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <uuid.h>
 
 #include <mbedtls/config.h>
 #include <mbedtls/platform.h>
@@ -17,6 +16,7 @@
 #include <mbedtls/ctr_drbg.h>
 
 #include "bpak_tool.h"
+#include "uuid/uuid.h"
 
 int action_generate(int argc, char **argv)
 {

@@ -15,7 +15,6 @@
 #include <getopt.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <uuid.h>
 
 #include <bpak/pkg.h>
 
@@ -26,8 +25,9 @@
 #include <mbedtls/pk.h>
 #include <mbedtls/entropy.h>
 #include <mbedtls/ctr_drbg.h>
-#include "bpak_tool.h"
 
+#include "bpak_tool.h"
+#include "uuid/uuid.h"
 
 static int merkle_wr(struct bpak_merkle_context *ctx,
                         uint64_t offset,

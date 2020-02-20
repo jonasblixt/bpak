@@ -54,17 +54,27 @@ bpak_SOURCES  = main.c \
 				mbedtls/ctr_drbg.c \
 				mbedtls/pkcs5.c \
 				mbedtls/entropy_poll.c \
-				mbedtls/timing.c
+				mbedtls/timing.c \
+				uuid/clear.c \
+				uuid/compare.c \
+				uuid/copy.c \
+				uuid/gen_uuid.c \
+				uuid/isnull.c \
+				uuid/pack.c \
+				uuid/parse.c \
+				uuid/unpack.c \
+				uuid/unparse.c \
+				uuid/uuid_time.c
 
 
 bpak_CFLAGS  = -I$(top_srcdir)/include \
 			   -I$(top_srcdir)/src/mbedtls/include \
-				$(CODE_COVERAGE_CFLAGS) \
-				$(UUID_CFLAGS)
+			   -I$(top_srcdir)/src/uuid \
+				$(CODE_COVERAGE_CFLAGS)
 
 bpak_LDFLAGS =
 bpak_LIBS = $(CODE_COVERAGE_LIBS)
 
-bpak_LDADD = $(top_builddir)/lib/libbpak.la $(UUID_LIBS)
+bpak_LDADD = $(top_builddir)/lib/libbpak.la
 
 endif
