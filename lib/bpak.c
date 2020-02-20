@@ -227,8 +227,6 @@ const char *bpak_known_id(uint32_t id)
         return "bpak-signature";
     case 0xfb2f1f3f:
         return "bpak-package";
-    case 0x79c3b7b4:
-        return "bpak-package-uid";
     case 0x2d44bbfb:
         return "bpak-transport";
     case  0x7c9b2f93:

@@ -66,11 +66,6 @@ int bpak_meta_to_string(struct bpak_header *h, struct bpak_meta_header *m,
         bpak_uuid_to_string(byte_ptr, buf, size);
 
     }
-    else if (m->id == bpak_id("bpak-package-uid"))
-    {
-        bpak_get_meta(h, m->id, (void **) &byte_ptr);
-        bpak_uuid_to_string(byte_ptr, buf, size);
-    }
     else if (m->id == bpak_id("bpak-transport"))
     {
         struct bpak_transport_meta *transport_meta =
