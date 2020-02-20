@@ -256,6 +256,9 @@ PyMODINIT_FUNC PyInit_bpak(void)
 {
     PyObject *m_p;
 
+    if (bpak_pkg_register_all_algs() != BPAK_OK)
+        return NULL;
+
     if (PyType_Ready(&BPAKPackageType) < 0)
         return NULL;
 

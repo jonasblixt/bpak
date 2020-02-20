@@ -355,12 +355,18 @@ static int transport_process(struct bpak_transport_meta *tm,
         return rc;
     }
 
+    bpak_printf(2, "Encoding part %x (%p)\n", part_ref_id, p);
+
     if (decode_flag)
         alg_id = tm->alg_id_decode;
     else
         alg_id = tm->alg_id_encode;
 
+    bpak_printf(2, "Using alg: %x\n", alg_id);
+
     rc = bpak_alg_get(alg_id, &alg);
+
+    bpak_printf(2, "Initializing alg: %x (%p)\n", alg_id, alg);
 
     if (rc != BPAK_OK || !alg)
     {
@@ -515,6 +521,9 @@ int bpak_pkg_transport_encode(struct bpak_package *pkg,
     struct bpak_header *h = bpak_pkg_header(pkg);
     struct bpak_transport_meta *tm = NULL;
 
+    bpak_printf(2, "Transport encode begin, pkg = %p, origin = %p, " \
+                "rate_limit_us = %li\n", pkg, origin, rate_limit_us);
+
     bpak_foreach_meta(&pkg->header, mh)
     {
         if (!mh->id)
@@ -578,4 +587,13 @@ int bpak_pkg_transport_decode(struct bpak_package *pkg,
 
     free(state_buffer);
     return rc;
+}
+
+int bpak_pkg_register_all_algs(void)
+{
+    bpak_alg_remove_register();
+    bpak_alg_bsdiff_register();
+    bpak_alg_bspatch_register();
+    bpak_alg_heatshrink_register();
+    bpak_alg_merkle_register();
 }

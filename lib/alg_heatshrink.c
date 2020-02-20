@@ -219,7 +219,7 @@ static int bpak_alg_hsd_process(struct bpak_alg_instance *ins)
     return rc;
 }
 
-BPAK_ALG(heatshrink_encode)
+static const struct bpak_alg heatshrink_encode_alg =
 {
     .id = 0xe31722a6, /* id("heatshrink-encode") */
     .name = "heatshrink-encode",
@@ -228,7 +228,7 @@ BPAK_ALG(heatshrink_encode)
     .state_size = sizeof(struct bpak_alg_hse_state),
 };
 
-BPAK_ALG(heatshrink_decode)
+static const struct bpak_alg heatshrink_decode_alg =
 {
     .id = 0x5f9bc012, /* id("heatshrink-decode") */
     .name = "heatshrink-decode",
@@ -237,3 +237,11 @@ BPAK_ALG(heatshrink_decode)
     .state_size = sizeof(struct bpak_alg_hsd_state),
 };
 
+int bpak_alg_heatshrink_register(void)
+{
+    if (bpak_alg_register(&heatshrink_encode_alg) != BPAK_OK)
+        return -BPAK_FAILED;
+
+    if (bpak_alg_register(&heatshrink_decode_alg) != BPAK_OK)
+        return -BPAK_FAILED;
+}

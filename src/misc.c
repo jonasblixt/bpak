@@ -229,7 +229,7 @@ void print_usage(void)
 
     print_common_usage();
 
-
+/*
     printf("Built-in algorithms:\n");
 
     uint8_t *p = (uint8_t *) bpak_alg_tbl_start();
@@ -242,4 +242,5 @@ void print_usage(void)
 
         p += sizeof(struct bpak_alg) + (32 - sizeof(struct bpak_alg) % 32);
     }
+*/
 }

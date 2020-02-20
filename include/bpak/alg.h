@@ -4,11 +4,6 @@
 #include <bpak/bpak.h>
 #include <bpak/io.h>
 
-#define __bpak_alg_tbl __attribute__ ((used, section("bpak_alg_tbl")))
-
-#define BPAK_ALG(__alg_name) __bpak_alg_tbl \
-            const struct bpak_alg __alg__##__alg_name##__ =
-
 struct bpak_alg;
 struct bpak_alg_instance;
 
@@ -61,9 +56,15 @@ int bpak_alg_process(struct bpak_alg_instance *ins);
 
 bool bpak_alg_done(struct bpak_alg_instance *ins);
 size_t bpak_alg_output_size(struct bpak_alg_instance *ins);
-int bpak_alg_get(uint32_t alg_id, struct bpak_alg **alg);
 
-struct bpak_alg * bpak_alg_tbl_start(void);
-struct bpak_alg * bpak_alg_tbl_end(void);
+int bpak_alg_get(uint32_t alg_id, struct bpak_alg **alg);
+int bpak_alg_register(const struct bpak_alg *alg);
+
+
+int bpak_alg_remove_register(void);
+int bpak_alg_bsdiff_register(void);
+int bpak_alg_bspatch_register(void);
+int bpak_alg_heatshrink_register(void);
+int bpak_alg_merkle_register(void);
 
 #endif  // INCLUDE_BPAK_ALG_H_

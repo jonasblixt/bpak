@@ -357,7 +357,7 @@ static int bpak_alg_bspatch_process(struct bpak_alg_instance *ins)
     return bpak_alg_process(&p->compressor);
 }
 
-BPAK_ALG(bspatch)
+static const struct bpak_alg bspatch_alg =
 {
     .id = 0xb5964388, /* id("bspatch") */
     .name = "bspatch",
@@ -366,3 +366,8 @@ BPAK_ALG(bspatch)
     .on_process = bpak_alg_bspatch_process,
     .state_size = sizeof(struct bpak_bspatch_private),
 };
+
+int bpak_alg_bspatch_register(void)
+{
+    return bpak_alg_register(&bspatch_alg);
+}

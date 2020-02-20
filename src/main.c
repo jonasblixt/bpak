@@ -42,7 +42,11 @@ int main(int argc, char **argv)
 
     srand(time(NULL));
 
-
+    if (bpak_pkg_register_all_algs() != BPAK_OK)
+    {
+        printf("Error: could not initialize all algorithms\n");
+        return -1;
+    }
 
     while ((opt = getopt_long(2, argv, "hV",
                    long_options, &long_index )) != -1)

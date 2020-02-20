@@ -48,4 +48,6 @@ int bpak_pkg_transport_encode(struct bpak_package *pkg,
 int bpak_pkg_transport_decode(struct bpak_package *pkg,
                               struct bpak_package *origin,
                               int rate_limit_us);
+int bpak_pkg_register_all_algs(void);
+
 #endif  // INCLUDE_BPAK_PKG_H_

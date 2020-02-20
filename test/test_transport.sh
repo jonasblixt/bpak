@@ -10,6 +10,7 @@ IMG_B=vB.bpak
 PKG_UUID=0888b0fa-9c48-4524-9845-06a641b61edd
 PKG_UNIQUE_ID_A=$(uuidgen -t)
 PKG_UNIQUE_ID_B=$(uuidgen -t)
+V=-vvvv
 set -e
 
 dd if=/dev/urandom of=A bs=1024 count=4096
@@ -19,67 +20,67 @@ cat A B_ > B
 
 # Create A package
 echo Creating package A
-$BPAK create $IMG_A -Y
+$BPAK create $IMG_A -Y $V
 
-$BPAK add $IMG_A --meta bpak-package --from-string $PKG_UUID --encoder uuid -v
+$BPAK add $IMG_A --meta bpak-package --from-string $PKG_UUID --encoder uuid $V
 $BPAK add $IMG_A --meta bpak-package-uid --from-string $PKG_UNIQUE_ID_A \
-                 --encoder uuid -v
+                 --encoder uuid $V
 
 $BPAK transport $IMG_A --add --part fs --encoder bsdiff \
-                                       --decoder bspatch -v
+                                       --decoder bspatch $V
 
 
 $BPAK transport $IMG_A --add --part fs-hash-tree \
                        --encoder remove-data \
-                       --decoder merkle-generate
+                       --decoder merkle-generate $V
 
 $BPAK add $IMG_A --part fs \
                  --from-file A \
                  --set-flag dont-hash \
-                 --encoder merkle -v
+                 --encoder merkle $V
 
 $BPAK sign $IMG_A --key $srcdir/secp256r1-key-pair.pem \
                   --key-id pb-development \
-                  --key-store pb-internal -v
+                  --key-store pb-internal $V
 
 # Create B package
 echo Creating package B
-$BPAK create $IMG_B -Y
+$BPAK create $IMG_B -Y $V
 
-$BPAK add $IMG_B --meta bpak-package --from-string $PKG_UUID --encoder uuid -v
+$BPAK add $IMG_B --meta bpak-package --from-string $PKG_UUID --encoder uuid $V
 $BPAK add $IMG_B --meta bpak-package-uid --from-string $PKG_UNIQUE_ID_B \
-                 --encoder uuid -v
+                 --encoder uuid $V
 
 $BPAK transport $IMG_B --add --part fs --encoder bsdiff \
-                                       --decoder bspatch -v
+                                       --decoder bspatch $V
 
 
 $BPAK transport $IMG_B --add --part fs-hash-tree \
                        --encoder remove-data \
-                       --decoder merkle-generate
+                       --decoder merkle-generate $V
 
 $BPAK add $IMG_B --part fs \
                  --from-file B \
                  --set-flag dont-hash \
-                 --encoder merkle -v
+                 --encoder merkle $V
 
 $BPAK sign $IMG_B --key $srcdir/secp256r1-key-pair.pem \
                   --key-id pb-development \
-                  --key-store pb-internal -v
+                  --key-store pb-internal $V
 
 # Test Transport encoding / decoding
 echo Transport encoding
 cp $IMG_B vB_transport.bpak
 
-$BPAK transport vB_transport.bpak --encode --origin $IMG_A -vvv
+$BPAK transport vB_transport.bpak --encode --origin $IMG_A $V
 
 cp vB_transport.bpak vB_install.bpak
 
 echo Transport decoding
 
-$BPAK transport vB_install.bpak --decode --origin $IMG_A -vvv
+$BPAK transport vB_install.bpak --decode --origin $IMG_A $V
 
-$BPAK compare vB.bpak vB_install.bpak -vv
+$BPAK compare vB.bpak vB_install.bpak $V
 
 #sha256sum $IMG_B
 #sha256sum vB_install.bpak
@@ -92,5 +93,5 @@ then
     exit 1
 fi
 
-$BPAK show vB_transport.bpak -vvv
-$BPAK show vB.bpak -vvv
+$BPAK show vB_transport.bpak $V
+$BPAK show vB.bpak $V

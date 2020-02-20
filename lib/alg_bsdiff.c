@@ -544,7 +544,7 @@ static int bpak_alg_bsdiff_process(struct bpak_alg_instance *ins)
     return BPAK_OK;
 }
 
-BPAK_ALG(bsdiff)
+static const struct bpak_alg bsdiff_alg =
 {
     .id = 0x9f7aacf9, /* id("bsdiff") */
     .name = "bsdiff",
@@ -555,14 +555,7 @@ BPAK_ALG(bsdiff)
     .state_size = sizeof(struct bpak_bsdiff_private),
 };
 
-
-BPAK_ALG(bsdiff_lz4)
+int bpak_alg_bsdiff_register(void)
 {
-    .id = 0x799dc2ee, /* id("bsdiff-lz4") */
-    .name = "bsdiff-lz4",
-    .parameter = 0xbd57d09a, /* id("lz4-encode") */
-    .on_init = bpak_alg_bsdiff_init,
-    .on_free = bpak_alg_bsdiff_free,
-    .on_process = bpak_alg_bsdiff_process,
-    .state_size = sizeof(struct bpak_bsdiff_private),
-};
+    return bpak_alg_register(&bsdiff_alg);
+}

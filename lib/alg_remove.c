@@ -20,7 +20,7 @@ int bpak_alg_remove_process(struct bpak_alg_instance *ins)
     return BPAK_OK;
 }
 
-BPAK_ALG(remove_data)
+static const struct bpak_alg alg_remove =
 {
     .id = 0x57004cd0, /* id("remove-data") */
     .name = "remove-data",
@@ -28,3 +28,8 @@ BPAK_ALG(remove_data)
     .on_process = bpak_alg_remove_process,
     .state_size = 0,
 };
+
+int bpak_alg_remove_register(void)
+{
+    return bpak_alg_register(&alg_remove);
+}

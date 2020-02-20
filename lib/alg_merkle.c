@@ -175,8 +175,7 @@ static int bpak_alg_merkle_process(struct bpak_alg_instance *ins)
     return rc;
 }
 
-
-BPAK_ALG(merkle_generate)
+static const struct bpak_alg merkle_generate_alg =
 {
     .id = 0xb5bcc58f, /* id("merkle-generate") */
     .name = "merkle-generate",
@@ -184,3 +183,8 @@ BPAK_ALG(merkle_generate)
     .on_process = bpak_alg_merkle_process,
     .state_size = sizeof(struct bpak_alg_merkle_ctx),
 };
+
+int bpak_alg_merkle_register(void)
+{
+    return bpak_alg_register(&merkle_generate_alg);
+}

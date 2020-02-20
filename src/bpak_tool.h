@@ -8,6 +8,7 @@
 #include <bpak/alg.h>
 #include <bpak/utils.h>
 #include <bpak/keystore.h>
+#include <bpak/pkg.h>
 
 int action_add(int argc, char **argv);
 int action_show(int argc, char **argv);

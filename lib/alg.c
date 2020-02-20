@@ -2,8 +2,9 @@
 #include <bpak/bpak.h>
 #include <bpak/alg.h>
 
-extern struct bpak_alg __start_bpak_alg_tbl[], __stop_bpak_alg_tbl[];
+#define BPAK_MAX_ALGS 64
 
+static struct bpak_alg *__algs[BPAK_MAX_ALGS];
 
 int bpak_alg_init(struct bpak_alg_instance *ins, uint32_t id,
                     struct bpak_part_header *part,
@@ -63,37 +64,36 @@ int bpak_alg_process(struct bpak_alg_instance *ins)
     return ins->alg->on_process(ins);
 }
 
-struct bpak_alg * bpak_alg_tbl_start(void)
-{
-    return __start_bpak_alg_tbl;
-}
-
-struct bpak_alg *bpak_alg_tbl_end(void)
-{
-    return __stop_bpak_alg_tbl;
-}
-
 int bpak_alg_get(uint32_t alg_id, struct bpak_alg **alg)
 {
-
-
-    uint8_t *p = (uint8_t *) bpak_alg_tbl_start();
-    uint8_t *e = (uint8_t *) bpak_alg_tbl_end();
-
-    while (p < e)
+    for (int i = 0; i < BPAK_MAX_ALGS; i++)
     {
-        struct bpak_alg *a = (struct bpak_alg *) p;
+        if (!__algs[i])
+            break;
 
-        if (a->id == alg_id)
+        if (__algs[i]->id == alg_id)
         {
-            (*alg) = a;
+            (*alg) = __algs[i];
             return BPAK_OK;
         }
-
-        p += sizeof(struct bpak_alg) + (32 - sizeof(struct bpak_alg) % 32);
     }
 
     (*alg) = NULL;
 
     return -BPAK_FAILED;
 }
+
+int bpak_alg_register(const struct bpak_alg *alg)
+{
+    for (int i = 0; i < BPAK_MAX_ALGS; i++)
+    {
+        if (!__algs[i])
+        {
+            __algs[i] = alg;
+            return BPAK_OK;
+        }
+    }
+
+    return -BPAK_FAILED;
+}
+
