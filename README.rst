@@ -112,9 +112,80 @@ Versioning
 
 The bitpacker tool and library uses semver 2.0.0 versioning
 
-------------------
-Tool example usage
-------------------
+-----------------------
+Building and installing
+-----------------------
+
+The library has no external dependencies and the tool only depends on the c
+library and the bpak library.
+
+The 'autoconf-archive' package must be installed before running autoreconf.
+
+Build library and tool::
+
+    $ autoreconf -fi
+    $ ./configure
+    $ make
+    $ sudo make install
+
+Runing tests::
+
+    $ ./configure --enable-code-coverage
+    $ make && make check
+
+-------------
+Basic example
+-------------
+
+In the simplest use-case for bitpacker the archive can be viewed as a container
+format for other binaries with metadata on sizes and offsets of the parts it 
+contains.
+
+Create an empty archive::
+
+    $ bpak create demo.bpak
+    $ bpak show demo.bpak
+    BPAK File: demo.bpak
+
+    Hash:      sha256
+    Signature: prime256v1
+
+    Metadata:
+        ID         Size   Meta ID              Part Ref   Data
+
+    Parts:
+        ID         Size         Z-pad  Flags          Transport Size
+
+    Hash: b4ea1989f2e8a8be290bf819644e41fcc9631b62ab0c21b6355e3cfd50fb44eb
+
+Add two parts to the archive::
+
+    $ bpak add demo.bpak --part part1 --from-file file_one
+    $ bpak add demo.bpak --part part2 --from-file file_two
+    $ bpak show demo.bpak
+
+    BPAK File: demo.bpak
+
+    Hash:      sha256
+    Signature: prime256v1
+
+    Metadata:
+        ID         Size   Meta ID              Part Ref   Data
+
+    Parts:
+        ID         Size         Z-pad  Flags          Transport Size
+        37b0705f   4857856      0      --------       4857856
+        aeb921e5   4907008      0      --------       4907008
+
+    Hash: c41a2bf1096628f9d81d2e52318e591a7519182e2c17ab0d0f3790c63f656a5c
+
+The archive now contains the two files and some metadata that describes how
+the files are stored in the archive. 
+
+
+----------------
+Advanced example
+----------------
 
 Create an empty archive::
 
@@ -307,3 +378,95 @@ The demo.bpak is now transport encoded. Not the aditional 'T' flag which
 indicates that a part is transport encoded. The new archvie size is now the
 sum of the sizes in the 'Transport Size' column.
 
+------------------------
+Advanced signing example
+------------------------
+
+A not so un-common development flow is working on development releases that
+after some iteration turn in to release candidates. The rc's pass through a
+number of test steps and eventually a release candidate is considered to be
+acceptable for release to production/customer.
+
+At this point it's often desirable to not rebuild the artifacts since it would
+incure another suite of testing before it can be released. To enable a flow
+where release candidates can be used directly bitpacker supports re-signing.
+
+
+Extracting the hash in binary form::
+
+    $ bpak show demo.bpak --hash > hash.bin
+
+Signing the hash using openssl::
+
+    $ cat hash.bin | openssl pkeyutl \
+                          -sign -inkey prime256v1-key-pair.pem \
+                          -keyform PEM > signature.bin
+
+Overwrite the current signature with the openssl generated one::
+
+    $ bpak sign demo.bpak --signature signature.bin \
+                          --key-id new-demo-key \
+                          --key-store demo-keystore
+
+This enables a signing process with sensitive keys to be de-coupled from the
+normal build environment and tools. The signing environment is usually backed
+by a HSM where the sensitive keys are stored.
+
+-------------
+C API Example
+-------------
+
+.. code-block:: c
+
+    #include <stdio.h>
+    #include <bpak/bpak.h>
+    #include <bpak/file.h>
+
+    int main(int argc, char **argv)
+    {
+        const char *filename = "a-1.0.0.bpak";
+        FILE *fp = NULL;
+        struct bpak_header header;
+        int rc;
+
+        printf("Reading '%s'...\n", filename);
+        fp = fopen(filename, "r");
+        
+        if (fread(&header, sizeof(header), 1, fp) != 1)
+        {
+            printf("Error: Could not read header\n");
+            rc = -1;
+            goto err_out_close;
+        }
+
+        rc = bpak_valid_header(&header);
+
+        if (rc != BPAK_OK)
+        {
+            printf("Error: Invalid header\n");
+            goto err_out_close;
+        }
+
+        bpak_foreach_meta(&header, m)
+        {
+            if (!m->id)
+                break;
+            printf("Found metadata %x, size: %i bytes, offset: %i\n",
+                        m->id, m->size, m->offset);
+        }
+
+    err_out_close:
+        fclose(fp);
+        return rc;
+    }
+
+This example opens a bpak file and iterates over the metadata.
+
+Build and run::
+
+    $ gcc c_example -o c_example -lbpak
+    $ ./c_example
+    Reading 'a-1.0.0.bpak'...
+    Found metadata fb2f1f3f, size: 16 bytes, offset: 0
+    Found metadata 9a5bab69, size: 6 bytes, offset: 16
+    Found metadata ba87349, size: 30 bytes, offset: 24
