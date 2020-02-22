@@ -56,6 +56,24 @@ TODO: Key-store
 
 TODO: SLC
 
+-----------
+Limitations
+-----------
+
+Bitpacker is not a complete package management system, it provides some
+necessary low level primitives that can enable such a system. If you choose
+to use it there is likely a lot of integration work that needs to be done
+before it is useful in any sense of the word.
+
+The library and format does not specify how to install a package and therefore left as an implementation detail.
+
+Bitpacker is new and not really supported by any other projects except the
+punchboot bootloader (https://github.com/jonasblixt/punchboot)
+
+The library does not include any cryptographic API or functionallity, it only
+comes with a structure for storing signatures and some concepts to enable
+signature verification and key management.
+
 ------------------------
 Well known metadata id's
 ------------------------
@@ -73,22 +91,219 @@ ID          Encoding                   Description
 0x2d44bbfb  <uint32, uint32>           bpak-transport, Transport medadata contains int32 pair that describes which encoder and decoder should be used for transport
 ==========  =================          ===========
 
---------------
-System example
---------------
+-----------------------------
+Built in transport algorithms
+-----------------------------
 
------------
-Limitations
------------
-
+==========  =================  ===========
+ID          Name               Description
+==========  =================  ===========
+0xb5bcc58f  merkle-generate    This decoder builds a merkle hash tree out of part dataa
+0x57004cd0  remove-data        Encoder that strips data from a part during transport encoding
+0x9f7aacf9  bsdiff             Encoder that creates a binary diff of a part given some other original part
+0xb5964388  bspatch            Decoder that reverses the opartion of bspatch
+0xe31722a6  heatshrink-encode  Heatshrink compression algorithm
+0x5f9bc012  heatshrink-decode  Heatshrink decompression algorithm
+==========  =================  ===========
 
 ----------
 Versioning
 ----------
 
-Bitpacker uses semver 2.0.0
+The bitpacker tool and library uses semver 2.0.0 versioning
 
+------------------
+Tool example usage
+------------------
 
--------------
-Example usage
--------------
+Create an empty archive::
+
+    $ bpak create demo.bpak
+    $ bpak show demo.bpak
+    BPAK File: demo.bpak
+
+    Hash:      sha256
+    Signature: prime256v1
+
+    Metadata:
+        ID         Size   Meta ID              Part Ref   Data
+
+    Parts:
+        ID         Size         Z-pad  Flags          Transport Size
+
+    Hash: b4ea1989f2e8a8be290bf819644e41fcc9631b62ab0c21b6355e3cfd50fb44eb
+
+The default hashing and signing algorithm is sha256 and eliptic curve prime256v1
+signature format.
+
+Adding a package type identifier::
+
+    $ bpak add demo.bpak --meta bpak-package \
+                         --from-string "74a53c6d-3556-49f5-a9cd-481ebf22baab" \
+                         --encoder uuid
+
+    $ bpak show demo.bpak
+    BPAK File: demo.bpak
+
+    Hash:      sha256
+    Signature: prime256v1
+
+    Metadata:
+        ID         Size   Meta ID              Part Ref   Data
+        fb2f1f3f   16     bpak-package                    74a53c6d-3556-49f5-a9cd-481ebf22baab
+
+    Parts:
+        ID         Size         Z-pad  Flags          Transport Size
+
+    Hash: 0e6e976e6137b1e8e38546773c9e257495053fd42d397e0f958cdd39786cddca
+
+Bitpacker supports a few ways to encode metadata, in the example above we're
+using the uuid encoder to translate the uuid string into the 16 byte 'raw' uuid.
+
+Adding some real data::
+
+    $ bpak add demo.bpak --part fs \
+                         --from-file demo_filesystem.squash \
+                         --set-flag dont-hash \
+                         --encoder merkle
+    $ bpak show demo.bpak
+    BPAK File: demo.bpak
+
+    Hash:      sha256
+    Signature: prime256v1
+
+    Metadata:
+        ID         Size   Meta ID              Part Ref   Data
+        fb2f1f3f   16     bpak-package                    74a53c6d-3556-49f5-a9cd-481ebf22baab
+        7c9b2f93   32     merkle-salt          faabeca7   92c1b824ade773441e2f57698dc6bb6937f2ed14b9deea702c8520319c79b829
+        e68fc9be   32     merkle-root-hash     faabeca7   89acacdf13051c2f5058c13453f7f812fd25164a09e4a0cae30d8c4bb846f81d
+
+    Parts:
+        ID         Size         Z-pad  Flags          Transport Size
+        faabeca7   4857856      0      h-------       4857856
+        77fadb17   45056        0      h-------       45056
+
+    Hash: aa6bdefc5e1a95dcfe6211fbbc6d1a68984d99c2c4fa9d0ed074c4f520b40046
+ 
+In this operation we added a squashfs filesystem image with the merkle encoder.
+This creates an additional part that contains a merkle hash tree, which is
+compatible with the dm-verity device mapper target in the linux kernel.
+
+Another result of the merkle encoder are two additional metadata fields,
+the 'merkle-root-hash' and the 'merkle-salt'. The root hash meta as the name
+suggests is the top most hash in the hash tree.
+
+In this archive the parts are not hashed because we only need to ensure that
+the salt and root hash are not comprimised.
+
+Add transport encoding information::
+
+    $ bpak transport demo.bpak --add --part fs \
+                               --encoder bsdiff \
+                               --decoder bspatch
+
+    $ bpak transport demo.bpak --add --part fs-hash-tree \
+                               --encoder remove-data \
+                               --decoder merkle-generate
+    $ bpak show demo.bpak
+    BPAK File: demo.bpak
+
+    Hash:      sha256
+    Signature: prime256v1
+
+    Metadata:
+        ID         Size   Meta ID              Part Ref   Data
+        fb2f1f3f   16     bpak-package                    74a53c6d-3556-49f5-a9cd-481ebf22baab
+        7c9b2f93   32     merkle-salt          faabeca7   92c1b824ade773441e2f57698dc6bb6937f2ed14b9deea702c8520319c79b829
+        e68fc9be   32     merkle-root-hash     faabeca7   89acacdf13051c2f5058c13453f7f812fd25164a09e4a0cae30d8c4bb846f81d
+        2d44bbfb   32     bpak-transport       faabeca7   Encode: 9f7aacf9, Decode: b5964388
+        2d44bbfb   32     bpak-transport       77fadb17   Encode: 57004cd0, Decode: b5bcc58f
+
+    Parts:
+        ID         Size         Z-pad  Flags          Transport Size
+        faabeca7   4857856      0      h-------       4857856
+        77fadb17   45056        0      h-------       45056
+
+    Hash: cadbd6ed13046bc40da6a522ae45df6e48b5d3fea4b124e9ab9c4c7fcad6243f
+ 
+The archive now contains information on how the two parts should be encoded
+for transport and how they should be decoded when installing the archive. In
+this example the hash-tree is completley removed because it can be generated
+using the data in the 'fs' part and the 'merkle-salt' meta, and then be verified
+by comparing the 'merkle-root-hash' meta with the generated root hash.
+
+The 'fs' part is encoded using the bsdiff algorithm, which when the actual
+encoding is going to be done requires some reference data.
+
+Signing the package::
+
+    $ bpak sign demo.bpak --key prime256v1-key-pair.pem \
+                          --key-id demo-key-id \
+                          --key-store demo-key-store
+
+    $ bpak show demo.bpak
+    BPAK File: demo.bpak
+
+    Hash:      sha256
+    Signature: prime256v1
+
+    Metadata:
+        ID         Size   Meta ID              Part Ref   Data
+        fb2f1f3f   16     bpak-package                    74a53c6d-3556-49f5-a9cd-481ebf22baab
+        7c9b2f93   32     merkle-salt          faabeca7   92c1b824ade773441e2f57698dc6bb6937f2ed14b9deea702c8520319c79b829
+        e68fc9be   32     merkle-root-hash     faabeca7   89acacdf13051c2f5058c13453f7f812fd25164a09e4a0cae30d8c4bb846f81d
+        2d44bbfb   32     bpak-transport       faabeca7   Encode: 9f7aacf9, Decode: b5964388
+        2d44bbfb   32     bpak-transport       77fadb17   Encode: 57004cd0, Decode: b5bcc58f
+        7da19399   4      bpak-key-id                     36edee98
+        106c13a7   4      bpak-key-store                  f45573db
+        e5679b94   70     bpak-signature
+
+    Parts:
+        ID         Size         Z-pad  Flags          Transport Size
+        faabeca7   4857856      0      h-------       4857856
+        77fadb17   45056        0      h-------       45056
+    
+    Hash: 86712dfc65614c56d1fcb4fbcb0b2775ce5dacc84cc7c9a8248d2378101b6ee4
+
+The signing operation adds three meta-data fields. The bpak-key-id that represents
+some kind of identification of the key that was used for signing and the bpak-key-store
+which is optionally used as and identifier of groups of verification keys.
+
+And of course the actual signature in 'bpak-signature'
+
+Verifying the package::
+
+    $ bpak verify demo.bpak --key prime256v1-public-key.der
+    Verification OK
+
+Encoding the package for transport::
+
+    $ bpak transport demo.bpak --encode --origin demo_old.bpak
+    $ bpak show demo.bpak
+    BPAK File: demo.bpak
+
+    Hash:      sha256
+    Signature: prime256v1
+
+    Metadata:
+        ID         Size   Meta ID              Part Ref   Data
+        fb2f1f3f   16     bpak-package                    74a53c6d-3556-49f5-a9cd-481ebf22baab
+        7c9b2f93   32     merkle-salt          faabeca7   6e23bf2f6fc7c473b68b4a6e48927e1751cf100ff7f1ff4119b23559fb824147
+        e68fc9be   32     merkle-root-hash     faabeca7   e26e259011cbf2b7073201f2eeafc7b8ca98512c91a7338b06119c9e137fec9c
+        2d44bbfb   32     bpak-transport       77fadb17   Encode: 57004cd0, Decode: b5bcc58f
+        2d44bbfb   32     bpak-transport       faabeca7   Encode: 9f7aacf9, Decode: b5964388
+        7da19399   4      bpak-key-id                     36edee98
+        106c13a7   4      bpak-key-store                  f45573db
+        e5679b94   70     bpak-signature
+
+    Parts:
+        ID         Size         Z-pad  Flags          Transport Size
+        faabeca7   4907008      0      hT------       114562
+        77fadb17   45056        0      hT------       0
+
+    Hash: a649eb0532f848f34116deed81140feb5a1f4a221f964231c83216b6cf8896dd
+
+The demo.bpak is now transport encoded. Not the aditional 'T' flag which
+indicates that a part is transport encoded. The new archvie size is now the
+sum of the sizes in the 'Transport Size' column.
+
