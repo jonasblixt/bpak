@@ -60,16 +60,18 @@ TODO: SLC
 Well known metadata id's
 ------------------------
 
-ID          Encoding          Description
-==========  ========          ===========
-0xfb2f1f3f  UUID              bpak-package, Package identifier type
-0x7da19399  uint32            bpak-key-id, Identifier of key used for signing
-0x106c13a7  uint32            bpak-key-store, Identifier of key-store
-0xe5679b94  uint8[]           bpak-signature, Octet-stream that contains the DER encoded signature
-0x9e5e4955  uint32            bpak-key-mask, Encodes a security life cycle bit mask
-0x9a5bab69  char[]            bpak-version, Version string
-0x0ba87349  <UUID, char>      bpak-dependency, Dependency tuple, UUID reference to another package and text string expressing constraints
-0x2d44bbfb  <uint32, uint32>  bpak-transport, Transport medadata contains int32 pair that describes which encoder and decoder should be used for transport
+==========  =================          ===========
+ID          Encoding                   Description
+==========  =================          ===========
+0xfb2f1f3f  UUID                       bpak-package, Package identifier type
+0x7da19399  uint32                     bpak-key-id, Identifier of key used for signing
+0x106c13a7  uint32                     bpak-key-store, Identifier of key-store
+0xe5679b94  uint8[]                    bpak-signature, Octet-stream that contains the DER encoded signature
+0x9e5e4955  uint32                     bpak-key-mask, Encodes a security life cycle bit mask
+0x9a5bab69  char[]                     bpak-version, Version string
+0x0ba87349  <UUID, char>               bpak-dependency, Dependency tuple, UUID reference to another package and text string expressing constraints
+0x2d44bbfb  <uint32, uint32>           bpak-transport, Transport medadata contains int32 pair that describes which encoder and decoder should be used for transport
+==========  =================          ===========
 
 --------------
 System example
