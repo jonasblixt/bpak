@@ -52,10 +52,6 @@ retrofitting DER formatted signatures, which, for example, is what openssl can
 produce. This way an approved release candidate can be re-signed with
 production keys without rebuilding all the artifacts that make up a bpak archive.
 
-TODO: Key-store
-
-TODO: SLC
-
 -----------
 Limitations
 -----------

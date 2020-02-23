@@ -37,3 +37,6 @@ config.guess
 config.sub
 ltmain.sh
 /*.sh
+*.bpak
+template*
+*.bak

@@ -88,3 +88,6 @@ TESTS = test_core_meta \
         test_misc.sh
 
 
+if BUILD_BPAK_PYTHON_LIB
+TESTS += test_python_lib.py
+endif
