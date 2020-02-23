@@ -9,7 +9,7 @@
 #include <bpak/bpak.h>
 #include <bpak/alg.h>
 #include <bpak/file.h>
-#include <bpak/pipe.h>
+#include <bpak/fifo.h>
 
 #include "sais.h"
 
@@ -311,7 +311,7 @@ static int write_diff_extra_and_adjustment(struct bpak_alg_instance *ins)
         if (res != chunk)
         {
             res = -BPAK_FAILED;
-            bpak_printf(0, "Error: Write error\n");
+            bpak_printf(0, "Error: Write error (%i != %li)\n", res, chunk);
             return res;
         }
 
@@ -407,7 +407,7 @@ static int bpak_alg_bsdiff_init(struct bpak_alg_instance *ins,
         goto err_munmap_new;
     }
 
-    rc = bpak_io_init_pipe(&priv->compressor_pipe);
+    rc = bpak_io_fifo_init(&priv->compressor_pipe, 1024*16);
 
     if (rc != BPAK_OK)
     {

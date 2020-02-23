@@ -5,7 +5,7 @@ libbpak_la_SOURCES = bpak.c \
                      bpakcrc.c \
                      io.c \
                      file.c \
-                     pipe.c \
+					 fifo.c \
                      keystore.c \
                      merkle.c \
                      sha256.c \
@@ -36,7 +36,7 @@ pkginclude_HEADERS = $(top_srcdir)/include/bpak/bpak.h \
                   $(top_srcdir)/include/bpak/crc.h \
                   $(top_srcdir)/include/bpak/io.h \
                   $(top_srcdir)/include/bpak/file.h \
-                  $(top_srcdir)/include/bpak/pipe.h \
+                  $(top_srcdir)/include/bpak/fifo.h \
                   $(top_srcdir)/include/bpak/keystore.h \
                   $(top_srcdir)/include/bpak/merkle.h \
                   $(top_srcdir)/include/bpak/utils.h \

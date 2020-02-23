@@ -412,6 +412,40 @@ This enables a signing process with sensitive keys to be de-coupled from the
 normal build environment and tools. The signing environment is usually backed
 by a HSM where the sensitive keys are stored.
 
+---------------
+Comparing files
+---------------
+
+Compare files::
+
+    $ bpak compare vA.bpak vB.bpak
+    BPAK comparison between:
+    1: 'vA.bpak'
+    2: 'vB.bpak'
+
+    =   : No differance
+    +   : Exists in file 2 but not in file 1
+    -   : Exists in file 1 but not in file 2
+    *   : Exists in both but data differs
+
+    Metadata:
+        ID         Size   Meta ID              Data
+    =   fb2f1f3f   16     bpak-package         0888b0fa-9c48-4524-9845-06a641b61edd
+    *   79c3b7b4   16
+    =   2d44bbfb   32     bpak-transport       Encode: 9f7aacf9, Decode: b5964388
+    =   2d44bbfb   32     bpak-transport       Encode: 57004cd0, Decode: b5bcc58f
+    =   7c9b2f93   32     merkle-salt          7691130fef9adf5704e702261b151833a176f66c667cad0dc1fb436d7e52707c
+    *   e68fc9be   32     merkle-root-hash     7a13e732655cb358779a21ca5fef5b2d6e1052ac791668679f5924f66362a1a1
+    =   7da19399   4      bpak-key-id          a90f9680
+    =   106c13a7   4      bpak-key-store       365f2120
+    *   e5679b94   72     bpak-signature
+
+    Parts:
+        ID         Size         Z-pad  Flags          Transport Size
+    *   faabeca7   4194304      0      h-------       4194304
+    *   77fadb17   36864        0      h-------       36864
+
+
 -------------
 C API Example
 -------------
@@ -420,7 +454,6 @@ C API Example
 
     #include <stdio.h>
     #include <bpak/bpak.h>
-    #include <bpak/file.h>
 
     int main(int argc, char **argv)
     {

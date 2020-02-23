@@ -6,7 +6,7 @@ from setuptools import find_packages
 from setuptools import Extension
 
 setup(name='bpak',
-      version="0.2.0",
+      version="0.3.0",
       description='Bitpacker firmware',
       long_description=open('README.rst', 'r').read(),
       author='Jonas Blixt',
