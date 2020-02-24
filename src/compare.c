@@ -92,7 +92,7 @@ int action_compare(int argc, char **argv)
     rc = bpak_io_init_file(&io2, filename2, "r");
 
     if (rc != BPAK_OK)
-        goto err_close_io2_out;
+        goto err_close_io1_out;
 
     if (bpak_io_read(io1, &h1, sizeof(h1)) != sizeof(h1))
     {

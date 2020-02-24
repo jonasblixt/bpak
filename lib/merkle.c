@@ -131,15 +131,12 @@ size_t bpak_merkle_get_size(struct bpak_merkle_context *ctx)
 int bpak_merkle_process(struct bpak_merkle_context *ctx,
                             uint8_t *input, uint16_t sz)
 {
-    int rc;
+    int rc = BPAK_OK;
     mbedtls_sha256_context hash;
     uint16_t chunk_sz = 0;
     uint8_t hash_tmp[32];
     uint64_t pos;
     int16_t pad = 0;
-
-    if (chunk_sz > MERKLE_BLOCK_SZ)
-        return -BPAK_FAILED;
 
     memset(ctx->buffer, 0, MERKLE_BLOCK_SZ);
 
@@ -202,6 +199,7 @@ int bpak_merkle_set_status_cb(struct bpak_merkle_context *ctx,
                               bpak_merkle_status_t sts)
 {
     ctx->status = sts;
+    return BPAK_OK;
 }
 
 bool bpak_merkle_done(struct bpak_merkle_context *ctx)

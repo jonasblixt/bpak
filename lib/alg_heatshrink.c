@@ -244,4 +244,6 @@ int bpak_alg_heatshrink_register(void)
 
     if (bpak_alg_register(&heatshrink_decode_alg) != BPAK_OK)
         return -BPAK_FAILED;
+
+    return BPAK_OK;
 }

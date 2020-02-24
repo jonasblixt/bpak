@@ -76,7 +76,11 @@ static int add_file(struct bpak_header *h,
     struct stat statbuf;
     uint64_t new_offset = sizeof(struct bpak_header);
 
-    stat(filename, &statbuf);
+    if (stat(filename, &statbuf) != 0)
+    {
+        printf("Error: can't open file\n");
+        return -BPAK_FAILED;
+    }
 
     FILE *in_fp = NULL;
 
@@ -133,15 +137,12 @@ static int add_file(struct bpak_header *h,
 
     uint64_t bytes_to_write = p->size;
 
-    if (filename)
-    {
-        in_fp = fopen(filename, "r");
+    in_fp = fopen(filename, "r");
 
-        if (!in_fp)
-        {
-            printf("Could not open input file: %s\n", filename);
-            return -BPAK_FAILED;
-        }
+    if (!in_fp)
+    {
+        printf("Could not open input file: %s\n", filename);
+        return -BPAK_FAILED;
     }
 
     char chunk_buffer[512];
@@ -294,7 +295,11 @@ static int add_merkle(struct bpak_header *h,
     size_t chunk_sz;
     uint64_t new_offset = sizeof(*h);
 
-    stat(filename, &statbuf);
+    if (stat(filename, &statbuf) != 0)
+    {
+        printf("Error: Can't open file\n");
+        return -1;
+    }
 
     size_t merkle_sz = bpak_merkle_compute_size(statbuf.st_size, -1, true);
     char *merkle_buf = malloc(merkle_sz);
@@ -591,6 +596,13 @@ int action_add(int argc, char **argv)
         /* Some known meta id's have predefined encoders */
         if (strcmp(meta_name, "bpak-dependency") == 0)
             encoder = "dependency";
+
+        if (!from_string)
+        {
+            printf("Error: No input supplied with --from-string\n");
+            rc = -BPAK_FAILED;
+            goto err_close_io_out;
+        }
 
         if (encoder)
         {

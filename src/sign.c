@@ -577,7 +577,7 @@ int action_verify(int argc, char **argv)
     {
         printf("Error: Verification failed\n");
         rc = -BPAK_FAILED;
-        goto err_out;
+        goto err_free_sign_key;
     }
 
     printf("Verification OK\n");

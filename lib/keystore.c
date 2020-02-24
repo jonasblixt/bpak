@@ -60,48 +60,9 @@ prime256v1:
     03  42 00 04 43 75 53 46 77 ...
  */
 
-static int asn1_sz(uint8_t *buf, size_t *sz, uint8_t *pos)
-{
-    if ((*buf) & 0x80 == 0)
-    {
-        *pos = 1;
-        *sz = *buf;
-        return BPAK_OK;
-    }
-
-    return BPAK_OK;
-}
-
 int bpak_parse_key(const struct bpak_key *k, uint8_t *buf, size_t sz)
 {
-    uint32_t pos = 0;
-    uint8_t consumed;
-    int rc;
-
-    /* Check first sequence */
-    if (buf[pos++] != 0x30)
-        return -BPAK_FAILED;
-
-    size_t seq_sz = 0;
-
-    rc = asn1_sz(&buf[pos], &seq_sz, &consumed);
-
-    if (rc != BPAK_OK)
-        return rc;
-
-    pos += consumed;
-
-    /* Check sequence tag */
-    if (buf[pos++] != 0x30)
-        return -BPAK_FAILED;
-
-    /* Decode sequence size */
-    rc = asn1_sz(&buf[pos], &seq_sz, &consumed);
-
-    if (rc != BPAK_OK)
-        return rc;
-
-    pos += consumed;
+    return -BPAK_FAILED;
 }
 
 int bpak_keystore_get(struct bpak_keystore *ks, uint8_t id,

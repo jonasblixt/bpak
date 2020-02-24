@@ -110,12 +110,6 @@ int action_transport(int argc, char **argv)
         return -1;
     }
 
-    if ((!decode_flag) && (!add_flag) && (!encode_flag))
-    {
-        printf("Error: Requried argument either --add, --encode or --decode\n");
-        return -1;
-    }
-
     if (encode_flag + add_flag + decode_flag > 1)
     {
         printf("Error: Only one of --add, --encode or --decode is allowed\n");
@@ -147,15 +141,24 @@ int action_transport(int argc, char **argv)
     }
 
     if (encode_flag)
+    {
         rc = bpak_pkg_transport_encode(pkg, origin, 0);
+    }
     else if(decode_flag)
+    {
         rc = bpak_pkg_transport_decode(pkg, origin, 0);
-    else if (add_flag)
+    }
+    else if (add_flag && encoder_alg && decoder_alg)
+    {
         rc = bpak_pkg_add_transport(pkg, bpak_id(part_ref),
                                          bpak_id(encoder_alg),
                                          bpak_id(decoder_alg));
+    }
     else
+    {
+        rc = -BPAK_FAILED;
         printf("Error: Unknown command");
+    }
 
     if (rc != BPAK_OK)
     {

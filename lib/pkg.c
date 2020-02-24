@@ -25,12 +25,12 @@ int bpak_pkg_open(struct bpak_package **pkg_, const char *filename,
     rc = bpak_io_init_file(&pkg->io, filename, mode);
 
     if (rc != BPAK_OK)
-        return rc;
+        goto err_free_pkg;
 
     rc = bpak_io_seek(pkg->io, 0, BPAK_IO_SEEK_SET);
 
     if (rc != BPAK_OK)
-        return rc;
+        goto err_free_pkg;
 
     size_t read_bytes = bpak_io_read(pkg->io, &pkg->header,
                                         sizeof(pkg->header));
@@ -54,6 +54,8 @@ int bpak_pkg_open(struct bpak_package **pkg_, const char *filename,
 
 err_close_io:
     bpak_io_close(pkg->io);
+err_free_pkg:
+    free(pkg);
     return rc;
 }
 
@@ -514,7 +516,7 @@ int bpak_pkg_transport_encode(struct bpak_package *pkg,
                               struct bpak_package *origin,
                               int rate_limit_us)
 {
-    int rc;
+    int rc = BPAK_OK;
     uint8_t *state_buffer = malloc(1024*1024);
     memset(state_buffer, 0, 1024*1024);
 
@@ -555,7 +557,7 @@ int bpak_pkg_transport_decode(struct bpak_package *pkg,
                               struct bpak_package *origin,
                               int rate_limit_us)
 {
-    int rc;
+    int rc = BPAK_OK;
     struct bpak_header *h = bpak_pkg_header(pkg);
     uint8_t *state_buffer = malloc(1024*1024);
     memset(state_buffer, 0, 1024*1024);
@@ -598,4 +600,6 @@ int bpak_pkg_register_all_algs(void)
     bpak_alg_heatshrink_register();
     bpak_alg_merkle_register();
 #endif
+
+    return BPAK_OK;
 }
