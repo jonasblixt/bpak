@@ -13,10 +13,10 @@ Introduction
 
 Bitpacker or bpak for short is a tool and library for creating firmware archives
 that can be cryptographically signed, support custom metadata and enable
-advanced update schemes. Bitpacker is primarly designed for embedded systems.
+advanced update schemes. Bitpacker is primarily designed for embedded systems.
 
 Embedded systems are often composed of several software components, for example:
-bootloader, kernel, filesystems, device configuration, third party applications,
+bootloader, kernel, file systems, device configuration, third party applications,
 etc. It is common to have many different formats and tools for the various
 components.
 
@@ -29,7 +29,7 @@ Core concepts
 
 A bpak archive is composed of a 4kByte header and parts. A part is any kind
 of data. The header contains a list of parts, a list of meta data and details
-about how the package should be hash'ed and signed. 2kBytes are reserved for 
+about how the package should be hashed and signed. 2kBytes are reserved for 
 actual metadata within the header.
 
 The metadata header encodes and id, size and offset within the metadata block
@@ -50,7 +50,7 @@ makes life easier for day-to-day development. The second way is to export a
 binary hash that can be signed in a controlled environment. Bitpacker supports
 retrofitting DER formatted signatures, which, for example, is what openssl can
 produce. This way an approved release candidate can be re-signed with
-production keys without rebuilding all the artifacts that make up a bpak archive.
+production keys without rebuilding all the artefacts that make up a bpak archive.
 
 -----------
 Limitations
@@ -66,7 +66,7 @@ The library and format does not specify how to install a package and therefore l
 Bitpacker is new and not really supported by any other projects except the
 punchboot bootloader (https://github.com/jonasblixt/punchboot)
 
-The library does not include any cryptographic API or functionallity, it only
+The library does not include any cryptographic API or functionality, it only
 comes with a structure for storing signatures and some concepts to enable
 signature verification and key management.
 
@@ -94,10 +94,10 @@ Built in transport algorithms
 ==========  =================  ===========
 ID          Name               Description
 ==========  =================  ===========
-0xb5bcc58f  merkle-generate    This decoder builds a merkle hash tree out of part dataa
+0xb5bcc58f  merkle-generate    This decoder builds a merkle hash tree out of part data
 0x57004cd0  remove-data        Encoder that strips data from a part during transport encoding
 0x9f7aacf9  bsdiff             Encoder that creates a binary diff of a part given some other original part
-0xb5964388  bspatch            Decoder that reverses the opartion of bspatch
+0xb5964388  bspatch            Decoder that reverses the operation of bspatch
 0xe31722a6  heatshrink-encode  Heatshrink compression algorithm
 0x5f9bc012  heatshrink-decode  Heatshrink decompression algorithm
 ==========  =================  ===========
@@ -124,7 +124,7 @@ Build library and tool::
     $ make
     $ sudo make install
 
-Runing tests::
+Running tests::
 
     $ ./configure --enable-code-coverage
     $ make && make check
@@ -200,7 +200,7 @@ Create an empty archive::
 
     Hash: b4ea1989f2e8a8be290bf819644e41fcc9631b62ab0c21b6355e3cfd50fb44eb
 
-The default hashing and signing algorithm is sha256 and eliptic curve prime256v1
+The default hashing and signing algorithm is sha256 and elliptic curve prime256v1
 signature format.
 
 Adding a package type identifier::
@@ -261,7 +261,7 @@ the 'merkle-root-hash' and the 'merkle-salt'. The root hash meta as the name
 suggests is the top most hash in the hash tree.
 
 In this archive the parts are not hashed because we only need to ensure that
-the salt and root hash are not comprimised.
+the salt and root hash are not compromised.
 
 Add transport encoding information::
 
@@ -295,7 +295,7 @@ Add transport encoding information::
  
 The archive now contains information on how the two parts should be encoded
 for transport and how they should be decoded when installing the archive. In
-this example the hash-tree is completley removed because it can be generated
+this example the hash-tree is completely removed because it can be generated
 using the data in the 'fs' part and the 'merkle-salt' meta, and then be verified
 by comparing the 'merkle-root-hash' meta with the generated root hash.
 
@@ -370,8 +370,8 @@ Encoding the package for transport::
 
     Hash: a649eb0532f848f34116deed81140feb5a1f4a221f964231c83216b6cf8896dd
 
-The demo.bpak is now transport encoded. Not the aditional 'T' flag which
-indicates that a part is transport encoded. The new archvie size is now the
+The demo.bpak is now transport encoded. Not the additional 'T' flag which
+indicates that a part is transport encoded. The new archive size is now the
 sum of the sizes in the 'Transport Size' column.
 
 ------------------------
@@ -383,8 +383,8 @@ after some iteration turn in to release candidates. The rc's pass through a
 number of test steps and eventually a release candidate is considered to be
 acceptable for release to production/customer.
 
-At this point it's often desirable to not rebuild the artifacts since it would
-incure another suite of testing before it can be released. To enable a flow
+At this point it's often desirable to not rebuild the artefacts since it would
+incur another suite of testing before it can be released. To enable a flow
 where release candidates can be used directly bitpacker supports re-signing.
 
 
