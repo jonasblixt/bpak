@@ -28,9 +28,9 @@ dnl Python stuff
 
 AC_MSG_CHECKING( wheter to build the bpak python library)
 AC_ARG_ENABLE([python-library],
-             AS_HELP_STRING([--disable-python-library], [Don''t build the bpak python libraryl]),
+             AS_HELP_STRING([--enable-python-library], [Build the bpak python libraryl]),
              [enable_python_library=$enableval],
-             [enable_python_library="yes"])
+             [enable_python_library="no"])
 
 AC_MSG_RESULT($enable_python_library)
 AM_CONDITIONAL([BUILD_BPAK_PYTHON_LIB], [test x$enable_python_library = xyes])

@@ -4,7 +4,7 @@ dist: bionic
 before_install:
   - sudo apt-get install git lcov uuid-runtime python3-dev
 script:
-    - autoreconf -fi && ./configure --enable-code-coverage PYTHON=python3 && make check || cat test/test-suite.log
+    - autoreconf -fi && ./configure --enable-code-coverage --enable-python-library PYTHON=python3 && make check || cat test/test-suite.log
 jobs:
     include:
         -   stage: Code Coverage

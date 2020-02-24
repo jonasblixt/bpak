@@ -51,11 +51,11 @@ int action_generate(int argc, char **argv)
                 keystore_name = optarg;
             break;
             case '?':
-                printf("Unknown option: %c\n", optopt);
+                fprintf(stderr, "Unknown option: %c\n", optopt);
                 return -1;
             break;
             case ':':
-                printf("Missing arg for %c\n", optopt);
+                fprintf(stderr, "Missing arg for %c\n", optopt);
                 return -1;
             break;
              default:
@@ -70,7 +70,7 @@ int action_generate(int argc, char **argv)
     }
     else
     {
-        printf("Missing generator argument\n");
+        fprintf(stderr, "Missing generator argument\n");
         return -1;
     }
 
@@ -84,7 +84,7 @@ int action_generate(int argc, char **argv)
         }
         else
         {
-            printf("Missing id-string argument\n");
+            fprintf(stderr, "Missing id-string argument\n");
             return -1;
         }
 
@@ -99,13 +99,13 @@ int action_generate(int argc, char **argv)
         }
         else
         {
-            printf("Missing filename argument\n");
+            fprintf(stderr, "Missing filename argument\n");
             return -1;
         }
 
         if(keystore_name == NULL)
         {
-            printf("Error: Missing --name parameter\n");
+            fprintf(stderr, "Error: Missing --name parameter\n");
             return -BPAK_FAILED;
         }
 
@@ -134,7 +134,7 @@ int action_generate(int argc, char **argv)
 
         if (rc != BPAK_OK)
         {
-            printf("Error: Could not read bpak-package-id\n");
+            fprintf(stderr, "Error: Could not read bpak-package-id\n");
             goto err_free_io_out;
         }
 
@@ -144,7 +144,7 @@ int action_generate(int argc, char **argv)
 
         if (uuid_compare(keystore_uuid, package_id) != 0)
         {
-            printf("Error: This is not a keystore file\n");
+            fprintf(stderr, "Error: This is not a keystore file\n");
             rc = -BPAK_FAILED;
             goto err_free_io_out;
         }
@@ -198,7 +198,7 @@ int action_generate(int argc, char **argv)
             if (read_bytes != p->size)
             {
                 rc = -BPAK_FAILED;
-                printf("Error: Could not read key\n");
+                fprintf(stderr, "Error: Could not read key\n");
                 goto err_free_header_out;
             }
 
@@ -207,7 +207,7 @@ int action_generate(int argc, char **argv)
 
             if (rc != 0)
             {
-                printf("Error: Coult not parse key\n");
+                fprintf(stderr, "Error: Coult not parse key\n");
                 rc = -BPAK_FAILED;
                 goto err_free_ctx;
             }
@@ -226,7 +226,7 @@ int action_generate(int argc, char **argv)
                         printf("    .kind = BPAK_KEY_PUB_SECP521r1,\n");
                     break;
                     default:
-                        printf("Unknown bit-length (%li)\n",
+                        fprintf(stderr, "Unknown bit-length (%li)\n",
                                 mbedtls_pk_get_bitlen(&ctx));
                         rc = -BPAK_FAILED;
                         goto err_free_ctx;
@@ -240,7 +240,7 @@ int action_generate(int argc, char **argv)
                 }
                 else
                 {
-                    printf("Unknown bit-length (%li)\n",
+                    fprintf(stderr, "Unknown bit-length (%li)\n",
                             mbedtls_pk_get_bitlen(&ctx));
                     rc = -BPAK_FAILED;
                     goto err_free_ctx;
@@ -248,7 +248,7 @@ int action_generate(int argc, char **argv)
             }
             else
             {
-                printf("Error: Unknown key type (%s)\n", mbedtls_pk_get_name(&ctx));
+                fprintf(stderr, "Error: Unknown key type (%s)\n", mbedtls_pk_get_name(&ctx));
                 rc = -BPAK_FAILED;
                 goto err_free_ctx;
             }

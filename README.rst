@@ -387,6 +387,15 @@ At this point it's often desirable to not rebuild the artefacts since it would
 incur another suite of testing before it can be released. To enable a flow
 where release candidates can be used directly bitpacker supports re-signing.
 
+Update key-id and keystore-id::
+
+    $ bpak set demo.bpak --meta bpak-key-id \
+                         --from-string "the-new-key-id" \
+                         --encoder id
+
+    $ bpak set demo.bpak --meta bpak-key-store \
+                         --from-string "some-other-keystore" \
+                         --encoder id
 
 Extracting the hash in binary form::
 
@@ -400,9 +409,7 @@ Signing the hash using openssl::
 
 Overwrite the current signature with the openssl generated one::
 
-    $ bpak sign demo.bpak --signature signature.bin \
-                          --key-id new-demo-key \
-                          --key-store demo-keystore
+    $ bpak sign demo.bpak --signature signature.bin
 
 This enables a signing process with sensitive keys to be de-coupled from the
 normal build environment and tools. The signing environment is usually backed
