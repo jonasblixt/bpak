@@ -281,7 +281,7 @@ int action_sign(int argc, char **argv)
     }
 
 
-    if (!key_id || !key_store)
+    if (!signature_file && (!key_id || !key_store))
     {
         printf("Error: Missing argument key-id or key-store\n");
         return -BPAK_FAILED;
@@ -302,7 +302,38 @@ int action_sign(int argc, char **argv)
 
     FILE *sig_fp = NULL;
 
-    rc = bpak_pkg_sign_init(pkg, bpak_id(key_id), bpak_id(key_store));
+    /* If we are installing a pre-computed signature and no
+     * key-id or key-store-id is supplied: re-use the current one */
+    if (signature_file && (!key_id || !key_store))
+    {
+        uint32_t *current_key_id = NULL;
+        uint32_t *current_keystore = NULL;
+
+
+        rc = bpak_get_meta(&pkg->header, bpak_id("bpak-key-id"),
+                                            (void **) &current_key_id);
+
+        if (rc != BPAK_OK)
+        {
+            printf("Error: Could not find bpak-key-id meta\n");
+            goto err_out;
+        }
+
+        rc = bpak_get_meta(&pkg->header, bpak_id("bpak-key-store"),
+                                            (void **) &current_keystore);
+
+        if (rc != BPAK_OK)
+        {
+            printf("Error: Could not find bpak-key-store meta\n");
+            goto err_out;
+        }
+
+        rc = bpak_pkg_sign_init(pkg, *current_key_id, *current_keystore);
+    }
+    else
+    {
+        rc = bpak_pkg_sign_init(pkg, bpak_id(key_id), bpak_id(key_store));
+    }
 
     if (rc != BPAK_OK)
         goto err_out;
