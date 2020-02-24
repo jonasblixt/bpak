@@ -14,18 +14,27 @@ libbpak_la_SOURCES = bpak.c \
                      utils.c \
                      sais.c \
                      pkg.c \
-                     heatshrink/heatshrink_decoder.c \
-                     heatshrink/heatshrink_encoder.c \
-                     alg_heatshrink.c \
-                     alg_remove.c \
-                     alg_merkle.c \
-                     alg_bspatch.c \
-                     alg_bsdiff.c \
 					 uuid/unparse.c \
 					 uuid/unpack.c
 
 libbpak_la_CFLAGS = -I$(top_srcdir)/include \
                      $(CODE_COVERAGE_CFLAGS)
+
+if BUILD_BPAK_CODECS
+
+libbpak_la_SOURCES += heatshrink/heatshrink_decoder.c \
+                      heatshrink/heatshrink_encoder.c \
+                      alg_heatshrink.c \
+                      alg_remove.c \
+                      alg_merkle.c \
+                      alg_bspatch.c \
+                      alg_bsdiff.c
+
+libbpak_la_CFLAGS += -DBUILD_BPAK_CODECS=1
+
+endif
+
+
 
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = bpak.pc

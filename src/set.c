@@ -135,12 +135,62 @@ int action_set(int argc, char **argv)
 
     if (!encoder)
     {
-        if (strlen(from_string) > meta_header->size)
+        if (bpak_get_verbosity() > 2)
         {
-            printf("Input string is to long (> %i)\n", meta_header->size);
-            rc = -BPAK_FAILED;
-            goto err_close_io_out;
+            printf("Need to grow metadata field with %li bytes\n", 
+                        strlen(from_string) - meta_header->size);
         }
+        
+        struct bpak_header *new_header = malloc(sizeof(struct bpak_header));
+        struct bpak_meta_header *meta_tmp = NULL;
+
+        memcpy(new_header, h, sizeof(*h));
+        memset(new_header->meta, 0, sizeof(new_header->meta));
+        memset(new_header->metadata, 0, sizeof(new_header->metadata));
+
+        bpak_foreach_meta(h, m)
+        {
+            uint8_t *tmp_ptr = NULL;
+
+            if (!m->id)
+                break;
+
+            if (m->id == bpak_id(meta_name))
+            {
+                if (bpak_get_verbosity() > 2)
+                {
+                    printf("Updating part %s\n", meta_name);
+                }
+
+                rc = bpak_add_meta(new_header, m->id, m->part_id_ref, 
+                                        (void **) &tmp_ptr,
+                                        strlen(from_string) + 1);
+
+                if (rc != BPAK_OK)
+                    break;
+
+                memcpy((void *) tmp_ptr, from_string, strlen(from_string)+1);
+            }
+            else
+            {
+                if (bpak_get_verbosity() > 2)
+                {
+                    printf("Copying meta %x, %i\n", m->id, m->size);
+                }
+                rc = bpak_add_meta(new_header, m->id, m->part_id_ref, 
+                                        (void **) &tmp_ptr,
+                                        m->size);
+
+                if (rc != BPAK_OK)
+                    break;
+
+                memcpy((void *) tmp_ptr, &(h->metadata[m->offset]), m->size);
+            }
+        }
+
+        free(h);
+        h = new_header;
+
     }
     else if (strcmp(encoder, "id") == 0)
     {

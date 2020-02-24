@@ -591,9 +591,11 @@ int bpak_pkg_transport_decode(struct bpak_package *pkg,
 
 int bpak_pkg_register_all_algs(void)
 {
+#ifdef BUILD_BPAK_CODECS
     bpak_alg_remove_register();
     bpak_alg_bsdiff_register();
     bpak_alg_bspatch_register();
     bpak_alg_heatshrink_register();
     bpak_alg_merkle_register();
+#endif
 }

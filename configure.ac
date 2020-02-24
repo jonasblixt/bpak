@@ -62,6 +62,18 @@ AC_ARG_ENABLE([tool],
 AC_MSG_RESULT($enable_tool)
 AM_CONDITIONAL([BUILD_BPAK_TOOL], [test x$enable_tool = xyes])
 
+
+dnl Transport codec options
+AC_MSG_CHECKING( wheter to build the bpak transport codecs)
+AC_ARG_ENABLE([codecs],
+             AS_HELP_STRING([--disable-codecs], [Don''t build the bpak transport codecs]),
+             [enable_codecs=$enableval],
+             [enable_codecs="yes"])
+
+AC_MSG_RESULT($enable_codecs)
+AM_CONDITIONAL([BUILD_BPAK_CODECS], [test x$enable_codecs = xyes])
+
+
 AC_CONFIG_FILES([Makefile
                 src/Makefile
                 lib/Makefile
