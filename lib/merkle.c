@@ -52,6 +52,9 @@ size_t bpak_merkle_compute_size(size_t input_data_size, int level, bool pad)
     size_t last_level = 0;
     int c = 0;
 
+    if (input_data_size <= MERKLE_BLOCK_SZ && level < 1)
+        return MERKLE_BLOCK_SZ;
+
     if ((tmp % MERKLE_BLOCK_SZ != 0) && pad)
         tmp += (MERKLE_BLOCK_SZ - (tmp % MERKLE_BLOCK_SZ));
 
