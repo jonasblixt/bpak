@@ -85,7 +85,7 @@ process_more:
                 p->ctrl_buf_count += bytes_to_copy;
                 pp += bytes_to_copy;
 
-                if (bytes_available && (p->ctrl_buf_count == 24))
+                if (p->ctrl_buf_count == 24)
                 {
                     p->state = PATCH_STATE_READ_CTRL;
                     goto process_more;
@@ -103,8 +103,8 @@ process_more:
             memcpy(buf, &p->ctrl_buf[16], 8);
             p->adjust = offtin(buf);
 
-            bpak_printf(2, "Patch: %10li %10li %10li\n", p->diff_sz,
-                            p->extra_sz, p->adjust);
+            bpak_printf(2, "Patch: %10li %10li %10li %li\n", p->diff_sz,
+                            p->extra_sz, p->adjust, bytes_available);
 
 
             p->state = PATCH_STATE_APPLY_DIFF;
@@ -173,7 +173,7 @@ process_more:
                     p->ctrl_buf_count = 0;
                 }
 
-                if (bytes_available - data_to_process > 0)
+                if (bytes_available)
                     goto process_more;
             }
         }
@@ -211,7 +211,7 @@ process_more:
                     break;
                 }
 
-                if (bytes_available - data_to_process > 0)
+                if (bytes_available)
                     goto process_more;
             }
         }
@@ -234,7 +234,6 @@ static size_t compressor_read(struct bpak_io *io, void *ptr, size_t size)
     struct bpak_bspatch_private *p = BSPATCH_PRIVATE(ins);
     size_t data_to_read;
     size_t r;
-    static size_t ra;
 
     data_to_read = size > p->patch_count?p->patch_count:size;
 
@@ -242,9 +241,7 @@ static size_t compressor_read(struct bpak_io *io, void *ptr, size_t size)
         return 0;
 
     r = bpak_io_read(p->in, ptr, data_to_read);
-    ra += r;
     p->patch_count -= r;
-
     return r;
 }
 
@@ -303,7 +300,7 @@ static int bpak_alg_bspatch_init(struct bpak_alg_instance *ins,
 
     p->compressor_io.on_read = compressor_read;
     p->compressor_io.on_write = compressor_write;
-
+/*
     bpak_printf(2, "Seeking to %li\n",
                         bpak_part_offset(ins->header, ins->part));
 
@@ -315,7 +312,7 @@ static int bpak_alg_bspatch_init(struct bpak_alg_instance *ins,
         bpak_printf(0, "Error: Failed to seek\n");
         return rc;
     }
-
+*/
     rc = bpak_alg_init(&p->compressor, ins->alg->parameter,
                         ins->part, ins->header,
                         p->compressor_buffer, sizeof(p->compressor_buffer),
