@@ -177,10 +177,22 @@ int bpak_valid_header(struct bpak_header *hdr)
     /* Check alignment of part data blocks */
     bpak_foreach_part(hdr, p)
     {
-        if (p->id)
+        if (!p->id)
+            break;
+
+        if (((p->size + p->pad_bytes) % BPAK_PART_ALIGN) != 0)
+            return -BPAK_BAD_ALIGNMENT;
+    }
+
+    /* Check for out-of-bounds metadata */
+    bpak_foreach_meta(hdr, m)
+    {
+        if (!m->id)
+            break;
+
+        if ((m->size + m->offset) > BPAK_METADATA_BYTES)
         {
-            if (((p->size + p->pad_bytes) % BPAK_PART_ALIGN) != 0)
-                return -BPAK_BAD_ALIGNMENT;
+            return -BPAK_SIZE_ERROR;
         }
     }
 
