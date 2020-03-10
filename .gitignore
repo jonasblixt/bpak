@@ -40,3 +40,4 @@ ltmain.sh
 *.bpak
 template*
 *.bak
+cov-int/
