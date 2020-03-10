@@ -78,7 +78,7 @@ static int add_file(struct bpak_header *h,
 
     if (stat(filename, &statbuf) != 0)
     {
-        printf("Error: can't open file\n");
+        printf("Error: can't open file '%s'\n", filename);
         return -BPAK_FAILED;
     }
 
@@ -191,7 +191,7 @@ static int add_key(struct bpak_header *h,
 
     if (len < 0)
     {
-        printf("Error: Could not load public key (%i)\n", len);
+        printf("Error: Could not load public key '%s'\n", filename);
         rc = -BPAK_FAILED;
         return rc;
     }
@@ -297,7 +297,7 @@ static int add_merkle(struct bpak_header *h,
 
     if (stat(filename, &statbuf) != 0)
     {
-        printf("Error: Can't open file\n");
+        printf("Error: Can't open file '%s'\n", filename);
         return -1;
     }
 
@@ -565,7 +565,10 @@ int action_add(int argc, char **argv)
     rc = bpak_io_init_file(&io, filename, "r+");
 
     if (rc != BPAK_OK)
+    {
+        printf("Could not open file '%s'\n", filename);
         goto err_free_header_out;
+    }
 
     bpak_io_seek(io, 0, BPAK_IO_SEEK_SET);
     size_t read_bytes = bpak_io_read(io, h, sizeof(*h));
