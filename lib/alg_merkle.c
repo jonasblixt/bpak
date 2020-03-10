@@ -8,9 +8,8 @@
 struct bpak_alg_merkle_ctx
 {
     struct bpak_merkle_context merkle;
-    struct bpak_io *in;
     struct bpak_io *out;
-    struct bpak_io *origin;
+    size_t pos;
     struct bpak_part_header *p_fs;
     struct bpak_part_header *hash_tree;
     bpak_merkle_hash_t salt;
@@ -73,8 +72,9 @@ static int bpak_alg_merkle_init(struct bpak_alg_instance *ins,
     int rc;
 
     memset(ctx, 0, sizeof(*ctx));
-    ctx->in = in;
     ctx->out = out;
+
+    bpak_printf(2, "merkle init\n");
 
     bpak_foreach_part(ins->header, p)
     {
@@ -86,19 +86,27 @@ static int bpak_alg_merkle_init(struct bpak_alg_instance *ins,
     }
 
     if (!fs_id)
+    {
+        bpak_printf(0, "Error: could not find hash tree\n");
         return -BPAK_FAILED;
-
+    }
     /* Get filesystem header */
     rc = bpak_get_part(ins->header, fs_id, &ctx->p_fs);
 
     if (rc != BPAK_OK)
+    {
+        bpak_printf(0, "Error: Could not read filesystem header\n");
         return rc;
+    }
 
     /* Get hash tree header */
     rc = bpak_get_part(ins->header, ins->part->id, &ctx->hash_tree);
 
     if (rc != BPAK_OK)
+    {
+        bpak_printf(0, "Error: Could not read hash tree header\n");
         return rc;
+    }
 
     /* Load salt */
     uint8_t *salt_ptr = NULL;   /*  id("merkle-salt") */
@@ -111,14 +119,9 @@ static int bpak_alg_merkle_init(struct bpak_alg_instance *ins,
     memcpy(ctx->salt, salt_ptr, sizeof(bpak_merkle_hash_t));
     ctx->bytes_to_process = ctx->p_fs->size;
 
-    /* Position input stream at the begining of the filesystem */
-    rc = bpak_io_seek(ctx->in, ctx->p_fs->offset, BPAK_IO_SEEK_SET);
-
-    if (rc != BPAK_OK)
-        return rc;
-
     /* Prepare space for the hash tree */
-    rc = bpak_io_seek(ctx->out, 0, BPAK_IO_SEEK_END);
+    rc = bpak_io_seek(ctx->out, ctx->p_fs->offset + ctx->p_fs->size,
+                        BPAK_IO_SEEK_SET);
 
     if (rc != BPAK_OK)
         return rc;
@@ -130,6 +133,19 @@ static int bpak_alg_merkle_init(struct bpak_alg_instance *ins,
         if (rc != 1)
             return -BPAK_FAILED;
     }
+
+    /* Position input stream at the begining of the filesystem */
+    rc = bpak_io_seek(ctx->out, ctx->p_fs->offset, BPAK_IO_SEEK_SET);
+
+    if (rc != BPAK_OK)
+    {
+        bpak_printf(0, "Error: Could not seek\n");
+        return rc;
+    }
+
+
+    bpak_printf(2, "alg_merkle init done\n");
+
     return bpak_merkle_init(&ctx->merkle, ctx->p_fs->size, ctx->salt,
                                 merkle_wr, merkle_rd, ctx);
 }
@@ -145,9 +161,20 @@ static int bpak_alg_merkle_process(struct bpak_alg_instance *ins)
     if (bpak_merkle_done(&ctx->merkle))
         return BPAK_OK;
 
+
     if (ctx->bytes_to_process)
     {
-        chunk_sz = bpak_io_read(ctx->in, ctx->buf, sizeof(ctx->buf));
+        rc = bpak_io_seek(ctx->out, ctx->p_fs->offset + ctx->pos, BPAK_IO_SEEK_SET);
+
+        if (rc != BPAK_OK)
+        {
+            bpak_printf(0, "Error: seek\n");
+            return rc;
+        }
+
+        chunk_sz = bpak_io_read(ctx->out, ctx->buf, sizeof(ctx->buf));
+
+        ctx->pos += chunk_sz;
 
         if (chunk_sz)
         {
