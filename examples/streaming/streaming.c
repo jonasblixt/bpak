@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <string.h>
+#include <sys/epoll.h>
+#include <sys/timerfd.h>
 #include <bpak/bpak.h>
 #include <bpak/file.h>
 #include <bpak/fifo.h>
@@ -38,6 +40,7 @@ struct stream_state
     uint8_t chunk_buffer[4096];
     size_t chunk_buffer_size;
     uint8_t state_buffer[1024*64];
+    CURLM *multi;
 };
 
 
@@ -347,15 +350,41 @@ static size_t stream_cb(void *contents, size_t length, size_t nmemb,
     return written;
 }
 
+static int sock_cb(CURL *e, curl_socket_t s, int what, void *cbp, void *sockp)
+{
+    struct stream_state *ss = (struct stream_state *) cbp;
+    const char *whatstr[]={ "none", "IN", "OUT", "INOUT", "REMOVE" };
+
+    printf("socket callback: s=%d e=%p what=%s ", s, e, whatstr[what]);
+    if (what == CURL_POLL_REMOVE)
+    {
+    }
+    else
+    {
+        if (
+    }
+}
+
 int main(int argc, char **argv)
 {
     int rc;
     CURL *curl_handle;
     CURLcode res;
     struct stream_state ss;
+    int epfd;
+    struct epoll_event ev;
+    struct epoll_event events[10];
 
     printf("Streaming example... %li\n", sizeof(ss));
     bpak_pkg_register_all_algs();
+
+    epfd = epoll_create1(EPOLL_CLOEXEC);
+
+    if (epfd == -1)
+    {
+        printf("Error: Could not create epoll fd\n");
+        return -1;
+    }
 
     memset(&ss, 0, sizeof(ss));
 
@@ -372,14 +401,16 @@ int main(int argc, char **argv)
     printf("Fifo initialized\n");
 
     /* Initialize a libcurl handle. */
+/*
     curl_global_init(CURL_GLOBAL_DEFAULT);
     curl_handle = curl_easy_init();
     curl_easy_setopt(curl_handle, CURLOPT_URL,
                    "http://localhost:8080/vB_transport.bpak");
     curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, stream_cb);
     curl_easy_setopt(curl_handle, CURLOPT_WRITEDATA, (void *) &ss);
-
+*/
     /* Perform the request and any follow-up parsing. */
+/*
     res = curl_easy_perform(curl_handle);
 
     if (res != CURLE_OK)
@@ -387,6 +418,11 @@ int main(int argc, char **argv)
         fprintf(stderr, "curl_easy_perform() failed: %s\n",
                 curl_easy_strerror(res));
     }
+*/
+
+    ss.multi = curl_multi_init();
+    curl_multi_setopt(g.multi, CURLMOPT_SOCKETFUNCTION, sock_cb);
+    curl_multi_setopt(g.multi, CURLMOPT_SOCKETDATA, &ss);
 
 
     while ((ss.state != STATE_DONE) && (ss.state != STATE_FAILED))

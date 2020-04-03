@@ -58,13 +58,11 @@ bpak_SOURCES  = main.c \
 				uuid/clear.c \
 				uuid/compare.c \
 				uuid/copy.c \
-				uuid/gen_uuid.c \
 				uuid/isnull.c \
 				uuid/pack.c \
 				uuid/parse.c \
 				uuid/unpack.c \
-				uuid/unparse.c \
-				uuid/uuid_time.c
+				uuid/unparse.c
 
 
 bpak_CFLAGS  = -I$(top_srcdir)/include \
