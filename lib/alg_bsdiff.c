@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <errno.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
@@ -19,6 +20,10 @@ struct bpak_bsdiff_private
     size_t new_size;
     uint8_t *old;
     uint8_t *new;
+    uint8_t *old_mmap;
+    size_t old_mmap_size;
+    uint8_t *new_mmap;
+    size_t new_mmap_size;
     uint64_t *suffix_array;
     size_t suffix_array_size;
     int suffix_array_fd;
@@ -358,6 +363,11 @@ static int bpak_alg_bsdiff_init(struct bpak_alg_instance *ins,
                         bpak_part_size(ins->part),
                         bpak_part_offset(ins->header, ins->part));
 
+    rc = bpak_io_seek(origin, BPAK_IO_SEEK_SET, 0);
+
+    if (rc != BPAK_OK)
+        return rc;
+
     rc = bpak_io_read(origin, &h, sizeof(h));
 
     if (rc != sizeof(h))
@@ -377,24 +387,40 @@ static int bpak_alg_bsdiff_init(struct bpak_alg_instance *ins,
     bpak_printf(2, "Found origin part, %li %li\n", bpak_part_size(p),
                                         bpak_part_offset(&h, p));
     priv->old_size = bpak_part_size(p);
-    priv->old = mmap(NULL, priv->old_size, PROT_READ,
-                        MAP_SHARED, bpak_io_file_to_fd(origin),
+
+    bpak_printf(2, "mmap: %zu, offset: %zu\n", priv->old_size,
                         bpak_part_offset(&h, p));
 
-    if (!priv->old)
-        return -BPAK_FAILED;
+    priv->old_mmap_size = origin->end_position;
+    priv->old_mmap = mmap(NULL, priv->old_mmap_size, PROT_READ,
+                        MAP_SHARED, bpak_io_file_to_fd(origin),
+                        0);
+    priv->old = priv->old_mmap + bpak_part_offset(&h, p);
 
+    if (((intptr_t) priv->old_mmap) == -1)
+    {
+        bpak_printf(0, "Error: Could not mmap old file (%s)\n",
+                        strerror(errno));
+        return -BPAK_FAILED;
+    }
 
     priv->new_size = bpak_part_size(ins->part);
-    priv->new = mmap(NULL, priv->new_size, PROT_READ,
+    priv->new_mmap_size = in->end_position;
+    priv->new_mmap = mmap(NULL, priv->new_mmap_size, PROT_READ,
                         MAP_SHARED, bpak_io_file_to_fd(in),
-                        bpak_part_offset(ins->header, ins->part));
-    if (!priv->new)
+                        0);
+    priv->new = priv->new_mmap + bpak_part_offset(ins->header, ins->part);
+    if (((intptr_t) priv->new_mmap) == -1)
     {
+
+        bpak_printf(0, "Error: Could not mmap new file (%s)\n",
+                        strerror(errno));
         rc = -BPAK_FAILED;
         goto err_munmap_old;
     }
 
+    bpak_printf(2, "old size: %zu bytes, new size: %zu\n", priv->old_size,
+                                                           priv->new_size);
     snprintf(priv->suffix_fn, sizeof(priv->suffix_fn),
                 "/tmp/.bpak_tmp_%x", rand());
 
@@ -403,6 +429,7 @@ static int bpak_alg_bsdiff_init(struct bpak_alg_instance *ins,
 
     if (priv->suffix_array_fd < 0)
     {
+        bpak_printf(0, "Error: Could not open suffix array buffer\n");
         rc = -BPAK_FAILED;
         goto err_munmap_new;
     }
@@ -413,6 +440,8 @@ static int bpak_alg_bsdiff_init(struct bpak_alg_instance *ins,
     {
         goto err_close_fd;
     }
+
+    bpak_printf(2, "Initializing compressor pipe...\n");
 
     rc = bpak_alg_init(&priv->compressor, ins->alg->parameter,
                         NULL, NULL,
@@ -438,6 +467,9 @@ static int bpak_alg_bsdiff_init(struct bpak_alg_instance *ins,
         goto err_close_io;
     }
 
+    bpak_printf(2, "Initializing sais array: %p %p %zu\n",
+                priv->old, priv->suffix_array, priv->old_size);
+
     rc = sais((uint8_t *)priv->old, priv->suffix_array, priv->old_size);
 
     if (rc != 0)
@@ -446,6 +478,7 @@ static int bpak_alg_bsdiff_init(struct bpak_alg_instance *ins,
         goto err_munmap_suffix;
     }
 
+    bpak_printf(2, "Init done\n");
     return BPAK_OK;
 
 err_munmap_suffix:
@@ -455,17 +488,17 @@ err_close_io:
 err_close_fd:
     close(priv->suffix_array_fd);
 err_munmap_new:
-    munmap(priv->new, priv->new_size);
+    munmap(priv->new_mmap, in->end_position);
 err_munmap_old:
-    munmap(priv->old, priv->old_size);
+    munmap(priv->old_mmap, origin->end_position);
     return rc;
 }
 
 static int bpak_alg_bsdiff_free(struct bpak_alg_instance *ins)
 {
     struct bpak_bsdiff_private *priv = BSDIFF_PRIVATE(ins);
-    munmap(priv->old, priv->old_size);
-    munmap(priv->new, priv->new_size);
+    munmap(priv->old_mmap, priv->old_mmap_size);
+    munmap(priv->new_mmap, priv->new_mmap_size);
     munmap(priv->suffix_array, priv->suffix_array_size);
     close(priv->suffix_array_fd);
     bpak_io_close(priv->compressor_pipe);
