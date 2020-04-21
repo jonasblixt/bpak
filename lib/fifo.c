@@ -11,7 +11,7 @@ static size_t fifo_available(struct bpak_io_fifo *f)
     else if (f->head > f->tail)
         return (f->buffer_size - (f->head - f->tail));
     else
-        return (f->tail - f->head) + 1;
+        return (f->tail - f->head);
 }
 
 
@@ -52,7 +52,7 @@ static size_t bpak_io_fifo_write(struct bpak_io *io, void *ptr, size_t size)
 
         memcpy(&ctx->buffer[ctx->head], ptr, chunk);
         memcpy(ctx->buffer, chunk_p, write_bytes - chunk);
-        ctx->head = write_bytes - chunk + 1;
+        ctx->head = write_bytes - chunk;
     }
     else
     {
@@ -88,7 +88,7 @@ static size_t bpak_io_fifo_read(struct bpak_io *io, void *ptr, size_t size)
         memcpy((uint8_t *) ptr, (uint8_t *) &ctx->buffer[ctx->tail], chunk);
         memcpy((uint8_t *) chunk_p, (uint8_t *) ctx->buffer,
                             bytes_to_read - chunk);
-        ctx->tail = (bytes_to_read - chunk) + 1;
+        ctx->tail = (bytes_to_read - chunk);
     }
 
     return bytes_to_read;

@@ -58,6 +58,13 @@ TEST(fifo_write1)
  *
  * W2  lo   Hel
  *       h  t
+ * R2
+ *       t
+ *       h
+ *
+ * Bfr 01234567
+ * W3    Hello
+ *       t    h
  */
 
 TEST(fifo_write_overlap)
@@ -74,6 +81,7 @@ TEST(fifo_write_overlap)
     rc = bpak_io_fifo_init(&f, 8);
     ASSERT_EQ(rc, BPAK_OK);
 
+    /* Write 1 */
     bytes = bpak_io_write(f, "Hello", 5);
     ASSERT_EQ(bytes, 5);
 
@@ -84,22 +92,37 @@ TEST(fifo_write_overlap)
     ASSERT_EQ(bytes, 5);
     ASSERT_EQ((char *) bfr, "Hello");
     ASSERT_EQ(fifo_p->tail, 5);
+    ASSERT_EQ(fifo_p->head, 5);
 
-
+    /* Write 2 */
     memset(bfr, 0, sizeof(bfr));
-
     bytes = bpak_io_write(f, "Hello", 5);
     ASSERT_EQ(bytes, 5);
 
     fifo_p = GET_FIFO_CTX(f);
-    ASSERT_EQ(fifo_p->head, 3);
+    ASSERT_EQ(fifo_p->head, 2);
     ASSERT_EQ(fifo_p->tail, 5);
 
     bytes = bpak_io_read(f, bfr, sizeof(bfr));
     ASSERT_EQ(bytes, 5);
     ASSERT_EQ((char *) bfr, "Hello");
-    ASSERT_EQ(fifo_p->tail, 3);
-    ASSERT_EQ(fifo_p->head, 3);
+    ASSERT_EQ(fifo_p->tail, 2);
+    ASSERT_EQ(fifo_p->head, 2);
+
+    /* Write 3 */
+    memset(bfr, 0, sizeof(bfr));
+    bytes = bpak_io_write(f, "Hello", 5);
+    ASSERT_EQ(bytes, 5);
+
+    fifo_p = GET_FIFO_CTX(f);
+    ASSERT_EQ(fifo_p->head, 7);
+    ASSERT_EQ(fifo_p->tail, 2);
+
+    bytes = bpak_io_read(f, bfr, sizeof(bfr));
+    ASSERT_EQ(bytes, 5);
+    ASSERT_EQ((char *) bfr, "Hello");
+    ASSERT_EQ(fifo_p->tail, 7);
+    ASSERT_EQ(fifo_p->head, 7);
 
     rc = bpak_io_close(f);
     ASSERT_EQ(rc, BPAK_OK);

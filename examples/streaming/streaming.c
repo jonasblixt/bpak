@@ -1,7 +1,10 @@
 #include <stdio.h>
+#include <assert.h>
+#include <unistd.h>
 #include <stdlib.h>
 #include <stdarg.h>
 #include <string.h>
+#include <poll.h>
 #include <sys/epoll.h>
 #include <sys/timerfd.h>
 #include <bpak/bpak.h>
@@ -11,6 +14,10 @@
 #include <bpak/alg.h>
 #include <bpak/pkg.h>
 #include <curl/curl.h>
+
+static int epollFd;
+static int timeout = -1;
+static struct pollfd pollfd;
 
 enum states
 {
@@ -52,6 +59,13 @@ int bpak_printf(int verbosity, const char *fmt, ...)
     vprintf(fmt, args);
     va_end(args);
     return BPAK_OK;
+}
+
+
+static void error(const char* string)
+{
+  perror(string);
+  exit(1);
 }
 
 static int process_update(struct stream_state *ss)
@@ -262,7 +276,7 @@ process_more:
                                      bpak_alg_done(&ss->alg_ins));
 */
 
-            
+
             if (bpak_alg_done(&ss->alg_ins))
             {
                 printf("Done\n");
@@ -340,6 +354,8 @@ static size_t stream_cb(void *contents, size_t length, size_t nmemb,
     struct stream_state *ss = (struct stream_state *) userp;
     int rc;
 
+    printf("stream_cb: %zu\n", real_size);
+
     size_t written = bpak_io_write(ss->fifo, contents, real_size);
 
     //size_t written = bpak_io_write(ss->fifo, contents, 1);
@@ -350,19 +366,80 @@ static size_t stream_cb(void *contents, size_t length, size_t nmemb,
     return written;
 }
 
-static int sock_cb(CURL *e, curl_socket_t s, int what, void *cbp, void *sockp)
+static int sock_cb(CURL* easy, curl_socket_t fd, int action, void* u, void* s)
 {
-    struct stream_state *ss = (struct stream_state *) cbp;
+    int rc;
+    struct stream_state *ss = (struct stream_state *) s;
     const char *whatstr[]={ "none", "IN", "OUT", "INOUT", "REMOVE" };
 
-    printf("socket callback: s=%d e=%p what=%s ", s, e, whatstr[what]);
-    if (what == CURL_POLL_REMOVE)
+    struct epoll_event event;
+    event.events = 0;
+    event.data.fd = fd;
+
+    pollfd.fd = fd;
+    pollfd.events = 0;
+    pollfd.revents = 0;
+    /* Remove fd */
+    if (action == CURL_POLL_REMOVE)
     {
+        printf(">>> %s: removing fd=%d\n", __func__, fd);
+
+        assert(pollfd.fd == fd);
+        pollfd.fd = -1;
+
+        rc = epoll_ctl(epollFd, EPOLL_CTL_DEL, fd, &event);
     }
     else
     {
-        if (
+        if (action == CURL_POLL_IN)
+        {
+            pollfd.events |= POLLIN;
+            event.events |= EPOLLIN;
+        }
+        else if (action == CURL_POLL_OUT)
+        {
+            pollfd.events |= POLLOUT;
+            event.events |= EPOLLOUT;
+        }
+        else if (action == CURL_POLL_INOUT)
+        {
+            pollfd.events |= (POLLOUT | POLLIN);
+            event.events |= (EPOLLOUT | EPOLLOUT);
+        }
+        else
+        {
+            printf("Error: Unknown action\n");
+            rc = -1;
+            goto err_out;
+        }
+
+        printf(">>> %s: adding fd=%d action=%d\n", __func__, fd, action);
+        if (event.events != 0)
+        {
+            rc = epoll_ctl(epollFd, EPOLL_CTL_ADD, fd, &event);
+
+            if (rc == -1)
+            {
+                rc = epoll_ctl(epollFd, EPOLL_CTL_MOD, fd, &event);
+                printf("EPOLL_CTL_MOD\n");
+            }
+            else
+            {
+                printf("EPOLL_CTL_ADD\n");
+            }
+        }
     }
+
+err_out:
+    return rc;
+}
+
+
+int timerCallback(CURLM* multi, long timeout_ms, void* u)
+{
+    printf(">>> %s: timeout: %ld ms\n", __func__, timeout_ms);
+    timeout = timeout_ms;
+    return 0;
 }
 
 int main(int argc, char **argv)
@@ -378,13 +455,12 @@ int main(int argc, char **argv)
     printf("Streaming example... %li\n", sizeof(ss));
     bpak_pkg_register_all_algs();
 
-    epfd = epoll_create1(EPOLL_CLOEXEC);
+    pollfd.fd = -1;
 
-    if (epfd == -1)
-    {
-        printf("Error: Could not create epoll fd\n");
-        return -1;
-    }
+    epollFd = epoll_create(1);
+
+    if (epollFd == -1)
+        error("epoll_create");
 
     memset(&ss, 0, sizeof(ss));
 
@@ -401,33 +477,54 @@ int main(int argc, char **argv)
     printf("Fifo initialized\n");
 
     /* Initialize a libcurl handle. */
-/*
+
     curl_global_init(CURL_GLOBAL_DEFAULT);
     curl_handle = curl_easy_init();
     curl_easy_setopt(curl_handle, CURLOPT_URL,
                    "http://localhost:8080/vB_transport.bpak");
     curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, stream_cb);
     curl_easy_setopt(curl_handle, CURLOPT_WRITEDATA, (void *) &ss);
-*/
-    /* Perform the request and any follow-up parsing. */
-/*
-    res = curl_easy_perform(curl_handle);
-
-    if (res != CURLE_OK)
-    {
-        fprintf(stderr, "curl_easy_perform() failed: %s\n",
-                curl_easy_strerror(res));
-    }
-*/
 
     ss.multi = curl_multi_init();
-    curl_multi_setopt(g.multi, CURLMOPT_SOCKETFUNCTION, sock_cb);
-    curl_multi_setopt(g.multi, CURLMOPT_SOCKETDATA, &ss);
+    curl_multi_setopt(ss.multi, CURLMOPT_SOCKETFUNCTION, sock_cb);
+    curl_multi_setopt(ss.multi, CURLMOPT_SOCKETDATA, &ss);
+    curl_multi_setopt(ss.multi, CURLMOPT_TIMERFUNCTION, timerCallback);
 
+    curl_multi_add_handle(ss.multi, curl_handle);
 
-    while ((ss.state != STATE_DONE) && (ss.state != STATE_FAILED))
+    int running_handles = 1;
+
+    while (running_handles > 0)
+    {
+        printf(">>> calling epoll_wait\n");
+        struct epoll_event event;
+        int res = epoll_wait(epollFd, &event, 1, timeout);
+
+        if (res == -1)
+        {
+            perror("epoll_wait");
+        }
+        else if (res == 0)
+        {
+            curl_multi_socket_action(ss.multi, CURL_SOCKET_TIMEOUT, 0,
+                                     &running_handles);
+        }
+        else
+        {
+            curl_multi_socket_action(ss.multi, event.data.fd, 0,
+                                     &running_handles);
+        }
+    }
+
+    printf("Finishing...\n");
+    while ((ss.state != STATE_DONE) &&
+           (ss.state != STATE_FAILED))
+    {
         process_update(&ss);
+    }
 
+    curl_multi_cleanup(ss.multi);
     curl_easy_cleanup(curl_handle);
     curl_global_cleanup();
+    close(epfd);
 }
