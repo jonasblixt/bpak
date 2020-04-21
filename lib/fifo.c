@@ -79,16 +79,24 @@ static size_t bpak_io_fifo_read(struct bpak_io *io, void *ptr, size_t size)
                                     bytes_to_read);
         ctx->tail += bytes_to_read;
     }
-    else
+    else /* Wrapped around, tail is before head */
     {
-        size_t chunk = (ctx->buffer_size - ctx->tail);
-        uint8_t *chunk_p = (uint8_t *) ptr;
-        chunk_p += chunk;
+        size_t first_chunk = (ctx->buffer_size - ctx->tail);
+        size_t chunk = (bytes_to_read > first_chunk)?first_chunk:bytes_to_read;
+        size_t remainder = bytes_to_read;
 
-        memcpy((uint8_t *) ptr, (uint8_t *) &ctx->buffer[ctx->tail], chunk);
-        memcpy((uint8_t *) chunk_p, (uint8_t *) ctx->buffer,
-                            bytes_to_read - chunk);
-        ctx->tail = (bytes_to_read - chunk);
+        uint8_t *first_chunk_p = (uint8_t *) ptr;
+        memcpy(first_chunk_p, (uint8_t *) &ctx->buffer[ctx->tail], chunk);
+        ctx->tail = (ctx->tail + chunk) % ctx->buffer_size;
+        remainder -= chunk;
+
+        if (remainder)
+        {
+            uint8_t *second_chunk_p = ((uint8_t *) ptr) + first_chunk;
+            memcpy(second_chunk_p, (uint8_t *) ctx->buffer, remainder);
+            ctx->tail = remainder;
+        }
+
     }
 
     return bytes_to_read;
