@@ -1,4 +1,5 @@
 #include <string.h>
+#include <stdlib.h>
 #include <bpak/bpak.h>
 #include <bpak/utils.h>
 #include <bpak/fifo.h>
@@ -205,4 +206,121 @@ TEST(fifo_write_overlap2)
     ASSERT_EQ(rc, BPAK_OK);
 
     free(bfr);
+}
+
+
+TEST(fifo_stream)
+{
+    int rc;
+    struct bpak_io *f = NULL;
+    struct bpak_io_fifo *fifo_p;
+    uint8_t input_data[1024*128];
+    size_t bytes = 0;
+    size_t bytes_to_write = 0;
+    size_t bytes_to_read = 0;
+    uint8_t read_buffer[1024*16];
+
+    for (int i = 0; i < sizeof(input_data); i++)
+        input_data[i] = i%256;
+
+    rc = bpak_io_fifo_init(&f, 1024*128);
+    ASSERT_EQ(rc, BPAK_OK);
+
+    fifo_p = GET_FIFO_CTX(f);
+
+    for (int i = 0; i < 1024; i++)
+    {
+        bytes_to_write = rand()%sizeof(input_data);
+        printf("W %9zu, %zu %zu\n", bytes_to_write, fifo_p->head,
+                                                       fifo_p->tail);
+
+        bytes = bpak_io_write(f, input_data, bytes_to_write);
+
+        for (int n = 0; n < 8; n++)
+        {
+            bytes_to_read = rand()%sizeof(read_buffer);
+            printf("R %9zu, %zu %zu\n", bytes_to_read, fifo_p->head,
+                                                         fifo_p->tail);
+            bytes = bpak_io_read(f, read_buffer, bytes_to_read);
+        }
+    }
+
+
+    rc = bpak_io_close(f);
+    ASSERT_EQ(rc, BPAK_OK);
+
+}
+
+
+TEST(fifo_stream2)
+{
+    int rc;
+    struct bpak_io *f = NULL;
+    struct bpak_io_fifo *fifo_p;
+    uint8_t input_data[1024*128];
+    size_t bytes = 0;
+    size_t bytes_to_write = 0;
+    size_t bytes_to_read = 0;
+    uint8_t read_buffer[32];
+
+    for (int i = 0; i < sizeof(input_data); i++)
+        input_data[i] = i%256;
+
+    rc = bpak_io_fifo_init(&f, 64);
+    ASSERT_EQ(rc, BPAK_OK);
+
+    fifo_p = GET_FIFO_CTX(f);
+
+    bytes = bpak_io_write(f, input_data, 32);
+    ASSERT(bytes == 32);
+    ASSERT_EQ(bpak_fifo_available_data(f), 32);
+
+    bytes = bpak_io_write(f, input_data, 16);
+    ASSERT(bytes == 16);
+    ASSERT_EQ(bpak_fifo_available_data(f), 32+16);
+
+    bytes = bpak_io_read(f, read_buffer, 16);
+    ASSERT(bytes == 16);
+    ASSERT_EQ(bpak_fifo_available_data(f), 32);
+
+    bytes = bpak_io_read(f, read_buffer, 16);
+    ASSERT(bytes == 16);
+    ASSERT_EQ(bpak_fifo_available_data(f), 16);
+
+    bytes = bpak_io_read(f, read_buffer, 16);
+    ASSERT(bytes == 16);
+    ASSERT_EQ(bpak_fifo_available_data(f), 0);
+
+    bytes = bpak_io_write(f, input_data, 32);
+    ASSERT(bytes == 32);
+
+    bytes = bpak_io_read(f, read_buffer, 7);
+    ASSERT(bytes == 7);
+
+    bytes = bpak_io_read(f, read_buffer, 7);
+    ASSERT(bytes == 7);
+
+    bytes = bpak_io_read(f, read_buffer, 16);
+    ASSERT(bytes == 16);
+
+    bytes = bpak_io_read(f, read_buffer, 2);
+    ASSERT(bytes == 2);
+
+    ASSERT(fifo_p->head == fifo_p->tail);
+
+    printf("head: %zu tail: %zu\n", fifo_p->head, fifo_p->tail);
+
+    bytes = bpak_io_write(f, input_data, 56);
+    ASSERT(bytes == 56);
+
+    for (int i = 0; i < 56; i++)
+    {
+        bytes = bpak_io_read(f, read_buffer, 1);
+        ASSERT(bytes == 1);
+        ASSERT_EQ(read_buffer[0], i);
+    }
+
+    rc = bpak_io_close(f);
+    ASSERT_EQ(rc, BPAK_OK);
+
 }
