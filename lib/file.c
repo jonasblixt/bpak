@@ -12,7 +12,6 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/types.h>
-#include <sys/stat.h>
 #include <bpak/bpak.h>
 #include <bpak/io.h>
 #include <bpak/file.h>
@@ -119,15 +118,15 @@ int bpak_io_init_file(struct bpak_io **io_, const char *filename,
         goto err_free_ctx_out;
     }
 
-    struct stat statbuf;
+    fseek(ctx->fp, 0, SEEK_END);
 
-    stat(filename, &statbuf);
-
-    io->end_position = statbuf.st_size;
+    io->end_position = ftell(ctx->fp);
     io->on_write = bpak_io_file_write;
     io->on_read = bpak_io_file_read;
     io->on_seek = bpak_io_file_seek;
     io->on_close = bpak_io_file_cleanup;
+
+    fseek(ctx->fp, 0, SEEK_SET);
 
     return rc;
 
