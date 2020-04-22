@@ -29,6 +29,7 @@ int action_show(int argc, char **argv)
     bool binary_hash_output = false;
     char hash_output[64];
     size_t hash_size = sizeof(hash_output);
+    char string_output[128];
 
     struct option long_options[] =
     {
@@ -95,6 +96,7 @@ int action_show(int argc, char **argv)
     }
 
     struct bpak_header *h = bpak_pkg_header(pkg);
+    memset(string_output, 0, sizeof(string_output));
 
     if (meta_name)
     {
@@ -104,7 +106,16 @@ int action_show(int argc, char **argv)
         {
             if (m->id == bpak_id(meta_name))
             {
-                printf("Found 0x%x, %i bytes\n", m->id, m->size);
+                /*printf("Found 0x%x, %i bytes\n", m->id, m->size);*/
+
+                if (part_name)
+                    if (bpak_id(part_name) != m->part_id_ref)
+                        continue;
+
+                bpak_meta_to_string(h, m, string_output, sizeof(string_output));
+                if (strlen(string_output))
+                    printf("%s\n", string_output);
+                
                 rc = BPAK_OK;
                 break;
             }
@@ -157,7 +168,6 @@ int action_show(int argc, char **argv)
     printf("\nMetadata:\n");
     printf("    ID         Size   Meta ID              Part Ref   Data\n");
 
-    char string_output[128];
 
     bpak_foreach_meta(h, m)
     {
