@@ -481,7 +481,7 @@ int main(int argc, char **argv)
     curl_global_init(CURL_GLOBAL_DEFAULT);
     curl_handle = curl_easy_init();
     curl_easy_setopt(curl_handle, CURLOPT_URL,
-                   "http://localhost:8080/vB_transport.bpak");
+                   "http://localhost:8090/vB_transport.bpak");
     curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, stream_cb);
     curl_easy_setopt(curl_handle, CURLOPT_WRITEDATA, (void *) &ss);
 
