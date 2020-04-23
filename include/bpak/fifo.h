@@ -11,6 +11,7 @@ struct bpak_io_fifo
     uint64_t tail;
     uint8_t *buffer;
     size_t buffer_size;
+    size_t buffer_count;
 };
 
 #define GET_FIFO_CTX(__io) ((struct bpak_io_fifo *) __io->priv)
