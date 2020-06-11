@@ -40,7 +40,7 @@ struct bpak_bspatch_private
     struct bpak_io *origin;
 };
 
-#define BSPATCH_PRIVATE(__ins) ((struct bpak_bspatch_private *) __ins->state)
+#define BSPATCH_PRIVATE(__ins) ((struct bpak_bspatch_private *) (__ins)->state)
 
 static int64_t offtin(uint8_t *buf)
 {
@@ -79,7 +79,7 @@ process_more:
             if (p->ctrl_buf_count < 24)
             {
                 size_t needed = 24 - p->ctrl_buf_count;
-                size_t bytes_to_copy = bytes_available > needed?needed:bytes_available;
+                size_t bytes_to_copy = BPAK_MIN(bytes_available, needed);
                 memcpy(&p->ctrl_buf[p->ctrl_buf_count], pp, bytes_to_copy);
                 bytes_available -= bytes_to_copy;
                 p->ctrl_buf_count += bytes_to_copy;
@@ -116,8 +116,7 @@ process_more:
         break;
         case PATCH_STATE_APPLY_DIFF:
         {
-            size_t data_to_process = (bytes_available < p->patch_pos) ? \
-                                     bytes_available:p->patch_pos;
+            size_t data_to_process = BPAK_MIN(bytes_available, p->patch_pos);
 
             p->patch_pos -= data_to_process;
             bytes_available -= data_to_process;
@@ -180,7 +179,7 @@ process_more:
         break;
         case PATCH_STATE_APPLY_EXTRA:
         {
-            size_t data_to_process = bytes_available < p->patch_pos?bytes_available:p->patch_pos;
+            size_t data_to_process = BPAK_MIN(bytes_available, p->patch_pos);
             p->patch_pos -= data_to_process;
             bytes_available -= data_to_process;
 
@@ -235,7 +234,7 @@ static size_t compressor_read(struct bpak_io *io, void *ptr, size_t size)
     size_t data_to_read;
     size_t r;
 
-    data_to_read = size > p->patch_count?p->patch_count:size;
+    data_to_read = BPAK_MIN(size, p->patch_count);
 
     if (data_to_read <= 0)
         return 0;
@@ -260,11 +259,27 @@ static int bpak_alg_bspatch_init(struct bpak_alg_instance *ins,
     p->out = out;
     p->origin = origin;
 
+    if (ins->origin_header_pos == BPAK_HEADER_POS_LAST)
+    {
+        rc = bpak_io_seek(origin, sizeof(struct bpak_header), BPAK_IO_SEEK_END);
+
+        if (rc != BPAK_OK)
+            return rc;
+    }
+
     rc = bpak_io_read(origin, &p->oh, sizeof(p->oh));
 
     if (rc != sizeof(p->oh))
     {
         return -BPAK_FAILED;
+    }
+
+    if (ins->origin_header_pos == BPAK_HEADER_POS_LAST)
+    {
+        rc = bpak_io_seek(origin, 0, BPAK_IO_SEEK_SET);
+
+        if (rc != BPAK_OK)
+            return rc;
     }
 
     rc = bpak_valid_header(&p->oh);

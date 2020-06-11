@@ -41,8 +41,7 @@ struct bpak_bsdiff_private
     char suffix_fn[64];
 };
 
-#define BSDIFF_PRIVATE(__ins) ((struct bpak_bsdiff_private *) __ins->state)
-#define MIN(x, y) (((x) < (y)) ? (x) : (y))
+#define BSDIFF_PRIVATE(__ins) ((struct bpak_bsdiff_private *) (__ins)->state)
 
 static int32_t matchlen(uint8_t *from_p,
                         int64_t from_size,
@@ -51,7 +50,7 @@ static int32_t matchlen(uint8_t *from_p,
 {
     int64_t i;
 
-    for (i = 0; i < MIN(from_size, to_size); i++)
+    for (i = 0; i < BPAK_MIN(from_size, to_size); i++)
     {
         if (from_p[i] != to_p[i])
         {
@@ -102,7 +101,7 @@ static int64_t search(int64_t *sa_p,
 
     x = (from_begin + (from_end - from_begin) / 2);
 
-    if (memcmp(from_p + sa_p[x], to_p, MIN(from_size - sa_p[x], to_size)) < 0)
+    if (memcmp(from_p + sa_p[x], to_p, BPAK_MIN(from_size - sa_p[x], to_size)) < 0)
     {
         return search(sa_p, from_p, from_size, to_p, to_size, x, from_end, pos_p);
     }
@@ -140,8 +139,7 @@ static int write_data(struct bpak_alg_instance *ins, uint8_t *bfr, size_t size)
 
     while (data_to_write)
     {
-        chunk = (data_to_write > sizeof(p->buffer))? \
-                                sizeof(p->buffer):data_to_write;
+        chunk = BPAK_MIN(data_to_write, sizeof(p->buffer));
 
         for (int n = 0; n < chunk; n++)
         {
@@ -302,8 +300,7 @@ static int write_diff_extra_and_adjustment(struct bpak_alg_instance *ins)
 
     while (data_to_write)
     {
-        chunk = (data_to_write > sizeof(p->buffer))? \
-                                sizeof(p->buffer):data_to_write;
+        chunk = BPAK_MIN(data_to_write, sizeof(p->buffer));
 
         for (int n = 0; n < chunk; n++)
         {

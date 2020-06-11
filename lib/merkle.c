@@ -151,7 +151,7 @@ int bpak_merkle_process(struct bpak_merkle_context *ctx,
     else
     {
         uint64_t bytes_r = ctx->previous.size - ctx->previous.byte_counter;
-        chunk_sz = (bytes_r > MERKLE_BLOCK_SZ) ? MERKLE_BLOCK_SZ:bytes_r;
+        chunk_sz = BPAK_MIN(bytes_r, MERKLE_BLOCK_SZ);
 
         pos = ctx->previous.offset + ctx->previous.byte_counter;
 

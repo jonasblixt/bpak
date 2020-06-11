@@ -294,3 +294,8 @@ __attribute__ ((weak)) int bpak_printf(int verbosity, const char *fmt, ...)
 {
     return BPAK_OK;
 }
+
+const char *bpak_version(void)
+{
+    return PACKAGE_VERSION;
+}

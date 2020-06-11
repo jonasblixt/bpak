@@ -89,7 +89,7 @@ int bpak_alg_register(const struct bpak_alg *alg)
     {
         if (!__algs[i])
         {
-            __algs[i] = alg;
+            __algs[i] = (struct bpak_alg *) alg;
             return BPAK_OK;
         }
     }

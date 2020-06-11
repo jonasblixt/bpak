@@ -41,3 +41,4 @@ ltmain.sh
 template*
 *.bak
 cov-int/
+examples/streaming/streaming

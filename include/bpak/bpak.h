@@ -50,6 +50,12 @@ enum bpak_errors
     BPAK_NOT_SUPPORTED,
 };
 
+enum bpak_header_pos
+{
+    BPAK_HEADER_POS_FIRST,
+    BPAK_HEADER_POS_LAST,
+};
+
 /* Data within this part is not included in hashing context */
 #define BPAK_FLAG_EXCLUDE_FROM_HASH (1 << 0)
 
@@ -110,6 +116,7 @@ struct bpak_header
     uint8_t pad1[500];   /* Pad to 4kByte, set to zero */
 } __attribute__ ((packed));
 
+#define BPAK_MIN(__a, __b) (((__a) > (__b))?(__b):(__a))
 
 #define bpak_foreach_part(__hdr, __var) \
     for (struct bpak_part_header *__var = (__hdr)->parts; \
@@ -219,5 +226,7 @@ const char *bpak_signature_kind(uint8_t signature_kind);
 const char *bpak_hash_kind(uint8_t hash_kind);
 
 int bpak_printf(int verbosity, const char *fmt, ...);
+
+const char *bpak_version(void);
 
 #endif  // INCLUDE_BPAK_BPAK_H_

@@ -14,7 +14,7 @@ struct bpak_io_fifo
     size_t buffer_count;
 };
 
-#define GET_FIFO_CTX(__io) ((struct bpak_io_fifo *) __io->priv)
+#define GET_FIFO_CTX(__io) ((struct bpak_io_fifo *) (__io)->priv)
 
 int bpak_io_fifo_init(struct bpak_io **_io, size_t size);
 size_t bpak_fifo_available_space(struct bpak_io *io);

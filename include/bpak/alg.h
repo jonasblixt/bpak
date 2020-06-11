@@ -40,6 +40,8 @@ struct bpak_alg_instance
     bool done;
     void *state;
     uint64_t output_size;
+    enum bpak_header_pos origin_header_pos;
+    enum bpak_header_pos out_header_pos;
 };
 
 int bpak_alg_init(struct bpak_alg_instance *ins, uint32_t id,
