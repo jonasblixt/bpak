@@ -15,8 +15,8 @@ check_PROGRAMS = test_core_meta \
                  test_merkle \
                  test_struct_sz \
                  test_meta_align \
-				 test_basic_file_io \
-				 test_fifo
+                 test_basic_file_io \
+                 test_fifo
 
 test_core_meta_SOURCES = test_core_meta.c common.c
 test_core_meta_LDADD = libnala.la $(top_builddir)/lib/libbpak.la
@@ -71,8 +71,8 @@ TESTS = test_core_meta \
         test_merkle \
         test_struct_sz \
         test_meta_align \
-		test_basic_file_io \
-		test_fifo \
+        test_basic_file_io \
+        test_fifo \
         test_create.sh \
         test_transport.sh \
         test_keystore_gen.sh \
@@ -85,9 +85,9 @@ TESTS = test_core_meta \
         test_dep_version.sh \
         test_help_output.sh \
         test_sign_rsa4096.sh \
-		test_openssl_resign.sh \
+        test_openssl_resign.sh \
         test_misc.sh \
-		test_set_string.sh
+        test_set_string.sh
 
 
 if BUILD_BPAK_PYTHON_LIB
