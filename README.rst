@@ -78,10 +78,6 @@ Well known metadata id's
 ID          Encoding                   Description
 ==========  =================          ===========
 0xfb2f1f3f  UUID                       bpak-package, Package identifier type
-0x7da19399  uint32                     bpak-key-id, Identifier of key used for signing
-0x106c13a7  uint32                     bpak-key-store, Identifier of key-store
-0xe5679b94  uint8[]                    bpak-signature, Octet-stream that contains the DER encoded signature
-0x9e5e4955  uint32                     bpak-key-mask, Encodes a security life cycle bit mask
 0x9a5bab69  char[]                     bpak-version, Version string
 0x0ba87349  <UUID, char>               bpak-dependency, Dependency tuple, UUID reference to another package and text string expressing constraints
 0x2d44bbfb  <uint32, uint32>           bpak-transport, Transport medadata contains int32 pair that describes which encoder and decoder should be used for transport
@@ -191,6 +187,8 @@ Create an empty archive::
 
     Hash:      sha256
     Signature: prime256v1
+    Key ID:      00000000
+    Keystore ID: 00000000
 
     Metadata:
         ID         Size   Meta ID              Part Ref   Data
@@ -214,6 +212,8 @@ Adding a package type identifier::
 
     Hash:      sha256
     Signature: prime256v1
+    Key ID:      00000000
+    Keystore ID: 00000000
 
     Metadata:
         ID         Size   Meta ID              Part Ref   Data
@@ -238,6 +238,8 @@ Adding some real data::
 
     Hash:      sha256
     Signature: prime256v1
+    Key ID:      00000000
+    Keystore ID: 00000000
 
     Metadata:
         ID         Size   Meta ID              Part Ref   Data
@@ -303,16 +305,16 @@ The 'fs' part is encoded using the bsdiff algorithm, which when the actual
 encoding is going to be done requires some reference data.
 
 Signing the package::
-
-    $ bpak sign demo.bpak --key prime256v1-key-pair.pem \
-                          --key-id demo-key-id \
-                          --key-store demo-key-store
+    $ bpak set demo.bpak --key-id demo-key --keystore-id demo-key-store
+    $ bpak sign demo.bpak --key prime256v1-key-pair.pem
 
     $ bpak show demo.bpak
     BPAK File: demo.bpak
 
     Hash:      sha256
     Signature: prime256v1
+    Key ID:      05ae3443
+    Keystore ID: f45573db
 
     Metadata:
         ID         Size   Meta ID              Part Ref   Data
@@ -321,9 +323,6 @@ Signing the package::
         e68fc9be   32     merkle-root-hash     faabeca7   89acacdf13051c2f5058c13453f7f812fd25164a09e4a0cae30d8c4bb846f81d
         2d44bbfb   32     bpak-transport       faabeca7   Encode: 9f7aacf9, Decode: b5964388
         2d44bbfb   32     bpak-transport       77fadb17   Encode: 57004cd0, Decode: b5bcc58f
-        7da19399   4      bpak-key-id                     36edee98
-        106c13a7   4      bpak-key-store                  f45573db
-        e5679b94   70     bpak-signature
 
     Parts:
         ID         Size         Z-pad  Flags          Transport Size
@@ -332,11 +331,8 @@ Signing the package::
     
     Hash: 86712dfc65614c56d1fcb4fbcb0b2775ce5dacc84cc7c9a8248d2378101b6ee4
 
-The signing operation adds three meta-data fields. The bpak-key-id that represents
-some kind of identification of the key that was used for signing and the bpak-key-store
-which is optionally used as and identifier of groups of verification keys.
-
-And of course the actual signature in 'bpak-signature'
+Setting the key-id and keystore-id is optional and can be used in the verification
+ process to select the correct verification key.
 
 Verifying the package::
 
@@ -351,6 +347,8 @@ Encoding the package for transport::
 
     Hash:      sha256
     Signature: prime256v1
+    Key ID:      05ae3443
+    Keystore ID: f45573db
 
     Metadata:
         ID         Size   Meta ID              Part Ref   Data
@@ -359,9 +357,6 @@ Encoding the package for transport::
         e68fc9be   32     merkle-root-hash     faabeca7   e26e259011cbf2b7073201f2eeafc7b8ca98512c91a7338b06119c9e137fec9c
         2d44bbfb   32     bpak-transport       77fadb17   Encode: 57004cd0, Decode: b5bcc58f
         2d44bbfb   32     bpak-transport       faabeca7   Encode: 9f7aacf9, Decode: b5964388
-        7da19399   4      bpak-key-id                     36edee98
-        106c13a7   4      bpak-key-store                  f45573db
-        e5679b94   70     bpak-signature
 
     Parts:
         ID         Size         Z-pad  Flags          Transport Size
@@ -383,19 +378,14 @@ after some iteration turn in to release candidates. The rc's pass through a
 number of test steps and eventually a release candidate is considered to be
 acceptable for release to production/customer.
 
-At this point it's often desirable to not rebuild the artefacts since it would
+At this point it's often desirable to not rebuild the artifacts since it would
 incur another suite of testing before it can be released. To enable a flow
 where release candidates can be used directly bitpacker supports re-signing.
 
 Update key-id and keystore-id::
 
-    $ bpak set demo.bpak --meta bpak-key-id \
-                         --from-string "the-new-key-id" \
-                         --encoder id
-
-    $ bpak set demo.bpak --meta bpak-key-store \
-                         --from-string "some-other-keystore" \
-                         --encoder id
+    $ bpak set demo.bpak --key-id "the-new-key-id" \
+                         --keystore-id "some-other-keystore"
 
 Extracting the hash in binary form::
 

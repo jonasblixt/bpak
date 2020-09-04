@@ -57,7 +57,7 @@ void print_set_usage(void)
 
     printf("\nKey hint configuration:\n");
     printf("    -k, --key-id <id>               Set key id\n");
-    printf("    -i, --key-store-id <id>         Key from key-store with id <id>\n");
+    printf("    -i, --keystore-id <id>          Key from key-store with id <id>\n");
     printf("\n");
 
     print_common_usage();
