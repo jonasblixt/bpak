@@ -1,5 +1,6 @@
 #!/bin/sh
 BPAK=../src/bpak
+V=-vvv
 echo Sign test ec256 with openssl
 pwd
 set -e
@@ -24,17 +25,23 @@ $BPAK add $IMG --part pb-development \
                --from-file $srcdir/dev_rsa_public.der \
                --encoder key
 
-$BPAK add $IMG --meta bpak-key-id --from-string bpak-test-key --encoder id
-$BPAK add $IMG --meta bpak-key-store --from-string bpak-internal --encoder id
+$BPAK set $IMG --key-id bpak-test-key \
+               --keystore-id bpak-internal $V
 
 $BPAK generate keystore $IMG --name internal
 
 $BPAK show $IMG --hash | openssl pkeyutl -sign -inkey $PRI_KEY \
                     -keyform PEM > /tmp/sig.data
 
-$BPAK sign $IMG --signature /tmp/sig.data --key-id bpak-test-key \
-                --key-store bpak-internal
+echo SHOW1
+$BPAK show $IMG $V
 
-$BPAK show $IMG
-$BPAK verify $IMG --key $PUB_KEY
+echo SIGNING
+$BPAK sign $IMG --signature /tmp/sig.data $V
 
+echo SHOW2
+$BPAK show $IMG $V
+
+echo VERIFY
+$BPAK verify $IMG --key $PUB_KEY $V
+echo TEST END

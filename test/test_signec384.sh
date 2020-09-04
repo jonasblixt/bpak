@@ -1,5 +1,6 @@
 #!/bin/sh
 BPAK=../src/bpak
+V=-vvv
 echo Sign test ec384
 pwd
 set -e
@@ -13,15 +14,16 @@ set -e
 
 # Create A package
 echo Creating package A
-$BPAK create $IMG_A -Y --hash-kind sha384 --signature-kind secp384r1
+$BPAK create $IMG_A -Y --hash-kind sha384 --signature-kind secp384r1 $V
 
-$BPAK add $IMG_A --meta bpak-package --from-string $PKG_UUID --encoder uuid -v
+$BPAK add $IMG_A --meta bpak-package --from-string $PKG_UUID --encoder uuid $V
 $BPAK add $IMG_A --meta bpak-package-uid --from-string $PKG_UNIQUE_ID_A \
-                 --encoder uuid -v
+                 --encoder uuid $V
 
-$BPAK sign $IMG_A --key $srcdir/secp384r1-key-pair.pem \
-                  --key-id pb-development \
-                  --key-store pb-internal -v
+$BPAK set $IMG_A --key-id pb-development \
+                 --keystore-id pb-internal $V
 
-$BPAK show $IMG_A
-$BPAK verify $IMG_A --key $srcdir/secp384r1-pub-key.der 
+$BPAK sign $IMG_A --key $srcdir/secp384r1-key-pair.pem $V
+
+$BPAK show $IMG_A $V
+$BPAK verify $IMG_A --key $srcdir/secp384r1-pub-key.der $V

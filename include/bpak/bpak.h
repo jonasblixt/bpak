@@ -14,10 +14,10 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#define BPAK_HEADER_MAGIC 0x4250414b
+#define BPAK_HEADER_MAGIC 0x42504132
 #define BPAK_MAX_PARTS 32
 #define BPAK_MAX_META 32
-#define BPAK_METADATA_BYTES 2048
+#define BPAK_METADATA_BYTES 1920
 #define BPAK_PART_ALIGN 512
 #define BPAK_META_ALIGN 8
 
@@ -113,7 +113,12 @@ struct bpak_header
     uint8_t hash_kind;                     /* is aligned to a BPAK_META_ALIGN */
     uint8_t signature_kind;                /*  boundary */
     uint16_t alignment;
-    uint8_t pad1[500];   /* Pad to 4kByte, set to zero */
+    uint8_t payload_hash[64];
+    uint32_t key_id;
+    uint32_t keystore_id;
+    uint8_t pad1[42];
+    uint8_t signature[512];
+    uint16_t signature_sz;
 } __attribute__ ((packed));
 
 #define BPAK_MIN(__a, __b) (((__a) > (__b))?(__b):(__a))

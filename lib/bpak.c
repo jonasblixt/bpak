@@ -231,12 +231,6 @@ const char *bpak_known_id(uint32_t id)
 {
     switch(id)
     {
-    case 0x7da19399:
-        return "bpak-key-id";
-    case 0x106c13a7:
-        return "bpak-key-store";
-    case 0xe5679b94:
-        return "bpak-signature";
     case 0xfb2f1f3f:
         return "bpak-package";
     case 0x2d44bbfb:
@@ -251,8 +245,6 @@ const char *bpak_known_id(uint32_t id)
         return "bpak-version";
     case 0x0ba87349:
         return "bpak-dependency";
-    case 0x9e5e4955:
-        return "bpak-key-mask";
     default:
         return "";
     }

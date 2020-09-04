@@ -1,5 +1,6 @@
 #!/bin/sh
 BPAK=../src/bpak
+V=-vvvv
 echo Creating simple archive
 pwd
 set -e
@@ -34,11 +35,14 @@ $BPAK add $IMG_A --part fs \
                  --set-flag dont-hash \
                  --encoder merkle -v
 
-$BPAK sign $IMG_A --key $srcdir/secp256r1-key-pair.pem \
-                  --key-id pb-development \
-                  --key-store pb-internal -v
-
+$BPAK set $IMG_A --key-id pb-development \
+                 --keystore-id pb-internal $V
+echo SIGN
+$BPAK sign $IMG_A --key $srcdir/secp256r1-key-pair.pem $V
+echo SHOW
 $BPAK show $IMG_A -vvv
+echo VERIFY
 $BPAK verify $IMG_A --key $srcdir/secp256r1-pub-key.der -vvv
+echo SHOW
 $BPAK show $IMG_A --part fs -vvv
 $BPAK show $IMG_A --meta bpak-package -vvv

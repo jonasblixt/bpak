@@ -113,11 +113,6 @@ int bpak_meta_to_string(struct bpak_header *h, struct bpak_meta_header *m,
         snprintf(buf, size, "%s (%s)", uuid_str, d->constraint);
 
     }
-    else if (m->id == bpak_id("bpak-key-mask"))
-    {
-        uint64_t *key_mask = (uint64_t *) &(h->metadata[m->offset]);
-        snprintf(buf, size, "mask: 0x%8.8x", (uint32_t) *key_mask);
-    }
     else
     {
         if (size)

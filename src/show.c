@@ -162,8 +162,10 @@ int action_show(int argc, char **argv)
 
     printf("BPAK File: %s\n", filename);
     printf("\n");
-    printf("Hash:      %s\n", bpak_hash_kind(h->hash_kind));
-    printf("Signature: %s\n", bpak_signature_kind(h->signature_kind));
+    printf("Hash:        %s\n", bpak_hash_kind(h->hash_kind));
+    printf("Signature:   %s\n", bpak_signature_kind(h->signature_kind));
+    printf("Key ID:      %08x\n", h->key_id);
+    printf("Keystore ID: %08x\n", h->keystore_id);
 
     printf("\nMetadata:\n");
     printf("    ID         Size   Meta ID              Part Ref   Data\n");

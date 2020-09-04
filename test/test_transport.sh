@@ -39,9 +39,10 @@ $BPAK add $IMG_A --part fs \
                  --set-flag dont-hash \
                  --encoder merkle $V
 
-$BPAK sign $IMG_A --key $srcdir/secp256r1-key-pair.pem \
-                  --key-id pb-development \
-                  --key-store pb-internal $V
+$BPAK set $IMG_A --key-id pb-development \
+                 --keystore-id pb-internal $V
+
+$BPAK sign $IMG_A --key $srcdir/secp256r1-key-pair.pem $V
 
 # Create B package
 echo Creating package B
@@ -64,9 +65,10 @@ $BPAK add $IMG_B --part fs \
                  --set-flag dont-hash \
                  --encoder merkle $V
 
-$BPAK sign $IMG_B --key $srcdir/secp256r1-key-pair.pem \
-                  --key-id pb-development \
-                  --key-store pb-internal $V
+$BPAK set $IMG_B --key-id pb-development \
+                 --keystore-id pb-internal $V
+
+$BPAK sign $IMG_B --key $srcdir/secp256r1-key-pair.pem $V
 
 # Test Transport encoding / decoding
 echo Transport encoding

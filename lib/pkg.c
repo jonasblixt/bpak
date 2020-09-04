@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
@@ -69,6 +70,9 @@ int bpak_pkg_close(struct bpak_package *pkg)
 int bpak_pkg_compute_hash(struct bpak_package *pkg, char *output, size_t *size)
 {
     int rc;
+    uint8_t signature[512];
+    uint16_t signature_sz;
+
     mbedtls_sha256_context sha256;
     mbedtls_sha512_context sha512;
 
@@ -99,26 +103,7 @@ int bpak_pkg_compute_hash(struct bpak_package *pkg, char *output, size_t *size)
             return -BPAK_NOT_SUPPORTED;
     }
 
-    /* Zero out signature if it exists */
-    bpak_foreach_meta(&pkg->header, m)
-    {
-        if (m->id == bpak_id("bpak-signature"))
-        {
-            uint8_t *ptr = &(pkg->header.metadata[m->offset]);
-            memset(ptr, 0, m->size);
-            memset(m, 0, sizeof(*m));
-        }
-    }
-
-    if (pkg->header.hash_kind == BPAK_HASH_SHA256)
-        rc = mbedtls_sha256_update_ret(&sha256, (char *) &pkg->header,
-                                        sizeof(pkg->header));
-    else
-        rc = mbedtls_sha512_update_ret(&sha512, (char *) &pkg->header,
-                                        sizeof(pkg->header));
-
     char hash_buffer[512];
-    char hash_output[64];
 
     bpak_io_seek(pkg->io, sizeof(pkg->header), BPAK_IO_SEEK_SET);
 
@@ -152,11 +137,50 @@ int bpak_pkg_compute_hash(struct bpak_package *pkg, char *output, size_t *size)
         } while (bytes_to_read);
     }
 
+    memset(pkg->header.payload_hash, 0, sizeof(pkg->header.payload_hash));
+    memcpy(signature, pkg->header.signature, sizeof(signature));
+    signature_sz = pkg->header.signature_sz;
+
+    memset(pkg->header.signature, 0, sizeof(pkg->header.signature));
+    pkg->header.signature_sz = 0;
+
+    if (pkg->header.hash_kind == BPAK_HASH_SHA256)
+        mbedtls_sha256_finish_ret(&sha256, pkg->header.payload_hash);
+    else
+        mbedtls_sha512_finish_ret(&sha512, pkg->header.payload_hash);
+
+    switch (pkg->header.hash_kind)
+    {
+        case BPAK_HASH_SHA256:
+            mbedtls_sha256_init(&sha256);
+            mbedtls_sha256_starts_ret(&sha256, 0);
+        break;
+        case BPAK_HASH_SHA384:
+            mbedtls_sha512_init(&sha512);
+            mbedtls_sha512_starts_ret(&sha512, 1);
+        break;
+        case BPAK_HASH_SHA512:
+            mbedtls_sha512_init(&sha512);
+            mbedtls_sha512_starts_ret(&sha512, 0);
+        break;
+        default:
+            return -BPAK_NOT_SUPPORTED;
+    }
+
+    if (pkg->header.hash_kind == BPAK_HASH_SHA256)
+        rc = mbedtls_sha256_update_ret(&sha256, (char *) &pkg->header,
+                                        sizeof(pkg->header));
+    else
+        rc = mbedtls_sha512_update_ret(&sha512, (char *) &pkg->header,
+                                        sizeof(pkg->header));
+
     if (pkg->header.hash_kind == BPAK_HASH_SHA256)
         mbedtls_sha256_finish_ret(&sha256, output);
     else
         mbedtls_sha512_finish_ret(&sha512, output);
 
+    memcpy(pkg->header.signature, signature, sizeof(signature));
+    pkg->header.signature_sz = signature_sz;
     return rc;
 }
 
@@ -194,75 +218,15 @@ struct bpak_header *bpak_pkg_header(struct bpak_package *pkg)
     return &pkg->header;
 }
 
-int bpak_pkg_sign_init(struct bpak_package *pkg, uint32_t key_id,
-                            int32_t keystore_id)
-{
-    int rc;
-    uint32_t *key_id_ptr = NULL;
-    uint32_t *key_store_ptr = NULL;
-
-    rc = bpak_get_meta(&pkg->header, bpak_id("bpak-key-id"),
-                        (void **) &key_id_ptr);
-
-    if (rc != BPAK_OK)
-    {
-        rc = bpak_add_meta(&pkg->header, bpak_id("bpak-key-id"),
-                        0, (void **) &key_id_ptr, sizeof(uint32_t));
-    }
-
-    if (rc != BPAK_OK)
-    {
-        return rc;
-    }
-
-    rc = bpak_get_meta(&pkg->header, bpak_id("bpak-key-store"),
-                            (void **) &key_store_ptr);
-
-    if (rc != BPAK_OK)
-    {
-        rc = bpak_add_meta(&pkg->header, bpak_id("bpak-key-store"), 0,
-                            (void **) &key_store_ptr, sizeof(uint32_t));
-    }
-
-    if (rc != BPAK_OK)
-    {
-        return rc;
-    }
-
-    *key_id_ptr = key_id;
-    *key_store_ptr = keystore_id;
-    return rc;
-}
-
 int bpak_pkg_sign(struct bpak_package *pkg, const uint8_t *signature,
                     size_t size)
 {
     int rc;
     uint8_t *signature_ptr = NULL;
 
-
-    /* Remove any existing signatures */
-    bpak_foreach_meta(&pkg->header, m)
-    {
-        if (!m->id)
-            break;
-
-        if (m->id == bpak_id("bpak-signature"))
-        {
-            uint8_t *ptr = &(pkg->header.metadata[m->offset]);
-            memset(ptr, 0, m->size);
-            memset(m, 0, sizeof(*m));
-            break;
-        }
-    }
-
-    rc = bpak_add_meta(&pkg->header, bpak_id("bpak-signature"), 0,
-                        (void **) &signature_ptr, size);
-
-    if (rc != BPAK_OK)
-        return rc;
-
-    memcpy(signature_ptr, signature, size);
+    memset(pkg->header.signature, 0, sizeof(pkg->header.signature));
+    memcpy(pkg->header.signature, signature, size);
+    pkg->header.signature_sz = size;
 
     rc = bpak_io_seek(pkg->io, 0, BPAK_IO_SEEK_SET);
 
@@ -280,24 +244,9 @@ int bpak_pkg_sign(struct bpak_package *pkg, const uint8_t *signature,
 int bpak_pkg_read_signature(struct bpak_package *pkg, uint8_t *sig,
                                 size_t *sig_size)
 {
-
-    bpak_foreach_meta(&pkg->header, m)
-    {
-        if (!m->id)
-            break;
-
-        if (m->id == bpak_id("bpak-signature"))
-        {
-            uint8_t *ptr = &(pkg->header.metadata[m->offset]);
-            if (m->size > *sig_size)
-                return -BPAK_FAILED;
-            *sig_size = m->size;
-            memcpy(sig, ptr, m->size);
-            return BPAK_OK;
-        }
-    }
-
-    return -BPAK_FAILED;
+    *sig_size = pkg->header.signature_sz;
+    memcpy(sig, pkg->header.signature, pkg->header.signature_sz);
+    return BPAK_OK;
 }
 
 int bpak_pkg_add_transport(struct bpak_package *pkg, uint32_t part_ref,

@@ -1,5 +1,6 @@
 #!/bin/sh
 BPAK=../src/bpak
+V=-vvv
 echo Creating keystore archive
 set -e
 
@@ -30,9 +31,9 @@ $BPAK add $IMG --part pb-development3 \
                --from-file $srcdir/secp521r1-pub-key.pem \
                --encoder key
 
-$BPAK sign $IMG --key $srcdir/secp256r1-key-pair.pem \
-                  --key-id pb-development \
-                  --key-store pb-internal -v
+$BPAK set $IMG --key-id pb-development \
+               --keystore-id pb-internal $V
+$BPAK sign $IMG --key $srcdir/secp256r1-key-pair.pem $V
 
 $BPAK show $IMG
 

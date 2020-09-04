@@ -207,8 +207,6 @@ int action_sign(int argc, char **argv)
     const char *filename = NULL;
     const char *signature_file = NULL;
     const char *key_source = NULL;
-    const char *key_store = NULL;
-    const char *key_id = NULL;
     const char *hash_alg = NULL;
     char sig[1024];
     size_t size = sizeof(sig);
@@ -225,13 +223,11 @@ int action_sign(int argc, char **argv)
         {"verbose",     no_argument,       0,  'v' },
         {"hash",        required_argument, 0,  'H' },
         {"key",         required_argument, 0,  'k' },
-        {"key-store",   required_argument, 0,  's' },
-        {"key-id",      required_argument, 0,  'i' },
         {"signature",   required_argument, 0,  'f' },
         {0,             0,                 0,   0  }
     };
 
-    while ((opt = getopt_long(argc, argv, "hvk:s:i:",
+    while ((opt = getopt_long(argc, argv, "hvk:",
                    long_options, &long_index )) != -1)
     {
         switch (opt)
@@ -244,12 +240,6 @@ int action_sign(int argc, char **argv)
             break;
             case 'k':
                 key_source = (const char *) optarg;
-            break;
-            case 's':
-                key_store = (const char *) optarg;
-            break;
-            case 'i':
-                key_id = (const char *) optarg;
             break;
             case 'f':
                 signature_file = (const char *) optarg;
@@ -280,13 +270,6 @@ int action_sign(int argc, char **argv)
         return -1;
     }
 
-
-    if (!signature_file && (!key_id || !key_store))
-    {
-        printf("Error: Missing argument key-id or key-store\n");
-        return -BPAK_FAILED;
-    }
-
     struct bpak_package *pkg = NULL;
     uint8_t hash_output[128];
 
@@ -301,42 +284,6 @@ int action_sign(int argc, char **argv)
     struct bpak_header *h = bpak_pkg_header(pkg);
 
     FILE *sig_fp = NULL;
-
-    /* If we are installing a pre-computed signature and no
-     * key-id or key-store-id is supplied: re-use the current one */
-    if (signature_file && (!key_id || !key_store))
-    {
-        uint32_t *current_key_id = NULL;
-        uint32_t *current_keystore = NULL;
-
-
-        rc = bpak_get_meta(&pkg->header, bpak_id("bpak-key-id"),
-                                            (void **) &current_key_id);
-
-        if (rc != BPAK_OK)
-        {
-            printf("Error: Could not find bpak-key-id meta\n");
-            goto err_out;
-        }
-
-        rc = bpak_get_meta(&pkg->header, bpak_id("bpak-key-store"),
-                                            (void **) &current_keystore);
-
-        if (rc != BPAK_OK)
-        {
-            printf("Error: Could not find bpak-key-store meta\n");
-            goto err_out;
-        }
-
-        rc = bpak_pkg_sign_init(pkg, *current_key_id, *current_keystore);
-    }
-    else
-    {
-        rc = bpak_pkg_sign_init(pkg, bpak_id(key_id), bpak_id(key_store));
-    }
-
-    if (rc != BPAK_OK)
-        goto err_out;
 
     /* Set pre-computed signature */
     if (signature_file)

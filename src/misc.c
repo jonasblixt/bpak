@@ -54,6 +54,10 @@ void print_set_usage(void)
     printf("    -m, --meta                      Update meta data\n");
     printf("    -s, --from-string               String input\n");
     printf("    -e, --encoder\n");
+
+    printf("\nKey hint configuration:\n");
+    printf("    -k, --key-id <id>               Set key id\n");
+    printf("    -i, --key-store-id <id>         Key from key-store with id <id>\n");
     printf("\n");
 
     print_common_usage();
@@ -191,9 +195,6 @@ void print_sign_usage(void)
     printf("Sign options:\n");
     printf("    -f, --signature <filename>       Write precomputed signature\n");
     printf("    -k, --key <key>                  Sign using key <key>\n");
-    printf("    -i, --key-id <id>                Set key id\n");
-    printf("    -s, --key-store <id>             Key from key-store with id <id>\n");
-    printf("    -H, --hash                       Output binary hash\n");
 }
 
 void print_verify_usage(void)

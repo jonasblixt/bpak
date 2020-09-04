@@ -152,11 +152,10 @@ TEST(too_much_metadata)
     ASSERT_EQ(rc, BPAK_OK);
 
     v = NULL;
-    for (int i = 0; i < BPAK_MAX_META; i++)
+    for (int i = 0; i < 30; i++)
     {
         printf("%i\n", i);
-        rc = bpak_add_meta(&h, bpak_id("test-meta"), 0, (void **) &v,
-                                            BPAK_METADATA_BYTES/BPAK_MAX_META);
+        rc = bpak_add_meta(&h, bpak_id("test-meta"), 0, (void **) &v, 64);
         printf("v %p\n", v);
         ASSERT_EQ(rc, BPAK_OK);
     }

@@ -1,5 +1,6 @@
 #!/bin/sh
 BPAK=../src/bpak
+V=-vvv
 echo Sign test ec256 with openssl
 pwd
 set -e
@@ -17,36 +18,34 @@ PUB_KEY=$srcdir/secp256r1-pub-key.der
 
 set -e
 
-$BPAK create $IMG -Y
+$BPAK create $IMG -Y $V
 
-$BPAK add $IMG --meta bpak-package --from-string $PKG_UUID --encoder uuid
+$BPAK add $IMG --meta bpak-package --from-string $PKG_UUID --encoder uuid $V
 
 $BPAK add $IMG --part pb-development \
                --from-file $srcdir/dev_rsa_public.der \
-               --encoder key
+               --encoder key $V
 
-$BPAK add $IMG --meta bpak-key-id --from-string bpak-test-key --encoder id
-$BPAK add $IMG --meta bpak-key-store --from-string bpak-internal --encoder id
+$BPAK generate keystore $IMG --name internal $V
 
-$BPAK generate keystore $IMG --name internal
+$BPAK set $IMG --key-id pb-development \
+               --keystore-id pb-internal $V
 
 $BPAK show $IMG --hash | openssl pkeyutl -sign -inkey $PRI_KEY \
                     -keyform PEM > /tmp/sig.data
 
-$BPAK sign $IMG --signature /tmp/sig.data --key-id bpak-test-key \
-                --key-store bpak-internal
+$BPAK sign $IMG --signature /tmp/sig.data $V
 
 $BPAK show $IMG
 $BPAK verify $IMG --key $PUB_KEY
 
 # Update keystore and re-sign
 
-$BPAK set $IMG --meta bpak-key-store --from-string bpak-other --encoder id
+$BPAK set $IMG --key-id pb-development \
+               --keystore-id bpak-other $V
 
-$BPAK sign $IMG --key $srcdir/secp256r1-key-pair.pem \
-                  --key-id pb-development \
-                  --key-store pb-internal -v
+$BPAK sign $IMG --key $srcdir/secp256r1-key-pair.pem $V
 
-$BPAK show $IMG
-$BPAK verify $IMG --key $PUB_KEY
+$BPAK show $IMG $V
+$BPAK verify $IMG --key $PUB_KEY $V
 

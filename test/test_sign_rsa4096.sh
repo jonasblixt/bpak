@@ -16,9 +16,10 @@ $BPAK add $IMG --meta bpak-package --from-string $PKG_UUID --encoder uuid $V
 $BPAK add $IMG --meta bpak-package-uid --from-string $PKG_UNIQUE_ID_A \
                  --encoder uuid $V
 
-$BPAK sign $IMG --key $srcdir/dev_rsa_private.pem \
-                  --key-id pb-development \
-                  --key-store pb-internal $V
+$BPAK set $IMG --key-id pb-development \
+               --keystore-id pb-internal $V
+
+$BPAK sign $IMG --key $srcdir/dev_rsa_private.pem $V
 
 $BPAK show $IMG $V
 $BPAK verify $IMG --key $srcdir/dev_rsa_public.der $V
