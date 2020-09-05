@@ -7,7 +7,7 @@ set -e
 
 $BPAK --help
 
-IMG_A=sign_test.bpak
+IMG_A=sign_test_ec384.bpak
 PKG_UUID=0888b0fa-9c48-4524-9845-06a641b61edd
 PKG_UNIQUE_ID_A=$(uuidgen -t)
 set -e

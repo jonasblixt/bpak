@@ -5,18 +5,18 @@ set -e
 
 $BPAK --help
 
-IMG_A=vA.bpak
-IMG_B=vB.bpak
+IMG_A=vA_transp.bpak
+IMG_B=vB_transp.bpak
 PKG_UUID=0888b0fa-9c48-4524-9845-06a641b61edd
 PKG_UNIQUE_ID_A=$(uuidgen -t)
 PKG_UNIQUE_ID_B=$(uuidgen -t)
 V=-vvvv
 set -e
 
-dd if=/dev/urandom of=A bs=1024 count=4096
-dd if=/dev/urandom of=B_ bs=1024 count=1024
+dd if=/dev/urandom of=A_transp bs=1024 count=4096
+dd if=/dev/urandom of=B__transp bs=1024 count=1024
 
-cat A B_ > B
+cat A_transp B__transp > B_transp
 
 # Create A package
 echo Creating package A
@@ -35,7 +35,7 @@ $BPAK transport $IMG_A --add --part fs-hash-tree \
                        --decoder merkle-generate $V
 
 $BPAK add $IMG_A --part fs \
-                 --from-file A \
+                 --from-file A_transp \
                  --set-flag dont-hash \
                  --encoder merkle $V
 
@@ -61,7 +61,7 @@ $BPAK transport $IMG_B --add --part fs-hash-tree \
                        --decoder merkle-generate $V
 
 $BPAK add $IMG_B --part fs \
-                 --from-file B \
+                 --from-file B_transp \
                  --set-flag dont-hash \
                  --encoder merkle $V
 
@@ -82,11 +82,11 @@ echo Transport decoding
 
 $BPAK transport vB_install.bpak --decode --origin $IMG_A $V
 
-$BPAK compare vB.bpak vB_install.bpak $V
+$BPAK compare $IMG_B vB_install.bpak $V
 
 #sha256sum $IMG_B
 #sha256sum vB_install.bpak
-first_sha256=$(sha256sum vB.bpak | cut -d ' ' -f 1)
+first_sha256=$(sha256sum $IMG_B | cut -d ' ' -f 1)
 second_sha256=$(sha256sum vB_install.bpak | cut -d ' ' -f 1)
 
 if [ $first_sha256 != $second_sha256  ];
@@ -96,4 +96,4 @@ then
 fi
 
 $BPAK show vB_transport.bpak $V
-$BPAK show vB.bpak $V
+$BPAK show $IMG_B $V

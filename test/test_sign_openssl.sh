@@ -10,7 +10,7 @@ $BPAK show --help
 $BPAK sign --help
 $BPAK verify --help
 
-IMG=test_keystore.bpak
+IMG=test_keystore_openssl.bpak
 PKG_UUID=5df103ef-e774-450b-95c5-1fef51ceec28
 PRI_KEY=$srcdir/secp256r1-key-pair.pem
 PUB_KEY=$srcdir/secp256r1-pub-key.der
@@ -31,13 +31,13 @@ $BPAK set $IMG --key-id bpak-test-key \
 $BPAK generate keystore $IMG --name internal
 
 $BPAK show $IMG --hash | openssl pkeyutl -sign -inkey $PRI_KEY \
-                    -keyform PEM > /tmp/sig.data
+                    -keyform PEM > /tmp/sig_openssl.data
 
 echo SHOW1
 $BPAK show $IMG $V
 
 echo SIGNING
-$BPAK sign $IMG --signature /tmp/sig.data $V
+$BPAK sign $IMG --signature /tmp/sig_openssl.data $V
 
 echo SHOW2
 $BPAK show $IMG $V
