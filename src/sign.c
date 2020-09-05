@@ -457,7 +457,7 @@ int action_verify(int argc, char **argv)
 
     sig_size = sizeof(sig);
 
-    rc = bpak_pkg_read_signature(pkg, sig, &sig_size);
+    rc = bpak_copyz_signature(&pkg->header, sig, &sig_size);
 
     if (rc != BPAK_OK)
         goto err_out;

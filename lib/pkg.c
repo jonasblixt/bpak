@@ -241,14 +241,6 @@ int bpak_pkg_sign(struct bpak_package *pkg, const uint8_t *signature,
     return BPAK_OK;
 }
 
-int bpak_pkg_read_signature(struct bpak_package *pkg, uint8_t *sig,
-                                size_t *sig_size)
-{
-    *sig_size = pkg->header.signature_sz;
-    memcpy(sig, pkg->header.signature, pkg->header.signature_sz);
-    return BPAK_OK;
-}
-
 int bpak_pkg_add_transport(struct bpak_package *pkg, uint32_t part_ref,
                                 uint32_t encoder_id, uint32_t decoder_id)
 {

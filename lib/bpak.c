@@ -287,6 +287,24 @@ __attribute__ ((weak)) int bpak_printf(int verbosity, const char *fmt, ...)
     return BPAK_OK;
 }
 
+int bpak_copyz_signature(struct bpak_header *header, uint8_t *signature,
+                         size_t *size)
+{
+    if (header->signature_sz > BPAK_SIGNATURE_MAX_BYTES)
+        return -BPAK_SIZE_ERROR;
+    if (header->signature_sz == 0)
+        return -BPAK_SIZE_ERROR;
+    if (header->signature_sz > *size)
+        return -BPAK_SIZE_ERROR;
+
+    (*size) = header->signature_sz;
+    memcpy(signature, header->signature, header->signature_sz);
+    memset(header->signature, 0, sizeof(header->signature));
+    header->signature_sz = 0;
+
+    return BPAK_OK;
+}
+
 const char *bpak_version(void)
 {
     return PACKAGE_VERSION;

@@ -20,6 +20,7 @@
 #define BPAK_METADATA_BYTES 1920
 #define BPAK_PART_ALIGN 512
 #define BPAK_META_ALIGN 8
+#define BPAK_SIGNATURE_MAX_BYTES 512
 
 enum bpak_hash_kind
 {
@@ -117,7 +118,7 @@ struct bpak_header
     uint32_t key_id;
     uint32_t keystore_id;
     uint8_t pad1[42];
-    uint8_t signature[512];
+    uint8_t signature[BPAK_SIGNATURE_MAX_BYTES];
     uint16_t signature_sz;
 } __attribute__ ((packed));
 
@@ -201,6 +202,16 @@ int bpak_add_part(struct bpak_header *hdr, uint32_t id,
  */
 
 int bpak_valid_header(struct bpak_header *hdr);
+
+/*
+ * Copy the signature to '*signature' and zero out the signature area in the
+ *  header.
+ *
+ * Signature size is returned in '*size'
+ **/
+
+int bpak_copyz_signature(struct bpak_header *header, uint8_t *signature,
+                         size_t *size);
 
 /*
  * Initialize empty header structure
