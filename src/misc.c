@@ -63,6 +63,22 @@ void print_set_usage(void)
     print_common_usage();
 }
 
+void print_extract_usage(void)
+{
+    print_version();
+    printf("\n");
+    printf("bpak extract <filename.bpak>        Extract parts from bpak file\n");
+    printf("\n");
+
+    printf("Extract options:\n");
+    printf("    -m, --meta <id>                 Extract meta data\n");
+    printf("    -p, --part <id>                 Extract part\n");
+    printf("    -o, --output <filename>\n");
+    printf("\n");
+
+    print_common_usage();
+}
+
 void print_create_usage(void)
 {
     print_version();
@@ -226,6 +242,7 @@ void print_usage(void)
     printf("    set                             Update metadata\n");
     printf("    generate                        Various generators\n");
     printf("    compare                         Compare bpak files\n");
+    printf("    extract                         Extract parts or meta data\n");
     printf("\n");
 
     print_common_usage();

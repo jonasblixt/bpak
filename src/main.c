@@ -119,6 +119,10 @@ int main(int argc, char **argv)
         {
             return action_compare(argc, argv);
         }
+        else if (strcmp(action, "extract") == 0)
+        {
+            return action_extract(argc, argv);
+        }
         else
         {
             printf ("Unknown action '%s'\n", action);

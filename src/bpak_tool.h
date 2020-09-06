@@ -19,6 +19,7 @@ int action_generate(int argc, char **argv);
 int action_transport(int argc, char **argv);
 int action_set(int argc, char **argv);
 int action_compare(int argc, char **argv);
+int action_extract(int argc, char **argv);
 
 void print_usage(void);
 void print_add_usage(void);
@@ -32,6 +33,7 @@ void print_generate_usage(void);
 void print_transport_usage(void);
 void print_compare_usage(void);
 void print_set_usage(void);
+void print_extract_usage(void);
 
 int bpak_get_verbosity(void);
 void bpak_inc_verbosity(void);
