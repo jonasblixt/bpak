@@ -87,7 +87,8 @@ TESTS = test_core_meta \
         test_sign_rsa4096.sh \
         test_openssl_resign.sh \
         test_misc.sh \
-        test_set_string.sh
+        test_set_string.sh \
+		test_extract.sh
 
 
 if BUILD_BPAK_PYTHON_LIB
