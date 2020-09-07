@@ -33,6 +33,7 @@ int action_extract(int argc, char **argv)
     const char *output_filename = NULL;
     uint32_t meta_id = 0;
     uint32_t part_id = 0;
+    uint32_t part_id_ref = 0;
     char output_path[16];
     FILE *fp = NULL;
 
@@ -43,10 +44,11 @@ int action_extract(int argc, char **argv)
         {"meta",        required_argument, 0,  'm' },
         {"part",        required_argument, 0,  'p' },
         {"output",      required_argument, 0,  'o' },
+        {"part-ref",    required_argument, 0,  'r' },
         {0,             0,                 0,   0  }
     };
 
-    while ((opt = getopt_long(argc, argv, "hvm:p:o:",
+    while ((opt = getopt_long(argc, argv, "hvm:p:o:r:",
                    long_options, &long_index )) != -1)
     {
         switch (opt)
@@ -56,6 +58,9 @@ int action_extract(int argc, char **argv)
                 return 0;
             case 'v':
                 bpak_inc_verbosity();
+            break;
+            case 'r':
+                part_id_ref = bpak_id(optarg);
             break;
             case 'p':
                 part_id = bpak_id(optarg);
@@ -110,6 +115,45 @@ int action_extract(int argc, char **argv)
 
     if (meta_id)
     {
+        struct bpak_meta_header *meta_header = NULL;
+        void *data_ptr = NULL;
+
+        rc = bpak_get_meta_and_header(h, meta_id, part_id_ref, &data_ptr,
+                                        &meta_header);
+
+        if (rc != BPAK_OK)
+        {
+            fprintf(stderr, "Error: Could not find metadata %x\n", meta_id);
+            goto err_close_pkg_out;
+        }
+
+        snprintf(output_path, sizeof(output_path), "%08x", meta_id);
+
+        char *path_str = NULL;
+
+        if (output_filename)
+            path_str = (char *) output_filename;
+        else
+            path_str = output_path;
+
+        fp = fopen(path_str, "w+");
+
+        if (fp == NULL)
+        {
+            fprintf(stderr, "Error: Could not create '%s'\n",
+                            path_str);
+            rc = -BPAK_FAILED;
+            goto err_close_pkg_out;
+        }
+
+        ssize_t written = fwrite(data_ptr, meta_header->size, 1, fp);
+
+        if (written != 1)
+        {
+            fprintf(stderr, "Error: write error\n");
+            rc = -BPAK_FAILED;
+            goto err_close_fp_out;
+        }
     }
 
     if (part_id)
@@ -136,7 +180,7 @@ int action_extract(int argc, char **argv)
         char *path_str = NULL;
 
         if (output_filename)
-            path_str = output_filename;
+            path_str = (char *) output_filename;
         else
             path_str = output_path;
 

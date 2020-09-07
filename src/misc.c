@@ -74,6 +74,7 @@ void print_extract_usage(void)
     printf("    -m, --meta <id>                 Extract meta data\n");
     printf("    -p, --part <id>                 Extract part\n");
     printf("    -o, --output <filename>\n");
+    printf("    -r, --part-ref=ref              Reference part\n");
     printf("\n");
 
     print_common_usage();
