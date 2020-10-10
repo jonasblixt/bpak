@@ -15,6 +15,10 @@ int bpak_pkg_open(struct bpak_package **pkg_, const char *filename,
                   const char *mode)
 {
     int rc;
+
+    if (!mode)
+        return -BPAK_FAILED;
+
     *pkg_ = malloc(sizeof(struct bpak_package));
     struct bpak_package *pkg = *pkg_;
 
@@ -33,18 +37,22 @@ int bpak_pkg_open(struct bpak_package **pkg_, const char *filename,
     if (rc != BPAK_OK)
         goto err_free_pkg;
 
-    size_t read_bytes = bpak_io_read(pkg->io, &pkg->header,
-                                        sizeof(pkg->header));
-    if (read_bytes != sizeof(pkg->header))
+    /* If we open the package for writing, do not try to read the header */
+    if (mode[0] == 'r')
     {
-        rc = -BPAK_FAILED;
-        goto err_close_io;
+        size_t read_bytes = bpak_io_read(pkg->io, &pkg->header,
+                                            sizeof(pkg->header));
+        if (read_bytes != sizeof(pkg->header))
+        {
+            rc = -BPAK_FAILED;
+            goto err_close_io;
+        }
+
+        rc = bpak_valid_header(&pkg->header);
+
+        if (rc != BPAK_OK)
+            goto err_close_io;
     }
-
-    rc = bpak_valid_header(&pkg->header);
-
-    if (rc != BPAK_OK)
-        goto err_close_io;
 
     rc = bpak_io_seek(pkg->io, 0, BPAK_IO_SEEK_SET);
 
@@ -57,6 +65,7 @@ err_close_io:
     bpak_io_close(pkg->io);
 err_free_pkg:
     free(pkg);
+    *pkg_ = NULL;
     return rc;
 }
 

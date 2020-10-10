@@ -92,5 +92,6 @@ TESTS = test_core_meta \
 
 
 if BUILD_BPAK_PYTHON_LIB
-TESTS += test_python_lib.py
+TESTS += test_python_lib.py \
+		 test_python_create_package.py
 endif
