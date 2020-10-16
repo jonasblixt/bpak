@@ -305,6 +305,7 @@ The 'fs' part is encoded using the bsdiff algorithm, which when the actual
 encoding is going to be done requires some reference data.
 
 Signing the package::
+
     $ bpak set demo.bpak --key-id demo-key --keystore-id demo-key-store
     $ bpak sign demo.bpak --key prime256v1-key-pair.pem
 
