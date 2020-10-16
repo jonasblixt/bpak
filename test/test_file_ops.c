@@ -187,6 +187,8 @@ TEST(file_seek_part)
 
     ASSERT_MEMORY(buf, "Hello part data2", 17);
 
+    rc = bpak_io_close(io);
+    ASSERT_EQ(rc, BPAK_OK);
     free(buf);
     free(h);   
 }
