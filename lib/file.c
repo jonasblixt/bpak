@@ -27,6 +27,12 @@ struct bpak_io_file_ctx
     bool remove_on_close;
 };
 
+static void bpak_io_file_flush(struct bpak_io *io)
+{
+    struct bpak_io_file_ctx *ctx = GET_FILE_CTX(io);
+    fflush(ctx->fp);
+}
+
 static int bpak_io_file_cleanup(struct bpak_io *io)
 {
     struct bpak_io_file_ctx *ctx = GET_FILE_CTX(io);
@@ -125,6 +131,7 @@ int bpak_io_init_file(struct bpak_io **io_, const char *filename,
     io->on_read = bpak_io_file_read;
     io->on_seek = bpak_io_file_seek;
     io->on_close = bpak_io_file_cleanup;
+    io->on_flush = bpak_io_file_flush;
 
     fseek(ctx->fp, 0, SEEK_SET);
 

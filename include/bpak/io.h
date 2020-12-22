@@ -26,6 +26,7 @@ struct bpak_io;
 typedef int (*on_bpak_close_t) (struct bpak_io *io);
 typedef size_t (*on_bpak_io_t) (struct bpak_io *io, void *ptr, size_t size);
 typedef int (*on_bpak_seek_t) (struct bpak_io *io, int64_t position);
+typedef void (*on_bpak_flush_t) (struct bpak_io *io);
 
 struct bpak_io
 {
@@ -38,6 +39,7 @@ struct bpak_io
     on_bpak_io_t on_read;
     on_bpak_io_t on_write;
     on_bpak_seek_t on_seek;
+    on_bpak_flush_t on_flush;
 };
 
 
@@ -48,5 +50,6 @@ int bpak_io_seek(struct bpak_io *io, int64_t position,
                     enum bpak_io_seek seekop);
 uint64_t bpak_io_tell(struct bpak_io *io);
 int bpak_io_close(struct bpak_io *io);
+void bpak_io_flush(struct bpak_io *io);
 
 #endif  // INCLUDE_BPAK_IO_H_

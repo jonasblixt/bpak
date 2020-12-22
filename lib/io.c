@@ -106,3 +106,9 @@ int bpak_io_close(struct bpak_io *io)
     return rc;
 }
 
+void bpak_io_flush(struct bpak_io *io)
+{
+    if (io->on_flush) {
+        io->on_flush(io);
+    }
+}
