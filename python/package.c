@@ -118,12 +118,14 @@ static PyObject * package_transport_encode(BPAKPackage *self,
                                             PyObject *args, PyObject *kwds)
 {
     int rc;
-    static char *kwlist[] = {"origin", "rate_limit_us", NULL};
+    static char *kwlist[] = {"origin", "output", "rate_limit_us", NULL};
     int rate_limit_us;
     BPAKPackage *origin;
+    BPAKPackage *output;
 
-    rc = PyArg_ParseTupleAndKeywords(args, kwds, "|Oi", kwlist,
+    rc = PyArg_ParseTupleAndKeywords(args, kwds, "|OOi", kwlist,
                                         &origin,
+                                        &output,
                                         &rate_limit_us);
     if (!rc)
     {
@@ -133,7 +135,8 @@ static PyObject * package_transport_encode(BPAKPackage *self,
 
     printf("origin = %p, rate_limit_us = %i us\n", origin, rate_limit_us);
 
-    rc = bpak_pkg_transport_encode(self->pkg, origin->pkg, rate_limit_us);
+    rc = bpak_pkg_transport_encode(self->pkg, output->pkg, origin->pkg,
+                                   rate_limit_us);
 
     if (rc != BPAK_OK)
     {
