@@ -2,8 +2,8 @@
     :width: 10 %
 .. image:: https://codecov.io/gh/jonasblixt/bpak/branch/master/graph/badge.svg
   :target: https://codecov.io/gh/jonasblixt/bpak
-.. image:: https://travis-ci.org/jonasblixt/bpak.svg?branch=master
-    :target: https://travis-ci.org/jonasblixt/bpak
+.. image:: https://travis-ci.com/jonasblixt/bpak.svg?branch=master
+    :target: https://travis-ci.com/jonasblixt/bpak
 .. image:: https://scan.coverity.com/projects/20419/badge.svg
     :target: https://scan.coverity.com/projects/jonasblixt-bpak
 
