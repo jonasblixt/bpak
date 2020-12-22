@@ -23,6 +23,7 @@ struct bpak_package
     struct bpak_io *io;
     struct bpak_header header;
     const char *filename;
+    enum bpak_header_pos header_location;
 };
 
 int bpak_pkg_open(struct bpak_package **pkg_, const char *filename,
@@ -40,12 +41,15 @@ int bpak_pkg_sign_init(struct bpak_package *pkg, uint32_t key_id,
 int bpak_pkg_add_transport(struct bpak_package *pkg, uint32_t part_ref,
                                 uint32_t encoder_id, uint32_t decoder_id);
 
-int bpak_pkg_transport_encode(struct bpak_package *pkg,
+int bpak_pkg_transport_encode(struct bpak_package *input,
+                              struct bpak_package *output,
                               struct bpak_package *origin,
                               int rate_limit_us);
-int bpak_pkg_transport_decode(struct bpak_package *pkg,
+int bpak_pkg_transport_decode(struct bpak_package *input,
+                              struct bpak_package *output,
                               struct bpak_package *origin,
-                              int rate_limit_us);
+                              int rate_limit_us,
+                              bool output_header_last);
 int bpak_pkg_register_all_algs(void);
 
 #endif  // INCLUDE_BPAK_PKG_H_

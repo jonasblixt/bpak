@@ -1,19 +1,17 @@
 #!/bin/sh
 BPAK=../src/bpak
-echo Creating simple archive
+echo --- Creating simple archive ---
 set -e
 
 $BPAK --help
 
-IMG_A=vA.bpak
-IMG_B=vB.bpak
+IMG_A=vA_transp.bpak
+IMG_B=vB_transp.bpak
 PKG_UUID=0888b0fa-9c48-4524-9845-06a641b61edd
 PKG_UNIQUE_ID_A=$(uuidgen -t)
 PKG_UNIQUE_ID_B=$(uuidgen -t)
 V=-vvvv
 set -e
-rm -f $IMG_A $IMG_B vB_transport.bpak vB_install.bpak
-
 
 dd if=/dev/urandom of=A_transp bs=1024 count=4096
 dd if=/dev/urandom of=B__transp bs=1024 count=1024
@@ -45,6 +43,18 @@ $BPAK set $IMG_A --key-id pb-development \
                  --keystore-id pb-internal $V
 
 $BPAK sign $IMG_A --key $srcdir/secp256r1-key-pair.pem $V
+
+DAT=transport2.dat
+
+dd if=/dev/zero of=$DAT bs=1M count=8
+# Extract header
+dd if=$IMG_A of=header_at_the_end.header bs=1024 count=4
+# Extract data
+dd if=$IMG_A of=header_at_the_end.data bs=1024 skip=4
+# Implant the header at the last 4k of $DAT
+dd if=header_at_the_end.header of=$DAT bs=1024 seek=8188 count=4
+# Implant the data at the beginning of $DAT
+dd if=header_at_the_end.data of=$DAT bs=1024 conv=notrunc
 
 # Create B package
 echo --- Creating package B ---
@@ -79,13 +89,18 @@ $BPAK transport $IMG_B --encode --origin $IMG_A \
                                 --output vB_transport.bpak \
                                 $V
 
+
 echo --- Transport decoding ---
-$BPAK transport vB_transport.bpak --decode --origin $IMG_A \
-                                           --output vB_install.bpak \
-                                           $V
+
+$BPAK transport vB_transport.bpak --decode \
+                                  --origin $DAT \
+                                  --output vB_install.bpak \
+                                  $V
 
 $BPAK compare $IMG_B vB_install.bpak $V
 
+#sha256sum $IMG_B
+#sha256sum vB_install.bpak
 first_sha256=$(sha256sum $IMG_B | cut -d ' ' -f 1)
 second_sha256=$(sha256sum vB_install.bpak | cut -d ' ' -f 1)
 

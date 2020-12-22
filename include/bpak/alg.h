@@ -51,7 +51,9 @@ int bpak_alg_init(struct bpak_alg_instance *ins, uint32_t id,
                     size_t size,
                     struct bpak_io *in,
                     struct bpak_io *out,
-                    struct bpak_io *origin);
+                    struct bpak_io *origin,
+                    enum bpak_header_pos origin_header_pos,
+                    enum bpak_header_pos out_header_pos);
 
 int bpak_alg_free(struct bpak_alg_instance *ins);
 int bpak_alg_process(struct bpak_alg_instance *ins);

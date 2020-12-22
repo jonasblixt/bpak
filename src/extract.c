@@ -168,7 +168,15 @@ int action_extract(int argc, char **argv)
             goto err_close_pkg_out;
         }
 
-        rc = bpak_io_seek(pkg->io, bpak_part_offset(h, part), BPAK_IO_SEEK_SET);
+        uint64_t p_offset = 0;
+
+        if (pkg->header_location == BPAK_HEADER_POS_FIRST) {
+            p_offset = bpak_part_offset(h, part);
+        } else {
+            p_offset = bpak_part_offset(h, part) - sizeof(*h);
+        }
+
+        rc = bpak_io_seek(pkg->io, p_offset, BPAK_IO_SEEK_SET);
 
         if (rc != BPAK_OK)
         {

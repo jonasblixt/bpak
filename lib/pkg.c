@@ -32,28 +32,47 @@ int bpak_pkg_open(struct bpak_package **pkg_, const char *filename,
     if (rc != BPAK_OK)
         goto err_free_pkg;
 
+    pkg->header_location = BPAK_HEADER_POS_FIRST;
     rc = bpak_io_seek(pkg->io, 0, BPAK_IO_SEEK_SET);
 
     if (rc != BPAK_OK)
-        goto err_free_pkg;
+        goto err_close_io;
 
-    /* If we open the package for writing, do not try to read the header */
-    if (mode[0] == 'r')
+    size_t read_bytes = bpak_io_read(pkg->io, &pkg->header,
+                                        sizeof(pkg->header));
+    if (read_bytes != sizeof(pkg->header))
     {
-        size_t read_bytes = bpak_io_read(pkg->io, &pkg->header,
+        rc = -BPAK_FAILED;
+        goto skip_header;
+    }
+
+    rc = bpak_valid_header(&pkg->header);
+
+    if (rc != BPAK_OK) {
+        /* Check if the header is at the end */
+        rc = bpak_io_seek(pkg->io, 4096, BPAK_IO_SEEK_END);
+
+        if (rc != BPAK_OK) {
+            goto skip_header;
+        }
+
+        read_bytes = bpak_io_read(pkg->io, &pkg->header,
                                             sizeof(pkg->header));
         if (read_bytes != sizeof(pkg->header))
         {
             rc = -BPAK_FAILED;
-            goto err_close_io;
+            goto skip_header;
         }
 
         rc = bpak_valid_header(&pkg->header);
 
         if (rc != BPAK_OK)
-            goto err_close_io;
+            goto skip_header;
+
+        pkg->header_location = BPAK_HEADER_POS_LAST;
     }
 
+skip_header:
     rc = bpak_io_seek(pkg->io, 0, BPAK_IO_SEEK_SET);
 
     if (rc != BPAK_OK)
@@ -114,10 +133,13 @@ int bpak_pkg_compute_hash(struct bpak_package *pkg, char *output, size_t *size)
 
     char hash_buffer[512];
 
-    bpak_io_seek(pkg->io, sizeof(pkg->header), BPAK_IO_SEEK_SET);
+    if (pkg->header_location == BPAK_HEADER_POS_FIRST) {
+        bpak_io_seek(pkg->io, sizeof(pkg->header), BPAK_IO_SEEK_SET);
+    } else {
+        bpak_io_seek(pkg->io, 0, BPAK_IO_SEEK_SET);
+    }
 
-    bpak_foreach_part(&pkg->header, p)
-    {
+    bpak_foreach_part(&pkg->header, p) {
         size_t bytes_to_read = bpak_part_size(p);
         size_t chunk = 0;
 
@@ -237,7 +259,11 @@ int bpak_pkg_sign(struct bpak_package *pkg, const uint8_t *signature,
     memcpy(pkg->header.signature, signature, size);
     pkg->header.signature_sz = size;
 
-    rc = bpak_io_seek(pkg->io, 0, BPAK_IO_SEEK_SET);
+    if (pkg->header_location == BPAK_HEADER_POS_FIRST) {
+        rc = bpak_io_seek(pkg->io, 0, BPAK_IO_SEEK_SET);
+    } else {
+        rc = bpak_io_seek(pkg->io, 4096, BPAK_IO_SEEK_END);
+    }
 
     if (rc != BPAK_OK)
         return rc;
@@ -265,7 +291,11 @@ int bpak_pkg_add_transport(struct bpak_package *pkg, uint32_t part_ref,
     meta->alg_id_encode = encoder_id;
     meta->alg_id_decode = decoder_id;
 
-    rc = bpak_io_seek(pkg->io, 0, BPAK_IO_SEEK_SET);
+    if (pkg->header_location == BPAK_HEADER_POS_FIRST) {
+        rc = bpak_io_seek(pkg->io, 0, BPAK_IO_SEEK_SET);
+    } else {
+        rc = bpak_io_seek(pkg->io, 4096, BPAK_IO_SEEK_END);
+    }
 
     if (rc != BPAK_OK)
         return rc;
@@ -279,27 +309,45 @@ int bpak_pkg_add_transport(struct bpak_package *pkg, uint32_t part_ref,
 }
 
 static int transport_process(struct bpak_transport_meta *tm,
-                                 struct bpak_header *h,
                                  uint32_t part_ref_id,
-                                 struct bpak_io *io,
-                                 struct bpak_io *origin,
+                                 struct bpak_package *input,
+                                 struct bpak_package *output,
+                                 struct bpak_package *origin,
                                  uint8_t *state_buffer,
                                  size_t size,
                                  bool decode_flag,
+                                 bool output_header_last,
                                  int rate_limit_us)
 {
-    int rc;
+    int rc = 0;
     struct bpak_alg_instance ins;
     struct bpak_part_header *p = NULL;
-    struct bpak_io *tmp;
+    struct bpak_part_header *op = NULL;
+    struct bpak_io *input_io = input->io;
+    struct bpak_io *output_io = output->io;
+    struct bpak_io *origin_io = NULL;
     struct bpak_alg *alg = NULL;
     uint64_t bytes_to_copy = 0;
     size_t chunk_sz = 0;
     size_t read_bytes = 0;
     size_t written_bytes = 0;
     uint32_t alg_id = 0;
+    struct bpak_header *input_header = bpak_pkg_header(input);
+    struct bpak_header *output_header = bpak_pkg_header(output);
 
-    rc = bpak_get_part(h, part_ref_id, &p);
+    if (origin) {
+        origin_io = origin->io;
+    }
+
+    rc = bpak_get_part(input_header, part_ref_id, &p);
+
+    if (rc != BPAK_OK)
+    {
+        bpak_printf(0, "Error could not get part with ref %x\n", part_ref_id);
+        return rc;
+    }
+
+    rc = bpak_get_part(output_header, part_ref_id, &op);
 
     if (rc != BPAK_OK)
     {
@@ -309,10 +357,11 @@ static int transport_process(struct bpak_transport_meta *tm,
 
     bpak_printf(2, "Encoding part %x (%p)\n", part_ref_id, p);
 
-    if (decode_flag)
+    if (decode_flag) {
         alg_id = tm->alg_id_decode;
-    else
+    } else {
         alg_id = tm->alg_id_encode;
+    }
 
     bpak_printf(2, "Using alg: %x\n", alg_id);
 
@@ -320,8 +369,7 @@ static int transport_process(struct bpak_transport_meta *tm,
 
     bpak_printf(2, "Initializing alg: %x (%p)\n", alg_id, alg);
 
-    if (rc != BPAK_OK || !alg)
-    {
+    if (rc != BPAK_OK || !alg) {
         bpak_printf(0, "Error: Unknown algorithm: %8.8x\n", alg_id);
         return rc;
     }
@@ -330,61 +378,34 @@ static int transport_process(struct bpak_transport_meta *tm,
                                 alg->name, alg_id);
 
     /* Already processed for transport ?*/
-    if ((p->flags & BPAK_FLAG_TRANSPORT) && (!decode_flag))
+    if ((op->flags & BPAK_FLAG_TRANSPORT) && (!decode_flag))
         return BPAK_OK;
 
-    bpak_io_seek(io, 0, BPAK_IO_SEEK_SET);
-
-    rc = bpak_io_init_random_file(&tmp);
-
-    if (rc != BPAK_OK)
-        goto err_close_io_out;
-
-    bpak_printf(2, "Created temporary file: %s\n", bpak_io_filename(tmp));
-
-    /* Copy everyting up until the part we are interested in */
-
-    bpak_io_write(tmp, h, sizeof(*h));
-
-    bpak_foreach_part(h, part)
-    {
-        if (part->id == p->id)
-            break;
-        if (!part->id)
-            continue;
-
-        bpak_io_seek(io, bpak_part_offset(h, part), BPAK_IO_SEEK_SET);
-
-        bytes_to_copy = bpak_part_size(part);
-
-        while (bytes_to_copy)
-        {
-            chunk_sz = (bytes_to_copy > size)?size:bytes_to_copy;
-            bpak_io_read(io, state_buffer, chunk_sz);
-            bpak_io_write(tmp, state_buffer, chunk_sz);
-            bytes_to_copy -= chunk_sz;
-        }
+    if (output_header_last == false) {
+        bpak_io_seek(output_io, 0, BPAK_IO_SEEK_SET);
+        bpak_io_write(output_io, output_header, sizeof(*output_header));
     }
 
     bpak_printf(1, "Initializing alg, input size %li bytes\n", bpak_part_size(p));
 
-    bpak_io_seek(io, bpak_part_offset(h, p), BPAK_IO_SEEK_SET);
+    bpak_io_seek(input_io,
+                 bpak_part_offset(input_header, p),
+                 BPAK_IO_SEEK_SET);
 
-    rc = bpak_alg_init(&ins, alg_id, p, h, state_buffer, size,
-                            io, tmp, origin);
+    rc = bpak_alg_init(&ins, alg_id, p, output_header, state_buffer, size,
+               input_io, output_io, origin_io,
+               origin->header_location,
+               output_header_last?BPAK_HEADER_POS_LAST:BPAK_HEADER_POS_FIRST);
 
-    if (rc != BPAK_OK)
-    {
+    if (rc != BPAK_OK) {
         bpak_printf(0, "Error: Could not initialize algorithm %8.8x\n", alg_id);
         return -BPAK_FAILED;
     }
 
-    while (!bpak_alg_done(&ins))
-    {
+    while (!bpak_alg_done(&ins)) {
         rc = bpak_alg_process(&ins);
 
-        if (rc != BPAK_OK)
-        {
+        if (rc != BPAK_OK) {
             bpak_printf(0, "Error: processing failed\n");
             break;
         }
@@ -393,143 +414,120 @@ static int transport_process(struct bpak_transport_meta *tm,
     }
 
     if (rc != BPAK_OK)
-        goto err_close_io_out;
+        goto err_out;
 
     bpak_alg_free(&ins);
 
     bpak_printf(1, "Done processing, output size %li bytes\n", ins.output_size);
 
-    /* Position input stream at the end of the part in intereset */
-    rc = bpak_io_seek(io, bpak_part_offset(h, p) + bpak_part_size(p),
-                                        BPAK_IO_SEEK_SET);
-
-    if (rc != BPAK_OK)
-    {
-        bpak_printf(0, "Error: Could not seek 1\n");
-        bpak_printf(0, "    part:        %8.8x\n", p->id);
-        bpak_printf(0, "    part offset: %li\n", bpak_part_offset(h, p));
-        bpak_printf(0, "    part size:   %li\n", bpak_part_size(p));
-        goto err_close_io_out;
-    }
-
     /* Update part header to indicate that the part has been coded */
-    if (decode_flag)
-    {
-        p->flags &= ~BPAK_FLAG_TRANSPORT;
-        p->transport_size = 0;
+    if (decode_flag) {
+        op->flags &= ~BPAK_FLAG_TRANSPORT;
+        op->transport_size = 0;
+    } else {
+        op->transport_size = bpak_alg_output_size(&ins);
+        op->flags |= BPAK_FLAG_TRANSPORT;
     }
-    else
-    {
-        p->transport_size = bpak_alg_output_size(&ins);
-        p->flags |= BPAK_FLAG_TRANSPORT;
-    }
-
-    bpak_io_seek(tmp, 0, BPAK_IO_SEEK_SET);
-    bpak_io_write(tmp, h, sizeof(*h));
 
     /* Position output stream at the end of the processed part*/
-    rc = bpak_io_seek(tmp, bpak_part_offset(h, p) + bpak_part_size(p),
-                    BPAK_IO_SEEK_SET);
+    rc = bpak_io_seek(output_io, bpak_part_offset(output_header, op) +
+                                 bpak_part_size(op),
+                                 BPAK_IO_SEEK_SET);
+
+    if (rc != BPAK_OK) {
+        bpak_printf(0, "Error: Could not seek\n");
+        bpak_printf(0, "    offset: %li\n", bpak_part_offset(output_header, op));
+        bpak_printf(0, "    size:   %li\n", bpak_part_size(op));
+        goto err_out;
+    }
+
+err_out:
+    return rc;
+}
+
+#define DECODE_STATE_BUF_SZ (1024*1024)
+
+int bpak_pkg_transport_encode(struct bpak_package *input,
+                              struct bpak_package *output,
+                              struct bpak_package *origin,
+                              int rate_limit_us)
+{
+    int rc = BPAK_OK;
+    uint8_t *state_buffer = malloc(DECODE_STATE_BUF_SZ);
+    memset(state_buffer, 0, DECODE_STATE_BUF_SZ);
+
+    struct bpak_header *h = bpak_pkg_header(input);
+    struct bpak_header *oh = bpak_pkg_header(output);
+    struct bpak_transport_meta *tm = NULL;
+    memcpy(oh, h, sizeof(*h));
+
+    bpak_printf(2, "Transport encode begin, input = %p, origin = %p, " \
+                "rate_limit_us = %li\n", input, origin, rate_limit_us);
+
+    bpak_foreach_meta(&input->header, mh) {
+        if (!mh->id)
+            break;
+
+        if (mh->id == bpak_id("bpak-transport")) {
+            bpak_get_meta(h, mh->id, (void **) &tm);
+
+            rc = transport_process(tm, mh->part_id_ref,
+                                   input, output, origin,
+                                   state_buffer, DECODE_STATE_BUF_SZ,
+                                   false, false,
+                                   rate_limit_us);
+
+            if (rc != BPAK_OK)
+                break;
+
+        }
+    }
+
+    rc = bpak_io_seek(output->io, 0, BPAK_IO_SEEK_SET);
 
     if (rc != BPAK_OK)
     {
         bpak_printf(0, "Error: Could not seek\n");
-        bpak_printf(0, "    offset: %li\n", bpak_part_offset(h, p));
-        bpak_printf(0, "    size:   %li\n", bpak_part_size(p));
-        goto err_close_io_out;
+        goto err_out;
     }
 
-    while(true)
-    {
-        read_bytes = bpak_io_read(io, state_buffer, size);
+    ssize_t written = bpak_io_write(output->io, oh, sizeof(*oh));
 
-        if (read_bytes == 0)
-            break;
-
-        written_bytes = bpak_io_write(tmp, state_buffer, read_bytes);
-
-        if (read_bytes != written_bytes)
-        {
-            rc = -BPAK_FAILED;
-            goto err_close_io_out;
-        }
+    if (written != sizeof(*oh)) {
+        bpak_printf(0, "Error: could not write header");
+        rc = -1;
     }
-
-    rc = bpak_io_replace_file(io, tmp);
-
-err_close_io_out:
-    bpak_io_close(tmp);
-    return rc;
-}
-
-int bpak_pkg_transport_encode(struct bpak_package *pkg,
-                              struct bpak_package *origin,
-                              int rate_limit_us)
-{
-    int rc = BPAK_OK;
-    uint8_t *state_buffer = malloc(1024*1024);
-    memset(state_buffer, 0, 1024*1024);
-
-    struct bpak_header *h = bpak_pkg_header(pkg);
-    struct bpak_transport_meta *tm = NULL;
-
-    bpak_printf(2, "Transport encode begin, pkg = %p, origin = %p, " \
-                "rate_limit_us = %li\n", pkg, origin, rate_limit_us);
-
-    bpak_foreach_meta(&pkg->header, mh)
-    {
-        if (!mh->id)
-            break;
-
-        if (mh->id == bpak_id("bpak-transport"))
-        {
-            bpak_get_meta(h, mh->id, (void **) &tm);
-            struct bpak_io *origin_io = NULL;
-
-            if (origin)
-                origin_io = origin->io;
-
-            rc = transport_process(tm, h, mh->part_id_ref,
-                    pkg->io, origin_io, state_buffer, 1024*1024, false,
-                    rate_limit_us);
-
-            if (rc != BPAK_OK)
-                break;
-
-        }
-    }
-
+err_out:
     free(state_buffer);
     return rc;
 }
 
-int bpak_pkg_transport_decode(struct bpak_package *pkg,
+int bpak_pkg_transport_decode(struct bpak_package *input,
+                              struct bpak_package *output,
                               struct bpak_package *origin,
-                              int rate_limit_us)
+                              int rate_limit_us,
+                              bool output_header_last)
 {
     int rc = BPAK_OK;
-    struct bpak_header *h = bpak_pkg_header(pkg);
-    uint8_t *state_buffer = malloc(1024*1024);
-    memset(state_buffer, 0, 1024*1024);
-
+    struct bpak_header *h = bpak_pkg_header(input);
+    struct bpak_header *oh = bpak_pkg_header(output);
+    uint8_t *state_buffer = malloc(DECODE_STATE_BUF_SZ);
+    memset(state_buffer, 0, DECODE_STATE_BUF_SZ);
+    memcpy(oh, h, sizeof(*h));
     struct bpak_transport_meta *tm = NULL;
 
-    bpak_foreach_meta(h, mh)
-    {
+    bpak_foreach_meta(h, mh) {
         if (!mh->id)
             break;
 
-        if (mh->id == bpak_id("bpak-transport"))
-        {
+        if (mh->id == bpak_id("bpak-transport")) {
             bpak_get_meta(h, mh->id, (void **) &tm);
-            struct bpak_io *origin_io = NULL;
 
-            if (origin)
-                origin_io = origin->io;
-
-            rc = transport_process(tm, h, mh->part_id_ref,
-                    pkg->io, origin_io, state_buffer, 1024*1024, true,
-                    rate_limit_us);
+            rc = transport_process(tm, mh->part_id_ref,
+                                   input, output, origin,
+                                   state_buffer, DECODE_STATE_BUF_SZ,
+                                   true, output_header_last,
+                                   rate_limit_us);
 
             if (rc != BPAK_OK)
                 break;
@@ -537,6 +535,26 @@ int bpak_pkg_transport_decode(struct bpak_package *pkg,
         }
     }
 
+    if (output_header_last) {
+       rc = bpak_io_seek(output->io, 4096, BPAK_IO_SEEK_END);
+    } else {
+       rc = bpak_io_seek(output->io, 0, BPAK_IO_SEEK_SET);
+    }
+
+    if (rc != BPAK_OK)
+    {
+        bpak_printf(0, "Error: Could not seek\n");
+        goto err_out;
+    }
+
+    ssize_t written = bpak_io_write(output->io, oh, sizeof(*oh));
+
+    if (written != sizeof(*oh)) {
+        bpak_printf(0, "Error: could not write header");
+        rc = -1;
+    }
+
+err_out:
     free(state_buffer);
     return rc;
 }

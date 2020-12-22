@@ -115,20 +115,23 @@ void print_transport_usage(void)
     printf("\n");
 
     printf("Transport commands:\n");
-    printf("    -a, --add           Add transport meta data\n");
-    printf("    -E, --encode        Encode archive for transport\n");
-    printf("    -D, --decode        Decode package\n");
+    printf("    -a, --add                 Add transport meta data\n");
+    printf("    -E, --encode              Encode archive for transport\n");
+    printf("    -D, --decode              Decode package\n");
     printf("\n");
 
     printf("Add options:\n");
-    printf("    -p, --part          Which part id to operate on\n");
-    printf("    -e, --encode        Encoder algorithm to use\n");
-    printf("    -d, --decode        Decoder algorithm to use\n");
+    printf("    -p, --part                Which part id to operate on\n");
+    printf("    -e, --encode              Encoder algorithm to use\n");
+    printf("    -d, --decode              Decoder algorithm to use\n");
     printf("\n");
 
     printf("Encode/Decode options:\n");
-    printf("    -O, --origin        Source data to use during encoding/decoding\n");
-    /* printf("    -o, --output        Output\n"); */
+    printf("    -O, --origin              Source data to use during encoding/decoding\n");
+    printf("    -R, --rate-limit <n>      Rate-limit operation 0-100\n");
+    printf("    -o, --output <fn>         Write to output to <fn>\n");
+    printf("Decode options:\n");
+    printf("    -H, --output-header-last  Write output header at the end\n");
     printf("\n");
 
     print_common_usage();

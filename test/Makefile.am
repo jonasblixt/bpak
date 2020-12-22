@@ -88,7 +88,10 @@ TESTS = test_core_meta \
         test_openssl_resign.sh \
         test_misc.sh \
         test_set_string.sh \
-		test_extract.sh
+        test_extract.sh \
+        test_header_at_the_end.sh \
+        test_transport2.sh \
+        test_transport3.sh
 
 
 if BUILD_BPAK_PYTHON_LIB

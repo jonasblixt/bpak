@@ -443,7 +443,9 @@ static int bpak_alg_bsdiff_init(struct bpak_alg_instance *ins,
     rc = bpak_alg_init(&priv->compressor, ins->alg->parameter,
                         NULL, NULL,
                         priv->compressor_buffer, sizeof(priv->compressor_buffer),
-                        priv->compressor_pipe, out, NULL);
+                        priv->compressor_pipe, out, NULL,
+                        BPAK_HEADER_POS_FIRST,
+                        BPAK_HEADER_POS_FIRST);
 
     if (rc != BPAK_OK)
     {

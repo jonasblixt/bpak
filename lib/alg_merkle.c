@@ -16,6 +16,8 @@ struct bpak_alg_merkle_ctx
     uint64_t output_size;
     uint64_t bytes_to_process;
     uint8_t buf[4096];
+    enum bpak_header_pos origin_header_pos;
+    enum bpak_header_pos out_header_pos;
 };
 
 static int merkle_wr(struct bpak_merkle_context *ctx,
@@ -26,8 +28,13 @@ static int merkle_wr(struct bpak_merkle_context *ctx,
 {
     struct bpak_alg_merkle_ctx *s = (struct bpak_alg_merkle_ctx *) priv;
     int rc;
+    off_t off = s->hash_tree->offset + offset;
 
-    rc = bpak_io_seek(s->out, s->hash_tree->offset + offset, BPAK_IO_SEEK_SET);
+    if (s->out_header_pos == BPAK_HEADER_POS_LAST) {
+        off -= 4096;
+    }
+
+    rc = bpak_io_seek(s->out, off, BPAK_IO_SEEK_SET);
 
     if (rc != BPAK_OK)
         return rc;
@@ -49,8 +56,13 @@ static int merkle_rd(struct bpak_merkle_context *ctx,
 {
     struct bpak_alg_merkle_ctx *s = (struct bpak_alg_merkle_ctx *) priv;
     int rc;
+    off_t off = s->hash_tree->offset + offset;
 
-    rc = bpak_io_seek(s->out, s->hash_tree->offset + offset, BPAK_IO_SEEK_SET);
+    if (s->out_header_pos == BPAK_HEADER_POS_LAST) {
+        off -= 4096;
+    }
+
+    rc = bpak_io_seek(s->out, off, BPAK_IO_SEEK_SET);
 
     if (rc != BPAK_OK)
         return rc;
@@ -73,6 +85,8 @@ static int bpak_alg_merkle_init(struct bpak_alg_instance *ins,
 
     memset(ctx, 0, sizeof(*ctx));
     ctx->out = out;
+    ctx->origin_header_pos = ins->origin_header_pos;
+    ctx->out_header_pos = ins->out_header_pos;
 
     bpak_printf(2, "merkle init\n");
 
@@ -120,12 +134,18 @@ static int bpak_alg_merkle_init(struct bpak_alg_instance *ins,
     ctx->bytes_to_process = ctx->p_fs->size;
 
     /* Prepare space for the hash tree */
-    rc = bpak_io_seek(ctx->out, ctx->p_fs->offset + ctx->p_fs->size,
-                        BPAK_IO_SEEK_SET);
+    off_t offset = ctx->p_fs->offset + ctx->p_fs->size;
 
-    if (rc != BPAK_OK)
+    if (ins->out_header_pos == BPAK_HEADER_POS_LAST) {
+        offset -= 4096;
+    }
+
+    rc = bpak_io_seek(ctx->out, offset, BPAK_IO_SEEK_SET);
+
+    if (rc != BPAK_OK) {
+        bpak_printf(0, "%s: could not seek to fs (%li) \n", __func__, offset);
         return rc;
-
+    }
     char c = 0;
     for (int i = 0; i < ctx->hash_tree->size; i++)
     {
@@ -135,7 +155,14 @@ static int bpak_alg_merkle_init(struct bpak_alg_instance *ins,
     }
 
     /* Position input stream at the begining of the filesystem */
-    rc = bpak_io_seek(ctx->out, ctx->p_fs->offset, BPAK_IO_SEEK_SET);
+
+    offset = ctx->p_fs->offset;
+
+    if (ins->out_header_pos == BPAK_HEADER_POS_LAST) {
+        offset -= 4096;
+    }
+
+    rc = bpak_io_seek(ctx->out, offset, BPAK_IO_SEEK_SET);
 
     if (rc != BPAK_OK)
     {
@@ -154,6 +181,7 @@ static int bpak_alg_merkle_process(struct bpak_alg_instance *ins)
 {
     struct bpak_alg_merkle_ctx *ctx = (struct bpak_alg_merkle_ctx *) ins->state;
     size_t chunk_sz;
+    off_t offset;
     int rc;
 
     rc = BPAK_OK;
@@ -164,7 +192,13 @@ static int bpak_alg_merkle_process(struct bpak_alg_instance *ins)
 
     if (ctx->bytes_to_process)
     {
-        rc = bpak_io_seek(ctx->out, ctx->p_fs->offset + ctx->pos, BPAK_IO_SEEK_SET);
+        offset = ctx->p_fs->offset + ctx->pos;
+
+        if (ins->out_header_pos == BPAK_HEADER_POS_LAST) {
+            offset -= 4096;
+        }
+
+        rc = bpak_io_seek(ctx->out, offset, BPAK_IO_SEEK_SET);
 
         if (rc != BPAK_OK)
         {

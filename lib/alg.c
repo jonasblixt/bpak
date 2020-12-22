@@ -13,7 +13,9 @@ int bpak_alg_init(struct bpak_alg_instance *ins, uint32_t id,
                     size_t size,
                     struct bpak_io *in,
                     struct bpak_io *out,
-                    struct bpak_io *origin)
+                    struct bpak_io *origin,
+                    enum bpak_header_pos origin_header_pos,
+                    enum bpak_header_pos out_header_pos)
 {
     struct bpak_alg *alg = NULL;
     int rc;
@@ -32,6 +34,8 @@ int bpak_alg_init(struct bpak_alg_instance *ins, uint32_t id,
     ins->state = state;
     ins->part = part;
     ins->header = header;
+    ins->origin_header_pos = origin_header_pos;
+    ins->out_header_pos = out_header_pos;
 
     memset(ins->state, 0, alg->state_size);
 

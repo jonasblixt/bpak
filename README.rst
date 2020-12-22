@@ -342,9 +342,9 @@ Verifying the package::
 
 Encoding the package for transport::
 
-    $ bpak transport demo.bpak --encode --origin demo_old.bpak
-    $ bpak show demo.bpak
-    BPAK File: demo.bpak
+    $ bpak transport demo.bpak --encode --origin demo_old.bpak --output demo_transport.bpak
+    $ bpak show demo_transport.bpak
+    BPAK File: demo_transport.bpak
 
     Hash:      sha256
     Signature: prime256v1
@@ -366,7 +366,7 @@ Encoding the package for transport::
 
     Hash: a649eb0532f848f34116deed81140feb5a1f4a221f964231c83216b6cf8896dd
 
-The demo.bpak is now transport encoded. Not the additional 'T' flag which
+The demo_transport.bpak is now transport encoded. Note the additional 'T' flag which
 indicates that a part is transport encoded. The new archive size is now the
 sum of the sizes in the 'Transport Size' column.
 

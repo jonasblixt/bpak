@@ -35,7 +35,9 @@ int action_transport(int argc, char **argv)
     bool add_flag = false;
     bool encode_flag = false;
     bool decode_flag = false;
+    bool output_header_last = false;
     int rc = 0;
+    int rate_limit = 0;
 
     struct option long_options[] =
     {
@@ -49,10 +51,12 @@ int action_transport(int argc, char **argv)
         {"encode",      no_argument,       0,  'E' },
         {"decode",      no_argument,       0,  'D' },
         {"part-ref",    required_argument, 0,  'r' },
+        {"output-header-last", no_argument,0,  'H' },
+        {"rate-limit",  required_argument, 0,  'R' },
         {0,             0,                 0,   0  }
     };
 
-    while ((opt = getopt_long(argc, argv, "hvao:s:O:e:d:EGr:",
+    while ((opt = getopt_long(argc, argv, "hvao:s:O:e:d:EGr:HR:",
                    long_options, &long_index )) != -1)
     {
         switch (opt)
@@ -60,6 +64,12 @@ int action_transport(int argc, char **argv)
             case 'h':
                 print_transport_usage();
                 return 0;
+            case 'H':
+                output_header_last = true;
+            break;
+            case 'R':
+                rate_limit = strtoul(optarg, 0, 0);
+            break;
             case 'v':
                 bpak_inc_verbosity();
             break;
@@ -116,10 +126,11 @@ int action_transport(int argc, char **argv)
         return -1;
     }
 
-    struct bpak_package *pkg = NULL;
+    struct bpak_package *input = NULL;
+    struct bpak_package *output = NULL;
     struct bpak_package *origin = NULL;
 
-    rc = bpak_pkg_open(&pkg, filename, "rb+");
+    rc = bpak_pkg_open(&input, filename, "rb+");
 
     if (rc != BPAK_OK)
     {
@@ -127,7 +138,7 @@ int action_transport(int argc, char **argv)
         return -BPAK_FAILED;
     }
 
-    struct bpak_header *h = bpak_pkg_header(pkg);
+    struct bpak_header *h = bpak_pkg_header(input);
 
     if (origin_file)
     {
@@ -140,34 +151,50 @@ int action_transport(int argc, char **argv)
         }
     }
 
-    if (encode_flag)
-    {
-        rc = bpak_pkg_transport_encode(pkg, origin, 0);
+    if ((encode_flag || decode_flag) && !output_file) {
+        printf("Error: No output file specified\n");
+        rc = -1;
+        goto err_out;
     }
-    else if(decode_flag)
-    {
-        rc = bpak_pkg_transport_decode(pkg, origin, 0);
+
+    if (encode_flag || decode_flag) {
+        if (output_header_last) {
+            rc = bpak_pkg_open(&output, output_file, "rb+");
+        } else {
+            rc = bpak_pkg_open(&output, output_file, "wb+");
+        }
+
+        if (rc != BPAK_OK)
+        {
+            printf("Error: Could not open output file %s\n", output_file);
+            goto err_out;
+        }
     }
-    else if (add_flag && encoder_alg && decoder_alg)
-    {
-        rc = bpak_pkg_add_transport(pkg, bpak_id(part_ref),
+
+    if (encode_flag) {
+        rc = bpak_pkg_transport_encode(input, output, origin, rate_limit);
+    } else if(decode_flag) {
+        rc = bpak_pkg_transport_decode(input, /* Input package or 'patch' */
+                                       output,
+                                       origin, /* Origin data to use for patch operation*/
+                                       rate_limit, /* Rate limit */
+                                       output_header_last);
+    } else if (add_flag && encoder_alg && decoder_alg) {
+        rc = bpak_pkg_add_transport(input, bpak_id(part_ref),
                                          bpak_id(encoder_alg),
                                          bpak_id(decoder_alg));
-    }
-    else
-    {
+    } else {
         rc = -BPAK_FAILED;
         printf("Error: Unknown command");
     }
 
-    if (rc != BPAK_OK)
-    {
+    if (rc != BPAK_OK) {
         rc = -BPAK_FAILED;
         printf("Error: Transport encoding/decoding failed\n");
     }
 
 err_out:
-    bpak_pkg_close(pkg);
+    bpak_pkg_close(input);
 
     if (origin)
         bpak_pkg_close(origin);
