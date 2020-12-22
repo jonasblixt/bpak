@@ -30,6 +30,8 @@ int action_show(int argc, char **argv)
     char hash_output[64];
     size_t hash_size = sizeof(hash_output);
     char string_output[128];
+    uint32_t part_id = 0;
+    uint32_t meta_id = 0;
 
     struct option long_options[] =
     {
@@ -55,9 +57,21 @@ int action_show(int argc, char **argv)
             break;
             case 'p':
                 part_name = (const char *) optarg;
+
+                if (strncmp(optarg, "0x", 2) == 0) {
+                    part_id = strtoul(optarg, NULL, 16);
+                } else {
+                    part_id = bpak_id(optarg);
+                }
             break;
             case 'm':
                 meta_name = (const char *) optarg;
+
+                if (strncmp(optarg, "0x", 2) == 0) {
+                    meta_id = strtoul(optarg, NULL, 16);
+                } else {
+                    meta_id = bpak_id(optarg);
+                }
             break;
             case 'H':
                 binary_hash_output = true;
@@ -104,18 +118,16 @@ int action_show(int argc, char **argv)
 
         bpak_foreach_meta(h, m)
         {
-            if (m->id == bpak_id(meta_name))
+            if (m->id == meta_id)
             {
-                /*printf("Found 0x%x, %i bytes\n", m->id, m->size);*/
-
                 if (part_name)
-                    if (bpak_id(part_name) != m->part_id_ref)
+                    if (part_id != m->part_id_ref)
                         continue;
 
                 bpak_meta_to_string(h, m, string_output, sizeof(string_output));
                 if (strlen(string_output))
                     printf("%s\n", string_output);
-                
+
                 rc = BPAK_OK;
                 break;
             }
@@ -135,7 +147,7 @@ int action_show(int argc, char **argv)
 
         bpak_foreach_part(h, p)
         {
-            if (p->id == bpak_id(part_name))
+            if (p->id == part_id)
             {
                 printf("Found 0x%x, %li bytes\n", p->id, p->size);
                 rc = BPAK_OK;

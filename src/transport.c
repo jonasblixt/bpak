@@ -27,7 +27,6 @@ int action_transport(int argc, char **argv)
     bool verbose = false;
     uint32_t flags = 0;
     const char *filename = NULL;
-    const char *part_ref = NULL;
     const char *origin_file = NULL;
     const char *output_file = NULL;
     const char *encoder_alg = NULL;
@@ -38,6 +37,7 @@ int action_transport(int argc, char **argv)
     bool output_header_last = false;
     int rc = 0;
     int rate_limit = 0;
+    uint32_t part_ref = 0;
 
     struct option long_options[] =
     {
@@ -80,7 +80,11 @@ int action_transport(int argc, char **argv)
                 encode_flag = true;
             break;
             case 'r':
-                part_ref = (const char *) optarg;
+                if (strncmp(optarg, "0x", 2) == 0) {
+                    part_ref = strtoul(optarg, NULL, 16);
+                } else {
+                    part_ref = bpak_id(optarg);
+                }
             break;
             case 'O':
                 origin_file = (const char *) optarg;
@@ -180,7 +184,7 @@ int action_transport(int argc, char **argv)
                                        rate_limit, /* Rate limit */
                                        output_header_last);
     } else if (add_flag && encoder_alg && decoder_alg) {
-        rc = bpak_pkg_add_transport(input, bpak_id(part_ref),
+        rc = bpak_pkg_add_transport(input, part_ref,
                                          bpak_id(encoder_alg),
                                          bpak_id(decoder_alg));
     } else {
