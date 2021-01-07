@@ -371,6 +371,12 @@ static int bpak_alg_bspatch_process(struct bpak_alg_instance *ins)
     return bpak_alg_process(&p->compressor);
 }
 
+static bool bpak_alg_bspatch_needs_more_data(struct bpak_alg_instance *ins)
+{
+    struct bpak_bspatch_private *p = BSPATCH_PRIVATE(ins);
+    return bpak_alg_needs_more_data(&p->compressor);
+}
+
 static const struct bpak_alg bspatch_alg =
 {
     .id = 0xb5964388, /* id("bspatch") */
@@ -378,6 +384,7 @@ static const struct bpak_alg bspatch_alg =
     .parameter = 0x5f9bc012, /* id("heatshrink-decode") */
     .on_init = bpak_alg_bspatch_init,
     .on_process = bpak_alg_bspatch_process,
+    .on_needs_more_data = bpak_alg_bspatch_needs_more_data,
     .state_size = sizeof(struct bpak_bspatch_private),
 };
 

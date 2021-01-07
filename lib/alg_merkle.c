@@ -162,6 +162,8 @@ static int bpak_alg_merkle_init(struct bpak_alg_instance *ins,
         offset -= 4096;
     }
 
+    bpak_printf(2, "alg_merkle: seek ctx->out to %li\n", offset);
+
     rc = bpak_io_seek(ctx->out, offset, BPAK_IO_SEEK_SET);
 
     if (rc != BPAK_OK)
@@ -186,9 +188,10 @@ static int bpak_alg_merkle_process(struct bpak_alg_instance *ins)
 
     rc = BPAK_OK;
 
-    if (bpak_merkle_done(&ctx->merkle))
+    if (bpak_merkle_done(&ctx->merkle)) {
+        bpak_printf(2, "%s: done\n", __func__);
         return BPAK_OK;
-
+    }
 
     if (ctx->bytes_to_process)
     {
@@ -220,10 +223,12 @@ static int bpak_alg_merkle_process(struct bpak_alg_instance *ins)
     else
     {
         rc = bpak_merkle_process(&ctx->merkle, NULL, 0);
+        bpak_printf(2, "%s: merkle_process(...) = %i\n", __func__, rc);
     }
 
     if (bpak_merkle_done(&ctx->merkle))
     {
+        bpak_printf(2, "%s: Alg done\n", __func__);
         ins->done = true;
         ins->output_size = ctx->output_size;
 
@@ -236,12 +241,18 @@ static int bpak_alg_merkle_process(struct bpak_alg_instance *ins)
     return rc;
 }
 
+static bool bpak_alg_merkle_needs_more_data(struct bpak_alg_instance *ins)
+{
+    return false;
+}
+
 static const struct bpak_alg merkle_generate_alg =
 {
     .id = 0xb5bcc58f, /* id("merkle-generate") */
     .name = "merkle-generate",
     .on_init = bpak_alg_merkle_init,
     .on_process = bpak_alg_merkle_process,
+    .on_needs_more_data = bpak_alg_merkle_needs_more_data,
     .state_size = sizeof(struct bpak_alg_merkle_ctx),
 };
 

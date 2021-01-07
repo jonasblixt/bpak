@@ -9,6 +9,7 @@ struct bpak_alg_instance;
 
 typedef int (*bpak_alg_free_t)(struct bpak_alg_instance *ins);
 
+typedef bool (*bpak_alg_needs_more_data_t)(struct bpak_alg_instance *ins);
 typedef int (*bpak_alg_init_t)(struct bpak_alg_instance *ins,
                                     struct bpak_io *in,
                                     struct bpak_io *out,
@@ -28,6 +29,7 @@ struct bpak_alg
     bpak_alg_free_t on_free;
     bpak_alg_init_t on_init;
     bpak_alg_process_t on_process;
+    bpak_alg_needs_more_data_t on_needs_more_data;
     size_t state_size;
     const char *name;
 };
@@ -60,7 +62,7 @@ int bpak_alg_process(struct bpak_alg_instance *ins);
 
 bool bpak_alg_done(struct bpak_alg_instance *ins);
 size_t bpak_alg_output_size(struct bpak_alg_instance *ins);
-
+bool bpak_alg_needs_more_data(struct bpak_alg_instance *ins);
 int bpak_alg_get(uint32_t alg_id, struct bpak_alg **alg);
 int bpak_alg_register(const struct bpak_alg *alg);
 
@@ -70,5 +72,4 @@ int bpak_alg_bsdiff_register(void);
 int bpak_alg_bspatch_register(void);
 int bpak_alg_heatshrink_register(void);
 int bpak_alg_merkle_register(void);
-
 #endif  // INCLUDE_BPAK_ALG_H_

@@ -63,6 +63,14 @@ int bpak_alg_free(struct bpak_alg_instance *ins)
         return BPAK_OK;
 }
 
+bool bpak_alg_needs_more_data(struct bpak_alg_instance *ins)
+{
+    if (ins->alg->on_needs_more_data)
+        return ins->alg->on_needs_more_data(ins);
+    else
+        return false;
+}
+
 int bpak_alg_process(struct bpak_alg_instance *ins)
 {
     return ins->alg->on_process(ins);

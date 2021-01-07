@@ -145,6 +145,12 @@ static int bpak_alg_hsd_init(struct bpak_alg_instance *ins,
     return BPAK_OK;
 }
 
+static bool bpak_alg_hsd_needs_more_data(struct bpak_alg_instance *ins)
+{
+    struct bpak_alg_hsd_state *s = (struct bpak_alg_hsd_state *) ins->state;
+    return (s->bytes_to_process > 0);
+}
+
 static int bpak_alg_hsd_process(struct bpak_alg_instance *ins)
 {
     int rc = BPAK_OK;
@@ -234,6 +240,7 @@ static const struct bpak_alg heatshrink_decode_alg =
     .name = "heatshrink-decode",
     .on_init = bpak_alg_hsd_init,
     .on_process = bpak_alg_hsd_process,
+    .on_needs_more_data = bpak_alg_hsd_needs_more_data,
     .state_size = sizeof(struct bpak_alg_hsd_state),
 };
 
