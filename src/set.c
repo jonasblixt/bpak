@@ -224,8 +224,7 @@ int action_set(int argc, char **argv)
             rc = -BPAK_FAILED;
             printf("Error: Unknown encoder\n");
         }
-    } else if (key_id_flag && keystore_id_flag)
-    {
+    } else if (key_id_flag && keystore_id_flag) {
         h->key_id = key_id;
         h->keystore_id = keystore_id;
 

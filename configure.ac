@@ -1,7 +1,7 @@
 dnl Bit Packer
 
 AC_PREREQ(2.59)
-AC_INIT([bpak], [0.4.3], [Jonas Blixt, <jonpe960@gmail.com>])
+AC_INIT([bpak], [0.5.0], [Jonas Blixt, <jonpe960@gmail.com>])
 
 m4_pattern_forbid([^AX_(CHECK_ENABLE_DEBUG|CODE_COVERAGE|COMPILER_FLAGS|COMPILER_FLAGS_(CFLAGS|CXXFLAGS|LDFLAGS))\b],
   [Unexpanded AX_ macro found. Please install GNU autoconf-archive])
