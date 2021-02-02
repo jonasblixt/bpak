@@ -681,7 +681,7 @@ int action_add(int argc, char **argv)
             }
             else if (strcmp(encoder, "dependency") == 0)
             {
-
+                /* Dependency format: <uuid>-<semver>*/
                 struct bpak_dependency *d;
 
                 char uuid_text[37];
@@ -717,7 +717,8 @@ int action_add(int argc, char **argv)
                     goto err_close_io_out;
                 }
 
-                strncpy(d->constraint, constraint_ptr, strlen(constraint_ptr));
+                strncpy(d->constraint, constraint_ptr,
+                                        meta_size - sizeof(*d));
 
                 if(bpak_get_verbosity())
                 {

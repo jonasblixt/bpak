@@ -454,7 +454,12 @@ static int bpak_alg_bsdiff_init(struct bpak_alg_instance *ins,
     }
 
     priv->suffix_array_size = priv->old_size * sizeof(int64_t);
-    ftruncate(priv->suffix_array_fd, priv->suffix_array_size + 1);
+    rc = ftruncate(priv->suffix_array_fd, priv->suffix_array_size + 1);
+
+    if (rc != 0) {
+        bpak_printf(0, "Error: ftruncate failed\n");
+        return rc;
+    }
 
     priv->suffix_array = mmap(NULL, priv->suffix_array_size + 1,
                                 PROT_READ | PROT_WRITE, MAP_SHARED,
