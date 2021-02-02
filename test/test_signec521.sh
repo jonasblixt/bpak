@@ -9,7 +9,7 @@ $BPAK --help
 
 IMG_A=sign_test_sign_ec521.bpak
 PKG_UUID=0888b0fa-9c48-4524-9845-06a641b61edd
-PKG_UNIQUE_ID_A=$(uuidgen -t)
+PKG_UNIQUE_ID_A=$(uuidgen)
 set -e
 
 # Create A package

@@ -6,7 +6,7 @@ $BPAK --help
 
 IMG=test_dep_version.bpak
 PKG_UUID=0888b0fa-9c48-4524-9845-06a641b61edd
-PKG_UNIQUE_ID_A=$(uuidgen -t)
+PKG_UNIQUE_ID_A=$(uuidgen)
 V=-vvv
 
 $BPAK create $IMG -Y --hash-kind sha256 --signature-kind prime256v1 $V

@@ -8,7 +8,7 @@ $BPAK --help
 
 IMG=test_keystore.bpak
 PKG_UUID=5df103ef-e774-450b-95c5-1fef51ceec28
-PKG_UNIQUE_ID_A=$(uuidgen -t)
+PKG_UNIQUE_ID_A=$(uuidgen)
 set -e
 
 # Create A package
