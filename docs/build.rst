@@ -1,3 +1,5 @@
+.. _Building and installing:
+
 -----------------------
 Building and installing
 -----------------------
