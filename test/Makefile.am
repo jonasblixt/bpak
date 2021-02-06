@@ -92,7 +92,8 @@ TESTS = test_core_meta \
         test_header_at_the_end.sh \
         test_transport2.sh \
         test_transport3.sh \
-        test_transport4.sh
+        test_transport4.sh \
+        test_sign_dont_hash.sh
 
 
 if BUILD_BPAK_PYTHON_LIB
