@@ -31,7 +31,7 @@ $BPAK generate keystore $IMG --name internal $V
 $BPAK set $IMG --key-id pb-development \
                --keystore-id pb-internal $V
 
-$BPAK show $IMG --hash | openssl pkeyutl -sign -inkey $PRI_KEY \
+$BPAK show $IMG --binary-hash | openssl pkeyutl -sign -inkey $PRI_KEY \
                     -keyform PEM > /tmp/sig.data
 
 $BPAK sign $IMG --signature /tmp/sig.data $V

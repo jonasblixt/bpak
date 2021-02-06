@@ -30,7 +30,7 @@ $BPAK set $IMG --key-id bpak-test-key \
 
 $BPAK generate keystore $IMG --name internal
 
-$BPAK show $IMG --hash | openssl pkeyutl -sign -inkey $PRI_KEY \
+$BPAK show $IMG --binary-hash | openssl pkeyutl -sign -inkey $PRI_KEY \
                     -keyform PEM > /tmp/sig_openssl.data
 
 echo SHOW1

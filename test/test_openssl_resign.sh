@@ -29,7 +29,7 @@ $BPAK set $IMG --key-id the-new-id \
 
 $BPAK show $IMG
 
-$BPAK show $IMG --hash | openssl pkeyutl -sign -inkey $srcdir/secp256r1-key-pair.pem \
+$BPAK show $IMG --binary-hash | openssl pkeyutl -sign -inkey $srcdir/secp256r1-key-pair.pem \
                     -keyform PEM > /tmp/sig.data
 
 $BPAK sign $IMG --signature /tmp/sig.data

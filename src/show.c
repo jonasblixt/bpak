@@ -26,6 +26,7 @@ int action_show(int argc, char **argv)
     const char *filename = NULL;
     const char *part_name = NULL;
     const char *meta_name = NULL;
+    bool text_hash_output = false;
     bool binary_hash_output = false;
     char hash_output[64];
     size_t hash_size = sizeof(hash_output);
@@ -40,10 +41,11 @@ int action_show(int argc, char **argv)
         {"meta",      required_argument, 0,  'm' },
         {"part",      required_argument, 0,  'p' },
         {"hash",      no_argument,       0,  'H' },
+        {"binary-hash", no_argument,       0,  'B' },
         {0,           0,                 0,   0  }
     };
 
-    while ((opt = getopt_long(argc, argv, "hvm:p:H",
+    while ((opt = getopt_long(argc, argv, "hvm:p:HB",
                    long_options, &long_index )) != -1)
     {
         switch (opt)
@@ -74,6 +76,9 @@ int action_show(int argc, char **argv)
                 }
             break;
             case 'H':
+                text_hash_output = true;
+            break;
+            case 'B':
                 binary_hash_output = true;
             break;
             case '?':
@@ -169,6 +174,14 @@ int action_show(int argc, char **argv)
 
         for (int i = 0; i < hash_size; i++)
             printf("%c", hash_output[i]);
+        goto err_pkg_close;
+    } else if (text_hash_output) {
+        hash_size = sizeof(hash_output);
+        bpak_pkg_compute_hash(pkg, hash_output, &hash_size);
+
+        for (int i = 0; i < hash_size; i++)
+            printf("%2.2x", hash_output[i] & 0xFF);
+        printf("\n");
         goto err_pkg_close;
     }
 
