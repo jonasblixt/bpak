@@ -393,6 +393,7 @@ static int bpak_alg_bsdiff_init(struct bpak_alg_instance *ins,
                         MAP_SHARED, bpak_io_file_to_fd(origin),
                         0);
     priv->old = priv->old_mmap + bpak_part_offset(&h, p);
+    bpak_printf(2, "--> origin offset: %lu\n", bpak_part_offset(&h, p));
 
     if (((intptr_t) priv->old_mmap) == -1)
     {
@@ -407,6 +408,9 @@ static int bpak_alg_bsdiff_init(struct bpak_alg_instance *ins,
                         MAP_SHARED, bpak_io_file_to_fd(in),
                         0);
     priv->new = priv->new_mmap + bpak_part_offset(ins->header, ins->part);
+    bpak_printf(2, "--> input offset: %lu\n",
+                bpak_part_offset(ins->header, ins->part));
+
     if (((intptr_t) priv->new_mmap) == -1)
     {
 

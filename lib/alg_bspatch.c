@@ -328,6 +328,28 @@ static int bpak_alg_bspatch_init(struct bpak_alg_instance *ins,
         return rc;
     }
 */
+
+    if (ins->origin_header_pos == BPAK_HEADER_POS_LAST) {
+        rc = bpak_io_seek(p->origin, bpak_part_offset(&p->oh, ins->part) - 4096,
+                        BPAK_IO_SEEK_SET);
+    } else {
+        rc = bpak_io_seek(p->origin, bpak_part_offset(&p->oh, ins->part),
+                        BPAK_IO_SEEK_SET);
+    }
+
+    if (rc != BPAK_OK)
+    {
+        bpak_printf(0, "Error: Failed to seek\n");
+        return rc;
+    }
+
+/*
+    bpak_printf(2, "In: %lu, Out: %lu, Origin: %lu\n",
+                bpak_io_tell(in),
+                bpak_io_tell(out),
+                bpak_io_tell(origin));
+*/
+
     rc = bpak_alg_init(&p->compressor, ins->alg->parameter,
                         ins->part, ins->header,
                         p->compressor_buffer, sizeof(p->compressor_buffer),

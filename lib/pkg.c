@@ -442,11 +442,32 @@ static int transport_process(struct bpak_transport_meta *tm,
 
     bpak_printf(1, "Initializing alg, input size %li bytes\n", bpak_part_size(p));
 
-    bpak_io_seek(input_io,
+    rc = bpak_io_seek(origin_io, 0, BPAK_IO_SEEK_SET);
+
+    if (rc != BPAK_OK) {
+        bpak_printf(0, "%s: Error, could not seek origin stream", __func__);
+        return rc;
+    }
+
+    rc = bpak_io_seek(input_io,
                  bpak_part_offset(input_header, p),
                  BPAK_IO_SEEK_SET);
 
-    rc = bpak_alg_init(&ins, alg_id, p, output_header, state_buffer, size,
+    if (rc != BPAK_OK) {
+        bpak_printf(0, "%s: Error, could not seek input stream", __func__);
+        return rc;
+    }
+
+    rc = bpak_io_seek(output_io,
+                 bpak_part_offset(output_header, p),
+                 BPAK_IO_SEEK_SET);
+
+    if (rc != BPAK_OK) {
+        bpak_printf(0, "%s: Error, could not seek output stream", __func__);
+        return rc;
+    }
+
+    rc = bpak_alg_init(&ins, alg_id, p, input_header, state_buffer, size,
                input_io, output_io, origin_io,
                origin->header_location,
                output_header_last?BPAK_HEADER_POS_LAST:BPAK_HEADER_POS_FIRST);
@@ -489,7 +510,7 @@ static int transport_process(struct bpak_transport_meta *tm,
                                  BPAK_IO_SEEK_SET);
 
     if (rc != BPAK_OK) {
-        bpak_printf(0, "Error: Could not seek\n");
+        bpak_printf(0, "%s: Error: Could not seek\n", __func__);
         bpak_printf(0, "    offset: %li\n", bpak_part_offset(output_header, op));
         bpak_printf(0, "    size:   %li\n", bpak_part_size(op));
         goto err_out;
@@ -522,7 +543,12 @@ int bpak_pkg_transport_encode(struct bpak_package *input,
     bpak_foreach_part(&input->header, ph) {
         if (ph->id == 0)
             break;
-
+/*
+        bpak_printf(0, "In: %lu, Out: %lu, Origin: %lu\n",
+                        bpak_io_tell(input->io),
+                        bpak_io_tell(output->io),
+                        bpak_io_tell(origin->io));
+*/
         if (bpak_get_meta_with_ref(&input->header,
                                    bpak_id("bpak-transport"),
                                    ph->id,

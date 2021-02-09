@@ -74,16 +74,16 @@ int bpak_io_seek(struct bpak_io *io, int64_t position,
         return -BPAK_BAD_ALIGNMENT;
 
     /* Check seek boundaries */
-    if ( (new_position < io->start_position) ||
-         (new_position > io->end_position))
-    {
-        return -BPAK_SEEK_ERROR;
-    }
 
-    if (io->on_seek)
-    {
+    if (io->on_seek) {
         if (io->on_seek(io, new_position) != BPAK_OK)
             return -BPAK_FAILED;
+    } else {
+        if ( (new_position < io->start_position) ||
+             (new_position > io->end_position))
+        {
+            return -BPAK_SEEK_ERROR;
+        }
     }
 
     io->position = new_position;
