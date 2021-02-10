@@ -110,11 +110,17 @@ int action_show(int argc, char **argv)
 
     if (rc != BPAK_OK)
     {
-        printf("Error: Could not open package\n");
+        fprintf(stderr, "Error: Could not open package\n");
         return -BPAK_FAILED;
     }
 
     struct bpak_header *h = bpak_pkg_header(pkg);
+
+    if (bpak_valid_header(h) != BPAK_OK) {
+        fprintf(stderr, "Error: Invalid BPAK header\n");
+        return -BPAK_FAILED;
+    }
+
     memset(string_output, 0, sizeof(string_output));
 
     if (meta_name)
