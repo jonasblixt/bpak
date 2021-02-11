@@ -164,6 +164,30 @@ static PyObject * package_transport_encode(BPAKPackage *self,
     return Py_BuildValue("");
 }
 
+static PyObject * package_read_digest(BPAKPackage *self)
+{
+    char digest_data[128];
+
+    size_t hash_size = sizeof(digest_data);
+
+    if (bpak_pkg_compute_hash(self->pkg, digest_data, &hash_size) != BPAK_OK)
+        return Py_None;
+
+    return Py_BuildValue("y#", digest_data, hash_size);
+}
+
+static PyObject * package_read_signature(BPAKPackage *self)
+{
+    char signature_data[512];
+
+    size_t sig_size = sizeof(signature_data);
+
+    if (bpak_copyz_signature(&self->pkg->header, signature_data, &sig_size) != BPAK_OK)
+        return Py_None;
+
+    return Py_BuildValue("y#", signature_data, sig_size);
+}
+
 static PyObject * package_deps(BPAKPackage *self)
 {
     struct bpak_header *h = bpak_pkg_header(self->pkg);
@@ -210,6 +234,12 @@ static PyMethodDef package_methods[] =
 
     {"deps", (PyCFunction) package_deps, METH_NOARGS,
                 "Get package dependencies"},
+
+    {"read_digest", (PyCFunction) package_read_digest, METH_NOARGS,
+                "Get package digest"},
+
+    {"read_signature", (PyCFunction) package_read_signature, METH_NOARGS,
+                "Get package signature"},
 
     {"version", (PyCFunction) package_version, METH_NOARGS,
                 "Get package version"},

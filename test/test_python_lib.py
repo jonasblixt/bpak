@@ -17,3 +17,7 @@ assert p.id() == "0888b0fa-9c48-4524-9845-06a641b61edd"
 assert bpak.id("bpak-test") == 0x515dcadf
 
 print("Pkg: " + str(p))
+
+# Test verify
+
+assert p.verify("%s/secp256r1-pub-key.pem"%(srcdir))
