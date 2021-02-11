@@ -42,3 +42,4 @@ template*
 *.bak
 cov-int/
 examples/streaming/streaming
+__pycache__

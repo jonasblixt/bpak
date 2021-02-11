@@ -97,7 +97,6 @@ TESTS = test_core_meta \
         test_sign_dont_hash.sh \
         test_multiple_bsdiff.sh
 
-
 if BUILD_BPAK_PYTHON_LIB
 TESTS += test_python_lib.py
 

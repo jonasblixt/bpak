@@ -11,6 +11,7 @@ typedef struct
 } BPAKPackage;
 
 static PyObject *BPAKPackageError;
+static PyObject *log_func = Py_None;
 
 static PyObject * package_new(PyTypeObject *type, PyObject *args,
                                     PyObject *kwds)
@@ -34,6 +35,21 @@ static void package_dealloc(BPAKPackage *self)
     Py_TYPE(self)->tp_free((PyObject *) self);
 }
 
+int bpak_printf(int verbosity, const char *fmt, ...)
+{
+    char log_buf[1024];
+    va_list args;
+    va_start(args, fmt);
+    vsnprintf(log_buf, sizeof(log_buf), fmt, args);
+    va_end(args);
+
+    if (log_func != Py_None) {
+        PyEval_CallFunction(log_func, "(is)", verbosity, log_buf);
+    }
+
+    return BPAK_OK;
+}
+
 static int package_init(BPAKPackage *self, PyObject *args,
                                 PyObject *kwds)
 {
@@ -45,8 +61,9 @@ static int package_init(BPAKPackage *self, PyObject *args,
     rc = PyArg_ParseTupleAndKeywords(args, kwds, "|ss", kwlist,
                                         &filename,
                                         &mode);
-    if (!rc)
+    if (!rc) {
         return -1;
+    }
 
     if (!filename || !mode)
     {
@@ -239,10 +256,28 @@ static PyObject * m_id(PyObject *module, PyObject *args, PyObject *kwds)
     return PyLong_FromLong(bpak_id(input_string));
 }
 
+static PyObject * m_set_log_func(PyObject *module, PyObject *args, PyObject *kwds)
+{
+    int rc;
+    static char *kwlist[] = {"log_func", NULL};
+
+    rc = PyArg_ParseTupleAndKeywords(args, kwds, "O", kwlist,
+                                        &log_func);
+    if (!rc) {
+        PyErr_SetString(BPAKPackageError, "Invalid argument");
+        return NULL;
+    }
+
+    return Py_None;
+}
+
+
 static PyMethodDef module_methods[] =
 {
     { "id", (PyCFunction)m_id, METH_VARARGS | METH_KEYWORDS,
         "Convert string to bpak id"},
+    { "set_log_func", (PyCFunction)m_set_log_func, METH_VARARGS | METH_KEYWORDS,
+        "Set logging function callback"},
     { NULL }
 };
 
@@ -255,7 +290,7 @@ static PyModuleDef module =
    .m_methods = module_methods
 };
 
-PyMODINIT_FUNC PyInit_bpak(void)
+PyMODINIT_FUNC PyInit__bpak(void)
 {
     PyObject *m_p;
 

@@ -19,6 +19,8 @@ int bpak_pkg_open(struct bpak_package **pkg_, const char *filename,
     if (!mode)
         return -BPAK_FAILED;
 
+    bpak_printf(1, "Opening BPAK file %s\n", filename);
+
     *pkg_ = malloc(sizeof(struct bpak_package));
     struct bpak_package *pkg = *pkg_;
 
