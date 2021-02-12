@@ -8,6 +8,7 @@ This documents the BPAK merkle hash tree generator which is used to create
 dm verity compatiable hash trees.
 
 ----------------------------------------------
+
 Source code: :github-blob:`include/bpak/merkle.h`, :github-blob:`lib/merkle.c`
 
 ----------------------------------------------
