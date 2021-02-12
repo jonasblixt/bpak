@@ -35,8 +35,6 @@ size_t bpak_pkg_size(struct bpak_package *pkg);
 struct bpak_header *bpak_pkg_header(struct bpak_package *pkg);
 int bpak_pkg_sign(struct bpak_package *pkg, const uint8_t *signature,
                     size_t size);
-int bpak_pkg_sign_init(struct bpak_package *pkg, uint32_t key_id,
-                            int32_t keystore_id);
 
 int bpak_pkg_add_transport(struct bpak_package *pkg, uint32_t part_ref,
                                 uint32_t encoder_id, uint32_t decoder_id);

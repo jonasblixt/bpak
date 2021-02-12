@@ -411,6 +411,28 @@ const char *bpak_hash_kind(uint8_t hash_kind);
 int bpak_printf(int verbosity, const char *fmt, ...);
 
 /**
+ * Sets key id which is used when verifying the package as a key hint to select
+ *  the correct verification key.
+ *
+ * @param[in] hdr BPAK Header
+ * @param[in] key_id The key ID
+ *
+ * @return BPAK_OK on success
+ */
+int bpak_set_key_id(struct bpak_header *hdr, uint32_t key_id);
+
+/**
+ * Set keystore ID which is used when verifying the package. The key pointed to
+ *  by the 'key_id' is expected to exist in a keystore with id \ref keystore_id
+ *
+ * @param[in] hdr BPAK Header
+ * @param[in] keystore_id The keystore ID
+ *
+ * @return BPAK_OK on success
+ */
+int bpak_set_keystore_id(struct bpak_header *hdr, uint32_t keystore_id);
+
+/**
  * Library version
  *
  * @return Library version as a text string

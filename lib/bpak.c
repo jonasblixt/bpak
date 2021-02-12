@@ -305,6 +305,18 @@ int bpak_copyz_signature(struct bpak_header *header, uint8_t *signature,
     return BPAK_OK;
 }
 
+int bpak_set_key_id(struct bpak_header *hdr, uint32_t key_id)
+{
+    hdr->key_id = key_id;
+    return BPAK_OK;
+}
+
+int bpak_set_keystore_id(struct bpak_header *hdr, uint32_t keystore_id)
+{
+    hdr->keystore_id = keystore_id;
+    return BPAK_OK;
+}
+
 const char *bpak_version(void)
 {
     return PACKAGE_VERSION;
