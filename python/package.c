@@ -92,6 +92,19 @@ static PyObject *package_installed_size(BPAKPackage *self)
     return PyLong_FromLong(bpak_pkg_installed_size(self->pkg));
 }
 
+static PyObject * package_close(BPAKPackage *self)
+{
+    bpak_pkg_close(self->pkg);
+    self->pkg = NULL;
+    return Py_None;
+}
+
+static PyObject * package_hash_kind(BPAKPackage *self)
+{
+    struct bpak_header *h = bpak_pkg_header(self->pkg);
+    return Py_BuildValue("i", h->hash_kind);
+}
+
 static PyObject * package_id(BPAKPackage *self)
 {
     struct bpak_header *h = bpak_pkg_header(self->pkg);
@@ -129,6 +142,88 @@ static PyObject * package_version(BPAKPackage *self)
     }
 
     return Py_BuildValue("s", version);
+}
+
+static PyObject * package_set_signature(BPAKPackage *self, PyObject *args,
+                                                        PyObject *kwds)
+{
+    int rc;
+    char *signature_data;
+    int signature_sz;
+    struct bpak_header *h = bpak_pkg_header(self->pkg);
+    static char *kwlist[] = {"signature_data", NULL};
+
+    rc = PyArg_ParseTupleAndKeywords(args, kwds, "y#", kwlist, &signature_data,
+                                                               &signature_sz);
+
+    if (!rc) {
+        PyErr_SetString(BPAKPackageError, "Invalid argument");
+        return NULL;
+    }
+
+    bpak_printf(2, "Sig data: %p, sz = %i\n", signature_data, signature_sz);
+
+    rc = bpak_pkg_sign(self->pkg, signature_data, signature_sz);
+
+    if (rc != BPAK_OK) {
+        PyErr_SetString(BPAKPackageError, "Failed to set signature data");
+        return NULL;
+    }
+
+    return Py_None;
+}
+static PyObject * package_set_key_id(BPAKPackage *self, PyObject *args,
+                                                        PyObject *kwds)
+{
+    int rc;
+    long key_id;
+    struct bpak_header *h = bpak_pkg_header(self->pkg);
+    static char *kwlist[] = {"key_id", NULL};
+
+    rc = PyArg_ParseTupleAndKeywords(args, kwds, "l", kwlist, &key_id);
+
+    if (!rc) {
+        PyErr_SetString(BPAKPackageError, "Invalid argument");
+        return NULL;
+    }
+
+    bpak_set_key_id(h, (uint32_t) key_id);
+
+    rc = bpak_pkg_write_header(self->pkg);
+
+    if (rc != BPAK_OK) {
+        PyErr_SetString(BPAKPackageError, "Could not write header");
+        return NULL;
+    }
+
+    return Py_None;
+}
+
+static PyObject * package_set_keystore_id(BPAKPackage *self, PyObject *args,
+                                                             PyObject *kwds)
+{
+    int rc;
+    long keystore_id;
+    struct bpak_header *h = bpak_pkg_header(self->pkg);
+    static char *kwlist[] = {"keystore_id", NULL};
+
+    rc = PyArg_ParseTupleAndKeywords(args, kwds, "l", kwlist, &keystore_id);
+
+    if (!rc) {
+        PyErr_SetString(BPAKPackageError, "Invalid argument");
+        return NULL;
+    }
+
+    bpak_set_keystore_id(h, (uint32_t) keystore_id);
+
+    rc = bpak_pkg_write_header(self->pkg);
+
+    if (rc != BPAK_OK) {
+        PyErr_SetString(BPAKPackageError, "Could not write header");
+        return NULL;
+    }
+
+    return Py_None;
 }
 
 static PyObject * package_transport_encode(BPAKPackage *self,
@@ -244,8 +339,23 @@ static PyMethodDef package_methods[] =
     {"version", (PyCFunction) package_version, METH_NOARGS,
                 "Get package version"},
 
+    {"close", (PyCFunction) package_close, METH_NOARGS,
+                "Close package"},
+
     {"id", (PyCFunction) package_id, METH_NOARGS,
                 "Get package id"},
+
+    {"read_hash_kind", (PyCFunction) package_hash_kind, METH_NOARGS,
+                "Get package hash kind"},
+
+    {"set_signature", (PyCFunction) package_set_signature, METH_VARARGS | METH_KEYWORDS,
+                "Sets package signature data"},
+
+    {"set_key_id", (PyCFunction) package_set_key_id, METH_VARARGS | METH_KEYWORDS,
+                "Sets key id"},
+
+    {"set_keystore_id", (PyCFunction) package_set_keystore_id, METH_VARARGS | METH_KEYWORDS,
+                "Sets keystore id"},
 
     {"transport", (PyCFunction) package_transport_encode, METH_VARARGS | METH_KEYWORDS,
                 "Encode package for transport"},

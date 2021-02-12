@@ -50,4 +50,13 @@ int bpak_pkg_transport_decode(struct bpak_package *input,
                               bool output_header_last);
 int bpak_pkg_register_all_algs(void);
 
+/**
+ * Writes current header to file
+ *
+ * @param[in] hdr BPAK Header
+ *
+ * @return BPAK_OK on success
+ */
+int bpak_pkg_write_header(struct bpak_package *pkg);
+
 #endif  // INCLUDE_BPAK_PKG_H_

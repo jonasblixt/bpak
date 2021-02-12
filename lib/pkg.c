@@ -251,6 +251,31 @@ struct bpak_header *bpak_pkg_header(struct bpak_package *pkg)
     return &pkg->header;
 }
 
+int bpak_pkg_write_header(struct bpak_package *pkg)
+{
+    int rc;
+
+    if (pkg->header_location == BPAK_HEADER_POS_FIRST) {
+        rc = bpak_io_seek(pkg->io, 0, BPAK_IO_SEEK_SET);
+    } else {
+        rc = bpak_io_seek(pkg->io, 4096, BPAK_IO_SEEK_END);
+    }
+
+    if (rc != BPAK_OK) {
+        bpak_printf(0, "%s: Could not seek\n", __func__);
+        return rc;
+    }
+
+    rc = bpak_io_write(pkg->io, &pkg->header, sizeof(pkg->header));
+
+    if (rc != sizeof(pkg->header)) {
+        bpak_printf(0, "%s: Write failed\n", __func__);
+        return -BPAK_FAILED;
+    }
+
+    return BPAK_OK;
+}
+
 int bpak_pkg_sign(struct bpak_package *pkg, const uint8_t *signature,
                     size_t size)
 {
@@ -261,21 +286,7 @@ int bpak_pkg_sign(struct bpak_package *pkg, const uint8_t *signature,
     memcpy(pkg->header.signature, signature, size);
     pkg->header.signature_sz = size;
 
-    if (pkg->header_location == BPAK_HEADER_POS_FIRST) {
-        rc = bpak_io_seek(pkg->io, 0, BPAK_IO_SEEK_SET);
-    } else {
-        rc = bpak_io_seek(pkg->io, 4096, BPAK_IO_SEEK_END);
-    }
-
-    if (rc != BPAK_OK)
-        return rc;
-
-    rc = bpak_io_write(pkg->io, &pkg->header, sizeof(pkg->header));
-
-    if (rc != sizeof(pkg->header))
-        return -BPAK_FAILED;
-
-    return BPAK_OK;
+    return bpak_pkg_write_header(pkg);
 }
 
 int bpak_pkg_add_transport(struct bpak_package *pkg, uint32_t part_ref,
@@ -293,21 +304,7 @@ int bpak_pkg_add_transport(struct bpak_package *pkg, uint32_t part_ref,
     meta->alg_id_encode = encoder_id;
     meta->alg_id_decode = decoder_id;
 
-    if (pkg->header_location == BPAK_HEADER_POS_FIRST) {
-        rc = bpak_io_seek(pkg->io, 0, BPAK_IO_SEEK_SET);
-    } else {
-        rc = bpak_io_seek(pkg->io, 4096, BPAK_IO_SEEK_END);
-    }
-
-    if (rc != BPAK_OK)
-        return rc;
-
-    rc = bpak_io_write(pkg->io, &pkg->header, sizeof(pkg->header));
-
-    if (rc != sizeof(pkg->header))
-        return -BPAK_FAILED;
-
-    return BPAK_OK;
+    return bpak_pkg_write_header(pkg);
 }
 
 static int transport_copy(struct bpak_header *hdr, uint32_t id,
