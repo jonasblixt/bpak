@@ -30,8 +30,8 @@ int action_set(int argc, char **argv)
     const char *encoder = NULL;
     uint32_t key_id = 0;
     uint32_t keystore_id = 0;
-    bool key_id_flag = true;
-    bool keystore_id_flag = true;
+    bool key_id_flag = false;
+    bool keystore_id_flag = false;
     int rc = 0;
 
     struct option long_options[] =
@@ -97,7 +97,7 @@ int action_set(int argc, char **argv)
         return -1;
     }
 
-    if (!meta_name && !(key_id_flag && keystore_id_flag))
+    if (!meta_name && !(key_id_flag || keystore_id_flag))
     {
         printf("Error: Requried argument --meta (or keystore-id and key-id) is missing\n");
         return -1;
@@ -153,10 +153,10 @@ int action_set(int argc, char **argv)
         {
             if (bpak_get_verbosity() > 2)
             {
-                printf("Need to grow metadata field with %li bytes\n", 
+                printf("Need to grow metadata field with %li bytes\n",
                             strlen(from_string) - meta_header->size);
             }
-            
+
             struct bpak_header *new_header = malloc(sizeof(struct bpak_header));
             struct bpak_meta_header *meta_tmp = NULL;
 
@@ -178,7 +178,7 @@ int action_set(int argc, char **argv)
                         printf("Updating part %s\n", meta_name);
                     }
 
-                    rc = bpak_add_meta(new_header, m->id, m->part_id_ref, 
+                    rc = bpak_add_meta(new_header, m->id, m->part_id_ref,
                                             (void **) &tmp_ptr,
                                             strlen(from_string) + 1);
 
@@ -193,7 +193,7 @@ int action_set(int argc, char **argv)
                     {
                         printf("Copying meta %x, %i\n", m->id, m->size);
                     }
-                    rc = bpak_add_meta(new_header, m->id, m->part_id_ref, 
+                    rc = bpak_add_meta(new_header, m->id, m->part_id_ref,
                                             (void **) &tmp_ptr,
                                             m->size);
 
@@ -224,14 +224,22 @@ int action_set(int argc, char **argv)
             rc = -BPAK_FAILED;
             printf("Error: Unknown encoder\n");
         }
-    } else if (key_id_flag && keystore_id_flag) {
-        h->key_id = key_id;
-        h->keystore_id = keystore_id;
+    } else if (key_id_flag || keystore_id_flag) {
 
-        if (bpak_get_verbosity())
-        {
-            printf("Setting key-id to       0x%08x\n", key_id);
-            printf("Setting keystore-id to  0x%08x\n", keystore_id);
+        if (key_id_flag) {
+            h->key_id = key_id;
+
+            if (bpak_get_verbosity()) {
+                printf("Setting key-id to       0x%08x\n", key_id);
+            }
+        }
+
+        if (keystore_id_flag) {
+            h->keystore_id = keystore_id;
+
+            if (bpak_get_verbosity()) {
+                printf("Setting keystore-id to  0x%08x\n", keystore_id);
+            }
         }
     }
     else
