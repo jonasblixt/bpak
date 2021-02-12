@@ -1,5 +1,14 @@
-import _bpak
+try:
+    # It's not possible to include the C extension when building
+    #  readthedocs.io documentation. And it's not needed for generating
+    # the documentation.
+    import _bpak
+except:
+    print("Warning: Could not import bpak C extension")
+
 import hashlib
+import uuid
+import semver
 
 BPAK_HASH_INVALID = 0
 BPAK_HASH_SHA256 = 1
@@ -24,18 +33,71 @@ def set_log_function(log_func):
     _bpak.set_log_func(log_func)
 
 class Package:
+    """
+    BPAK Python wrapper
+
+    This class wraps the high level BPAK API
+    """
     def __init__(self, filename, mode):
         self.pkg = _bpak.Package(filename, mode)
     def close(self):
+        """
+        Close BPAK archive
+        """
         self.pkg.close()
     def id(self):
-        return self.pkg.id()
+        """
+        Return the bpak-package UUID metadata
+        """
+        raw_pkg_id = self.pkg.read_raw_meta(id("bpak-package"), 0)
+        return uuid.UUID(bytes=raw_pkg_id)
+    def version(self):
+        """
+        Read 'bpak-version' metadata
+        """
+        raw_pkg_version = self.pkg.read_raw_meta(id("bpak-version"), 0)
+        return str(raw_pkg_version)
+    def read_string_meta(self, meta_id, part_ref_id=0):
+        raw_data = self.read_raw_meta(meta_id, part_ref_id)
+        return raw_data[:-1].decode('utf-8')
+    def read_hex_meta(self, meta_id, part_ref_id=0):
+        raw_data = self.read_raw_meta(meta_id, part_ref_id)
+        return raw_data.hex()
+    def write_string_meta(self, meta_id, input_string, part_ref_id=0):
+        raw_data = bytes(input_string, 'utf-8') + b'\x00'
+        return self.pkg.write_raw_meta(meta_id, part_ref_id, raw_data)
+    def read_raw_meta(self, meta_id, part_ref_id=0):
+        return self.pkg.read_raw_meta(meta_id, part_ref_id)
+    def write_raw_meta(self, meta_id, meta_data, part_ref_id=0):
+        return self.pkg.write_raw_meta(meta_id, part_ref_id, meta_data)
+    def transport(self, origin, output, rate_limit_us=0):
+        """
+        Transport encode package
+        """
+        return self.pkg.transport(origin, output, rate_limit_us)
+    def deps(self):
+        """
+        Read package dependencies
+        """
+        return self.pkg.deps()
+    def size(self):
+        return self.pkg.size()
+    def installed_size(self):
+        return self.pkg.installed_size()
     def set_key_id(self, key_id):
+        """
+        Set the key-id hint. This is used to select the correct public key when verifying the package.
+        """
         return self.pkg.set_key_id(id(key_id))
     def set_keystore_id(self, keystore_id):
+        """
+        Set the keystore-id hint. When verifying the package the package key-id key is expected to exist in a keystore with id 'keystore_id'
+        """
         return self.pkg.set_keystore_id(id(keystore_id))
     def sign(self, signing_key_path):
-        """Sign a package using a DER or PEM encoded private key"""
+        """
+        Sign a package using a DER or PEM encoded private key
+        """
         if not HAVE_CRYPTO:
             raise Exception("ecdsa library not installed")
 

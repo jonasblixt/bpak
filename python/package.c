@@ -105,45 +105,6 @@ static PyObject * package_hash_kind(BPAKPackage *self)
     return Py_BuildValue("i", h->hash_kind);
 }
 
-static PyObject * package_id(BPAKPackage *self)
-{
-    struct bpak_header *h = bpak_pkg_header(self->pkg);
-    uint8_t *id_p = NULL;
-    int rc;
-    char uuid_str[64];
-
-                        /* bpak-package */
-    rc = bpak_get_meta(h, 0xfb2f1f3f, (void **) &id_p);
-
-    if (rc != BPAK_OK)
-    {
-        PyErr_SetString(BPAKPackageError, "Could not read id");
-        return NULL;
-    }
-
-    bpak_uuid_to_string(id_p, uuid_str, sizeof(uuid_str));
-
-    return Py_BuildValue("s", uuid_str);
-}
-
-static PyObject * package_version(BPAKPackage *self)
-{
-    struct bpak_header *h = bpak_pkg_header(self->pkg);
-    char *version = NULL;
-    int rc = 0;
-
-                          /* bpak-version */
-    rc = bpak_get_meta(h, 0x9a5bab69, (void **) &version);
-
-    if (rc != BPAK_OK)
-    {
-        PyErr_SetString(BPAKPackageError, "Could not read verison");
-        return NULL;
-    }
-
-    return Py_BuildValue("s", version);
-}
-
 static PyObject * package_set_signature(BPAKPackage *self, PyObject *args,
                                                         PyObject *kwds)
 {
@@ -172,6 +133,7 @@ static PyObject * package_set_signature(BPAKPackage *self, PyObject *args,
 
     return Py_None;
 }
+
 static PyObject * package_set_key_id(BPAKPackage *self, PyObject *args,
                                                         PyObject *kwds)
 {
@@ -226,6 +188,102 @@ static PyObject * package_set_keystore_id(BPAKPackage *self, PyObject *args,
     return Py_None;
 }
 
+static PyObject * package_read_raw_meta(BPAKPackage *self, PyObject *args,
+                                                        PyObject *kwds)
+{
+    int rc;
+    long meta_id, part_ref_id;
+    char *meta_ptr = NULL;
+    struct bpak_meta_header *meta_header = NULL;
+    struct bpak_header *h = bpak_pkg_header(self->pkg);
+    static char *kwlist[] = {"meta_id", "part_ref_id", NULL};
+
+    rc = PyArg_ParseTupleAndKeywords(args, kwds, "ll", kwlist,
+                                        &meta_id, &part_ref_id);
+
+    if (!rc) {
+        PyErr_SetString(BPAKPackageError, "Invalid argument");
+        return NULL;
+    }
+
+    rc = bpak_get_meta_and_header(h, (uint32_t) meta_id,
+                                     (uint32_t) part_ref_id,
+                                     (void **) &meta_ptr,
+                                     &meta_header);
+
+    if (rc != BPAK_OK) {
+        PyErr_SetString(BPAKPackageError, "Error reading meat data");
+        return NULL;
+    }
+
+    return Py_BuildValue("y#", meta_ptr, meta_header->size);
+}
+
+static PyObject * package_write_raw_meta(BPAKPackage *self, PyObject *args,
+                                                        PyObject *kwds)
+{
+    int rc;
+    char *meta_data_in;
+    int meta_data_sz;
+    int meta_id, part_ref_id;
+    void *meta = NULL;
+    struct bpak_meta_header *meta_header = NULL;
+    struct bpak_header *h = bpak_pkg_header(self->pkg);
+    static char *kwlist[] = {"meta_id", "part_ref_id", "data", NULL};
+
+    rc = PyArg_ParseTupleAndKeywords(args, kwds, "lly#", kwlist,
+                                        &meta_id, &part_ref_id,
+                                        &meta_data_in, &meta_data_sz);
+
+    if (!rc) {
+        PyErr_SetString(BPAKPackageError, "Invalid argument");
+        return NULL;
+    }
+
+    rc = bpak_get_meta_and_header(h, (uint32_t) meta_id,
+                                     (uint32_t) part_ref_id,
+                                     &meta, &meta_header);
+
+    if (rc != BPAK_OK || meta == NULL) {
+        /* Create new meta data */
+
+        rc = bpak_add_meta(h, (uint32_t) meta_id, (uint32_t) part_ref_id,
+                              (void **) &meta, meta_data_sz);
+
+        if (rc != BPAK_OK) {
+            PyErr_SetString(BPAKPackageError, "Could not add meta data");
+            return NULL;
+        }
+
+        memcpy(meta, meta_data_in, meta_data_sz);
+
+        rc = bpak_pkg_write_header(self->pkg);
+
+        if (rc != BPAK_OK) {
+            PyErr_SetString(BPAKPackageError, "Could not write header");
+            return NULL;
+        }
+    } else {
+        /* Update and possibly resize existing metadata */
+
+        if (meta_data_sz > meta_header->size) {
+            PyErr_SetString(BPAKPackageError, "Growing meta data is currently not supported");
+            return NULL;
+        }
+
+        memcpy(meta, meta_data_in, meta_data_sz);
+        meta_header->size = meta_data_sz;
+
+        rc = bpak_pkg_write_header(self->pkg);
+
+        if (rc != BPAK_OK) {
+            PyErr_SetString(BPAKPackageError, "Could not write header");
+            return NULL;
+        }
+    }
+
+    return Py_None;
+}
 static PyObject * package_transport_encode(BPAKPackage *self,
                                             PyObject *args, PyObject *kwds)
 {
@@ -336,14 +394,8 @@ static PyMethodDef package_methods[] =
     {"read_signature", (PyCFunction) package_read_signature, METH_NOARGS,
                 "Get package signature"},
 
-    {"version", (PyCFunction) package_version, METH_NOARGS,
-                "Get package version"},
-
     {"close", (PyCFunction) package_close, METH_NOARGS,
                 "Close package"},
-
-    {"id", (PyCFunction) package_id, METH_NOARGS,
-                "Get package id"},
 
     {"read_hash_kind", (PyCFunction) package_hash_kind, METH_NOARGS,
                 "Get package hash kind"},
@@ -362,6 +414,12 @@ static PyMethodDef package_methods[] =
 
     {"installed_size", (PyCFunction) package_installed_size, METH_NOARGS,
                 "Return the installed size of the archive"},
+
+    {"read_raw_meta", (PyCFunction) package_read_raw_meta, METH_VARARGS | METH_KEYWORDS,
+                "Read meta data"},
+
+    {"write_raw_meta", (PyCFunction) package_write_raw_meta, METH_VARARGS | METH_KEYWORDS,
+                "Write meta data"},
     {NULL},
 };
 
