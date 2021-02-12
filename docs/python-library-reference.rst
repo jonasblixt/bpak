@@ -5,5 +5,5 @@ Python library reference
    :maxdepth: 1
    :glob:
 
-   python/*
+   python-ref/*
 

@@ -12,5 +12,6 @@ Welcome to the bpak documentation
    developer-guide
    c-library-reference
    python-library-reference
+   python-examples
    license
 

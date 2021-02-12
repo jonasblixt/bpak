@@ -6,6 +6,8 @@ import shlex
 import sphinx_rtd_theme
 import alabaster
 import subprocess
+sys.path.append("../python")
+import bpak
 
 read_the_docs_build = os.environ.get('READTHEDOCS', None) == 'True'
 
@@ -31,7 +33,9 @@ breathe_projects = {
 extensions = [
     "alabaster",
     "breathe",
-    "sphinx.ext.extlinks"
+    "sphinx.ext.extlinks",
+    "sphinx.ext.autodoc",
+    "sphinx.ext.viewcode",
 ]
 
 # Add any paths that contain templates here, relative to this directory.
