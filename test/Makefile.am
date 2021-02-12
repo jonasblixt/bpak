@@ -101,7 +101,8 @@ if BUILD_BPAK_PYTHON_LIB
 TESTS += test_python_lib_prepare.sh \
          test_python_lib.py \
          test_python_meta_prepare.sh \
-         test_python_meta.py
+         test_python_meta.py \
+         test_python_create_package.py
 
 #test_python_create_package.py
 endif

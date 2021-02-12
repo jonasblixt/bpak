@@ -15,6 +15,12 @@ BPAK_HASH_SHA256 = 1
 BPAK_HASH_SHA384 = 2
 BPAK_HASH_SHA512 = 3
 
+BPAK_SIGN_INVALID = 0
+BPAK_SIGN_RSA4096 = 1
+BPAK_SIGN_PRIME256v1 = 2
+BPAK_SIGN_SECP384r1 = 3
+BPAK_SIGN_SECP521r1 = 4
+
 HAVE_CRYPTO = False
 try:
     from ecdsa import SigningKey, VerifyingKey, NIST256p, NIST384p, NIST521p
@@ -84,16 +90,20 @@ class Package:
         return self.pkg.size()
     def installed_size(self):
         return self.pkg.installed_size()
+    def set_hash_kind(self, hash_kind):
+        return self.pkg.set_hash_kind(hash_kind)
+    def set_signature_kind(self, sign_kind):
+        return self.pkg.set_sign_kind(sign_kind)
     def set_key_id(self, key_id):
         """
         Set the key-id hint. This is used to select the correct public key when verifying the package.
         """
-        return self.pkg.set_key_id(id(key_id))
+        return self.pkg.set_key_id(key_id)
     def set_keystore_id(self, keystore_id):
         """
         Set the keystore-id hint. When verifying the package the package key-id key is expected to exist in a keystore with id 'keystore_id'
         """
-        return self.pkg.set_keystore_id(id(keystore_id))
+        return self.pkg.set_keystore_id(keystore_id)
     def sign(self, signing_key_path):
         """
         Sign a package using a DER or PEM encoded private key

@@ -105,6 +105,60 @@ static PyObject * package_hash_kind(BPAKPackage *self)
     return Py_BuildValue("i", h->hash_kind);
 }
 
+static PyObject * package_set_hash_kind(BPAKPackage *self, PyObject *args,
+                                                        PyObject *kwds)
+{
+    int rc;
+    int hash_kind;
+    struct bpak_header *h = bpak_pkg_header(self->pkg);
+    static char *kwlist[] = {"hash_kind", NULL};
+
+    rc = PyArg_ParseTupleAndKeywords(args, kwds, "i", kwlist, &hash_kind);
+
+    if (!rc) {
+        PyErr_SetString(BPAKPackageError, "Invalid argument");
+        return NULL;
+    }
+
+    h->hash_kind = (uint32_t) hash_kind;
+
+    rc = bpak_pkg_write_header(self->pkg);
+
+    if (rc != BPAK_OK) {
+        PyErr_SetString(BPAKPackageError, "Could not write header");
+        return NULL;
+    }
+
+    return Py_None;
+}
+
+static PyObject * package_set_sign_kind(BPAKPackage *self, PyObject *args,
+                                                        PyObject *kwds)
+{
+    int rc;
+    int sign_kind;
+    struct bpak_header *h = bpak_pkg_header(self->pkg);
+    static char *kwlist[] = {"sign_kind", NULL};
+
+    rc = PyArg_ParseTupleAndKeywords(args, kwds, "i", kwlist, &sign_kind);
+
+    if (!rc) {
+        PyErr_SetString(BPAKPackageError, "Invalid argument");
+        return NULL;
+    }
+
+    h->signature_kind = (uint32_t) sign_kind;
+
+    rc = bpak_pkg_write_header(self->pkg);
+
+    if (rc != BPAK_OK) {
+        PyErr_SetString(BPAKPackageError, "Could not write header");
+        return NULL;
+    }
+
+    return Py_None;
+}
+
 static PyObject * package_set_signature(BPAKPackage *self, PyObject *args,
                                                         PyObject *kwds)
 {
@@ -399,6 +453,12 @@ static PyMethodDef package_methods[] =
 
     {"read_hash_kind", (PyCFunction) package_hash_kind, METH_NOARGS,
                 "Get package hash kind"},
+
+    {"set_hash_kind", (PyCFunction) package_set_hash_kind, METH_VARARGS | METH_KEYWORDS,
+                "Sets package hash kind"},
+
+    {"set_sign_kind", (PyCFunction) package_set_sign_kind, METH_VARARGS | METH_KEYWORDS,
+                "Sets package signature kind"},
 
     {"set_signature", (PyCFunction) package_set_signature, METH_VARARGS | METH_KEYWORDS,
                 "Sets package signature data"},
