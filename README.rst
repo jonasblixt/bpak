@@ -6,6 +6,9 @@
     :target: https://travis-ci.com/jonasblixt/bpak
 .. image:: https://scan.coverity.com/projects/20419/badge.svg
     :target: https://scan.coverity.com/projects/jonasblixt-bpak
+.. image:: https://readthedocs.org/projects/bpak/badge/?version=latest
+    :target: https://bpak.readthedocs.io/en/latest/?badge=latest
+    :alt: Documentation Status
 
 ------------
 Introduction
