@@ -9,17 +9,8 @@ except:
 import hashlib
 import uuid
 import semver
-
-BPAK_HASH_INVALID = 0
-BPAK_HASH_SHA256 = 1
-BPAK_HASH_SHA384 = 2
-BPAK_HASH_SHA512 = 3
-
-BPAK_SIGN_INVALID = 0
-BPAK_SIGN_RSA4096 = 1
-BPAK_SIGN_PRIME256v1 = 2
-BPAK_SIGN_SECP384r1 = 3
-BPAK_SIGN_SECP521r1 = 4
+from bpak.utils import id
+import bpak
 
 HAVE_CRYPTO = False
 try:
@@ -28,15 +19,6 @@ try:
     HAVE_CRYPTO = True
 except:
     pass
-
-def id(input_string):
-    """Converts a text string to a BPAK ID"""
-    return _bpak.id(input_string)
-
-def set_log_function(log_func):
-    """Set a logging call back. The log function should have two arguments:
-        my_log_func(level, message)"""
-    _bpak.set_log_func(log_func)
 
 class Package:
     """
@@ -133,11 +115,11 @@ class Package:
         hash_kind = self.pkg.read_hash_kind()
         sha_func = None
 
-        if hash_kind == BPAK_HASH_SHA256:
+        if hash_kind == bpak.BPAK_HASH_SHA256:
             sha_func = hashlib.sha256
-        elif hash_kind == BPAK_HASH_SHA384:
+        elif hash_kind == bpak.BPAK_HASH_SHA384:
             sha_func = hashlib.sha384
-        elif hash_kind == BPAK_HASH_SHA512:
+        elif hash_kind == bpak.BPAK_HASH_SHA512:
             sha_func = hashlib.sha512
         else:
             raise Exception("Unknown hash kind %i"%(hash_kind))

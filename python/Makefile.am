@@ -1,7 +1,9 @@
 if BUILD_BPAK_PYTHON_LIB
 
 bpakdir = $(pkgpythondir)
-bpak_PYTHON = bpak.py
+bpak_PYTHON = bpak/package.py \
+              bpak/utils.py \
+              bpak/__init__.py
 
 pyexec_LTLIBRARIES = _bpak.la
 

@@ -4,9 +4,9 @@
 .. module:: python
    :synopsis: BPAK python wrapper
 
-.. autofunction:: bpak.set_log_function
+.. autofunction:: bpak.utils.set_log_function
 
-.. autofunction:: bpak.id
+.. autofunction:: bpak.utils.id
 
-.. autoclass:: bpak.Package
+.. autoclass:: bpak.package.Package
    :members:
