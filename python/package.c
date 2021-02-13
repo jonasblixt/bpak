@@ -266,7 +266,7 @@ static PyObject * package_read_raw_meta(BPAKPackage *self, PyObject *args,
                                      &meta_header);
 
     if (rc != BPAK_OK) {
-        PyErr_SetString(BPAKPackageError, "Error reading meat data");
+        PyErr_SetString(BPAKPackageError, "Error reading meta data");
         return NULL;
     }
 
