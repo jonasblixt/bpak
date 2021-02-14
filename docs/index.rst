@@ -8,6 +8,7 @@ Welcome to the bpak documentation
 
    intro
    build
+   architecture
    user-guide
    developer-guide
    c-library-reference
