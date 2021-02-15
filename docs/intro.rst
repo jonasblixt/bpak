@@ -1,21 +1,5 @@
------------------
-BPAK Introduction
------------------
-
-Bitpacker or bpak for short is a tool and library for creating firmware archives
-that can be cryptographically signed, support custom metadata and enable
-advanced update schemes. Bitpacker is primarily designed for embedded systems.
-
-Embedded systems are often composed of several software components, for example:
-bootloader, kernel, file systems, device configuration, third party applications,
-etc. It is common to have many different formats and tools for the various
-components.
-
-One of the main goals with bitpacker is to reduce the number of tools and
-formats required to manage these components.
-
-Core concepts
--------------
+Introduction
+============
 
 A bpak archive is composed of a 4kByte header and parts. A part is any kind
 of data. The header contains a list of parts, a list of meta data and details

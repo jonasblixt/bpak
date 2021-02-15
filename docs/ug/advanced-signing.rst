@@ -17,7 +17,7 @@ Update key-id and keystore-id::
 
 Extracting the hash in binary form::
 
-    $ bpak show demo.bpak --hash > hash.bin
+    $ bpak show demo.bpak --binary-hash > hash.bin
 
 Signing the hash using openssl::
 
