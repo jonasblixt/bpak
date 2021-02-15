@@ -46,17 +46,32 @@ class Package:
         raw_pkg_version = self.pkg.read_raw_meta(id("bpak-version"), 0)
         return str(raw_pkg_version)
     def read_string_meta(self, meta_id, part_ref_id=0):
+        """
+        Read a string metadata
+        """
         raw_data = self.read_raw_meta(meta_id, part_ref_id)
         return raw_data[:-1].decode('utf-8')
     def read_hex_meta(self, meta_id, part_ref_id=0):
+        """
+        Read metadata and return result as a hex-string
+        """
         raw_data = self.read_raw_meta(meta_id, part_ref_id)
         return raw_data.hex()
     def write_string_meta(self, meta_id, input_string, part_ref_id=0):
+        """
+        Write string meta data
+        """
         raw_data = bytes(input_string, 'utf-8') + b'\x00'
         return self.pkg.write_raw_meta(meta_id, part_ref_id, raw_data)
     def read_raw_meta(self, meta_id, part_ref_id=0):
+        """
+        Read raw meta data. The result is a byte string
+        """
         return self.pkg.read_raw_meta(meta_id, part_ref_id)
     def write_raw_meta(self, meta_id, meta_data, part_ref_id=0):
+        """
+        Write raw meta data. The input should be a byte string
+        """
         return self.pkg.write_raw_meta(meta_id, part_ref_id, meta_data)
     def transport(self, origin, output, rate_limit_us=0):
         """
@@ -69,12 +84,27 @@ class Package:
         """
         return self.pkg.deps()
     def size(self):
+        """
+        Return the size of the package in bytes.
+        """
         return self.pkg.size()
     def installed_size(self):
+        """
+        Return the installed size of the package in bytes.
+
+        Calling this on a transport encoded package will give the size required
+        in bytes after the package has been transport decoded.
+        """
         return self.pkg.installed_size()
     def set_hash_kind(self, hash_kind):
+        """
+        Set the hash algorithm that should be used for this package.
+        """
         return self.pkg.set_hash_kind(hash_kind)
     def set_signature_kind(self, sign_kind):
+        """
+        Set the signature kind that should be used for this package.
+        """
         return self.pkg.set_sign_kind(sign_kind)
     def set_key_id(self, key_id):
         """
