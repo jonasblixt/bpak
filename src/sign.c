@@ -227,7 +227,7 @@ int action_sign(int argc, char **argv)
         {0,             0,                 0,   0  }
     };
 
-    while ((opt = getopt_long(argc, argv, "hvk:",
+    while ((opt = getopt_long(argc, argv, "hvk:f:",
                    long_options, &long_index )) != -1)
     {
         switch (opt)
