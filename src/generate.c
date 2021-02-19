@@ -149,6 +149,17 @@ int action_generate(int argc, char **argv)
             goto err_free_io_out;
         }
 
+        uint32_t *keystore_provider_id = NULL;
+
+        rc = bpak_get_meta(h, bpak_id("keystore-provider-id"),
+                              (void **) &keystore_provider_id);
+
+        if (rc != BPAK_OK)
+        {
+            fprintf(stderr, "Error: Could not read keystore-provider-id meta\n");
+            goto err_free_io_out;
+        }
+
         mbedtls_pk_context ctx;
 
         int key_index = 0;
@@ -262,7 +273,7 @@ int action_generate(int argc, char **argv)
         printf("const struct bpak_keystore keystore_%s =\n",
                                                     keystore_name_copy);
         printf("{\n");
-        printf("    .id = 0x%x,\n", bpak_id(keystore_name));
+        printf("    .id = 0x%x,\n", *keystore_provider_id);
         printf("    .no_of_keys = %i,\n", key_index);
         printf("    .verified = true,\n");
         printf("    .keys =\n");
