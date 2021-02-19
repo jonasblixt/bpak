@@ -196,6 +196,8 @@ void print_add_usage(void)
     printf("Encoders that can be used together with --from-string:\n");
     printf("    integer                         Encode as integer\n");
     printf("    uuid                            Encode as UUID\n");
+    printf("    id                              Encode as bpak id\n");
+    printf("    dependency                      Encode as UUID-semver tuple\n");
     printf("\n");
 
     printf("Encoders that can be used together with --from-file:\n");
