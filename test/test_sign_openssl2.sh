@@ -22,6 +22,8 @@ $BPAK create $IMG -Y $V
 
 $BPAK add $IMG --meta bpak-package --from-string $PKG_UUID --encoder uuid $V
 
+$BPAK add $IMG --meta keystore-provider-id --from-string internal --encoder id
+
 $BPAK add $IMG --part pb-development \
                --from-file $srcdir/dev_rsa_public.der \
                --encoder key $V

@@ -18,6 +18,8 @@ $BPAK create $IMG -Y
 $BPAK add $IMG --meta bpak-package --from-string $PKG_UUID --encoder uuid -v
 $BPAK add $IMG --meta bpak-package-uid --from-string $PKG_UNIQUE_ID_A \
                  --encoder uuid -v
+$BPAK add $IMG --meta keystore-provider-id --from-string test --encoder id
+
 echo Adding first key
 $BPAK add $IMG --part pb-development \
                --from-file $srcdir/secp256r1-pub-key.pem \

@@ -25,6 +25,8 @@ $BPAK add $IMG --part pb-development \
                --from-file $srcdir/dev_rsa_public.der \
                --encoder key
 
+$BPAK add $IMG --meta keystore-provider-id --from-string internal --encoder id
+
 $BPAK set $IMG --key-id bpak-test-key \
                --keystore-id bpak-internal $V
 
