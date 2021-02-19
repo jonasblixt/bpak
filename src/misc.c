@@ -146,7 +146,8 @@ void print_show_usage(void)
     printf("Options:\n");
     printf("    -m, --meta <id>                 Show information about meta with id\n");
     printf("    -p, --part <id>                 Show information about part with id\n");
-    printf("    -H, --hash                      Print binary hash\n");
+    printf("    -H, --hash                      Print package hash\n");
+    printf("    -B, --binary-hash               Output package hash in binary form\n");
     printf("\n");
 
     print_common_usage();
