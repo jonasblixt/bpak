@@ -58,12 +58,20 @@ int action_set(int argc, char **argv)
                 bpak_inc_verbosity();
             break;
             case 'k':
-                key_id = bpak_id(optarg);
                 key_id_flag = true;
+                if (strncmp(optarg, "0x", 2) == 0) {
+                    key_id = strtoul(optarg, NULL, 16);
+                } else {
+                    key_id = bpak_id(optarg);
+                }
             break;
             case 'i':
-                keystore_id = bpak_id(optarg);
                 keystore_id_flag = true;
+                if (strncmp(optarg, "0x", 2) == 0) {
+                    keystore_id = strtoul(optarg, NULL, 16);
+                } else {
+                    keystore_id = bpak_id(optarg);
+                }
             break;
             case 'm':
                 meta_name = (const char *) optarg;
