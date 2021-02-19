@@ -207,7 +207,6 @@ int action_sign(int argc, char **argv)
     const char *filename = NULL;
     const char *signature_file = NULL;
     const char *key_source = NULL;
-    const char *hash_alg = NULL;
     char sig[1024];
     size_t size = sizeof(sig);
     int rc = 0;
@@ -221,7 +220,6 @@ int action_sign(int argc, char **argv)
     {
         {"help",        no_argument,       0,  'h' },
         {"verbose",     no_argument,       0,  'v' },
-        {"hash",        required_argument, 0,  'H' },
         {"key",         required_argument, 0,  'k' },
         {"signature",   required_argument, 0,  'f' },
         {0,             0,                 0,   0  }
@@ -243,9 +241,6 @@ int action_sign(int argc, char **argv)
             break;
             case 'f':
                 signature_file = (const char *) optarg;
-            break;
-            case 'H':
-                hash_alg = (const char *) optarg;
             break;
             case '?':
                 printf("Unknown option: %c\n", optopt);
