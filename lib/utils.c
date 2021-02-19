@@ -113,6 +113,11 @@ int bpak_meta_to_string(struct bpak_header *h, struct bpak_meta_header *m,
         snprintf(buf, size, "%s (%s)", uuid_str, d->constraint);
 
     }
+    else if (m->id == bpak_id("keystore-provider-id"))
+    {
+        bpak_get_meta(h, m->id, (void **) &id_ptr);
+        snprintf(buf, size, "0x%x", *id_ptr);
+    }
     else
     {
         if (size)

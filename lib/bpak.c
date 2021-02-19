@@ -245,6 +245,8 @@ const char *bpak_known_id(uint32_t id)
         return "bpak-version";
     case 0x0ba87349:
         return "bpak-dependency";
+    case 0xfb367d9a:
+        return "keystore-provider-id";
     default:
         return "";
     }
