@@ -16,6 +16,10 @@
 #include <stdbool.h>
 #include <sys/types.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * \def MERKLE_BLOCK_SZ
  * Size of hash blocks in bytes. This is selected to be compatible with
@@ -165,5 +169,9 @@ int bpak_merkle_process(struct bpak_merkle_context *ctx,
  */
 int bpak_merkle_out(struct bpak_merkle_context *ctx,
                     bpak_merkle_hash_t roothash);
+
+#ifdef __cplusplus
+}  // extern "C"
+#endif
 
 #endif  // INCLUDE_BPAK_MERKLE_H_

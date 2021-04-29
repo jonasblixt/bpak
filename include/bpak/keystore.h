@@ -3,6 +3,10 @@
 
 #include <bpak/bpak.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define BPAK_KEYSTORE_UUID "5df103ef-e774-450b-95c5-1fef51ceec28"
 
 enum bpak_key_kind
@@ -46,5 +50,9 @@ int bpak_keystore_get(struct bpak_keystore *ks, uint8_t id,
 
 int bpak_keystore_add_pem(struct bpak_keystore *ks, const char *filename);
 int bpak_keystore_add_der(struct bpak_keystore *ks, const char *filename);
+
+#ifdef __cplusplus
+}  // extern "C"
+#endif
 
 #endif  // INCLUDE_BPAK_KEYSTORE_H_

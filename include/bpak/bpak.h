@@ -16,6 +16,10 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * \def BPAK_HEADER_MAGIC
  * Magic number for BPAK header identification
@@ -438,5 +442,9 @@ int bpak_set_keystore_id(struct bpak_header *hdr, uint32_t keystore_id);
  * @return Library version as a text string
  **/
 const char *bpak_version(void);
+
+#ifdef __cplusplus
+}  // extern "C"
+#endif
 
 #endif  // INCLUDE_BPAK_BPAK_H_

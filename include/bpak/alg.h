@@ -4,6 +4,10 @@
 #include <bpak/bpak.h>
 #include <bpak/io.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct bpak_alg;
 struct bpak_alg_instance;
 
@@ -72,4 +76,9 @@ int bpak_alg_bsdiff_register(void);
 int bpak_alg_bspatch_register(void);
 int bpak_alg_heatshrink_register(void);
 int bpak_alg_merkle_register(void);
+
+#ifdef __cplusplus
+}  // extern "C"
+#endif
+
 #endif  // INCLUDE_BPAK_ALG_H_

@@ -13,6 +13,10 @@
 #include <bpak/bpak.h>
 #include <bpak/io.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 int bpak_io_init_file(struct bpak_io **io_, const char *filename,
                         const char *mode);
 
@@ -22,5 +26,9 @@ int bpak_io_replace_file(struct bpak_io *replacee, struct bpak_io *src);
 
 int bpak_io_init_random_file(struct bpak_io **io);
 int bpak_io_file_to_fd(struct bpak_io *io);
+
+#ifdef __cplusplus
+}  // extern "C"
+#endif
 
 #endif  // INCLUDE_BPAK_FILE_H_

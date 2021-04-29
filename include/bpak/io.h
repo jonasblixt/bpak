@@ -13,6 +13,10 @@
 #include <bpak/bpak.h>
 #include <stddef.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 enum bpak_io_seek
 {
     BPAK_IO_SEEK_SET,
@@ -51,5 +55,9 @@ int bpak_io_seek(struct bpak_io *io, int64_t position,
 uint64_t bpak_io_tell(struct bpak_io *io);
 int bpak_io_close(struct bpak_io *io);
 void bpak_io_flush(struct bpak_io *io);
+
+#ifdef __cplusplus
+}  // extern "C"
+#endif
 
 #endif  // INCLUDE_BPAK_IO_H_

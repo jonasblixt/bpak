@@ -15,6 +15,10 @@
 #include <bpak/bpak.h>
 #include <bpak/io.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /*! \public
  *
  * BPAK dependancy operators
@@ -177,5 +181,9 @@ int bpak_pkg_register_all_algs(void);
  * @return BPAK_OK on success
  */
 int bpak_pkg_write_header(struct bpak_package *pkg);
+
+#ifdef __cplusplus
+}  // extern "C"
+#endif
 
 #endif  // INCLUDE_BPAK_PKG_H_

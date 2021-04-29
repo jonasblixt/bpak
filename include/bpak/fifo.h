@@ -5,6 +5,10 @@
 #include <bpak/bpak.h>
 #include <bpak/io.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct bpak_io_fifo
 {
     uint64_t head;
@@ -19,5 +23,9 @@ struct bpak_io_fifo
 int bpak_io_fifo_init(struct bpak_io **_io, size_t size);
 size_t bpak_fifo_available_space(struct bpak_io *io);
 size_t bpak_fifo_available_data(struct bpak_io *io);
+
+#ifdef __cplusplus
+}  // extern "C"
+#endif
 
 #endif  // INCLUDE_BPAK_FIFO_H_

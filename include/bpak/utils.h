@@ -14,6 +14,10 @@
 #include <stdint.h>
 #include <stddef.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef union
 {
     uint8_t raw[16];
@@ -71,5 +75,9 @@ int bpak_uuid_to_string(const uint8_t *data, char *buf, size_t size);
  * @return BPAK ID of \ref str
  */
 uint32_t bpak_id(const char *str);
+
+#ifdef __cplusplus
+}  // extern "C"
+#endif
 
 #endif  // INCLUDE_BPAK_UTILS_H_
