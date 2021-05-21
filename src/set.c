@@ -215,9 +215,17 @@ int action_set(int argc, char **argv)
             free(h);
             h = new_header;
 
-        }
-        else if (strcmp(encoder, "id") == 0)
-        {
+        } else if (strcmp(encoder, "integer") == 0) {
+            if (meta_header->size != 8)
+            {
+                printf("Incorrect meta data length\n");
+                rc = -BPAK_FAILED;
+                goto err_close_io_out;
+            }
+
+            long *val = (uint32_t *) meta;
+            (*val) = strtol(from_string, NULL, 0);
+        } else if (strcmp(encoder, "id") == 0) {
             if (meta_header->size != 4)
             {
                 printf("Incorrect meta data length\n");
