@@ -139,32 +139,32 @@ int action_extract(int argc, char **argv)
             goto err_close_pkg_out;
         }
 
-        snprintf(output_path, sizeof(output_path), "%08x", meta_id);
+        if (output_filename != NULL) {
+            fp = fopen(output_filename, "w+");
 
-        char *path_str = NULL;
+            if (fp == NULL)
+            {
+                fprintf(stderr, "Error: Could not create '%s'\n",
+                                output_filename);
+                rc = -BPAK_FAILED;
+                goto err_close_pkg_out;
+            }
 
-        if (output_filename)
-            path_str = (char *) output_filename;
-        else
-            path_str = output_path;
+            ssize_t written = fwrite(data_ptr, meta_header->size, 1, fp);
 
-        fp = fopen(path_str, "w+");
-
-        if (fp == NULL)
-        {
-            fprintf(stderr, "Error: Could not create '%s'\n",
-                            path_str);
-            rc = -BPAK_FAILED;
-            goto err_close_pkg_out;
-        }
-
-        ssize_t written = fwrite(data_ptr, meta_header->size, 1, fp);
-
-        if (written != 1)
-        {
-            fprintf(stderr, "Error: write error\n");
-            rc = -BPAK_FAILED;
-            goto err_close_fp_out;
+            if (written != 1)
+            {
+                fprintf(stderr, "Error: write error\n");
+                rc = -BPAK_FAILED;
+                goto err_close_fp_out;
+            }
+        } else {
+            /* Write to STDOUT */
+            if (write(1, data_ptr, meta_header->size) != meta_header->size) {
+                fprintf(stderr, "Error: write failed\n");
+                rc = -1;
+                goto err_close_fp_out;
+            }
         }
     }
 
@@ -195,40 +195,51 @@ int action_extract(int argc, char **argv)
             fprintf(stderr, "Error: Could not seek in stream\n");
         }
 
-        snprintf(output_path, sizeof(output_path), "%08x", part_id);
+        if (output_filename) {
+            fp = fopen(output_filename, "w+");
 
-        char *path_str = NULL;
+            if (fp == NULL)
+            {
+                fprintf(stderr, "Error: Could not create '%s'\n",
+                                output_filename);
+                rc = -BPAK_FAILED;
+                goto err_close_pkg_out;
+            }
 
-        if (output_filename)
-            path_str = (char *) output_filename;
-        else
-            path_str = output_path;
+            char copy_buffer[1024];
+            size_t bytes_to_copy = bpak_part_size(part);
+            size_t chunk = 0;
 
-        fp = fopen(path_str, "w+");
+            while (bytes_to_copy)
+            {
+                chunk = bpak_io_read(pkg->io, copy_buffer, sizeof(copy_buffer));
+                fwrite(copy_buffer, chunk, 1, fp);
+                bytes_to_copy -= chunk;
+            }
+        } else {
+            /* Print to STDOUT */
 
-        if (fp == NULL)
-        {
-            fprintf(stderr, "Error: Could not create '%s'\n",
-                            path_str);
-            rc = -BPAK_FAILED;
-            goto err_close_pkg_out;
-        }
+            char copy_buffer[1024];
+            size_t bytes_to_copy = bpak_part_size(part);
+            size_t chunk = 0;
 
-        char copy_buffer[1024];
-        size_t bytes_to_copy = bpak_part_size(part);
-        size_t chunk = 0;
-
-        while (bytes_to_copy)
-        {
-            chunk = bpak_io_read(pkg->io, copy_buffer, sizeof(copy_buffer));
-            fwrite(copy_buffer, chunk, 1, fp);
-            bytes_to_copy -= chunk;
+            while (bytes_to_copy)
+            {
+                chunk = bpak_io_read(pkg->io, copy_buffer, sizeof(copy_buffer));
+                if (write(1, copy_buffer, chunk) != chunk) {
+                    fprintf(stderr, "Error: write failed\n");
+                    rc = -1;
+                    goto err_close_fp_out;
+                }
+                bytes_to_copy -= chunk;
+            }
         }
 
     }
 
 err_close_fp_out:
-    fclose(fp);
+    if (fp)
+        fclose(fp);
 err_close_pkg_out:
     bpak_pkg_close(pkg);
     return rc;
