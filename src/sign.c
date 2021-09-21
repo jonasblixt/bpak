@@ -280,6 +280,9 @@ int action_sign(int argc, char **argv)
 
     FILE *sig_fp = NULL;
 
+    size_t hash_size = sizeof(hash_output);
+    bpak_pkg_compute_hash(pkg, hash_output, &hash_size);
+
     /* Set pre-computed signature */
     if (signature_file)
     {
@@ -294,9 +297,6 @@ int action_sign(int argc, char **argv)
     }
     else
     {
-        size_t hash_size = sizeof(hash_output);
-        bpak_pkg_compute_hash(pkg, hash_output, &hash_size);
-
         if (bpak_get_verbosity())
         {
             printf("Computed hash: ");
