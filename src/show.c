@@ -176,14 +176,14 @@ int action_show(int argc, char **argv)
     if (binary_hash_output)
     {
         hash_size = sizeof(hash_output);
-        bpak_pkg_compute_hash(pkg, hash_output, &hash_size);
+        bpak_pkg_compute_header_hash(pkg, hash_output, &hash_size, true);
 
         for (int i = 0; i < hash_size; i++)
             printf("%c", hash_output[i]);
         goto err_pkg_close;
     } else if (text_hash_output) {
         hash_size = sizeof(hash_output);
-        bpak_pkg_compute_hash(pkg, hash_output, &hash_size);
+        bpak_pkg_compute_header_hash(pkg, hash_output, &hash_size, true);
 
         for (int i = 0; i < hash_size; i++)
             printf("%2.2x", hash_output[i] & 0xFF);
@@ -251,12 +251,27 @@ int action_show(int argc, char **argv)
     }
 
 
-    hash_size = sizeof(hash_output);
-    bpak_pkg_compute_hash(pkg, hash_output, &hash_size);
-
     char hash_str[128];
+    hash_size = sizeof(hash_output);
+    rc = bpak_pkg_compute_header_hash(pkg, hash_output, &hash_size, true);
+    if (rc != BPAK_OK) {
+        fprintf(stderr, "Error: Failed to compute header hash\n");
+        goto err_pkg_close;
+    }
+
     bpak_bin2hex(hash_output, hash_size, hash_str, sizeof(hash_str));
-    printf("\nHash: %s\n", hash_str);
+    printf("\nHeader hash:  %s\n", hash_str);
+
+    hash_size = sizeof(hash_output);
+    rc = bpak_pkg_compute_payload_hash(pkg, hash_output, &hash_size);
+
+    if (rc != BPAK_OK) {
+        fprintf(stderr, "Error: Failed to compute header hash\n");
+        goto err_pkg_close;
+    }
+    bpak_bin2hex(hash_output, hash_size, hash_str, sizeof(hash_str));
+    printf("Payload hash: %s\n", hash_str);
+
 
     if (bpak_get_verbosity())
     {

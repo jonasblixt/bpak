@@ -3,7 +3,7 @@ BPAK=../src/bpak
 V=-vvv
 echo Sign test ec256 with openssl
 pwd
-set -e
+set -ex
 
 $BPAK create --help
 $BPAK show --help
@@ -16,7 +16,7 @@ PKG_UUID=5df103ef-e774-450b-95c5-1fef51ceec28
 PRI_KEY=$srcdir/secp256r1-key-pair.pem
 PUB_KEY=$srcdir/secp256r1-pub-key.der
 
-set -e
+set -ex
 
 $BPAK create $IMG -Y $V
 

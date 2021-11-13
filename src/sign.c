@@ -281,24 +281,20 @@ int action_sign(int argc, char **argv)
     FILE *sig_fp = NULL;
 
     /* Set pre-computed signature */
-    if (signature_file)
-    {
+    if (signature_file) {
         sig_fp = fopen(signature_file, "r");
 
         size = fread(sig, 1, sizeof(sig), sig_fp);
 
         fclose(sig_fp);
-        if (bpak_get_verbosity())
+        if (bpak_get_verbosity()) {
             printf("Loaded signature %li bytes\n", size);
+        }
 
-    }
-    else
-    {
+    } else {
         size_t hash_size = sizeof(hash_output);
-        bpak_pkg_compute_hash(pkg, hash_output, &hash_size);
-
-        if (bpak_get_verbosity())
-        {
+        bpak_pkg_compute_header_hash(pkg, hash_output, &hash_size, true);
+        if (bpak_get_verbosity()) {
             printf("Computed hash: ");
             for (int i = 0; i < hash_size; i++)
                 printf("%2.2x", (char ) hash_output[i] & 0xff);
@@ -460,7 +456,8 @@ int action_verify(int argc, char **argv)
     struct bpak_header *h = bpak_pkg_header(pkg);
 
     size_t hash_size = sizeof(hash_output);
-    bpak_pkg_compute_hash(pkg, hash_output, &hash_size);
+    /* Compute the header hash, but don't update the payload hash */
+    bpak_pkg_compute_header_hash(pkg, hash_output, &hash_size, false);
 
     if (bpak_get_verbosity() > 1)
     {

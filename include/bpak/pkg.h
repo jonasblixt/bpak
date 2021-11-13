@@ -74,7 +74,8 @@ int bpak_pkg_open(struct bpak_package **pkg_, const char *filename,
 int bpak_pkg_close(struct bpak_package *pkg);
 
 /**
- * Computes the package hash
+ * Computes the package header hash. This function also calls
+ *  bpak_compute_payload_hash
  *
  * @param[in] pkg Package pointer
  * @param[out] out Output hash
@@ -82,7 +83,29 @@ int bpak_pkg_close(struct bpak_package *pkg);
  *
  * @return BPAK_OK on success
  */
-int bpak_pkg_compute_hash(struct bpak_package *pkg, char *output, size_t *size);
+int bpak_pkg_compute_header_hash(struct bpak_package *pkg, char *output,
+                                 size_t *size, bool update_payload_hash);
+
+/**
+ * Computes the package payload hash.
+ *
+ * @param[in] pkg Package pointer
+ * @param[out] out Output hash
+ * @param[in, out] size Input size of \ref output buffer and result of computation size is stored here as well
+ *
+ * @return BPAK_OK on success
+ */
+int bpak_pkg_compute_payload_hash(struct bpak_package *pkg, char *output,
+                                 size_t *size);
+
+/**
+ * Computes and updates the payload hash in the package header
+ *
+ * @param[in] pkg Package pointer
+ *
+ * @return BPAK_OK on success
+ */
+int bpak_pkg_update_payload_hash(struct bpak_package *pkg);
 
 /**
  * Computes the package size after transport decoding

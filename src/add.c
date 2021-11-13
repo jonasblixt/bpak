@@ -65,13 +65,13 @@ static void merkle_status(struct bpak_merkle_context *ctx)
     }
 }
 
-static int add_file(struct bpak_header *h,
-                     struct bpak_io *io,
+static int add_file(struct bpak_package *pkg,
                      const char *filename,
                      const char *part_name,
                      uint8_t flags)
 {
     int rc;
+    struct bpak_header *h = bpak_pkg_header(pkg);
     struct bpak_part_header *p = NULL;
     struct stat statbuf;
     uint64_t new_offset = sizeof(struct bpak_header);
@@ -110,24 +110,7 @@ static int add_file(struct bpak_header *h,
     else
         p->pad_bytes = 0;
 
-    /* Re-write header */
-    rc = bpak_io_seek(io, 0, BPAK_IO_SEEK_SET);
-
-    if (rc != BPAK_OK)
-    {
-        printf("Error: Seek failed\n");
-        return rc;
-    }
-
-    size_t written_bytes = bpak_io_write(io, h, sizeof(*h));
-
-    if (written_bytes != sizeof(*h))
-    {
-        printf("Could not write header to file\n");
-        return rc;
-    }
-
-    rc = bpak_io_seek(io, new_offset, BPAK_IO_SEEK_SET);
+    rc = bpak_io_seek(pkg->io, new_offset, BPAK_IO_SEEK_SET);
 
     if (rc != BPAK_OK)
     {
@@ -151,7 +134,7 @@ static int add_file(struct bpak_header *h,
     while (bytes_to_write)
     {
         size_t read_bytes = fread(chunk_buffer, 1, sizeof(chunk_buffer), in_fp);
-        if (bpak_io_write(io, chunk_buffer, read_bytes) != read_bytes)
+        if (bpak_io_write(pkg->io, chunk_buffer, read_bytes) != read_bytes)
         {
             printf ("write error\n");
             rc = -BPAK_FAILED;
@@ -160,26 +143,39 @@ static int add_file(struct bpak_header *h,
         bytes_to_write -= read_bytes;
     }
 
+    if (rc != BPAK_OK) {
+        goto err_close_fp;
+    }
+
     if (p->pad_bytes)
     {
         if (bpak_get_verbosity() > 1)
             printf("Adding %i z-pad\n", p->pad_bytes);
         memset(chunk_buffer, 0, sizeof(chunk_buffer));
-        bpak_io_write(io, chunk_buffer, p->pad_bytes);
+        bpak_io_write(pkg->io, chunk_buffer, p->pad_bytes);
     }
 
+    if (bpak_pkg_update_payload_hash(pkg) != BPAK_OK) {
+        fprintf(stderr, "Error: Could not update payload hash\n");
+        rc = -BPAK_FAILED;
+        goto err_close_fp;
+    }
+
+    rc = bpak_pkg_write_header(pkg);
+
+err_close_fp:
     fclose(in_fp);
     return rc;
 }
 
-static int add_key(struct bpak_header *h,
-                     struct bpak_io *io,
+static int add_key(struct bpak_package *pkg,
                      const char *filename,
                      const char *part_name,
                      uint8_t flags)
 {
     int rc;
     char tmp[4096];
+    struct bpak_header *h = bpak_pkg_header(pkg);
     struct bpak_part_header *p = NULL;
     struct stat statbuf;
     uint64_t new_offset = sizeof(struct bpak_header);
@@ -227,25 +223,7 @@ static int add_key(struct bpak_header *h,
     else
         p->pad_bytes = 0;
 
-    /* Re-write header */
-    rc = bpak_io_seek(io, 0, BPAK_IO_SEEK_SET);
-
-    if (rc != BPAK_OK)
-    {
-        printf("Error: Seek failed\n");
-        return rc;
-    }
-
-    size_t written_bytes = bpak_io_write(io, h, sizeof(*h));
-
-    if (written_bytes != sizeof(*h))
-    {
-        rc = -BPAK_FAILED;
-        printf("Could not write header to file\n");
-        return rc;
-    }
-
-    rc = bpak_io_seek(io, new_offset, BPAK_IO_SEEK_SET);
+    rc = bpak_io_seek(pkg->io, new_offset, BPAK_IO_SEEK_SET);
 
     if (rc != BPAK_OK)
     {
@@ -266,7 +244,7 @@ static int add_key(struct bpak_header *h,
 
         memcpy(chunk_buffer, &tmp[sizeof(tmp) - len + bytes_offset], chunk_sz);
 
-        if (bpak_io_write(io, chunk_buffer, chunk_sz) != chunk_sz)
+        if (bpak_io_write(pkg->io, chunk_buffer, chunk_sz) != chunk_sz)
         {
             printf ("write error\n");
             rc = -BPAK_FAILED;
@@ -277,18 +255,25 @@ static int add_key(struct bpak_header *h,
     }
 
     memset(chunk_buffer, 0, sizeof(chunk_buffer));
-    bpak_io_write(io, chunk_buffer, p->pad_bytes);
+    bpak_io_write(pkg->io, chunk_buffer, p->pad_bytes);
 
-    return rc;
+    if (rc != BPAK_OK)
+        return rc;
+
+    if (bpak_pkg_update_payload_hash(pkg) != BPAK_OK) {
+        fprintf(stderr, "Error: Could not update payload hash\n");
+        return -BPAK_FAILED;
+    }
+    return bpak_pkg_write_header(pkg);
 }
 
-static int add_merkle(struct bpak_header *h,
-                     struct bpak_io *io,
+static int add_merkle(struct bpak_package *pkg,
                      const char *filename,
                      const char *part_name,
                      uint8_t flags)
 {
     int rc;
+    struct bpak_header *h = bpak_pkg_header(pkg);
     struct bpak_merkle_context ctx;
     struct stat statbuf;
     uint8_t block_buf[4096];
@@ -422,24 +407,7 @@ static int add_merkle(struct bpak_header *h,
     p->size = merkle_sz;
     p->pad_bytes = 0; /* Merkle tree is multiples of 4kByte, no padding needed */
 
-    /* Re-write header */
-    rc = bpak_io_seek(io, 0, BPAK_IO_SEEK_SET);
-
-    if (rc != BPAK_OK)
-    {
-        printf("Error: Seek failed\n");
-        return rc;
-    }
-
-    size_t written_bytes = bpak_io_write(io, h, sizeof(*h));
-
-    if (written_bytes != sizeof(*h))
-    {
-        printf("Could not write header to file\n");
-        return rc;
-    }
-
-    rc = bpak_io_seek(io, new_offset, BPAK_IO_SEEK_SET);
+    rc = bpak_io_seek(pkg->io, new_offset, BPAK_IO_SEEK_SET);
 
     if (rc != BPAK_OK)
     {
@@ -447,9 +415,18 @@ static int add_merkle(struct bpak_header *h,
         return rc;
     }
 
-    rc = bpak_io_write(io, merkle_buf, merkle_sz);
+    if (bpak_io_write(pkg->io, merkle_buf, merkle_sz) != merkle_sz) {
+        rc = -BPAK_FAILED;
+        goto err_free_buf;
+    }
 
+    if (bpak_pkg_update_payload_hash(pkg) != BPAK_OK) {
+        fprintf(stderr, "Error: Could not update payload hash\n");
+        rc = -BPAK_FAILED;
+        goto err_free_buf;
+    }
 
+    rc = bpak_pkg_write_header(pkg);
 err_free_buf:
     free(merkle_buf);
 
@@ -559,34 +536,18 @@ int action_add(int argc, char **argv)
         return -1;
     }
 
-    struct bpak_io *io = NULL;
-    struct bpak_header *h = malloc(sizeof(struct bpak_header));
+    struct bpak_package *pkg;
 
-    rc = bpak_io_init_file(&io, filename, "r+");
-
-    if (rc != BPAK_OK)
-    {
-        printf("Could not open file '%s'\n", filename);
-        goto err_free_header_out;
-    }
-
-    bpak_io_seek(io, 0, BPAK_IO_SEEK_SET);
-    size_t read_bytes = bpak_io_read(io, h, sizeof(*h));
-
-    if (read_bytes != sizeof(*h))
-    {
-        rc = -BPAK_FAILED;
-        printf("Error: Could not read header %li\n", read_bytes);
-        goto err_close_io_out;
-    }
-
-    rc = bpak_valid_header(h);
+    rc = bpak_pkg_open(&pkg, filename, "r+");
 
     if (rc != BPAK_OK)
     {
-        printf("Error: Invalid header. Not a BPAK file?\n");
-        goto err_close_io_out;
+        printf("Error: Could not open package\n");
+        return -BPAK_FAILED;
     }
+
+    struct bpak_header *h = bpak_pkg_header(pkg);
+    struct bpak_io *io = pkg->io;
 
     if (meta_name)
     {
@@ -604,7 +565,7 @@ int action_add(int argc, char **argv)
         {
             printf("Error: No input supplied with --from-string\n");
             rc = -BPAK_FAILED;
-            goto err_close_io_out;
+            goto err_close_pkg_out;
         }
 
         if (encoder)
@@ -619,7 +580,7 @@ int action_add(int argc, char **argv)
                 {
                     rc = -BPAK_FAILED;
                     printf("Error: Could not convert UUID string\n");
-                    goto err_close_io_out;
+                    goto err_close_pkg_out;
                 }
 
                 rc = bpak_add_meta(h, bpak_id(meta_name), part_ref_id,
@@ -628,7 +589,7 @@ int action_add(int argc, char **argv)
                 if (rc != BPAK_OK)
                 {
                     printf("Error: Could not add meta data\n");
-                    goto err_close_io_out;
+                    goto err_close_pkg_out;
                 }
 
                 memcpy(meta_data, uu, 16);
@@ -649,7 +610,7 @@ int action_add(int argc, char **argv)
                 if (rc != BPAK_OK)
                 {
                     printf("Error: Could not add meta data\n");
-                    goto err_close_io_out;
+                    goto err_close_pkg_out;
                 }
 
                 memcpy(meta_data, &value, sizeof(value));
@@ -669,7 +630,7 @@ int action_add(int argc, char **argv)
                 if (rc != BPAK_OK)
                 {
                     printf("Error: Could not add meta data\n");
-                    goto err_close_io_out;
+                    goto err_close_pkg_out;
                 }
 
                 memcpy(meta_data, &value, sizeof(value));
@@ -694,7 +655,7 @@ int action_add(int argc, char **argv)
                 {
                     rc = -BPAK_FAILED;
                     printf("Error: malformed constraint\n");
-                    goto err_close_io_out;
+                    goto err_close_pkg_out;
                 }
 
                 size_t meta_size = sizeof(*d) + strlen(constraint_ptr);
@@ -705,7 +666,7 @@ int action_add(int argc, char **argv)
                 if (rc != BPAK_OK)
                 {
                     printf("Error: Could not add meta data\n");
-                    goto err_close_io_out;
+                    goto err_close_pkg_out;
                 }
 
                 rc = uuid_parse(uuid_text, d->uuid);
@@ -714,7 +675,7 @@ int action_add(int argc, char **argv)
                 {
                     rc = -BPAK_FAILED;
                     printf("Error: Could not convert UUID string\n");
-                    goto err_close_io_out;
+                    goto err_close_pkg_out;
                 }
 
                 strncpy(d->constraint, constraint_ptr,
@@ -729,7 +690,7 @@ int action_add(int argc, char **argv)
             {
                 printf("Error: Unknown encoder\n");
                 rc = -BPAK_FAILED;
-                goto err_close_io_out;
+                goto err_close_pkg_out;
             }
         }
         else
@@ -743,7 +704,7 @@ int action_add(int argc, char **argv)
             if (rc != BPAK_OK)
             {
                 printf("Error: Could not add meta data\n");
-                goto err_close_io_out;
+                goto err_close_pkg_out;
             }
 
             memcpy(meta_data, from_string, strlen(from_string));
@@ -752,44 +713,35 @@ int action_add(int argc, char **argv)
         if (bpak_get_verbosity() > 2)
             printf("Meta data array pointer = %p\n", meta_data);
 
-        rc = bpak_io_seek(io, 0, BPAK_IO_SEEK_SET);
+        rc = bpak_pkg_write_header(pkg);
 
         if (rc != BPAK_OK)
         {
-            printf("Error: Seek failed\n");
-            goto err_close_io_out;
-        }
-
-        size_t written_bytes = bpak_io_write(io, h, sizeof(*h));
-
-        if (written_bytes != sizeof(*h))
-        {
-            rc = -BPAK_FAILED;
-            printf("Could not write to file\n");
-            goto err_close_io_out;
+            fprintf(stderr, "Error: Could not write header\n");
+            goto err_close_pkg_out;
         }
     }
     else if (part_name && !encoder)
     {
-        rc = add_file(h, io, from_file, part_name, flags);
+        rc = add_file(pkg, from_file, part_name, flags);
     }
     else if (part_name && strcmp(encoder, "key") == 0)
     {
-        rc = add_key(h, io, from_file, part_name, flags);
+        rc = add_key(pkg, from_file, part_name, flags);
     }
     else if (strcmp(encoder, "merkle") == 0)
     {
         if (bpak_get_verbosity())
             printf("Writing filesystem...\n");
-        rc = add_file(h, io, from_file, part_name, flags);
+        rc = add_file(pkg, from_file, part_name, flags);
 
         if (rc != BPAK_OK)
-            goto err_close_io_out;
+            goto err_close_pkg_out;
 
         if (bpak_get_verbosity())
             printf("Building merkle tree...\n");
 
-        rc = add_merkle(h, io, from_file, part_name, flags);
+        rc = add_merkle(pkg, from_file, part_name, flags);
 
     }
     else
@@ -798,9 +750,7 @@ int action_add(int argc, char **argv)
         rc = -BPAK_FAILED;
     }
 
-err_close_io_out:
-    bpak_io_close(io);
-err_free_header_out:
-    free(h);
+err_close_pkg_out:
+    bpak_pkg_close(pkg);
     return rc;
 }
