@@ -101,7 +101,7 @@ int bpak_pkg_update_payload_hash(struct bpak_package *pkg)
 {
     size_t payload_size = sizeof(pkg->header.payload_hash);
 
-    return bpak_pkg_compute_payload_hash(pkg, pkg->header.payload_hash,
+    return bpak_pkg_compute_payload_hash(pkg, (char *) pkg->header.payload_hash,
                                                             &payload_size);
 }
 
@@ -117,7 +117,7 @@ int bpak_pkg_compute_header_hash(struct bpak_package *pkg, char *output,
     if (update_payload_hash) {
         size_t payload_size = sizeof(pkg->header.payload_hash);
 
-        rc = bpak_pkg_compute_payload_hash(pkg, pkg->header.payload_hash,
+        rc = bpak_pkg_compute_payload_hash(pkg, (char *) pkg->header.payload_hash,
                                             &payload_size);
 
         if (rc != BPAK_OK) {
@@ -159,16 +159,16 @@ int bpak_pkg_compute_header_hash(struct bpak_package *pkg, char *output,
             return -BPAK_NOT_SUPPORTED;
     }
     if (pkg->header.hash_kind == BPAK_HASH_SHA256)
-        rc = mbedtls_sha256_update_ret(&sha256, (char *) &pkg->header,
+        rc = mbedtls_sha256_update_ret(&sha256, (const unsigned char *) &pkg->header,
                                         sizeof(pkg->header));
     else
-        rc = mbedtls_sha512_update_ret(&sha512, (char *) &pkg->header,
+        rc = mbedtls_sha512_update_ret(&sha512, (const unsigned char *) &pkg->header,
                                         sizeof(pkg->header));
 
     if (pkg->header.hash_kind == BPAK_HASH_SHA256)
-        mbedtls_sha256_finish_ret(&sha256, output);
+        mbedtls_sha256_finish_ret(&sha256, (unsigned char *) output);
     else
-        mbedtls_sha512_finish_ret(&sha512, output);
+        mbedtls_sha512_finish_ret(&sha512, (unsigned char*) output);
 
     memcpy(pkg->header.signature, signature, sizeof(signature));
     pkg->header.signature_sz = signature_sz;

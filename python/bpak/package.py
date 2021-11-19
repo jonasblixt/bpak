@@ -43,8 +43,7 @@ class Package:
         """
         Read 'bpak-version' metadata
         """
-        raw_pkg_version = self.pkg.read_raw_meta(id("bpak-version"), 0)
-        return str(raw_pkg_version)
+        return self.read_string_meta(id("bpak-version"), 0)
     def read_string_meta(self, meta_id, part_ref_id=0):
         """
         Read a string metadata
