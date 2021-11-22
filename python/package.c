@@ -357,7 +357,6 @@ static PyObject * package_transport_encode(BPAKPackage *self,
         return NULL;
     }
 
-    printf("origin = %p, rate_limit_us = %i us\n", origin, rate_limit_us);
 
     rc = bpak_pkg_transport_encode(self->pkg, output->pkg, origin->pkg,
                                    rate_limit_us);

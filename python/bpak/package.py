@@ -76,7 +76,7 @@ class Package:
         """
         Transport encode package
         """
-        return self.pkg.transport(origin, output, rate_limit_us)
+        return self.pkg.transport(origin.pkg, output.pkg, rate_limit_us)
     def deps(self):
         """
         Read package dependencies
