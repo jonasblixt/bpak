@@ -44,7 +44,7 @@ int bpak_printf(int verbosity, const char *fmt, ...)
     va_end(args);
 
     if (log_func != Py_None) {
-        PyEval_CallFunction(log_func, "(is)", verbosity, log_buf);
+        PyObject_CallFunction(log_func, "(is)", verbosity, log_buf);
     }
 
     return BPAK_OK;
