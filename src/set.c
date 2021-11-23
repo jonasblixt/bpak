@@ -223,7 +223,7 @@ int action_set(int argc, char **argv)
                 goto err_close_io_out;
             }
 
-            long *val = (uint32_t *) meta;
+            long *val = (long *) meta;
             (*val) = strtol(from_string, NULL, 0);
         } else if (strcmp(encoder, "id") == 0) {
             if (meta_header->size != 4)
