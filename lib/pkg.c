@@ -369,6 +369,15 @@ static int transport_copy(struct bpak_header *hdr, uint32_t id,
         bpak_printf(0, "%s: Could not seek input stream\n", __func__);
     }
 
+    rc = bpak_io_seek(output_io,
+                 bpak_part_offset(&output->header, p),
+                 BPAK_IO_SEEK_SET);
+
+    if (rc != BPAK_OK) {
+        bpak_printf(0, "%s: Error, could not seek output stream", __func__);
+        return rc;
+    }
+
     uint8_t buf[1024];
     uint64_t bytes_to_copy = bpak_part_size(p);
     uint64_t chunk = 0;

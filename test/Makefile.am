@@ -94,6 +94,7 @@ TESTS = test_core_meta \
         test_transport3.sh \
         test_transport4.sh \
         test_transport5.sh \
+        test_transport6.sh \
         test_sign_dont_hash.sh \
         test_multiple_bsdiff.sh \
         test_openssl_sign.sh
