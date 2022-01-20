@@ -212,7 +212,13 @@ int action_extract(int argc, char **argv)
 
             while (bytes_to_copy)
             {
-                chunk = bpak_io_read(pkg->io, copy_buffer, sizeof(copy_buffer));
+                if (bytes_to_copy > sizeof(copy_buffer)) {
+                    chunk = sizeof(copy_buffer);
+                } else {
+                    chunk = bytes_to_copy;
+                }
+
+                chunk = bpak_io_read(pkg->io, copy_buffer, chunk);
                 fwrite(copy_buffer, chunk, 1, fp);
                 bytes_to_copy -= chunk;
             }
@@ -225,7 +231,14 @@ int action_extract(int argc, char **argv)
 
             while (bytes_to_copy)
             {
-                chunk = bpak_io_read(pkg->io, copy_buffer, sizeof(copy_buffer));
+                if (bytes_to_copy > sizeof(copy_buffer)) {
+                    chunk = sizeof(copy_buffer);
+                } else {
+                    chunk = bytes_to_copy;
+                }
+
+                chunk = bpak_io_read(pkg->io, copy_buffer, chunk);
+
                 if (write(1, copy_buffer, chunk) != chunk) {
                     fprintf(stderr, "Error: write failed\n");
                     rc = -1;
