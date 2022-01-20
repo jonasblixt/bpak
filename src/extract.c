@@ -207,7 +207,7 @@ int action_extract(int argc, char **argv)
             }
 
             char copy_buffer[1024];
-            size_t bytes_to_copy = bpak_part_size(part);
+            size_t bytes_to_copy = bpak_part_size(part) - part->pad_bytes;
             size_t chunk = 0;
 
             while (bytes_to_copy)
@@ -226,7 +226,7 @@ int action_extract(int argc, char **argv)
             /* Print to STDOUT */
 
             char copy_buffer[1024];
-            size_t bytes_to_copy = bpak_part_size(part);
+            size_t bytes_to_copy = bpak_part_size(part) - part->pad_bytes;
             size_t chunk = 0;
 
             while (bytes_to_copy)
