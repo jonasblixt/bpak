@@ -456,8 +456,8 @@ int action_verify(int argc, char **argv)
     struct bpak_header *h = bpak_pkg_header(pkg);
 
     size_t hash_size = sizeof(hash_output);
-    /* Compute the header hash, but don't update the payload hash */
-    bpak_pkg_compute_header_hash(pkg, hash_output, &hash_size, false);
+    /* Update the header hash and payload hash */
+    bpak_pkg_compute_header_hash(pkg, hash_output, &hash_size, true);
 
     if (bpak_get_verbosity() > 1)
     {
