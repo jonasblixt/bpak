@@ -26,16 +26,18 @@ int action_generate(int argc, char **argv)
     const char *filename = NULL;
     const char *generator = NULL;
     const char *keystore_name = NULL;
+    bool decorate_keystore = false;
 
     struct option long_options[] =
     {
         {"help",      no_argument,       0,  'h' },
         {"verbose",   no_argument,       0,  'v' },
         {"name",      required_argument, 0,  'n' },
+        {"decorate",  no_argument,       0,  'd' },
         {0,           0,                 0,   0  }
     };
 
-    while ((opt = getopt_long(argc, argv, "hv",
+    while ((opt = getopt_long(argc, argv, "hvdn:",
                    long_options, &long_index )) != -1)
     {
         switch (opt)
@@ -49,6 +51,9 @@ int action_generate(int argc, char **argv)
             break;
             case 'n':
                 keystore_name = optarg;
+            break;
+            case 'd':
+                decorate_keystore = true;
             break;
             case '?':
                 fprintf(stderr, "Unknown option: %c\n", optopt);
@@ -186,9 +191,13 @@ int action_generate(int argc, char **argv)
             if (!p->id)
                 continue;
 
-            printf("const struct bpak_key keystore_%s_key%i =\n",
+            const char *keystore_key_decorator = \
+                           "__attribute__((section (\".keystore_key\"))) ";
+
+            printf("const struct bpak_key keystore_%s_key%i %s=\n",
                                                     keystore_name_copy,
-                                                    key_index);
+                                                    key_index,
+                              decorate_keystore?keystore_key_decorator:"");
 
             printf("{\n");
             printf("    .id = 0x%x,\n", p->id);
@@ -269,9 +278,12 @@ int action_generate(int argc, char **argv)
             key_index++;
         }
 
+        const char *keystore_header_decorator = \
+                       "__attribute__((section (\".keystore_header\"))) ";
 
-        printf("const struct bpak_keystore keystore_%s =\n",
-                                                    keystore_name_copy);
+        printf("const struct bpak_keystore keystore_%s %s=\n",
+                                                    keystore_name_copy,
+                              decorate_keystore?keystore_header_decorator:"");
         printf("{\n");
         printf("    .id = 0x%x,\n", *keystore_provider_id);
         printf("    .no_of_keys = %i,\n", key_index);
