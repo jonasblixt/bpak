@@ -167,6 +167,7 @@ void print_generate_usage(void)
 
     printf("Keystore options:\n");
     printf("    -n, --name                      Output name\n");
+    printf("    -d, --decorate                  Decorate structs with section attribute\n");
     printf("\n");
 
     print_common_usage();
