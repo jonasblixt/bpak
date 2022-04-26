@@ -1,5 +1,5 @@
 ignore:
-    - src/mbedtls
-    - src/uuid
-    - lib/uuid
-    - lib/heatshrink
+  - src/mbedtls
+  - src/uuid
+  - lib/uuid
+  - lib/heatshrink
