@@ -372,11 +372,18 @@ static int bpak_alg_bspatch_init(struct bpak_alg_instance *ins,
     for (int i = 0; i < ins->part->size/sizeof(p->buffer); i++)
         bpak_io_write(p->out, p->buffer, sizeof(p->buffer));
 
-    bpak_io_seek(p->out, out_pos, BPAK_IO_SEEK_SET);
+    if (bpak_io_seek(p->out, out_pos, BPAK_IO_SEEK_SET) != BPAK_OK) {
+        rc = -BPAK_SEEK_ERROR;
+        goto err_free_alg_out;
+    }
 
 
     bpak_printf(2, "origin pos: %li\n", bpak_io_tell(p->origin));
     return BPAK_OK;
+
+err_free_alg_out:
+    bpak_alg_free(&p->compressor);
+    return rc;
 }
 
 static int bpak_alg_bspatch_process(struct bpak_alg_instance *ins)
