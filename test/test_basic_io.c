@@ -68,7 +68,7 @@ TEST(io_init)
     rc = bpak_io_read(&io, h, sizeof(*h));
     ASSERT_EQ(rc, sizeof(*h));
     rc  = bpak_valid_header(h);
-    ASSERT_EQ(rc, -BPAK_FAILED);
+    ASSERT_EQ(rc, -BPAK_BAD_MAGIC);
 
     /*  Seek to 0 and read header again*/
     memset(h, 0, sizeof(*h));

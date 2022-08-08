@@ -8,7 +8,7 @@ TEST(part_header)
     struct bpak_header h;
     int rc;
     h.magic = 0;
-    ASSERT_EQ(bpak_valid_header(&h), -BPAK_FAILED);
+    ASSERT_EQ(bpak_valid_header(&h), -BPAK_BAD_MAGIC);
 
     rc = bpak_init_header(&h);
 

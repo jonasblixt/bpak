@@ -15,6 +15,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include <unistd.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -88,6 +89,16 @@ enum bpak_errors
     BPAK_BAD_ALIGNMENT,
     BPAK_SEEK_ERROR,
     BPAK_NOT_SUPPORTED,
+    BPAK_NEEDS_MORE_DATA,
+    BPAK_WRITE_ERROR,
+    BPAK_DECOMPRESSOR_ERROR,
+    BPAK_COMPRESSOR_ERROR,
+    BPAK_PATCH_READ_ORIGIN_ERROR,
+    BPAK_PATCH_WRITE_ERROR,
+    BPAK_READ_ERROR,
+    BPAK_BAD_MAGIC,
+    BPAK_DECODER_CTX_TOO_SMALL,
+    BPAK_BUFFER_TOO_SMALL,
 };
 
 /*! \public
@@ -119,6 +130,11 @@ enum bpak_header_pos
 #define BPAK_FLAG_TRANSPORT (1 << 1)
 
 /* Bits 2 - 7 are reserved */
+
+typedef ssize_t (*bpak_io_t)(off_t offset,
+                             uint8_t *buffer,
+                             size_t length,
+                             void *user);
 
 /**
  * Transport mode meta data
@@ -215,21 +231,21 @@ struct bpak_header
 
 
 /**
- * Retrive pointer to metadata with id 'id'. If *ptr equals NULL
+ * Retrive pointer to metadata with id 'id'. If *offset equals NULL
  *  the function will search from the beginning of the header array.
- *  When *ptr points to some data within the metadata block, the function
- *  will search forward from that point.
  *
  * @param[in] hdr BPAK Header
  * @param[in] id Meta data identifier
- * @param[out] ptr Pointer is assigned to the location of the metadata within
+ * @param[out] output Pointer is assigned to the location of the metadata within
  *  the hdr->metadata byte array.
+ * @param[in] offset Optional offset within the meta data array
  *
  * @return BPAK_OK on success -BPAK_NOT_FOUND if the metadata is missing
  *
  **/
 
-int bpak_get_meta(struct bpak_header *hdr, uint32_t id, void **ptr);
+int bpak_get_meta(struct bpak_header *hdr, uint32_t id, void **output,
+                    void *offset);
 
 /**
  * Get pointer to meta data with 'id' and a part reference id 'part_id_ref'.
@@ -245,7 +261,8 @@ int bpak_get_meta(struct bpak_header *hdr, uint32_t id, void **ptr);
  *
  * */
 int bpak_get_meta_with_ref(struct bpak_header *hdr, uint32_t id,
-                            uint32_t part_id_ref, void **ptr);
+                            uint32_t part_id_ref, void **output,
+                            void *offset);
 
 /**
  * Get pointer to both the metadata header and the actual data
@@ -261,7 +278,8 @@ int bpak_get_meta_with_ref(struct bpak_header *hdr, uint32_t id,
  *
  * */
 int bpak_get_meta_and_header(struct bpak_header *hdr, uint32_t id,
-          uint32_t part_id_ref, void **ptr, struct bpak_meta_header **header);
+                             uint32_t part_id_ref, void **output, void *offset,
+                             struct bpak_meta_header **header);
 
 /**
  * Add new metadata with id 'id' of size 'size'. *ptr is assigned
@@ -349,14 +367,14 @@ int bpak_copyz_signature(struct bpak_header *hdr, uint8_t *signature,
 int bpak_init_header(struct bpak_header *hdr);
 
 /**
- * Get data offset of 'part' within the BPAK stream
+ * Get data offset of 'part' within the BPAK stream. This includes
+ * the header (4kByte).
  *
- * @param[in] hdr BPAK Header
  * @param[in] part BPAK Part pointer
  *
  * @return Offset in bytes
  */
-uint64_t bpak_part_offset(struct bpak_header *hdr, struct bpak_part_header *part);
+off_t bpak_part_offset(struct bpak_header *h, struct bpak_part_header *part);
 
 /**
  * Get size of 'part'
@@ -366,7 +384,17 @@ uint64_t bpak_part_offset(struct bpak_header *hdr, struct bpak_part_header *part
  * @return  Data size + padding bytes or transport size without padding
  *           depending on if the transport bit is set in part->flags
  */
-uint64_t bpak_part_size(struct bpak_part_header *part);
+size_t bpak_part_size(struct bpak_part_header *part);
+
+/**
+ * Get size of 'part' without padding
+ *
+ * @param[in] part BPAK Part
+ *
+ * @return  Data size bytes or transport size without padding
+ *           depending on if the transport bit is set in part->flags
+ */
+size_t bpak_part_size_wo_pad(struct bpak_part_header *part);
 
 /**
  * Translate error codes to string representation
@@ -435,6 +463,21 @@ int bpak_set_key_id(struct bpak_header *hdr, uint32_t key_id);
  * @return BPAK_OK on success
  */
 int bpak_set_keystore_id(struct bpak_header *hdr, uint32_t keystore_id);
+
+/**
+ * Add transport meta data to the header. 'encoder_id' and 'decoder_id' specifies
+ *  which encoders/decoders should be used when encoding or decoding part
+ *  with id 'part_id'.
+ *
+ * @param[in] header BPAK Header
+ * @param[in] part_id Id of part
+ * @param[in] encoder_id Encoder id
+ * @param[in] decoder_id Decoder id
+ *
+ * @return BPAK_OK on success
+ */
+int bpak_add_transport_meta(struct bpak_header *header, uint32_t part_id,
+                                uint32_t encoder_id, uint32_t decoder_id);
 
 /**
  * Library version

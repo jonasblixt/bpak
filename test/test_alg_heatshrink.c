@@ -1,8 +1,8 @@
 #include <stdint.h>
 #include <ctype.h>
 
-#include "heatshrink/heatshrink_encoder.h"
-#include "heatshrink/heatshrink_decoder.h"
+#include <bpak/heatshrink_encoder.h>
+#include <bpak/heatshrink_decoder.h>
 
 #include "nala.h"
 

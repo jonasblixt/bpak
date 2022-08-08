@@ -15,6 +15,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <sys/types.h>
+#include <bpak/bpak.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -39,18 +40,7 @@ extern "C" {
  */
 typedef unsigned char bpak_merkle_hash_t[32];
 
-/**
- * \typedef bpak_merkle_io_t
- *
- * Read or write function pointer. This is externally defined to support
- * several use-cases and not only file based io.
- */
 struct bpak_merkle_context;
-typedef int (*bpak_merkle_io_t) (struct bpak_merkle_context *ctx,
-                                    uint64_t offset,
-                                    uint8_t *buf,
-                                    size_t size,
-                                    void *priv);
 
 /**
  * \typedef bpak_merkle_status_t
@@ -70,7 +60,7 @@ struct bpak_merkle_level
 
 struct bpak_merkle_context
 {
-    uint8_t buffer[MERKLE_BLOCK_SZ];   /*!< Holds one block of data for hash input */
+    uint8_t *buffer;                   /*!< Holds one block of data for hash input */
     int level;                         /*!< Current level in the hash tree */
     int no_of_levels;                  /*!< Number of levels to compute */
     struct bpak_merkle_level current;  /*!< Current, active level thats being computed */
@@ -79,8 +69,8 @@ struct bpak_merkle_context
     size_t hash_tree_size;             /*!< Hash tree output size */
     bpak_merkle_hash_t salt;           /*!< Input salt for hashing */
     bpak_merkle_hash_t hash;           /*!< Output root hash */
-    bpak_merkle_io_t wr;               /*!< Function to write to the hash tree */
-    bpak_merkle_io_t rd;               /*!< Function to read from the hash tree */
+    bpak_io_t wr;                      /*!< Function to write to the hash tree */
+    bpak_io_t rd;                      /*!< Function to read from the hash tree */
     bpak_merkle_status_t status;       /*!< Status callback */
     void *priv;                        /*!< Externalt context variable */
 };
@@ -129,10 +119,12 @@ bool bpak_merkle_done(struct bpak_merkle_context *ctx);
  *
  */
 int bpak_merkle_init(struct bpak_merkle_context *ctx,
+                        uint8_t *buffer,
+                        size_t buffer_length,
                         size_t filesystem_size,
                         bpak_merkle_hash_t salt,
-                        bpak_merkle_io_t wr,
-                        bpak_merkle_io_t rd,
+                        bpak_io_t wr,
+                        bpak_io_t rd,
                         void *priv);
 
 /**

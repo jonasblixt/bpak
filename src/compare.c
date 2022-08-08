@@ -143,9 +143,9 @@ int action_compare(int argc, char **argv)
         added = false;
         removed = false;
 
-        bpak_get_meta(h1p, m->id, (void **) &data1);
+        bpak_get_meta(h1p, m->id, (void **) &data1, data1);
 
-        rc = bpak_get_meta(h2p, m->id, (void **) &data2);
+        rc = bpak_get_meta(h2p, m->id, (void **) &data2, data2);
 
         /* Missing in file 2? */
         if (rc != BPAK_OK)
@@ -176,7 +176,7 @@ int action_compare(int argc, char **argv)
             printf("=");
         }
 
-        bpak_meta_to_string(h1p, m, string_output, sizeof(string_output));
+        meta_to_string(h1p, m, string_output, sizeof(string_output));
         printf("   %8.8x   %-3u    %-20s %s\n", m->id, m->size,
                                 bpak_known_id(m->id), string_output);
         printf(NO_CLR);
@@ -194,15 +194,15 @@ int action_compare(int argc, char **argv)
         added = false;
         removed = false;
 
-        bpak_get_meta(h2p, m->id, (void **) &data1);
+        bpak_get_meta(h2p, m->id, (void **) &data1, data1);
 
-        rc = bpak_get_meta(h1p, m->id, (void **) &data2);
+        rc = bpak_get_meta(h1p, m->id, (void **) &data2, data2);
 
         /* Missing in file 2? */
         if (rc != BPAK_OK)
         {
             printf(RED_YL);
-            bpak_meta_to_string(h2p, m, string_output, sizeof(string_output));
+            meta_to_string(h2p, m, string_output, sizeof(string_output));
             printf("+   %8.8x   %-3u    %-20s %s\n", m->id, m->size,
                                     bpak_known_id(m->id), string_output);
             printf(NO_CLR);

@@ -134,7 +134,8 @@ TEST(file_part_read_part)
 
     uint32_t *meta_data = NULL;
 
-    rc = bpak_get_meta(h, bpak_id("fancy-meta-data"), (void **) &meta_data);
+    rc = bpak_get_meta(h, bpak_id("fancy-meta-data"), (void **) &meta_data,
+                    NULL);
     ASSERT_EQ(rc, BPAK_OK);
     ASSERT_EQ(*meta_data, 0x11223344);
     

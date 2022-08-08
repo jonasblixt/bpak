@@ -29,26 +29,24 @@
 #include "bpak_tool.h"
 #include "uuid/uuid.h"
 
-static int merkle_wr(struct bpak_merkle_context *ctx,
-                        uint64_t offset,
-                        uint8_t *buf,
-                        size_t size,
-                        void *priv)
+static ssize_t merkle_wr(off_t offset,
+                         uint8_t *buf,
+                         size_t size,
+                         void *priv)
 {
     uint8_t *data = (uint8_t *) priv;
     memcpy(&data[offset], buf, size);
-    return BPAK_OK;
+    return size;
 }
 
-static int merkle_rd(struct bpak_merkle_context *ctx,
-                        uint64_t offset,
-                        uint8_t *buf,
-                        size_t size,
-                        void *priv)
+static ssize_t merkle_rd(off_t offset,
+                         uint8_t *buf,
+                         size_t size,
+                         void *priv)
 {
     uint8_t *data = (uint8_t *) priv + offset;
     memcpy(buf, data, size);
-    return BPAK_OK;
+    return size;
 }
 
 static void merkle_status(struct bpak_merkle_context *ctx)
@@ -277,6 +275,7 @@ static int add_merkle(struct bpak_package *pkg,
     struct bpak_merkle_context ctx;
     struct stat statbuf;
     uint8_t block_buf[4096];
+    uint8_t buffer2[4096];
     size_t chunk_sz;
     uint64_t new_offset = sizeof(*h);
 
@@ -305,7 +304,7 @@ static int add_merkle(struct bpak_package *pkg,
         salt_ptr++;
     }
 
-    rc = bpak_merkle_init(&ctx, statbuf.st_size, salt,
+    rc = bpak_merkle_init(&ctx, buffer2, 4096, statbuf.st_size, salt,
                             merkle_wr, merkle_rd, merkle_buf);
 
     if (bpak_get_verbosity())

@@ -135,7 +135,8 @@ int action_generate(int argc, char **argv)
 
         char *package_id = NULL;
 
-        rc = bpak_get_meta(h, bpak_id("bpak-package"), (void **) &package_id);
+        rc = bpak_get_meta(h, bpak_id("bpak-package"), (void **) &package_id,
+                            NULL);
 
         if (rc != BPAK_OK)
         {
@@ -157,7 +158,7 @@ int action_generate(int argc, char **argv)
         uint32_t *keystore_provider_id = NULL;
 
         rc = bpak_get_meta(h, bpak_id("keystore-provider-id"),
-                              (void **) &keystore_provider_id);
+                              (void **) &keystore_provider_id, NULL);
 
         if (rc != BPAK_OK)
         {

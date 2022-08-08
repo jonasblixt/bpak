@@ -11,29 +11,24 @@
 #include <bpak/bpak.h>
 
 int bpak_get_meta_and_header(struct bpak_header *hdr, uint32_t id,
-        uint32_t part_id_ref, void **ptr, struct bpak_meta_header **header)
+        uint32_t part_id_ref, void **output, void *offset,
+        struct bpak_meta_header **header)
 {
-    void *offset = *ptr;
-
-    bpak_foreach_meta(hdr, m)
-    {
-        if (m->id == id)
-        {
-            if (part_id_ref != 0)
-            {
+    bpak_foreach_meta(hdr, m) {
+        if (m->id == id) {
+            if (part_id_ref != 0) {
                 if (m->part_id_ref != part_id_ref)
                     continue;
             }
 
             void *tmp = (void *) &hdr->metadata[m->offset];
 
-            if (offset)
-            {
+            if (offset) {
                 if (tmp <= offset)
                     continue;
             }
 
-            (*ptr) = tmp;
+            (*output) = tmp;
 
             if (header)
                 (*header) = m;
@@ -42,19 +37,21 @@ int bpak_get_meta_and_header(struct bpak_header *hdr, uint32_t id,
         }
     }
 
+    (*output) = NULL;
     return -BPAK_NOT_FOUND;
 }
 
-int bpak_get_meta(struct bpak_header *hdr, uint32_t id, void **ptr)
+int bpak_get_meta(struct bpak_header *hdr, uint32_t id, void **output,
+                    void *offset)
 {
-    return bpak_get_meta_and_header(hdr, id, 0, ptr,
+    return bpak_get_meta_and_header(hdr, id, 0, output, offset,
                     (struct bpak_meta_header  **) 0);
 }
 
 int bpak_get_meta_with_ref(struct bpak_header *hdr, uint32_t id,
-                            uint32_t part_id_ref, void **ptr)
+                            uint32_t part_id_ref, void **output, void *offset)
 {
-    return bpak_get_meta_and_header(hdr, id, part_id_ref, ptr,
+    return bpak_get_meta_and_header(hdr, id, part_id_ref, output, offset,
                     (struct bpak_meta_header  **) 0);
 }
 
@@ -65,8 +62,7 @@ int bpak_add_meta(struct bpak_header *hdr, uint32_t id, uint32_t part_ref_id,
 
     bpak_foreach_meta(hdr, m)
     {
-        if (!m->id)
-        {
+        if (!m->id) {
             m->id = id;
             m->offset = new_offset;
             m->size = size;
@@ -92,12 +88,9 @@ int bpak_get_part(struct bpak_header *hdr, uint32_t id,
 {
     void *offset = *part;
 
-    bpak_foreach_part(hdr, p)
-    {
-        if (p->id == id)
-        {
-            if (offset)
-            {
+    bpak_foreach_part(hdr, p) {
+        if (p->id == id) {
+            if (offset) {
                 if (((void *) p) <= offset)
                     continue;
             }
@@ -113,10 +106,8 @@ int bpak_get_part(struct bpak_header *hdr, uint32_t id,
 int bpak_add_part(struct bpak_header *hdr, uint32_t id,
                   struct bpak_part_header **part)
 {
-    bpak_foreach_part(hdr, p)
-    {
-        if(!p->id)
-        {
+    bpak_foreach_part(hdr, p) {
+        if(!p->id) {
             p->id = id;
             (*part) = p;
             return BPAK_OK;
@@ -142,28 +133,40 @@ const char *bpak_error_string(int code)
     {
         case BPAK_OK:
             return "OK";
-        break;
         case -BPAK_FAILED:
             return "Failed";
-        break;
         case -BPAK_NOT_FOUND:
             return "Not found";
-        break;
         case -BPAK_SIZE_ERROR:
             return "Size error";
-        break;
         case -BPAK_NO_SPACE_LEFT:
             return "No space left";
-        break;
         case -BPAK_BAD_ALIGNMENT:
             return "Bad alignment";
-        break;
         case -BPAK_SEEK_ERROR:
             return "Seek error";
-        break;
         case -BPAK_NOT_SUPPORTED:
             return "Not supported";
-        break;
+        case -BPAK_NEEDS_MORE_DATA:
+            return "Needs more data";
+        case -BPAK_WRITE_ERROR:
+            return "Write error";
+        case -BPAK_DECOMPRESSOR_ERROR:
+            return "Decompressor error";
+        case -BPAK_COMPRESSOR_ERROR:
+            return "Compressor error";
+        case -BPAK_PATCH_READ_ORIGIN_ERROR:
+            return "Patch read origin error";
+        case -BPAK_PATCH_WRITE_ERROR:
+            return "Patch write error";
+        case -BPAK_READ_ERROR:
+            return "Read error";
+        case -BPAK_BAD_MAGIC:
+            return "Bad magic";
+        case -BPAK_DECODER_CTX_TOO_SMALL:
+            return "Decoder context too small";
+        case -BPAK_BUFFER_TOO_SMALL:
+            return "Buffer too small";
         default:
             return "Unknown";
     }
@@ -172,7 +175,7 @@ const char *bpak_error_string(int code)
 int bpak_valid_header(struct bpak_header *hdr)
 {
     if (hdr->magic != BPAK_HEADER_MAGIC)
-        return -BPAK_FAILED;
+        return -BPAK_BAD_MAGIC;
 
     /* Check alignment of part data blocks */
     bpak_foreach_part(hdr, p)
@@ -202,12 +205,11 @@ int bpak_valid_header(struct bpak_header *hdr)
     return BPAK_OK;
 }
 
-uint64_t bpak_part_offset(struct bpak_header *h, struct bpak_part_header *part)
+off_t bpak_part_offset(struct bpak_header *h, struct bpak_part_header *part)
 {
-    uint64_t offset = sizeof(*h);
+    off_t offset = sizeof(*h);
 
-    bpak_foreach_part(h, p)
-    {
+    bpak_foreach_part(h, p) {
         if (!p->id)
             break;
         if (p->id == part->id)
@@ -219,12 +221,20 @@ uint64_t bpak_part_offset(struct bpak_header *h, struct bpak_part_header *part)
     return offset;
 }
 
-uint64_t bpak_part_size(struct bpak_part_header *part)
+size_t bpak_part_size(struct bpak_part_header *part)
 {
     if (part->flags & BPAK_FLAG_TRANSPORT)
         return part->transport_size;
     else
         return (part->size + part->pad_bytes);
+}
+
+size_t bpak_part_size_wo_pad(struct bpak_part_header *part)
+{
+    if (part->flags & BPAK_FLAG_TRANSPORT)
+        return part->transport_size;
+    else
+        return (part->size);
 }
 
 const char *bpak_known_id(uint32_t id)
@@ -316,6 +326,25 @@ int bpak_set_key_id(struct bpak_header *hdr, uint32_t key_id)
 int bpak_set_keystore_id(struct bpak_header *hdr, uint32_t keystore_id)
 {
     hdr->keystore_id = keystore_id;
+    return BPAK_OK;
+}
+
+int bpak_add_transport_meta(struct bpak_header *header, uint32_t part_id,
+                                uint32_t encoder_id, uint32_t decoder_id)
+{
+    int rc;
+    struct bpak_transport_meta *meta = NULL;
+
+                            /* id("bpak-transport") = 0x2d44bbfb */
+    rc = bpak_add_meta(header, 0x2d44bbfb, part_id, (void **) &meta,
+                            sizeof(*meta));
+
+    if (rc != BPAK_OK)
+        return rc;
+
+    meta->alg_id_encode = encoder_id;
+    meta->alg_id_decode = decoder_id;
+
     return BPAK_OK;
 }
 

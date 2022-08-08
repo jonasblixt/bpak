@@ -7,20 +7,29 @@ check_LTLIBRARIES = libnala.la
 libnala_la_SOURCES = nala.c
 
 check_PROGRAMS = test_core_meta \
+				 test_bsdiff_hs \
+				 test_bsdiff \
+				 test_merkle \
                  test_core_part \
                  test_alignment \
                  test_basic_io \
                  test_file_ops \
                  test_alg_heatshrink \
-                 test_merkle \
                  test_struct_sz \
                  test_meta_align \
-                 test_basic_file_io \
-                 test_fifo
+                 test_basic_file_io
 
 test_core_meta_SOURCES = test_core_meta.c common.c
 test_core_meta_LDADD = libnala.la $(top_builddir)/lib/libbpak.la
 test_core_meta_CFLAGS = $(COMMON_TEST_CFLAGS)
+
+test_bsdiff_hs_SOURCES = test_bsdiff_hs.c common.c
+test_bsdiff_hs_LDADD = libnala.la $(top_builddir)/lib/libbpak.la
+test_bsdiff_hs_CFLAGS = $(COMMON_TEST_CFLAGS)
+
+test_bsdiff_SOURCES = test_bsdiff.c common.c
+test_bsdiff_LDADD = libnala.la $(top_builddir)/lib/libbpak.la
+test_bsdiff_CFLAGS = $(COMMON_TEST_CFLAGS)
 
 test_core_part_SOURCES = test_core_part.c common.c
 test_core_part_LDADD = libnala.la $(top_builddir)/lib/libbpak.la
@@ -58,23 +67,16 @@ test_basic_file_io_SOURCES = test_basic_file_io.c common.c
 test_basic_file_io_LDADD = libnala.la $(top_builddir)/lib/libbpak.la
 test_basic_file_io_CFLAGS = $(COMMON_TEST_CFLAGS)
 
-test_fifo_SOURCES = test_fifo.c common.c
-test_fifo_LDADD = libnala.la $(top_builddir)/lib/libbpak.la
-test_fifo_CFLAGS = $(COMMON_TEST_CFLAGS)
-
 TESTS = test_core_meta \
         test_core_part \
         test_alignment \
         test_basic_io \
         test_file_ops \
-        test_alg_heatshrink \
-        test_merkle \
         test_struct_sz \
         test_meta_align \
         test_basic_file_io \
-        test_fifo \
+		test_merkle \
         test_create.sh \
-        test_transport.sh \
         test_keystore_gen.sh \
         test_signec256.sh \
         test_signec384.sh \
@@ -90,14 +92,15 @@ TESTS = test_core_meta \
         test_set_string.sh \
         test_extract.sh \
         test_header_at_the_end.sh \
-        test_transport2.sh \
-        test_transport3.sh \
-        test_transport4.sh \
+        test_header_at_the_end.sh \
+		test_transport.sh \
         test_transport5.sh \
         test_transport6.sh \
         test_sign_dont_hash.sh \
         test_multiple_bsdiff.sh \
-        test_openssl_sign.sh
+        test_openssl_sign.sh \
+		test_bsdiff_hs \
+		test_bsdiff
 
 if BUILD_BPAK_PYTHON_LIB
 TESTS += test_python_lib_prepare.sh \

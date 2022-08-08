@@ -1,4 +1,7 @@
 #include <stdio.h>
+/* Python 3.10 and newser must set PY_SSIZE_T_CLEAN when using # variant
+ *  when parsing arguments */
+#define PY_SSIZE_T_CLEAN
 #include <Python.h>
 #include <bpak/bpak.h>
 #include <bpak/pkg.h>
@@ -164,7 +167,7 @@ static PyObject * package_set_signature(BPAKPackage *self, PyObject *args,
 {
     int rc;
     char *signature_data;
-    int signature_sz;
+    Py_ssize_t signature_sz;
     struct bpak_header *h = bpak_pkg_header(self->pkg);
     static char *kwlist[] = {"signature_data", NULL};
 
@@ -262,7 +265,7 @@ static PyObject * package_read_raw_meta(BPAKPackage *self, PyObject *args,
 
     rc = bpak_get_meta_and_header(h, (uint32_t) meta_id,
                                      (uint32_t) part_ref_id,
-                                     (void **) &meta_ptr,
+                                     (void **) &meta_ptr, NULL,
                                      &meta_header);
 
     if (rc != BPAK_OK) {
@@ -278,7 +281,7 @@ static PyObject * package_write_raw_meta(BPAKPackage *self, PyObject *args,
 {
     int rc;
     char *meta_data_in;
-    int meta_data_sz;
+    Py_ssize_t meta_data_sz;
     int meta_id, part_ref_id;
     void *meta = NULL;
     struct bpak_meta_header *meta_header = NULL;
@@ -296,7 +299,7 @@ static PyObject * package_write_raw_meta(BPAKPackage *self, PyObject *args,
 
     rc = bpak_get_meta_and_header(h, (uint32_t) meta_id,
                                      (uint32_t) part_ref_id,
-                                     &meta, &meta_header);
+                                     &meta, NULL, &meta_header);
 
     if (rc != BPAK_OK || meta == NULL) {
         /* Create new meta data */
@@ -342,15 +345,14 @@ static PyObject * package_transport_encode(BPAKPackage *self,
                                             PyObject *args, PyObject *kwds)
 {
     int rc;
-    static char *kwlist[] = {"origin", "output", "rate_limit_us", NULL};
+    static char *kwlist[] = {"origin", "output", NULL};
     int rate_limit_us;
     BPAKPackage *origin;
     BPAKPackage *output;
 
-    rc = PyArg_ParseTupleAndKeywords(args, kwds, "|OOi", kwlist,
+    rc = PyArg_ParseTupleAndKeywords(args, kwds, "|OO", kwlist,
                                         &origin,
-                                        &output,
-                                        &rate_limit_us);
+                                        &output);
     if (!rc)
     {
         PyErr_SetString(BPAKPackageError, "Invalid argument");
@@ -358,8 +360,7 @@ static PyObject * package_transport_encode(BPAKPackage *self,
     }
 
 
-    rc = bpak_pkg_transport_encode(self->pkg, output->pkg, origin->pkg,
-                                   rate_limit_us);
+    rc = bpak_pkg_transport_encode(self->pkg, output->pkg, origin->pkg);
 
     if (rc != BPAK_OK)
     {
@@ -415,14 +416,16 @@ static PyObject * package_deps(BPAKPackage *self)
 
     bpak_foreach_meta(h, m)
     {
-        if (m->id == 0x0ba87349) /* bpak-transport */
+        if (m->id == 0x0ba87349) /* bpak-dependency */
         {
 
             char uuid_str[64];
             struct bpak_dependency *d = \
                        (struct bpak_dependency *) &(h->metadata[m->offset]);
 
-            bpak_uuid_to_string(d->uuid, uuid_str, sizeof(uuid_str));
+            // TODO: Fix this
+            //  Use python's uuid functions to parse the uuid byte array instead
+            //bpak_uuid_to_string(d->uuid, uuid_str, sizeof(uuid_str));
 
             PyObject *dep = Py_BuildValue("s s", uuid_str, d->constraint);
 
@@ -550,9 +553,6 @@ static PyModuleDef module =
 PyMODINIT_FUNC PyInit__bpak(void)
 {
     PyObject *m_p;
-
-    if (bpak_pkg_register_all_algs() != BPAK_OK)
-        return NULL;
 
     if (PyType_Ready(&BPAKPackageType) < 0)
         return NULL;

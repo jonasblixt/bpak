@@ -1,7 +1,7 @@
 #!/bin/sh
 BPAK=../src/bpak
 echo --- Creating simple archive ---
-set -e
+set -ex
 
 $BPAK --help
 

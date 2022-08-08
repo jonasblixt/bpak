@@ -17,8 +17,7 @@ static size_t bpak_merkle_offset(struct bpak_merkle_context *ctx, int level)
 {
     size_t result = 0;
 
-    for (int i = ctx->no_of_levels; i > level; i--)
-    {
+    for (int i = ctx->no_of_levels; i > level; i--) {
         result += bpak_merkle_compute_size(ctx->fs_size, i, true);
     }
 
@@ -83,13 +82,19 @@ size_t bpak_merkle_compute_size(size_t input_data_size, int level, bool pad)
 
 
 int bpak_merkle_init(struct bpak_merkle_context *ctx,
+                        uint8_t *buffer,
+                        size_t buffer_length,
                         size_t filesystem_size,
                         bpak_merkle_hash_t salt,
-                        bpak_merkle_io_t wr,
-                        bpak_merkle_io_t rd,
+                        bpak_io_t wr,
+                        bpak_io_t rd,
                         void *priv)
 {
+    if (buffer_length < MERKLE_BLOCK_SZ)
+        return -BPAK_BUFFER_TOO_SMALL;
+
     memset(ctx, 0, sizeof(*ctx));
+    ctx->buffer = buffer;
     ctx->wr = wr;
     ctx->rd = rd;
     ctx->fs_size = filesystem_size;
@@ -140,6 +145,8 @@ int bpak_merkle_process(struct bpak_merkle_context *ctx,
     uint8_t hash_tmp[32];
     uint64_t pos;
     int16_t pad = 0;
+    ssize_t bytes_written;
+    ssize_t bytes_read;
 
     memset(ctx->buffer, 0, MERKLE_BLOCK_SZ);
 
@@ -155,10 +162,11 @@ int bpak_merkle_process(struct bpak_merkle_context *ctx,
 
         pos = ctx->previous.offset + ctx->previous.byte_counter;
 
-        rc = ctx->rd(ctx, pos, ctx->buffer, chunk_sz, ctx->priv);
-
-        if (rc != BPAK_OK)
-            return rc;
+        bytes_read = ctx->rd(pos, ctx->buffer, chunk_sz, ctx->priv);
+        if (bytes_read < 0)
+            return bytes_read;
+        if (bytes_read != chunk_sz)
+            return -BPAK_READ_ERROR;
 
         ctx->previous.byte_counter += chunk_sz;
     }
@@ -170,7 +178,15 @@ int bpak_merkle_process(struct bpak_merkle_context *ctx,
     mbedtls_sha256_finish_ret(&hash, hash_tmp);
 
     pos = ctx->current.offset + ctx->current.byte_counter;
-    ctx->wr(ctx, pos, hash_tmp, 32, ctx->priv);
+    bytes_written = ctx->wr(pos, hash_tmp, 32, ctx->priv);
+
+    if (bytes_written < 0)
+        return bytes_written;
+    if (bytes_written != 32) {
+        bpak_printf(0, "%s: Wanted to write %zu byte, but %i was written\n",
+                                           __func__, 32, bytes_written);
+        return -BPAK_WRITE_ERROR;
+    }
     ctx->current.byte_counter += 32;
 
     if (ctx->status)
@@ -182,10 +198,18 @@ int bpak_merkle_process(struct bpak_merkle_context *ctx,
                      ((ctx->current.byte_counter % MERKLE_BLOCK_SZ) != 0);
         if (padding_needed)
         {
-            memset(ctx->buffer, 0, sizeof(ctx->buffer));
             pos = ctx->current.offset + ctx->current.byte_counter;
             pad = MERKLE_BLOCK_SZ - (ctx->current.byte_counter % MERKLE_BLOCK_SZ);
-            ctx->wr(ctx, pos, ctx->buffer, pad, ctx->priv);
+            memset(ctx->buffer, 0, pad);
+            bytes_written = ctx->wr(pos, ctx->buffer, pad, ctx->priv);
+
+            if (bytes_written < 0)
+                return bytes_written;
+            if (bytes_written != pad) {
+                bpak_printf(0, "%s: Wanted to write %zu byte, but %i was written\n",
+                                           __func__, pad, bytes_written);
+                return -BPAK_WRITE_ERROR;
+            }
             ctx->current.byte_counter += pad;
         }
 
@@ -215,8 +239,14 @@ int bpak_merkle_out(struct bpak_merkle_context *ctx,
 {
     mbedtls_sha256_context hash;
     uint64_t pos = ctx->current.offset;
+    ssize_t bytes_read;
 
-    ctx->rd(ctx, pos, ctx->buffer, MERKLE_BLOCK_SZ, ctx->priv);
+    bytes_read = ctx->rd(pos, ctx->buffer, MERKLE_BLOCK_SZ, ctx->priv);
+
+    if (bytes_read < 0)
+        return bytes_read;
+    if (bytes_read != MERKLE_BLOCK_SZ)
+        return -BPAK_READ_ERROR;
 
     mbedtls_sha256_init(&hash);
     mbedtls_sha256_starts_ret(&hash, 0);

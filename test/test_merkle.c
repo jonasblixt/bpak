@@ -41,26 +41,24 @@ Root hash:              2f71d6f2e44801bb8bd97e5b66a0e82b1588b24d684728a46093cdb2
  *
  */
 
-static int merkle_wr(struct bpak_merkle_context *ctx,
-                        uint64_t offset,
+static ssize_t merkle_wr(off_t offset,
                         uint8_t *buf,
                         size_t size,
                         void *priv)
 {
     uint8_t *data = (uint8_t *) priv;
     memcpy(&data[offset], buf, size);
-    return BPAK_OK;
+    return size;
 }
 
-static int merkle_rd(struct bpak_merkle_context *ctx,
-                        uint64_t offset,
+static ssize_t merkle_rd(off_t offset,
                         uint8_t *buf,
                         size_t size,
                         void *priv)
 {
     uint8_t *data = (uint8_t *) priv + offset;
     memcpy(buf, data, size);
-    return BPAK_OK;
+    return size;
 }
 
 static void merkle_status(struct bpak_merkle_context *ctx)
@@ -81,6 +79,7 @@ TEST(merkle_odd)
 {
     int rc;
     struct bpak_merkle_context ctx;
+    uint8_t buffer2[4096];
     char *input_data = malloc(1024*1023);
     size_t merkle_sz = bpak_merkle_compute_size(1024*1023, -1, true);
     char *merkle_buf = malloc(merkle_sz);
@@ -135,7 +134,7 @@ TEST(merkle_odd)
     };
 
 /* 8effc062924445d3389c6b360b29cf1c142d29497df783a63eabcea6f7779436*/
-    rc = bpak_merkle_init(&ctx, 1024*1023, salt,
+    rc = bpak_merkle_init(&ctx, buffer2, 4096, 1024*1023, salt,
                             merkle_wr, merkle_rd, merkle_buf);
 
     for (int i = 0; i < ctx.no_of_levels; i++)
@@ -195,6 +194,7 @@ TEST(merkle_even)
     char *input_data = malloc(1024*1024);
     size_t merkle_sz = bpak_merkle_compute_size(1024*1024, -1, true);
     char *merkle_buf = malloc(merkle_sz);
+    uint8_t buffer2[4096];
 
     memset(&ctx, 0, sizeof(ctx));
 
@@ -247,7 +247,7 @@ TEST(merkle_even)
     };
 
 /* 8effc062924445d3389c6b360b29cf1c142d29497df783a63eabcea6f7779436*/
-    rc = bpak_merkle_init(&ctx, 1024*1024, salt,
+    rc = bpak_merkle_init(&ctx, buffer2, 4096, 1024*1024, salt,
                             merkle_wr, merkle_rd, merkle_buf);
 
     for (int i = 0; i < ctx.no_of_levels; i++)
@@ -318,6 +318,7 @@ TEST(merkle_small)
 {
     int rc;
     struct bpak_merkle_context ctx;
+    uint8_t buffer2[4096];
 
     printf("merkle_small\n");
 
@@ -381,7 +382,7 @@ TEST(merkle_small)
     };
 
 /* 8effc062924445d3389c6b360b29cf1c142d29497df783a63eabcea6f7779436*/
-    rc = bpak_merkle_init(&ctx, 1024*4, salt,
+    rc = bpak_merkle_init(&ctx, buffer2, 4096, 1024*4, salt,
                             merkle_wr, merkle_rd, merkle_buf);
 
     for (int i = 0; i < ctx.no_of_levels; i++)

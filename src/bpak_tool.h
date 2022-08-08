@@ -38,4 +38,7 @@ void print_extract_usage(void);
 int bpak_get_verbosity(void);
 void bpak_inc_verbosity(void);
 
+int uuid_to_string(const uint8_t *data, char *buf, size_t size);
+int meta_to_string(struct bpak_header *h, struct bpak_meta_header *m,
+                        char *buf, size_t size);
 #endif

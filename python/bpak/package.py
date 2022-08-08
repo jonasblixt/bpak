@@ -72,16 +72,17 @@ class Package:
         Write raw meta data. The input should be a byte string
         """
         return self.pkg.write_raw_meta(meta_id, part_ref_id, meta_data)
-    def transport(self, origin, output, rate_limit_us=0):
+    def transport(self, origin, output):
         """
         Transport encode package
         """
-        return self.pkg.transport(origin.pkg, output.pkg, rate_limit_us)
+        return self.pkg.transport(origin.pkg, output.pkg)
     def deps(self):
         """
         Read package dependencies
         """
-        return self.pkg.deps()
+        # return self.pkg.deps()
+        raise Exception("Broken, don't use this for the moment")
     def size(self):
         """
         Return the size of the package in bytes.

@@ -131,7 +131,7 @@ int action_extract(int argc, char **argv)
         void *data_ptr = NULL;
 
         rc = bpak_get_meta_and_header(h, meta_id, part_id_ref, &data_ptr,
-                                        &meta_header);
+                                        NULL, &meta_header);
 
         if (rc != BPAK_OK)
         {

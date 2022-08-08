@@ -9,7 +9,7 @@ TEST(header)
     int rc;
 
     h.magic = 0;
-    ASSERT_EQ(bpak_valid_header(&h), -BPAK_FAILED);
+    ASSERT_EQ(bpak_valid_header(&h), -BPAK_BAD_MAGIC);
 
     rc = bpak_init_header(&h);
 
@@ -33,16 +33,16 @@ TEST(add_meta)
 
     uint32_t *out = NULL;
 
-    rc = bpak_get_meta(&h, bpak_id("test-meta"), (void **) &out);
+    rc = bpak_get_meta(&h, bpak_id("test-meta"), (void **) &out, NULL);
     ASSERT_EQ(rc, BPAK_OK);
     ASSERT_EQ(*out, 0x11223344);
 
     /* Try to get non-existing 'test-meta' after the first one */
-    uint32_t *out2 = test; /* Begin search after the first meta*/
+    uint32_t *out2 = NULL;
 
-    rc = bpak_get_meta(&h, bpak_id("test-meta"), (void **) &out2);
+    /* Begin search after the first meta*/
+    rc = bpak_get_meta(&h, bpak_id("test-meta"), (void **) &out2, test);
     ASSERT_EQ(rc, -BPAK_NOT_FOUND);
-    ASSERT_EQ(out2, test);
 
     /* Add additional meta data with the same id */
     uint32_t *test2 = NULL;
@@ -51,9 +51,10 @@ TEST(add_meta)
     ASSERT_EQ(rc, BPAK_OK);
     *test2 = 0x55667788;
 
-    uint32_t *out3 = test; /* Begin search after the first meta*/
+    uint32_t *out3 = NULL;
 
-    rc = bpak_get_meta(&h, bpak_id("test-meta"), (void **) &out3);
+    /* Begin search after the first meta*/
+    rc = bpak_get_meta(&h, bpak_id("test-meta"), (void **) &out3, test);
     ASSERT_EQ(rc, BPAK_OK);
     ASSERT_EQ(*out3, 0x55667788);
 }
@@ -71,7 +72,7 @@ TEST(iterate_meta)
     uint32_t *out = NULL;
     int c = 0;
 
-    while (bpak_get_meta(&h, bpak_id("test-meta"), (void **) &out) == BPAK_OK)
+    while (bpak_get_meta(&h, bpak_id("test-meta"), (void **) &out, out) == BPAK_OK)
     {
         ASSERT_EQ(*out, 0x11223300 + c);
         c++;
@@ -87,7 +88,7 @@ TEST(iterate_meta)
         printf ("v %p\n", v);
     }
 
-    while (bpak_get_meta(&h, bpak_id("test-meta"), (void **) &out) == BPAK_OK)
+    while (bpak_get_meta(&h, bpak_id("test-meta"), (void **) &out, out) == BPAK_OK)
     {
         printf("out %p\n", out);
         ASSERT_EQ(*out, 0x11223300 + c);
@@ -116,7 +117,7 @@ TEST(too_many_meta_headers)
 
     uint32_t *out = NULL;
     int c = 0;
-    while (bpak_get_meta(&h, bpak_id("test-meta"), (void **) &out) == BPAK_OK)
+    while (bpak_get_meta(&h, bpak_id("test-meta"), (void **) &out, out) == BPAK_OK)
     {
         ASSERT_EQ(*out, 0x11223300 + c);
         c++;

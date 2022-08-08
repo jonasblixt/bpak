@@ -164,14 +164,12 @@ int bpak_pkg_add_transport(struct bpak_package *pkg, uint32_t part_ref,
  * @param[in] input BPAK Package input stream
  * @param[in] output BPAK Package output, the result
  * @param[in] origin BPAK Package origin data
- * @param[in] rate_limit_us Rate limit the operation by sleeping \ref rate_limit_us between every encoding step
  *
  * @return BPAK_OK on success
  */
 int bpak_pkg_transport_encode(struct bpak_package *input,
                               struct bpak_package *output,
-                              struct bpak_package *origin,
-                              int rate_limit_us);
+                              struct bpak_package *origin);
 
 /**
  * Transport decode package
@@ -179,22 +177,12 @@ int bpak_pkg_transport_encode(struct bpak_package *input,
  * @param[in] input BPAK Package input stream
  * @param[in] output BPAK Package output, the result
  * @param[in] origin BPAK Package origin data
- * @param[in] rate_limit_us Rate limit the operation by sleeping \ref rate_limit_us between every encoding step
  *
  * @return BPAK_OK on success
  */
 int bpak_pkg_transport_decode(struct bpak_package *input,
                               struct bpak_package *output,
-                              struct bpak_package *origin,
-                              int rate_limit_us,
-                              bool output_header_last);
-/**
- * Register all built in algorithms. This must be called before using
- *  any of the transport encoding or decoding functions.
- *
- * @return BPAK_OK on success
- */
-int bpak_pkg_register_all_algs(void);
+                              struct bpak_package *origin);
 
 /**
  * Writes current header to file

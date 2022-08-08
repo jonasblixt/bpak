@@ -1,7 +1,7 @@
 dnl Bit Packer
 
 AC_PREREQ(2.59)
-AC_INIT([bpak], [0.5.11], [Jonas Blixt, <jonpe960@gmail.com>])
+AC_INIT([bpak], [0.6.0], [Jonas Blixt, <jonpe960@gmail.com>])
 
 m4_pattern_forbid([^AX_(CHECK_ENABLE_DEBUG|CODE_COVERAGE|COMPILER_FLAGS|COMPILER_FLAGS_(CFLAGS|CXXFLAGS|LDFLAGS))\b],
   [Unexpanded AX_ macro found. Please install GNU autoconf-archive])
@@ -62,6 +62,12 @@ AC_ARG_ENABLE([tool],
 AC_MSG_RESULT($enable_tool)
 AM_CONDITIONAL([BUILD_BPAK_TOOL], [test x$enable_tool = xyes])
 
+if test "x$enable_tool" = "xyes"; then
+    PKG_CHECK_MODULES(LIBUUID, [uuid >= 1.0.0])
+    AC_SUBST(LIBUUID_CFLAGS)
+    AC_SUBST(LIBUUID_LDFLAGS)
+    AC_SUBST(LIBUUID_LIBS)
+fi
 
 dnl Transport codec options
 AC_MSG_CHECKING( wheter to build the bpak transport codecs)

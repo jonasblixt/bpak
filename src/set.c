@@ -148,7 +148,8 @@ int action_set(int argc, char **argv)
         void *meta = NULL;
         struct bpak_meta_header *meta_header = NULL;
 
-        rc = bpak_get_meta_and_header(h, bpak_id(meta_name), 0, &meta, &meta_header);
+        rc = bpak_get_meta_and_header(h, bpak_id(meta_name), 0, &meta, NULL,
+                                        &meta_header);
 
         if (rc != BPAK_OK || meta == NULL)
         {

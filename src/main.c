@@ -22,6 +22,7 @@ int bpak_printf(int verbosity, const char *fmt, ...)
 
 int main(int argc, char **argv)
 {
+    int rc;
     int opt;
     int long_index = 0;
     const char *action = NULL;
@@ -41,12 +42,6 @@ int main(int argc, char **argv)
     }
 
     srand(time(NULL));
-
-    if (bpak_pkg_register_all_algs() != BPAK_OK)
-    {
-        printf("Error: could not initialize all algorithms\n");
-        return -1;
-    }
 
     while ((opt = getopt_long(2, argv, "hV",
                    long_options, &long_index )) != -1)
@@ -83,48 +78,27 @@ int main(int argc, char **argv)
         argc--;
 
         /* Check for valid action */
-        if (strcmp(action, "create") == 0)
-        {
-            return action_create(argc, argv);
-        }
-        else if (strcmp(action, "add") == 0)
-        {
-            return action_add(argc, argv);
-        }
-        else if (strcmp(action, "show") == 0)
-        {
-            return action_show(argc, argv);
-        }
-        else if (strcmp(action, "sign") == 0)
-        {
-            return action_sign(argc, argv);
-        }
-        else if (strcmp(action, "verify") == 0)
-        {
-            return action_verify(argc, argv);
-        }
-        else if (strcmp(action, "generate") == 0)
-        {
-            return action_generate(argc, argv);
-        }
-        else if (strcmp(action, "transport") == 0)
-        {
-            return action_transport(argc, argv);
-        }
-        else if (strcmp(action, "set") == 0)
-        {
-            return action_set(argc, argv);
-        }
-        else if (strcmp(action, "compare") == 0)
-        {
-            return action_compare(argc, argv);
-        }
-        else if (strcmp(action, "extract") == 0)
-        {
-            return action_extract(argc, argv);
-        }
-        else
-        {
+        if (strcmp(action, "create") == 0) {
+            rc = action_create(argc, argv);
+        } else if (strcmp(action, "add") == 0) {
+            rc = action_add(argc, argv);
+        } else if (strcmp(action, "show") == 0) {
+            rc = action_show(argc, argv);
+        } else if (strcmp(action, "sign") == 0) {
+            rc = action_sign(argc, argv);
+        } else if (strcmp(action, "verify") == 0) {
+            rc = action_verify(argc, argv);
+        } else if (strcmp(action, "generate") == 0) {
+            rc = action_generate(argc, argv);
+        } else if (strcmp(action, "transport") == 0) {
+            rc = action_transport(argc, argv);
+        } else if (strcmp(action, "set") == 0) {
+            rc = action_set(argc, argv);
+        } else if (strcmp(action, "compare") == 0) {
+            rc = action_compare(argc, argv);
+        } else if (strcmp(action, "extract") == 0) {
+            rc = action_extract(argc, argv);
+        } else {
             printf ("Unknown action '%s'\n", action);
             return -1;
         }
@@ -135,5 +109,9 @@ int main(int argc, char **argv)
         return -1;
     }
 
-    return 0;
+    if (rc != BPAK_OK) {
+        fprintf(stderr, "Error: %s (%i)\n", bpak_error_string(rc), rc);
+    }
+
+    return rc;
 }

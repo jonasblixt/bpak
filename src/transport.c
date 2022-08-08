@@ -34,9 +34,7 @@ int action_transport(int argc, char **argv)
     bool add_flag = false;
     bool encode_flag = false;
     bool decode_flag = false;
-    bool output_header_last = false;
     int rc = 0;
-    int rate_limit = 0;
     uint32_t part_ref = 0;
 
     struct option long_options[] =
@@ -51,12 +49,10 @@ int action_transport(int argc, char **argv)
         {"encode",      no_argument,       0,  'E' },
         {"decode",      no_argument,       0,  'D' },
         {"part-ref",    required_argument, 0,  'r' },
-        {"output-header-last", no_argument,0,  'H' },
-        {"rate-limit",  required_argument, 0,  'R' },
         {0,             0,                 0,   0  }
     };
 
-    while ((opt = getopt_long(argc, argv, "hvao:s:O:e:d:EGr:HR:",
+    while ((opt = getopt_long(argc, argv, "hvao:s:O:e:d:EGr:",
                    long_options, &long_index )) != -1)
     {
         switch (opt)
@@ -64,12 +60,6 @@ int action_transport(int argc, char **argv)
             case 'h':
                 print_transport_usage();
                 return 0;
-            case 'H':
-                output_header_last = true;
-            break;
-            case 'R':
-                rate_limit = strtoul(optarg, 0, 0);
-            break;
             case 'v':
                 bpak_inc_verbosity();
             break;
@@ -162,11 +152,7 @@ int action_transport(int argc, char **argv)
     }
 
     if (encode_flag || decode_flag) {
-        if (output_header_last) {
-            rc = bpak_pkg_open(&output, output_file, "rb+");
-        } else {
-            rc = bpak_pkg_open(&output, output_file, "wb+");
-        }
+        rc = bpak_pkg_open(&output, output_file, "wb+");
 
         if (rc != BPAK_OK)
         {
@@ -176,17 +162,22 @@ int action_transport(int argc, char **argv)
     }
 
     if (encode_flag) {
-        rc = bpak_pkg_transport_encode(input, output, origin, rate_limit);
+        rc = bpak_pkg_transport_encode(input, output, origin);
     } else if(decode_flag) {
         rc = bpak_pkg_transport_decode(input, /* Input package or 'patch' */
                                        output,
-                                       origin, /* Origin data to use for patch operation*/
-                                       rate_limit, /* Rate limit */
-                                       output_header_last);
+                                       origin); /* Origin data to use for patch operation*/
     } else if (add_flag && encoder_alg && decoder_alg) {
-        rc = bpak_pkg_add_transport(input, part_ref,
+        rc = bpak_add_transport_meta(&input->header, part_ref,
                                          bpak_id(encoder_alg),
                                          bpak_id(decoder_alg));
+
+        if (rc != BPAK_OK) {
+            fprintf(stderr, "Error: Could not add transport meta data\n");
+            goto err_out;
+        }
+
+        rc = bpak_pkg_write_header(input);
     } else {
         rc = -BPAK_FAILED;
         printf("Error: Unknown command");
