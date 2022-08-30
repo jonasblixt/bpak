@@ -80,32 +80,33 @@ int action_compare(int argc, char **argv)
         return -1;
     }
 
-    struct bpak_io *io1 = NULL;
-    struct bpak_io *io2 = NULL;
+    FILE *fp1 = NULL;
+    FILE *fp2 = NULL;
     struct bpak_header h1, h2;
 
-    rc = bpak_io_init_file(&io1, filename1, "r");
+    fp1 = fopen(filename1, "r");
 
-    if (rc != BPAK_OK)
-        return rc;
-
-    rc = bpak_io_init_file(&io2, filename2, "r");
-
-    if (rc != BPAK_OK)
-        goto err_close_io1_out;
-
-    if (bpak_io_read(io1, &h1, sizeof(h1)) != sizeof(h1))
-    {
-        printf("Could not read first header\n");
-        rc = -BPAK_FAILED;
-        goto err_close_io1_out;
+    if (fp1 == NULL) {
+        return -BPAK_FAILED;
     }
 
-    if (bpak_io_read(io2, &h2, sizeof(h2)) != sizeof(h2))
-    {
-        printf("Could not read second header\n");
+    fp2 = fopen(filename2, "r");
+
+    if (fp2 == NULL) {
         rc = -BPAK_FAILED;
-        goto err_close_io1_out;
+        goto err_close_fp1_out;
+    }
+
+    if (fread(&h1, 1, sizeof(h1), fp1) != sizeof(h1)) {
+        printf("Could not read first header\n");
+        rc = -BPAK_READ_ERROR;
+        goto err_close_fp1_out;
+    }
+
+    if (fread(&h2, 1, sizeof(h2), fp2) != sizeof(h2)) {
+        printf("Could not read second header\n");
+        rc = -BPAK_READ_ERROR;
+        goto err_close_fp1_out;
     }
 
     printf("BPAK comparison between:\n1: '%s'\n2: '%s'\n", filename1, filename2);
@@ -132,8 +133,7 @@ int action_compare(int argc, char **argv)
     printf("Metadata:\n");
     printf("    ID         Size   Meta ID              Data\n");
 
-    bpak_foreach_meta(h1p, m)
-    {
+    bpak_foreach_meta(h1p, m) {
         if (!m->id)
             continue;
 
@@ -238,19 +238,19 @@ int action_compare(int argc, char **argv)
                     change = true;
 
                 /* Compare the data */
-                rc = bpak_io_seek(io1, bpak_part_offset(h1p, p), BPAK_IO_SEEK_SET);
+                rc = fseek(fp1, bpak_part_offset(h1p, p), SEEK_SET);
 
-                if (rc != BPAK_OK)
-                {
+                if (rc != 0) {
                     printf("Error: Seek failed\n");
+                    rc = -BPAK_SEEK_ERROR;
                     break;
                 }
 
-                rc = bpak_io_seek(io2, bpak_part_offset(h2p, p2), BPAK_IO_SEEK_SET);
+                rc = fseek(fp2, bpak_part_offset(h2p, p2), SEEK_SET);
 
-                if (rc != BPAK_OK)
-                {
+                if (rc != 0) {
                     printf("Error: Seek failed\n");
+                    rc = -BPAK_SEEK_ERROR;
                     break;
                 }
 
@@ -261,11 +261,16 @@ int action_compare(int argc, char **argv)
                     size_t chunk = (data_to_compare > sizeof(chunk1)) ? \
                                    sizeof(chunk1):data_to_compare;
 
-                    bpak_io_read(io1, chunk1, chunk);
-                    bpak_io_read(io2, chunk2, chunk);
+                    if (fread(chunk1, 1, chunk, fp1) != chunk) {
+                        rc = -BPAK_READ_ERROR;
+                        goto err_close_fp1_out;
+                    }
+                    if (fread(chunk2, 1, chunk, fp2) != chunk) {
+                        rc = -BPAK_READ_ERROR;
+                        goto err_close_fp1_out;
+                    }
 
-                    if (memcmp(chunk1, chunk2, chunk) != 0)
-                    {
+                    if (memcmp(chunk1, chunk2, chunk) != 0) {
                         change = true;
                         break;
                     }
@@ -347,9 +352,9 @@ int action_compare(int argc, char **argv)
             }
         }
     }
-err_close_io1_out:
-    bpak_io_close(io1);
-err_close_io2_out:
-    bpak_io_close(io2);
+err_close_fp1_out:
+    fclose(fp1);
+err_close_fp2_out:
+    fclose(fp2);
     return rc;
 }

@@ -2,8 +2,6 @@
 #define SRC_BPAK_TOOL_H_
 
 #include <bpak/bpak.h>
-#include <bpak/io.h>
-#include <bpak/file.h>
 #include <bpak/merkle.h>
 #include <bpak/alg.h>
 #include <bpak/utils.h>

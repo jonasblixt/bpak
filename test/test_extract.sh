@@ -1,6 +1,6 @@
 #!/bin/sh
 BPAK=../src/bpak
-set -e
+set -ex
 V=-vvv
 
 IMG=extract_test.bpak

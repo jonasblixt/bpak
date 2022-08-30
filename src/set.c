@@ -117,22 +117,27 @@ int action_set(int argc, char **argv)
         return -1;
     }
 
-    struct bpak_io *io = NULL;
+    FILE *fp = NULL;
     struct bpak_header *h = malloc(sizeof(struct bpak_header));
 
-    rc = bpak_io_init_file(&io, filename, "r+");
+    fp = fopen(filename, "r+");
 
-    if (rc != BPAK_OK)
-        goto err_free_header_out;
-
-    bpak_io_seek(io, 0, BPAK_IO_SEEK_SET);
-    size_t read_bytes = bpak_io_read(io, h, sizeof(*h));
-
-    if (read_bytes != sizeof(*h))
-    {
+    if (fp == NULL) {
         rc = -BPAK_FAILED;
+        goto err_free_header_out;
+    }
+
+    if (fseek(fp, 0, SEEK_SET) != 0) {
+        rc = -BPAK_SEEK_ERROR;
+        goto err_close_fp_out;
+    }
+
+    size_t read_bytes = fread(h, 1, sizeof(*h), fp);
+
+    if (read_bytes != sizeof(*h)) {
+        rc = -BPAK_READ_ERROR;
         printf("Error: Could not read header %li\n", read_bytes);
-        goto err_close_io_out;
+        goto err_close_fp_out;
     }
 
     rc = bpak_valid_header(h);
@@ -140,7 +145,7 @@ int action_set(int argc, char **argv)
     if (rc != BPAK_OK)
     {
         printf("Error: Invalid header. Not a BPAK file?\n");
-        goto err_close_io_out;
+        goto err_close_fp_out;
     }
 
     if (meta_name)
@@ -155,7 +160,7 @@ int action_set(int argc, char **argv)
         {
             printf("Error: Could not find '%s'\n", meta_name);
             rc = -BPAK_FAILED;
-            goto err_close_io_out;
+            goto err_close_fp_out;
         }
 
         if (!encoder)
@@ -217,21 +222,19 @@ int action_set(int argc, char **argv)
             h = new_header;
 
         } else if (strcmp(encoder, "integer") == 0) {
-            if (meta_header->size != 8)
-            {
+            if (meta_header->size != 8) {
                 printf("Incorrect meta data length\n");
                 rc = -BPAK_FAILED;
-                goto err_close_io_out;
+                goto err_close_fp_out;
             }
 
             long *val = (long *) meta;
             (*val) = strtol(from_string, NULL, 0);
         } else if (strcmp(encoder, "id") == 0) {
-            if (meta_header->size != 4)
-            {
+            if (meta_header->size != 4) {
                 printf("Incorrect meta data length\n");
                 rc = -BPAK_FAILED;
-                goto err_close_io_out;
+                goto err_close_fp_out;
             }
             uint32_t *val = (uint32_t *) meta;
             (*val) = bpak_id(from_string);
@@ -265,11 +268,18 @@ int action_set(int argc, char **argv)
         printf("Error: Don't know what to do\n");
     }
 
-    bpak_io_seek(io, 0, BPAK_IO_SEEK_SET);
-    bpak_io_write(io, h, sizeof(*h));
+    if (fseek(fp, 0, SEEK_SET) != 0) {
+        rc = -BPAK_SEEK_ERROR;
+        goto err_close_fp_out;
+    }
 
-err_close_io_out:
-    bpak_io_close(io);
+    if (fwrite(h, 1, sizeof(*h), fp) != sizeof(*h)) {
+        rc = -BPAK_WRITE_ERROR;
+        goto err_close_fp_out;
+    }
+
+err_close_fp_out:
+    fclose(fp);
 err_free_header_out:
     free(h);
     return rc;

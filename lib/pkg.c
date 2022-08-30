@@ -9,7 +9,6 @@
 #include <bpak/bpak.h>
 #include <bpak/crc.h>
 #include <bpak/pkg.h>
-#include <bpak/file.h>
 #include <bpak/utils.h>
 #include <bpak/transport.h>
 
@@ -28,22 +27,23 @@ int bpak_pkg_open(struct bpak_package *pkg, const char *filename,
 
     memset(pkg, 0, sizeof(*pkg));
 
-    rc = bpak_io_init_file(&pkg->io, filename, mode);
+    pkg->fp = fopen(filename, mode);
 
-    if (rc != BPAK_OK)
-        return rc;
+    if (pkg->fp == NULL)
+        return -BPAK_NOT_FOUND;
 
     pkg->header_location = BPAK_HEADER_POS_FIRST;
-    rc = bpak_io_seek(pkg->io, 0, BPAK_IO_SEEK_SET);
 
-    if (rc != BPAK_OK)
+    if (fseek(pkg->fp, 0, SEEK_SET) != 0) {
+        rc = -BPAK_SEEK_ERROR;
         goto err_close_io;
+    }
 
-    size_t read_bytes = bpak_io_read(pkg->io, &pkg->header,
-                                        sizeof(pkg->header));
+    size_t read_bytes = fread(&pkg->header, 1, sizeof(pkg->header), pkg->fp);
+
     if (read_bytes != sizeof(pkg->header))
     {
-        rc = -BPAK_FAILED;
+        rc = -BPAK_READ_ERROR;
         goto skip_header;
     }
 
@@ -51,14 +51,14 @@ int bpak_pkg_open(struct bpak_package *pkg, const char *filename,
 
     if (rc != BPAK_OK) {
         /* Check if the header is at the end */
-        rc = bpak_io_seek(pkg->io, 4096, BPAK_IO_SEEK_END);
 
-        if (rc != BPAK_OK) {
+        if (fseek(pkg->fp, 4096, SEEK_END) != 0) {
+            rc = -BPAK_SEEK_ERROR;
             goto skip_header;
         }
 
-        read_bytes = bpak_io_read(pkg->io, &pkg->header,
-                                            sizeof(pkg->header));
+        read_bytes = fread(&pkg->header, 1, sizeof(pkg->header), pkg->fp);
+
         if (read_bytes != sizeof(pkg->header))
         {
             rc = -BPAK_FAILED;
@@ -74,23 +74,23 @@ int bpak_pkg_open(struct bpak_package *pkg, const char *filename,
     }
 
 skip_header:
-    rc = bpak_io_seek(pkg->io, 0, BPAK_IO_SEEK_SET);
-
-    if (rc != BPAK_OK)
+    if (fseek(pkg->fp, 0, SEEK_SET) != 0) {
+        rc = -BPAK_SEEK_ERROR;
         goto err_close_io;
+    }
 
     return BPAK_OK;
 
 err_close_io:
-    bpak_io_close(pkg->io);
+    fclose(pkg->fp);
     return rc;
 }
 
 int bpak_pkg_close(struct bpak_package *pkg)
 {
-    if (pkg->io != NULL) {
-        bpak_io_close(pkg->io);
-        pkg->io = NULL;
+    if (pkg->fp != NULL) {
+        fclose(pkg->fp);
+        pkg->fp = NULL;
     }
     return BPAK_OK;
 }
@@ -210,9 +210,13 @@ int bpak_pkg_compute_payload_hash(struct bpak_package *pkg, char *output,
     char hash_buffer[512];
 
     if (pkg->header_location == BPAK_HEADER_POS_FIRST) {
-        bpak_io_seek(pkg->io, sizeof(pkg->header), BPAK_IO_SEEK_SET);
+        if (fseek(pkg->fp, sizeof(pkg->header), SEEK_SET) != 0) {
+            return -BPAK_SEEK_ERROR;
+        }
     } else {
-        bpak_io_seek(pkg->io, 0, BPAK_IO_SEEK_SET);
+        if (fseek(pkg->fp, 0, SEEK_SET) != 0) {
+            return -BPAK_SEEK_ERROR;
+        }
     }
 
     bpak_foreach_part(&pkg->header, p) {
@@ -222,9 +226,10 @@ int bpak_pkg_compute_payload_hash(struct bpak_package *pkg, char *output,
         if (!p->id)
             continue;
 
-        if (p->flags & BPAK_FLAG_EXCLUDE_FROM_HASH)
-        {
-            bpak_io_seek(pkg->io, bpak_part_size(p), BPAK_IO_SEEK_FWD);
+        if (p->flags & BPAK_FLAG_EXCLUDE_FROM_HASH) {
+            if (fseek(pkg->fp, bpak_part_size(p), SEEK_CUR) != 0) {
+                return -BPAK_SEEK_ERROR;
+            }
             continue;
         }
 
@@ -233,7 +238,9 @@ int bpak_pkg_compute_payload_hash(struct bpak_package *pkg, char *output,
             chunk = (bytes_to_read > sizeof(hash_buffer))?
                         sizeof(hash_buffer):bytes_to_read;
 
-            bpak_io_read(pkg->io, hash_buffer, chunk);
+            if (fread(hash_buffer, 1, chunk, pkg->fp) != chunk) {
+                return -BPAK_READ_ERROR;
+            }
 
             if (pkg->header.hash_kind == BPAK_HASH_SHA256)
                 rc = mbedtls_sha256_update_ret(&sha256, hash_buffer, chunk);
@@ -256,8 +263,7 @@ size_t bpak_pkg_installed_size(struct bpak_package *pkg)
 {
     size_t installed_size = 0;
 
-    bpak_foreach_part(&pkg->header, p)
-    {
+    bpak_foreach_part(&pkg->header, p) {
         installed_size += p->size + p->pad_bytes;
     }
 
@@ -288,24 +294,21 @@ struct bpak_header *bpak_pkg_header(struct bpak_package *pkg)
 
 int bpak_pkg_write_header(struct bpak_package *pkg)
 {
-    int rc;
-
     if (pkg->header_location == BPAK_HEADER_POS_FIRST) {
-        rc = bpak_io_seek(pkg->io, 0, BPAK_IO_SEEK_SET);
+        if (fseek(pkg->fp, 0, SEEK_SET) != 0) {
+            return -BPAK_SEEK_ERROR;
+        }
     } else {
-        rc = bpak_io_seek(pkg->io, 4096, BPAK_IO_SEEK_END);
+        if (fseek(pkg->fp, sizeof(struct bpak_header), SEEK_END) != 0) {
+            return -BPAK_SEEK_ERROR;
+        }
     }
 
-    if (rc != BPAK_OK) {
-        bpak_printf(0, "%s: Could not seek\n", __func__);
-        return rc;
-    }
+    size_t bytes_written = fwrite(&pkg->header, 1, sizeof(pkg->header), pkg->fp);
 
-    rc = bpak_io_write(pkg->io, &pkg->header, sizeof(pkg->header));
-
-    if (rc != sizeof(pkg->header)) {
+    if (bytes_written != sizeof(pkg->header)) {
         bpak_printf(0, "%s: Write failed\n", __func__);
-        return -BPAK_FAILED;
+        return -BPAK_WRITE_ERROR;
     }
 
     return BPAK_OK;
@@ -326,8 +329,8 @@ int bpak_pkg_sign(struct bpak_package *pkg, const uint8_t *signature,
 
 struct decode_private
 {
-    struct bpak_io *output_io;
-    struct bpak_io *origin_io;
+    FILE *output_fp;
+    FILE *origin_fp;
     off_t origin_offset;
     off_t output_offset;
 };
@@ -339,13 +342,11 @@ static ssize_t decode_write_output(off_t offset,
 {
     struct decode_private *priv = (struct decode_private *) user;
 
-    if (bpak_io_seek(priv->output_io, priv->output_offset + offset,
-                        BPAK_IO_SEEK_SET) != BPAK_OK) {
+    if (fseek(priv->output_fp, priv->output_offset + offset, SEEK_SET) != 0) {
         return -BPAK_SEEK_ERROR;
     }
 
-
-    return bpak_io_write(priv->output_io, buffer, length);
+    return fwrite(buffer, 1, length, priv->output_fp);
 }
 
 static ssize_t decode_read_output(off_t offset,
@@ -355,12 +356,11 @@ static ssize_t decode_read_output(off_t offset,
 {
     struct decode_private *priv = (struct decode_private *) user;
 
-    if (bpak_io_seek(priv->output_io, priv->output_offset + offset,
-                        BPAK_IO_SEEK_SET) != BPAK_OK) {
+    if (fseek(priv->output_fp, priv->output_offset + offset, SEEK_SET) != 0) {
         return -BPAK_SEEK_ERROR;
     }
 
-    return bpak_io_read(priv->output_io, buffer, length);
+    return fread(buffer, 1, length, priv->output_fp);
 }
 
 static ssize_t decode_write_output_header(off_t offset,
@@ -373,12 +373,11 @@ static ssize_t decode_write_output_header(off_t offset,
     if (length != sizeof(struct bpak_header))
         return -BPAK_SIZE_ERROR;
 
-    if (bpak_io_seek(priv->output_io, 0,
-                        BPAK_IO_SEEK_SET) != BPAK_OK) {
+    if (fseek(priv->output_fp, 0, SEEK_SET) != 0) {
         return -BPAK_SEEK_ERROR;
     }
 
-    return bpak_io_write(priv->output_io, buffer, length);
+    return fwrite(buffer, 1, length, priv->output_fp);
 }
 
 static ssize_t decode_read_origin(off_t offset,
@@ -388,12 +387,11 @@ static ssize_t decode_read_origin(off_t offset,
 {
     struct decode_private *priv = (struct decode_private *) user;
 
-    if (bpak_io_seek(priv->origin_io, priv->origin_offset + offset,
-                        BPAK_IO_SEEK_SET) != BPAK_OK) {
+    if (fseek(priv->origin_fp, priv->origin_offset + offset, SEEK_SET) != 0) {
         return -BPAK_SEEK_ERROR;
     }
 
-    return bpak_io_read(priv->origin_io, buffer, length);
+    return fread(buffer, 1, length, priv->origin_fp);
 }
 
 int bpak_pkg_transport_decode(struct bpak_package *input,
@@ -413,11 +411,11 @@ int bpak_pkg_transport_decode(struct bpak_package *input,
     struct decode_private decode_private;
 
     memset(&decode_private, 0, sizeof(struct decode_private));
-    decode_private.output_io = output->io;
+    decode_private.output_fp = output->fp;
     if (origin != NULL)
-        decode_private.origin_io = origin->io;
+        decode_private.origin_fp = origin->fp;
     else
-        decode_private.origin_io = NULL;
+        decode_private.origin_fp = NULL;
 
     rc = bpak_transport_decode_init(&decode_ctx,
                                     decode_buffer,
@@ -450,13 +448,10 @@ int bpak_pkg_transport_decode(struct bpak_package *input,
         }
     }
 
-    rc = bpak_io_seek(input->io,
-                 sizeof(struct bpak_header),
-                 BPAK_IO_SEEK_SET);
 
-    if (rc != BPAK_OK) {
+    if (fseek(input->fp, sizeof(struct bpak_header), SEEK_SET) != 0) {
         bpak_printf(0, "%s: Error, could not seek input stream", __func__);
-        return rc;
+        return -BPAK_SEEK_ERROR;
     }
 
     bpak_foreach_part(patch_header, part) {
@@ -464,7 +459,7 @@ int bpak_pkg_transport_decode(struct bpak_package *input,
             break;
 
         /* Compute origin and output offsets */
-        if (origin->io != NULL) {
+        if (origin->fp != NULL) {
             rc = bpak_get_part(&origin->header, part->id, &origin_part);
 
             if (rc != BPAK_OK) {
@@ -491,7 +486,7 @@ int bpak_pkg_transport_decode(struct bpak_package *input,
 
         while (bytes_to_process) {
             size_t chunk_length = BPAK_MIN(bytes_to_process, sizeof(chunk_buffer));
-            size_t bytes_read = bpak_io_read(input->io, chunk_buffer, chunk_length);
+            size_t bytes_read = fread(chunk_buffer, 1, chunk_length, input->fp);
 
             if (bytes_read != chunk_length) {
                 bpak_printf(0, "%s: bytes_read != chunk_length\n", __func__);

@@ -108,7 +108,7 @@ static int add_file(struct bpak_package *pkg,
     else
         p->pad_bytes = 0;
 
-    rc = bpak_io_seek(pkg->io, new_offset, BPAK_IO_SEEK_SET);
+    rc = fseek(pkg->fp, new_offset, SEEK_SET);
 
     if (rc != BPAK_OK)
     {
@@ -129,13 +129,11 @@ static int add_file(struct bpak_package *pkg,
     char chunk_buffer[512];
 
 
-    while (bytes_to_write)
-    {
+    while (bytes_to_write) {
         size_t read_bytes = fread(chunk_buffer, 1, sizeof(chunk_buffer), in_fp);
-        if (bpak_io_write(pkg->io, chunk_buffer, read_bytes) != read_bytes)
-        {
+        if (fwrite(chunk_buffer, 1, read_bytes, pkg->fp) != read_bytes) {
             printf ("write error\n");
-            rc = -BPAK_FAILED;
+            rc = -BPAK_WRITE_ERROR;
             break;
         }
         bytes_to_write -= read_bytes;
@@ -145,12 +143,14 @@ static int add_file(struct bpak_package *pkg,
         goto err_close_fp;
     }
 
-    if (p->pad_bytes)
-    {
+    if (p->pad_bytes) {
         if (bpak_get_verbosity() > 1)
             printf("Adding %i z-pad\n", p->pad_bytes);
         memset(chunk_buffer, 0, sizeof(chunk_buffer));
-        bpak_io_write(pkg->io, chunk_buffer, p->pad_bytes);
+        if (fwrite(chunk_buffer, 1, p->pad_bytes, pkg->fp) != p->pad_bytes) {
+            rc = -BPAK_WRITE_ERROR;
+            goto err_close_fp;
+        }
     }
 
     if (bpak_pkg_update_payload_hash(pkg) != BPAK_OK) {
@@ -221,7 +221,7 @@ static int add_key(struct bpak_package *pkg,
     else
         p->pad_bytes = 0;
 
-    rc = bpak_io_seek(pkg->io, new_offset, BPAK_IO_SEEK_SET);
+    rc = fseek(pkg->fp, new_offset, SEEK_SET);
 
     if (rc != BPAK_OK)
     {
@@ -242,21 +242,23 @@ static int add_key(struct bpak_package *pkg,
 
         memcpy(chunk_buffer, &tmp[sizeof(tmp) - len + bytes_offset], chunk_sz);
 
-        if (bpak_io_write(pkg->io, chunk_buffer, chunk_sz) != chunk_sz)
-        {
+        if (fwrite(chunk_buffer, 1, chunk_sz, pkg->fp) != chunk_sz) {
             printf ("write error\n");
-            rc = -BPAK_FAILED;
+            rc = -BPAK_WRITE_ERROR;
             break;
         }
         bytes_to_write -= chunk_sz;
         bytes_offset += chunk_sz;
     }
 
-    memset(chunk_buffer, 0, sizeof(chunk_buffer));
-    bpak_io_write(pkg->io, chunk_buffer, p->pad_bytes);
-
     if (rc != BPAK_OK)
         return rc;
+
+    memset(chunk_buffer, 0, sizeof(chunk_buffer));
+    if (fwrite(chunk_buffer, 1, p->pad_bytes, pkg->fp) != p->pad_bytes) {
+        return -BPAK_WRITE_ERROR;
+    }
+
 
     if (bpak_pkg_update_payload_hash(pkg) != BPAK_OK) {
         fprintf(stderr, "Error: Could not update payload hash\n");
@@ -279,8 +281,7 @@ static int add_merkle(struct bpak_package *pkg,
     size_t chunk_sz;
     uint64_t new_offset = sizeof(*h);
 
-    if (stat(filename, &statbuf) != 0)
-    {
+    if (stat(filename, &statbuf) != 0) {
         printf("Error: Can't open file '%s'\n", filename);
         return -1;
     }
@@ -406,7 +407,7 @@ static int add_merkle(struct bpak_package *pkg,
     p->size = merkle_sz;
     p->pad_bytes = 0; /* Merkle tree is multiples of 4kByte, no padding needed */
 
-    rc = bpak_io_seek(pkg->io, new_offset, BPAK_IO_SEEK_SET);
+    rc = fseek(pkg->fp, new_offset, SEEK_SET);
 
     if (rc != BPAK_OK)
     {
@@ -414,8 +415,8 @@ static int add_merkle(struct bpak_package *pkg,
         return rc;
     }
 
-    if (bpak_io_write(pkg->io, merkle_buf, merkle_sz) != merkle_sz) {
-        rc = -BPAK_FAILED;
+    if (fwrite(merkle_buf, 1, merkle_sz, pkg->fp) != merkle_sz) {
+        rc = -BPAK_WRITE_ERROR;
         goto err_free_buf;
     }
 
@@ -546,7 +547,6 @@ int action_add(int argc, char **argv)
     }
 
     struct bpak_header *h = bpak_pkg_header(&pkg);
-    struct bpak_io *io = pkg.io;
 
     if (meta_name)
     {

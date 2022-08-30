@@ -3,8 +3,6 @@ lib_LTLIBRARIES = libbpak.la
 
 libbpak_la_SOURCES = bpak.c \
                      bpakcrc.c \
-                     io.c \
-                     file.c \
                      keystore.c \
                      merkle.c \
                      sha256.c \
@@ -40,8 +38,6 @@ libbpak_la_LIBS = $(CODE_COVERAGE_LIBS)
 
 pkginclude_HEADERS = $(top_srcdir)/include/bpak/bpak.h \
                   $(top_srcdir)/include/bpak/crc.h \
-                  $(top_srcdir)/include/bpak/io.h \
-                  $(top_srcdir)/include/bpak/file.h \
                   $(top_srcdir)/include/bpak/keystore.h \
                   $(top_srcdir)/include/bpak/merkle.h \
                   $(top_srcdir)/include/bpak/utils.h \

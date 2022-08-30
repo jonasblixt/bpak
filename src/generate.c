@@ -114,21 +114,22 @@ int action_generate(int argc, char **argv)
             return -BPAK_FAILED;
         }
 
-        struct bpak_io *io = NULL;
+        FILE *fp = NULL;
         struct bpak_header *h = malloc(sizeof(struct bpak_header));
 
         if (!h)
             return -BPAK_FAILED;
 
-        rc = bpak_io_init_file(&io, filename, "rb");
+        fp = fopen(filename, "rb");
 
-        if (rc != BPAK_OK)
+        if (fp == NULL) {
+            rc = -BPAK_NOT_FOUND;
             goto err_free_header_out;
+        }
 
-        size_t read_bytes = bpak_io_read(io, h, sizeof(*h));
+        size_t read_bytes = fread(h, 1, sizeof(*h), fp);
 
-        if (read_bytes != sizeof(*h))
-        {
+        if (read_bytes != sizeof(*h)) {
             rc = -BPAK_FAILED;
             goto err_free_io_out;
         }
@@ -204,12 +205,15 @@ int action_generate(int argc, char **argv)
             printf("    .id = 0x%x,\n", p->id);
             printf("    .size = %li,\n", p->size);
 
-            bpak_io_seek(io, p->offset, BPAK_IO_SEEK_SET);
-            read_bytes = bpak_io_read(io, key_buffer, p->size);
+            if (fseek(fp, p->offset, SEEK_SET) != 0) {
+                rc = -BPAK_SEEK_ERROR;
+                goto err_free_ctx;
+            }
 
-            if (read_bytes != p->size)
-            {
-                rc = -BPAK_FAILED;
+            read_bytes = fread(key_buffer, 1, p->size, fp);
+
+            if (read_bytes != p->size) {
+                rc = -BPAK_READ_ERROR;
                 fprintf(stderr, "Error: Could not read key\n");
                 goto err_free_header_out;
             }
@@ -217,17 +221,14 @@ int action_generate(int argc, char **argv)
             mbedtls_pk_free(&ctx);
             rc = mbedtls_pk_parse_public_key(&ctx, key_buffer, p->size);
 
-            if (rc != 0)
-            {
+            if (rc != 0) {
                 fprintf(stderr, "Error: Coult not parse key\n");
                 rc = -BPAK_FAILED;
                 goto err_free_ctx;
             }
 
-            if (strcmp(mbedtls_pk_get_name(&ctx), "EC") == 0)
-            {
-                switch (mbedtls_pk_get_bitlen(&ctx))
-                {
+            if (strcmp(mbedtls_pk_get_name(&ctx), "EC") == 0) {
+                switch (mbedtls_pk_get_bitlen(&ctx)) {
                     case 256:
                         printf("    .kind = BPAK_KEY_PUB_PRIME256v1,\n");
                     break;
@@ -243,23 +244,16 @@ int action_generate(int argc, char **argv)
                         rc = -BPAK_FAILED;
                         goto err_free_ctx;
                 };
-            }
-            else if(strcmp(mbedtls_pk_get_name(&ctx), "RSA") == 0)
-            {
-                if (mbedtls_pk_get_bitlen(&ctx) == 4096)
-                {
+            } else if(strcmp(mbedtls_pk_get_name(&ctx), "RSA") == 0) {
+                if (mbedtls_pk_get_bitlen(&ctx) == 4096) {
                     printf("    .kind = BPAK_KEY_PUB_RSA4096,\n");
-                }
-                else
-                {
+                } else {
                     fprintf(stderr, "Unknown bit-length (%li)\n",
                             mbedtls_pk_get_bitlen(&ctx));
                     rc = -BPAK_FAILED;
                     goto err_free_ctx;
                 }
-            }
-            else
-            {
+            } else {
                 fprintf(stderr, "Error: Unknown key type (%s)\n", mbedtls_pk_get_name(&ctx));
                 rc = -BPAK_FAILED;
                 goto err_free_ctx;
@@ -267,8 +261,7 @@ int action_generate(int argc, char **argv)
             printf("    .data =\n");
             printf("    {\n");
             printf("            ");
-            for (int i = 0; i < p->size; i++)
-            {
+            for (int i = 0; i < p->size; i++) {
                 printf("0x%2.2x, ", key_buffer[i] & 0xFF);
                 if ((i+1) % 8 == 0)
                     printf("\n            ");
@@ -301,7 +294,7 @@ int action_generate(int argc, char **argv)
     err_free_header_out:
         free(h);
     err_free_io_out:
-        bpak_io_close(io);
+        fclose(fp);
 
     }
 

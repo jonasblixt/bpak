@@ -9,7 +9,6 @@
 #include <bpak/bpak.h>
 #include <bpak/crc.h>
 #include <bpak/pkg.h>
-#include <bpak/file.h>
 #include <bpak/utils.h>
 #include <bpak/merkle.h>
 #include <bpak/bsdiff.h>
@@ -23,8 +22,8 @@ static int transport_copy(struct bpak_header *hdr, uint32_t id,
                           struct bpak_package *output)
 {
     int rc;
-    struct bpak_io *input_io = input->io;
-    struct bpak_io *output_io = output->io;
+    FILE *input_fp = input->fp;
+    FILE *output_fp = output->fp;
     struct bpak_part_header *p = NULL;
     uint64_t part_offset = 0;
 
@@ -37,19 +36,20 @@ static int transport_copy(struct bpak_header *hdr, uint32_t id,
 
     part_offset = bpak_part_offset(hdr, p);
 
-    rc = bpak_io_seek(input_io, part_offset, BPAK_IO_SEEK_SET);
+    rc = fseek(input_fp, part_offset, SEEK_SET);
 
-    if (rc != BPAK_OK) {
+    if (rc != 0) {
         bpak_printf(0, "%s: Could not seek input stream\n", __func__);
+        return -BPAK_SEEK_ERROR;
     }
 
-    rc = bpak_io_seek(output_io,
+    rc = fseek(output_fp,
                  bpak_part_offset(hdr, p),
-                 BPAK_IO_SEEK_SET);
+                 SEEK_SET);
 
-    if (rc != BPAK_OK) {
+    if (rc != 0) {
         bpak_printf(0, "%s: Error, could not seek output stream", __func__);
-        return rc;
+        return -BPAK_SEEK_ERROR;
     }
 
     uint8_t buf[1024];
@@ -58,7 +58,7 @@ static int transport_copy(struct bpak_header *hdr, uint32_t id,
 
     while (bytes_to_copy) {
         chunk = (bytes_to_copy > sizeof(buf))?sizeof(buf):bytes_to_copy;
-        uint64_t read_bytes = bpak_io_read(input_io, buf, chunk);
+        uint64_t read_bytes = fread(buf, 1, chunk, input_fp);
 
         if (read_bytes != chunk) {
             bpak_printf(0, "Error: Could not read chunk");
@@ -66,7 +66,7 @@ static int transport_copy(struct bpak_header *hdr, uint32_t id,
             goto err_out;
         }
 
-        uint64_t written_bytes = bpak_io_write(output_io, buf, chunk);
+        uint64_t written_bytes = fwrite(buf, 1, chunk, output_fp);
 
         if (written_bytes != read_bytes) {
             bpak_printf(0, "Error: Could not write chunk");
@@ -116,13 +116,13 @@ static ssize_t bsdiff_write_output(off_t offset,
 }
 
 
-static ssize_t transport_bsdiff_hs(struct bpak_io *target,
+static ssize_t transport_bsdiff_hs(FILE *target,
                                    off_t target_offset,
                                    size_t target_length,
-                                   struct bpak_io *origin,
+                                   FILE *origin,
                                    off_t origin_offset,
                                    size_t origin_length,
-                                   struct bpak_io *output,
+                                   FILE *output,
                                    off_t output_offset)
 {
     ssize_t rc;
@@ -132,16 +132,20 @@ static ssize_t transport_bsdiff_hs(struct bpak_io *target,
     uint8_t *origin_data_mmap = NULL;
     uint8_t *target_data = NULL;
     uint8_t *target_data_mmap = NULL;
-    int target_fd = bpak_io_file_to_fd(target);
-    int origin_fd = bpak_io_file_to_fd(origin);
+    int target_fd = fileno(target);
+    int origin_fd = fileno(origin);
 
     memset(&priv, 0, sizeof(priv));
-    priv.fd = bpak_io_file_to_fd(output);
+    priv.fd = fileno(output);
     priv.offset = output_offset;
 
     /* Map the entrire file because mmap's offset must be page aligned and
      * we need to handle non page aligned offsets */
-    target_data_mmap = mmap(NULL, target->end_position, PROT_READ, MAP_SHARED,
+    if (fseek(target, 0, SEEK_END) != 0)
+        return -BPAK_SEEK_ERROR;
+
+    size_t target_file_sz = ftell(target);
+    target_data_mmap = mmap(NULL, target_file_sz, PROT_READ, MAP_SHARED,
                             target_fd, 0);
 
     if (((intptr_t) target_data_mmap) == -1) {
@@ -153,7 +157,11 @@ static ssize_t transport_bsdiff_hs(struct bpak_io *target,
     /* Calculate pointer to where the needed data starts */
     target_data = target_data_mmap + target_offset;
 
-    origin_data_mmap = mmap(NULL, origin->end_position, PROT_READ, MAP_SHARED,
+    if (fseek(origin, 0, SEEK_END) != 0)
+        return -BPAK_SEEK_ERROR;
+
+    size_t origin_file_sz = ftell(origin);
+    origin_data_mmap = mmap(NULL, origin_file_sz, PROT_READ, MAP_SHARED,
                             origin_fd, 0);
 
     if (((intptr_t) origin_data_mmap) == -1) {
@@ -190,14 +198,14 @@ static ssize_t transport_bsdiff_hs(struct bpak_io *target,
 err_bsdiff_free:
     bpak_bsdiff_hs_free(&bsdiff);
 err_munmap_origin:
-    munmap(origin_data_mmap, origin->end_position);
+    munmap(origin_data_mmap, origin_file_sz);
 err_munmap_target:
-    munmap(target_data_mmap, target->end_position);
+    munmap(target_data_mmap, target_file_sz);
     return rc;
 }
 
 struct merkle_priv_ctx {
-    struct bpak_io *out;
+    FILE *out;
     off_t tree_offset;
 };
 
@@ -208,19 +216,19 @@ static ssize_t merkle_tree_rd(off_t offset,
 {
     struct merkle_priv_ctx *priv = (struct merkle_priv_ctx *) user_priv;
 
-    int64_t pos = bpak_io_tell(priv->out);
+    int64_t pos = ftell(priv->out);
 
-    if (bpak_io_seek(priv->out, priv->tree_offset + offset,
-                        BPAK_IO_SEEK_SET) != BPAK_OK) {
+    if (fseek(priv->out, priv->tree_offset + offset,
+                        SEEK_SET) != 0) {
         bpak_printf(0, "Error: merkle write seek error\n");
-        return -BPAK_FAILED;
+        return -BPAK_SEEK_ERROR;
     }
 
-    ssize_t bytes_read = bpak_io_read(priv->out, buf, size);
+    ssize_t bytes_read = fwrite(buf, 1, size, priv->out);
 
-    if (bpak_io_seek(priv->out, pos, BPAK_IO_SEEK_SET) != BPAK_OK) {
+    if (fseek(priv->out, pos, SEEK_SET) != BPAK_OK) {
         bpak_printf(0, "Error: merkle read seek error\n");
-        return -BPAK_FAILED;
+        return -BPAK_SEEK_ERROR;
     }
 
     return bytes_read;
@@ -233,25 +241,25 @@ static ssize_t merkle_tree_wr(off_t offset,
 {
     struct merkle_priv_ctx *priv = (struct merkle_priv_ctx *) user_priv;
 
-    int64_t pos = bpak_io_tell(priv->out);
+    int64_t pos = ftell(priv->out);
 
-    if (bpak_io_seek(priv->out, priv->tree_offset + offset,
-                        BPAK_IO_SEEK_SET) != BPAK_OK) {
+    if (fseek(priv->out, priv->tree_offset + offset,
+                        SEEK_SET) != BPAK_OK) {
         bpak_printf(0, "Error: merkle write seek error\n");
-        return -BPAK_FAILED;
+        return -BPAK_SEEK_ERROR;
     }
 
-    ssize_t bytes_written = bpak_io_write(priv->out, buf, size);
+    ssize_t bytes_written = fwrite(buf, 1, size, priv->out);
 
-    if (bpak_io_seek(priv->out, pos, BPAK_IO_SEEK_SET) != BPAK_OK) {
+    if (fseek(priv->out, pos, SEEK_SET) != 0) {
         bpak_printf(0, "Error: merkle write seek error\n");
-        return -BPAK_FAILED;
+        return -BPAK_SEEK_ERROR;
     }
 
     return bytes_written;
 }
 
-static ssize_t transport_merkle_generate(struct bpak_io *io,
+static ssize_t transport_merkle_generate(FILE *fp,
                                          struct bpak_header *header,
                                          uint32_t merkle_tree_id,
                                          off_t offset)
@@ -304,7 +312,7 @@ static ssize_t transport_merkle_generate(struct bpak_io *io,
 
     /* Init merkle private context for wr/rd callbacks */
     memset(&merkle_priv, 0, sizeof(merkle_priv));
-    merkle_priv.out = io;
+    merkle_priv.out = fp;
     merkle_priv.tree_offset = offset + bpak_part_offset(header, fs_part) +
                                   bpak_part_size(fs_part);
 
@@ -324,16 +332,16 @@ static ssize_t transport_merkle_generate(struct bpak_io *io,
     }
 
     /* Position input stream to where the data starts */
-    if (bpak_io_seek(io, offset + bpak_part_offset(header, fs_part),
-                        BPAK_IO_SEEK_SET) != BPAK_OK) {
+    if (fseek(fp, offset + bpak_part_offset(header, fs_part),
+                        SEEK_SET) != 0) {
         bpak_printf(0, "Error: seek\n");
-        return -BPAK_FAILED;
+        return -BPAK_SEEK_ERROR;
     }
 
     bytes_to_process = fs_part->size;
     while (bytes_to_process) {
-        chunk_length = bpak_io_read(io, chunk_buffer,
-                            BPAK_MIN(sizeof(chunk_buffer), bytes_to_process));
+        chunk_length = fread(chunk_buffer, 1,
+                            BPAK_MIN(sizeof(chunk_buffer), bytes_to_process), fp);
 
         rc = bpak_merkle_process(&merkle, chunk_buffer, chunk_length);
 
@@ -380,9 +388,9 @@ static int transport_process(struct bpak_transport_meta *tm,
     struct bpak_part_header *input_part = NULL;
     struct bpak_part_header *output_part = NULL;
     struct bpak_part_header *origin_part = NULL;
-    struct bpak_io *input_io = input->io;
-    struct bpak_io *output_io = output->io;
-    struct bpak_io *origin_io = NULL;
+    FILE *input_fp = input->fp;
+    FILE *output_fp = output->fp;
+    FILE *origin_fp = NULL;
     uint64_t bytes_to_copy = 0;
     size_t chunk_sz = 0;
     size_t read_bytes = 0;
@@ -394,7 +402,7 @@ static int transport_process(struct bpak_transport_meta *tm,
     struct bpak_header *origin_header = bpak_pkg_header(origin);
 
     if (origin) {
-        origin_io = origin->io;
+        origin_fp = origin->fp;
     }
 
     rc = bpak_get_part(input_header, part_ref_id, &input_part);
@@ -432,35 +440,45 @@ static int transport_process(struct bpak_transport_meta *tm,
         return BPAK_OK;
 
     /* Populate the header in the output stream */
-    bpak_io_seek(output_io, 0, BPAK_IO_SEEK_SET);
-    bpak_io_write(output_io, output_header, sizeof(*output_header));
+    rc = fseek(output_fp, 0, SEEK_SET);
+
+    if (rc != 0) {
+        bpak_printf(0, "%s: Error, could not seek output stream", __func__);
+        return -BPAK_SEEK_ERROR;
+    }
+
+    if (fwrite(output_header, 1, sizeof(*output_header), output_fp) !=
+                sizeof(*output_header)) {
+        bpak_printf(0, "Error: Could not write output header\n");
+        return -BPAK_WRITE_ERROR;
+    }
 
     bpak_printf(1, "Initializing alg, input size %li bytes\n",
                 bpak_part_size(input_part));
 
-    rc = bpak_io_seek(origin_io,
+    rc = fseek(origin_fp,
                  bpak_part_offset(origin_header, origin_part),
-                 BPAK_IO_SEEK_SET);
+                 SEEK_SET);
 
-    if (rc != BPAK_OK) {
+    if (rc != 0) {
         bpak_printf(0, "%s: Error, could not seek origin stream", __func__);
         return rc;
     }
 
-    rc = bpak_io_seek(input_io,
+    rc = fseek(input_fp,
                  bpak_part_offset(input_header, input_part),
-                 BPAK_IO_SEEK_SET);
+                 SEEK_SET);
 
     if (rc != BPAK_OK) {
         bpak_printf(0, "%s: Error, could not seek input stream", __func__);
         return rc;
     }
 
-    rc = bpak_io_seek(output_io,
+    rc = fseek(output_fp,
                  bpak_part_offset(output_header, output_part),
-                 BPAK_IO_SEEK_SET);
+                 SEEK_SET);
 
-    if (rc != BPAK_OK) {
+    if (rc != 0) {
         bpak_printf(0, "%s: Error, could not seek output stream", __func__);
         return rc;
     }
@@ -474,19 +492,19 @@ static int transport_process(struct bpak_transport_meta *tm,
 
     switch (alg_id) {
         case 0x9f7aacf9: /* id("bsdiff") heatshrink compressor */
-            output_size = transport_bsdiff_hs(input_io,
+            output_size = transport_bsdiff_hs(input_fp,
                                 bpak_part_offset(input_header, input_part),
                                 bpak_part_size(input_part),
-                                origin_io,
+                                origin_fp,
                                 bpak_part_offset(origin_header, origin_part) +
                                   origin_offset,
                                 bpak_part_size(origin_part),
-                                output_io,
+                                output_fp,
                                 bpak_part_offset(output_header, output_part) +
                                   output_offset);
         break;
         case 0xb5bcc58f: /* id("merkle-generate") */
-            output_size = transport_merkle_generate(output_io,
+            output_size = transport_merkle_generate(output_fp,
                                                     &output->header,
                                                     part_ref_id,
                                                     output_offset);
@@ -514,14 +532,15 @@ static int transport_process(struct bpak_transport_meta *tm,
     output_part->flags |= BPAK_FLAG_TRANSPORT;
 
     /* Position output stream at the end of the processed part*/
-    rc = bpak_io_seek(output_io, bpak_part_offset(output_header, output_part) +
-                                 bpak_part_size(output_part),
-                                 BPAK_IO_SEEK_SET);
+    rc = fseek(output_fp, bpak_part_offset(output_header, output_part) +
+                          bpak_part_size(output_part),
+                          SEEK_SET);
 
     if (rc != BPAK_OK) {
         bpak_printf(0, "%s: Error: Could not seek\n", __func__);
         bpak_printf(0, "    offset: %li\n", bpak_part_offset(output_header, output_part));
         bpak_printf(0, "    size:   %li\n", bpak_part_size(output_part));
+        rc = -BPAK_SEEK_ERROR;
         goto err_out;
     }
 
@@ -572,14 +591,15 @@ int bpak_transport_encode(struct bpak_package *input,
     }
 
     // TODO: Header at the end?
-    rc = bpak_io_seek(output->io, 0, BPAK_IO_SEEK_SET);
+    rc = fseek(output->fp, 0, SEEK_SET);
 
-    if (rc != BPAK_OK) {
+    if (rc != 0) {
         bpak_printf(0, "Error: Could not seek\n");
+        rc = -BPAK_SEEK_ERROR;
         goto err_out;
     }
 
-    written = bpak_io_write(output->io, oh, sizeof(*oh));
+    written = fwrite(oh, 1, sizeof(*oh), output->fp);
 
     if (written != sizeof(*oh)) {
         bpak_printf(0, "Error: could not write header");

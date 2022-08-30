@@ -120,11 +120,6 @@ static ssize_t merkle_generate(struct bpak_transport_decode *ctx)
     // TODO: Check roothash?
     bpak_printf(2, "merkle done (%i)\n", rc);
 
-    printf("root hash: ");
-    for (int i = 0; i < 32; i++)
-        printf("%2.2x", roothash[i]);
-    printf("\n");
-
     if (rc == 0)
         return bpak_merkle_get_size(&merkle);
     else

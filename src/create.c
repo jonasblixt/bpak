@@ -148,7 +148,7 @@ int action_create(int argc, char **argv)
         }
     }
 
-    struct bpak_io *io = NULL;
+    FILE *fp = NULL;
     struct bpak_header *h = NULL;;
 
     h = malloc(sizeof(*h));
@@ -165,21 +165,22 @@ int action_create(int argc, char **argv)
     h->hash_kind = hash_kind;
     h->signature_kind = signature_kind;
 
-    rc = bpak_io_init_file(&io, filename, "wb");
+    fp = fopen(filename, "wb");
 
-    if (rc != BPAK_OK)
+    if (fp == NULL) {
+        rc = -BPAK_FAILED;
         goto err_free_header_out;
+    }
 
-    size_t written = bpak_io_write(io, h, sizeof(*h));
+    size_t written = fwrite(h, 1, sizeof(*h), fp);
 
-    if (written != sizeof(*h))
-    {
+    if (written != sizeof(*h)) {
         rc = -BPAK_FAILED;
         goto err_close_io_out;
     }
 
 err_close_io_out:
-    bpak_io_close(io);
+    fclose(fp);
 err_free_header_out:
     free(h);
     return rc;

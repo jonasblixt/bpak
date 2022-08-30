@@ -12,8 +12,8 @@
 #ifndef INCLUDE_BPAK_PKG_H_
 #define INCLUDE_BPAK_PKG_H_
 
+#include <stdio.h>
 #include <bpak/bpak.h>
-#include <bpak/io.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -46,7 +46,7 @@ struct bpak_dependency
  */
 struct bpak_package
 {
-    struct bpak_io *io;                   /*!< I/O Stream  for package */
+    FILE *fp;                             /*!< I/O Stream  for package */
     struct bpak_header header;            /*!< BPAK Header */
     const char *filename;                 /*!< Filename */
     enum bpak_header_pos header_location; /*!< Header location */

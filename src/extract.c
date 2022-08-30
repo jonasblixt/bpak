@@ -188,11 +188,10 @@ int action_extract(int argc, char **argv)
             p_offset = bpak_part_offset(h, part) - sizeof(*h);
         }
 
-        rc = bpak_io_seek(pkg.io, p_offset, BPAK_IO_SEEK_SET);
-
-        if (rc != BPAK_OK)
-        {
+        if (fseek(pkg.fp, p_offset, SEEK_SET) != 0) {
             fprintf(stderr, "Error: Could not seek in stream\n");
+            rc = -BPAK_SEEK_ERROR;
+            goto err_close_pkg_out;
         }
 
         if (output_filename) {
@@ -218,8 +217,12 @@ int action_extract(int argc, char **argv)
                     chunk = bytes_to_copy;
                 }
 
-                chunk = bpak_io_read(pkg.io, copy_buffer, chunk);
-                fwrite(copy_buffer, chunk, 1, fp);
+                chunk = fread(copy_buffer, 1, chunk, pkg.fp);
+                if (fwrite(copy_buffer, 1, chunk, fp) != chunk) {
+                    rc = -BPAK_WRITE_ERROR;
+                    goto err_close_pkg_out;
+                }
+
                 bytes_to_copy -= chunk;
             }
         } else {
@@ -237,7 +240,7 @@ int action_extract(int argc, char **argv)
                     chunk = bytes_to_copy;
                 }
 
-                chunk = bpak_io_read(pkg.io, copy_buffer, chunk);
+                chunk = fread(copy_buffer, 1, chunk, pkg.fp);
 
                 if (write(1, copy_buffer, chunk) != chunk) {
                     fprintf(stderr, "Error: write failed\n");
