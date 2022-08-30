@@ -1,3 +1,12 @@
+/**
+ * BPAK - Bit Packer
+ *
+ * Copyright (C) 2019 Jonas Blixt <jonpe960@gmail.com>
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
@@ -11,9 +20,10 @@
 #include <bpak/pkg.h>
 #include <bpak/utils.h>
 #include <bpak/transport.h>
-
-#include "sha256.h"
-#include "sha512.h"
+#include <mbedtls/config.h>
+#include <mbedtls/platform.h>
+#include <mbedtls/sha256.h>
+#include <mbedtls/sha512.h>
 
 int bpak_pkg_open(struct bpak_package *pkg, const char *filename,
                   const char *mode)

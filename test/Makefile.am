@@ -1,7 +1,7 @@
 COMMON_TEST_CFLAGS = -I $(top_srcdir)/include \
                      -I $(top_srcdir)/lib \
                      -fsanitize=address
-
+COMMON_TEST_LDADD = libnala.la $(top_builddir)/lib/libbpak.la -lmbedtls -lmbedcrypto
 check_LTLIBRARIES = libnala.la
 
 libnala_la_SOURCES = nala.c
@@ -17,39 +17,39 @@ check_PROGRAMS = test_core_meta \
                  test_meta_align
 
 test_core_meta_SOURCES = test_core_meta.c common.c
-test_core_meta_LDADD = libnala.la $(top_builddir)/lib/libbpak.la
+test_core_meta_LDADD = $(COMMON_TEST_LDADD) 
 test_core_meta_CFLAGS = $(COMMON_TEST_CFLAGS)
 
 test_bsdiff_hs_SOURCES = test_bsdiff_hs.c common.c
-test_bsdiff_hs_LDADD = libnala.la $(top_builddir)/lib/libbpak.la
+test_bsdiff_hs_LDADD = $(COMMON_TEST_LDADD)
 test_bsdiff_hs_CFLAGS = $(COMMON_TEST_CFLAGS)
 
 test_bsdiff_SOURCES = test_bsdiff.c common.c
-test_bsdiff_LDADD = libnala.la $(top_builddir)/lib/libbpak.la
+test_bsdiff_LDADD = $(COMMON_TEST_LDADD)
 test_bsdiff_CFLAGS = $(COMMON_TEST_CFLAGS)
 
 test_core_part_SOURCES = test_core_part.c common.c
-test_core_part_LDADD = libnala.la $(top_builddir)/lib/libbpak.la
+test_core_part_LDADD = $(COMMON_TEST_LDADD)
 test_core_part_CFLAGS = $(COMMON_TEST_CFLAGS)
 
 test_alignment_SOURCES = test_alignment.c common.c
-test_alignment_LDADD = libnala.la $(top_builddir)/lib/libbpak.la
+test_alignment_LDADD = $(COMMON_TEST_LDADD)
 test_alignment_CFLAGS = $(COMMON_TEST_CFLAGS)
 
 test_alg_heatshrink_SOURCES = test_alg_heatshrink.c common.c
-test_alg_heatshrink_LDADD = libnala.la $(top_builddir)/lib/libbpak.la
+test_alg_heatshrink_LDADD = $(COMMON_TEST_LDADD)
 test_alg_heatshrink_CFLAGS = $(COMMON_TEST_CFLAGS)
 
 test_merkle_SOURCES = test_merkle.c common.c
-test_merkle_LDADD = libnala.la $(top_builddir)/lib/libbpak.la
+test_merkle_LDADD = $(COMMON_TEST_LDADD)
 test_merkle_CFLAGS = $(COMMON_TEST_CFLAGS)
 
 test_struct_sz_SOURCES = test_struct_sz.c common.c
-test_struct_sz_LDADD = libnala.la $(top_builddir)/lib/libbpak.la
+test_struct_sz_LDADD = $(COMMON_TEST_LDADD)
 test_struct_sz_CFLAGS = $(COMMON_TEST_CFLAGS)
 
 test_meta_align_SOURCES = test_meta_align.c common.c
-test_meta_align_LDADD = libnala.la $(top_builddir)/lib/libbpak.la
+test_meta_align_LDADD = $(COMMON_TEST_LDADD)
 test_meta_align_CFLAGS = $(COMMON_TEST_CFLAGS)
 
 TESTS = test_core_meta \

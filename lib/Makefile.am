@@ -5,8 +5,6 @@ libbpak_la_SOURCES = bpak.c \
                      bpakcrc.c \
                      keystore.c \
                      merkle.c \
-                     sha256.c \
-                     sha512.c \
                      utils.c \
                      sais.c \
                      pkg.c \
@@ -15,6 +13,8 @@ libbpak_la_SOURCES = bpak.c \
 
 libbpak_la_CFLAGS = -I$(top_srcdir)/include \
                      $(CODE_COVERAGE_CFLAGS)
+
+libbpak_la_LDFLAGS =  -lmbedtls -lmbedcrypto
 
 if BUILD_BPAK_CODECS
 

@@ -10,8 +10,10 @@
 #include <string.h>
 #include <bpak/bpak.h>
 #include <bpak/merkle.h>
-
-#include "sha256.h"
+#include <mbedtls/config.h>
+#include <mbedtls/platform.h>
+#include <mbedtls/sha256.h>
+#include <mbedtls/sha512.h>
 
 static size_t bpak_merkle_offset(struct bpak_merkle_context *ctx, int level)
 {
