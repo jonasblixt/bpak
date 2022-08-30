@@ -106,7 +106,7 @@ int action_extract(int argc, char **argv)
         return -1;
     }
 
-    struct bpak_package *pkg = NULL;
+    struct bpak_package pkg;
 
     rc = bpak_pkg_open(&pkg, filename, "r+");
 
@@ -116,7 +116,7 @@ int action_extract(int argc, char **argv)
         return -BPAK_FAILED;
     }
 
-    struct bpak_header *h = bpak_pkg_header(pkg);
+    struct bpak_header *h = bpak_pkg_header(&pkg);
 
     if (!((meta_id > 0) ^ (part_id > 0)))
     {
@@ -182,13 +182,13 @@ int action_extract(int argc, char **argv)
 
         uint64_t p_offset = 0;
 
-        if (pkg->header_location == BPAK_HEADER_POS_FIRST) {
+        if (pkg.header_location == BPAK_HEADER_POS_FIRST) {
             p_offset = bpak_part_offset(h, part);
         } else {
             p_offset = bpak_part_offset(h, part) - sizeof(*h);
         }
 
-        rc = bpak_io_seek(pkg->io, p_offset, BPAK_IO_SEEK_SET);
+        rc = bpak_io_seek(pkg.io, p_offset, BPAK_IO_SEEK_SET);
 
         if (rc != BPAK_OK)
         {
@@ -218,7 +218,7 @@ int action_extract(int argc, char **argv)
                     chunk = bytes_to_copy;
                 }
 
-                chunk = bpak_io_read(pkg->io, copy_buffer, chunk);
+                chunk = bpak_io_read(pkg.io, copy_buffer, chunk);
                 fwrite(copy_buffer, chunk, 1, fp);
                 bytes_to_copy -= chunk;
             }
@@ -237,7 +237,7 @@ int action_extract(int argc, char **argv)
                     chunk = bytes_to_copy;
                 }
 
-                chunk = bpak_io_read(pkg->io, copy_buffer, chunk);
+                chunk = bpak_io_read(pkg.io, copy_buffer, chunk);
 
                 if (write(1, copy_buffer, chunk) != chunk) {
                     fprintf(stderr, "Error: write failed\n");
@@ -254,6 +254,6 @@ err_close_fp_out:
     if (fp)
         fclose(fp);
 err_close_pkg_out:
-    bpak_pkg_close(pkg);
+    bpak_pkg_close(&pkg);
     return rc;
 }

@@ -265,7 +265,7 @@ int action_sign(int argc, char **argv)
         return -1;
     }
 
-    struct bpak_package *pkg = NULL;
+    struct bpak_package pkg;
     uint8_t hash_output[128];
 
     rc = bpak_pkg_open(&pkg, filename, "r+");
@@ -276,7 +276,7 @@ int action_sign(int argc, char **argv)
         return -BPAK_FAILED;
     }
 
-    struct bpak_header *h = bpak_pkg_header(pkg);
+    struct bpak_header *h = bpak_pkg_header(&pkg);
 
     FILE *sig_fp = NULL;
 
@@ -293,7 +293,7 @@ int action_sign(int argc, char **argv)
 
     } else {
         size_t hash_size = sizeof(hash_output);
-        bpak_pkg_compute_header_hash(pkg, hash_output, &hash_size, true);
+        bpak_pkg_compute_header_hash(&pkg, hash_output, &hash_size, true);
         if (bpak_get_verbosity()) {
             printf("Computed hash: ");
             for (int i = 0; i < hash_size; i++)
@@ -345,7 +345,7 @@ int action_sign(int argc, char **argv)
             goto err_out;
         }
 
-        rc = mbedtls_pk_sign(&ctx, hash_kind(pkg->header.hash_kind),
+        rc = mbedtls_pk_sign(&ctx, hash_kind(pkg.header.hash_kind),
                             hash_output, hash_size,
                             sig, &size,
                             mbedtls_ctr_drbg_random, &ctr_drbg);
@@ -365,11 +365,11 @@ int action_sign(int argc, char **argv)
         printf("\n");
     }
 
-    rc = bpak_pkg_sign(pkg, sig, size);
+    rc = bpak_pkg_sign(&pkg, sig, size);
 
 err_out:
 
-    bpak_pkg_close(pkg);
+    bpak_pkg_close(&pkg);
     return rc;
 }
 
@@ -433,7 +433,7 @@ int action_verify(int argc, char **argv)
         return -1;
     }
 
-    struct bpak_package *pkg = NULL;
+    struct bpak_package pkg;
     uint8_t hash_output[128];
     uint8_t sig[1024];
     size_t sig_size;
@@ -448,16 +448,16 @@ int action_verify(int argc, char **argv)
 
     sig_size = sizeof(sig);
 
-    rc = bpak_copyz_signature(&pkg->header, sig, &sig_size);
+    rc = bpak_copyz_signature(&pkg.header, sig, &sig_size);
 
     if (rc != BPAK_OK)
         goto err_out;
 
-    struct bpak_header *h = bpak_pkg_header(pkg);
+    struct bpak_header *h = bpak_pkg_header(&pkg);
 
     size_t hash_size = sizeof(hash_output);
     /* Update the header hash and payload hash */
-    bpak_pkg_compute_header_hash(pkg, hash_output, &hash_size, true);
+    bpak_pkg_compute_header_hash(&pkg, hash_output, &hash_size, true);
 
     if (bpak_get_verbosity() > 1)
     {
@@ -508,7 +508,7 @@ int action_verify(int argc, char **argv)
         goto err_out;
     }
 
-    rc = mbedtls_pk_verify(&ctx, hash_kind(pkg->header.hash_kind),
+    rc = mbedtls_pk_verify(&ctx, hash_kind(pkg.header.hash_kind),
                             hash_output, hash_size,
                             sig, sig_size);
 
@@ -524,6 +524,6 @@ int action_verify(int argc, char **argv)
 err_free_sign_key:
     free(sign_key);
 err_out:
-    bpak_pkg_close(pkg);
+    bpak_pkg_close(&pkg);
     return rc;
 }

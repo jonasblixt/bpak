@@ -535,7 +535,7 @@ int action_add(int argc, char **argv)
         return -1;
     }
 
-    struct bpak_package *pkg;
+    struct bpak_package pkg;
 
     rc = bpak_pkg_open(&pkg, filename, "r+");
 
@@ -545,8 +545,8 @@ int action_add(int argc, char **argv)
         return -BPAK_FAILED;
     }
 
-    struct bpak_header *h = bpak_pkg_header(pkg);
-    struct bpak_io *io = pkg->io;
+    struct bpak_header *h = bpak_pkg_header(&pkg);
+    struct bpak_io *io = pkg.io;
 
     if (meta_name)
     {
@@ -712,7 +712,7 @@ int action_add(int argc, char **argv)
         if (bpak_get_verbosity() > 2)
             printf("Meta data array pointer = %p\n", meta_data);
 
-        rc = bpak_pkg_write_header(pkg);
+        rc = bpak_pkg_write_header(&pkg);
 
         if (rc != BPAK_OK)
         {
@@ -722,17 +722,17 @@ int action_add(int argc, char **argv)
     }
     else if (part_name && !encoder)
     {
-        rc = add_file(pkg, from_file, part_name, flags);
+        rc = add_file(&pkg, from_file, part_name, flags);
     }
     else if (part_name && strcmp(encoder, "key") == 0)
     {
-        rc = add_key(pkg, from_file, part_name, flags);
+        rc = add_key(&pkg, from_file, part_name, flags);
     }
     else if (strcmp(encoder, "merkle") == 0)
     {
         if (bpak_get_verbosity())
             printf("Writing filesystem...\n");
-        rc = add_file(pkg, from_file, part_name, flags);
+        rc = add_file(&pkg, from_file, part_name, flags);
 
         if (rc != BPAK_OK)
             goto err_close_pkg_out;
@@ -740,7 +740,7 @@ int action_add(int argc, char **argv)
         if (bpak_get_verbosity())
             printf("Building merkle tree...\n");
 
-        rc = add_merkle(pkg, from_file, part_name, flags);
+        rc = add_merkle(&pkg, from_file, part_name, flags);
 
     }
     else
@@ -750,6 +750,6 @@ int action_add(int argc, char **argv)
     }
 
 err_close_pkg_out:
-    bpak_pkg_close(pkg);
+    bpak_pkg_close(&pkg);
     return rc;
 }

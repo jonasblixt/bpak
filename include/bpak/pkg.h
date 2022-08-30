@@ -61,7 +61,7 @@ struct bpak_package
  *
  * @return BPAK_OK on success
  */
-int bpak_pkg_open(struct bpak_package **pkg_, const char *filename,
+int bpak_pkg_open(struct bpak_package *pkg, const char *filename,
                   const char *mode);
 
 /**

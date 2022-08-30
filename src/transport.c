@@ -120,9 +120,9 @@ int action_transport(int argc, char **argv)
         return -1;
     }
 
-    struct bpak_package *input = NULL;
-    struct bpak_package *output = NULL;
-    struct bpak_package *origin = NULL;
+    struct bpak_package input;
+    struct bpak_package output;
+    struct bpak_package origin;
 
     rc = bpak_pkg_open(&input, filename, "rb+");
 
@@ -132,14 +132,12 @@ int action_transport(int argc, char **argv)
         return -BPAK_FAILED;
     }
 
-    struct bpak_header *h = bpak_pkg_header(input);
+    struct bpak_header *h = bpak_pkg_header(&input);
 
-    if (origin_file)
-    {
+    if (origin_file) {
         rc = bpak_pkg_open(&origin, origin_file, "rb+");
 
-        if (rc != BPAK_OK)
-        {
+        if (rc != BPAK_OK) {
             printf("Error: Could not open package %s\n", origin_file);
             return -BPAK_FAILED;
         }
@@ -162,13 +160,13 @@ int action_transport(int argc, char **argv)
     }
 
     if (encode_flag) {
-        rc = bpak_pkg_transport_encode(input, output, origin);
+        rc = bpak_pkg_transport_encode(&input, &output, &origin);
     } else if(decode_flag) {
-        rc = bpak_pkg_transport_decode(input, /* Input package or 'patch' */
-                                       output,
-                                       origin); /* Origin data to use for patch operation*/
+        rc = bpak_pkg_transport_decode(&input, /* Input package or 'patch' */
+                                       &output,
+                                       &origin); /* Origin data to use for patch operation*/
     } else if (add_flag && encoder_alg && decoder_alg) {
-        rc = bpak_add_transport_meta(&input->header, part_ref,
+        rc = bpak_add_transport_meta(&input.header, part_ref,
                                          bpak_id(encoder_alg),
                                          bpak_id(decoder_alg));
 
@@ -177,7 +175,7 @@ int action_transport(int argc, char **argv)
             goto err_out;
         }
 
-        rc = bpak_pkg_write_header(input);
+        rc = bpak_pkg_write_header(&input);
     } else {
         rc = -BPAK_FAILED;
         printf("Error: Unknown command");
@@ -189,10 +187,11 @@ int action_transport(int argc, char **argv)
     }
 
 err_out:
-    bpak_pkg_close(input);
+    bpak_pkg_close(&input);
 
-    if (origin)
-        bpak_pkg_close(origin);
+    if (origin_file) {
+        bpak_pkg_close(&origin);
+    }
 
     return rc;
 }

@@ -104,7 +104,7 @@ int action_show(int argc, char **argv)
         return -1;
     }
 
-    struct bpak_package *pkg = NULL;
+    struct bpak_package pkg;
 
     rc = bpak_pkg_open(&pkg, filename, "rb");
 
@@ -114,7 +114,7 @@ int action_show(int argc, char **argv)
         return -BPAK_FAILED;
     }
 
-    struct bpak_header *h = bpak_pkg_header(pkg);
+    struct bpak_header *h = bpak_pkg_header(&pkg);
 
     if (bpak_valid_header(h) != BPAK_OK) {
         fprintf(stderr, "Error: Invalid BPAK header\n");
@@ -176,14 +176,14 @@ int action_show(int argc, char **argv)
     if (binary_hash_output)
     {
         hash_size = sizeof(hash_output);
-        bpak_pkg_compute_header_hash(pkg, hash_output, &hash_size, true);
+        bpak_pkg_compute_header_hash(&pkg, hash_output, &hash_size, true);
 
         for (int i = 0; i < hash_size; i++)
             printf("%c", hash_output[i]);
         goto err_pkg_close;
     } else if (text_hash_output) {
         hash_size = sizeof(hash_output);
-        bpak_pkg_compute_header_hash(pkg, hash_output, &hash_size, true);
+        bpak_pkg_compute_header_hash(&pkg, hash_output, &hash_size, true);
 
         for (int i = 0; i < hash_size; i++)
             printf("%2.2x", hash_output[i] & 0xFF);
@@ -253,7 +253,7 @@ int action_show(int argc, char **argv)
 
     char hash_str[128];
     hash_size = sizeof(hash_output);
-    rc = bpak_pkg_compute_header_hash(pkg, hash_output, &hash_size, true);
+    rc = bpak_pkg_compute_header_hash(&pkg, hash_output, &hash_size, true);
     if (rc != BPAK_OK) {
         fprintf(stderr, "Error: Failed to compute header hash\n");
         goto err_pkg_close;
@@ -263,7 +263,7 @@ int action_show(int argc, char **argv)
     printf("\nHeader hash:  %s\n", hash_str);
 
     hash_size = sizeof(hash_output);
-    rc = bpak_pkg_compute_payload_hash(pkg, hash_output, &hash_size);
+    rc = bpak_pkg_compute_payload_hash(&pkg, hash_output, &hash_size);
 
     if (rc != BPAK_OK) {
         fprintf(stderr, "Error: Failed to compute header hash\n");
@@ -287,10 +287,10 @@ int action_show(int argc, char **argv)
         printf ("Metadata usage: %i/%li bytes\n", meta_size,
                     sizeof(h->metadata));
 
-        printf("Transport size: %li bytes\n", bpak_pkg_size(pkg));
-        printf("Installed size: %li bytes\n", bpak_pkg_installed_size(pkg));
+        printf("Transport size: %li bytes\n", bpak_pkg_size(&pkg));
+        printf("Installed size: %li bytes\n", bpak_pkg_installed_size(&pkg));
     }
 err_pkg_close:
-    bpak_pkg_close(pkg);
+    bpak_pkg_close(&pkg);
     return rc;
 }

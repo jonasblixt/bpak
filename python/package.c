@@ -10,7 +10,7 @@
 typedef struct
 {
     PyObject_HEAD
-    struct bpak_package *pkg;
+    struct bpak_package pkg;
 } BPAKPackage;
 
 static PyObject *BPAKPackageError;
@@ -22,19 +22,12 @@ static PyObject * package_new(PyTypeObject *type, PyObject *args,
     BPAKPackage *self;
 
     self = (BPAKPackage *) type->tp_alloc(type, 0);
-
-    if (self != NULL)
-    {
-        self->pkg = NULL;
-    }
-
     return (PyObject *) self;
 }
 
 static void package_dealloc(BPAKPackage *self)
 {
-    if (self->pkg)
-        bpak_pkg_close(self->pkg);
+    bpak_pkg_close(&self->pkg);
     Py_TYPE(self)->tp_free((PyObject *) self);
 }
 
@@ -87,24 +80,23 @@ static int package_init(BPAKPackage *self, PyObject *args,
 
 static PyObject *package_size(BPAKPackage *self)
 {
-    return PyLong_FromLong(bpak_pkg_size(self->pkg));
+    return PyLong_FromLong(bpak_pkg_size(&self->pkg));
 }
 
 static PyObject *package_installed_size(BPAKPackage *self)
 {
-    return PyLong_FromLong(bpak_pkg_installed_size(self->pkg));
+    return PyLong_FromLong(bpak_pkg_installed_size(&self->pkg));
 }
 
 static PyObject * package_close(BPAKPackage *self)
 {
-    bpak_pkg_close(self->pkg);
-    self->pkg = NULL;
+    bpak_pkg_close(&self->pkg);
     return Py_None;
 }
 
 static PyObject * package_hash_kind(BPAKPackage *self)
 {
-    struct bpak_header *h = bpak_pkg_header(self->pkg);
+    struct bpak_header *h = bpak_pkg_header(&self->pkg);
     return Py_BuildValue("i", h->hash_kind);
 }
 
@@ -113,7 +105,7 @@ static PyObject * package_set_hash_kind(BPAKPackage *self, PyObject *args,
 {
     int rc;
     int hash_kind;
-    struct bpak_header *h = bpak_pkg_header(self->pkg);
+    struct bpak_header *h = bpak_pkg_header(&self->pkg);
     static char *kwlist[] = {"hash_kind", NULL};
 
     rc = PyArg_ParseTupleAndKeywords(args, kwds, "i", kwlist, &hash_kind);
@@ -125,7 +117,7 @@ static PyObject * package_set_hash_kind(BPAKPackage *self, PyObject *args,
 
     h->hash_kind = (uint32_t) hash_kind;
 
-    rc = bpak_pkg_write_header(self->pkg);
+    rc = bpak_pkg_write_header(&self->pkg);
 
     if (rc != BPAK_OK) {
         PyErr_SetString(BPAKPackageError, "Could not write header");
@@ -140,7 +132,7 @@ static PyObject * package_set_sign_kind(BPAKPackage *self, PyObject *args,
 {
     int rc;
     int sign_kind;
-    struct bpak_header *h = bpak_pkg_header(self->pkg);
+    struct bpak_header *h = bpak_pkg_header(&self->pkg);
     static char *kwlist[] = {"sign_kind", NULL};
 
     rc = PyArg_ParseTupleAndKeywords(args, kwds, "i", kwlist, &sign_kind);
@@ -152,7 +144,7 @@ static PyObject * package_set_sign_kind(BPAKPackage *self, PyObject *args,
 
     h->signature_kind = (uint32_t) sign_kind;
 
-    rc = bpak_pkg_write_header(self->pkg);
+    rc = bpak_pkg_write_header(&self->pkg);
 
     if (rc != BPAK_OK) {
         PyErr_SetString(BPAKPackageError, "Could not write header");
@@ -168,7 +160,7 @@ static PyObject * package_set_signature(BPAKPackage *self, PyObject *args,
     int rc;
     char *signature_data;
     Py_ssize_t signature_sz;
-    struct bpak_header *h = bpak_pkg_header(self->pkg);
+    struct bpak_header *h = bpak_pkg_header(&self->pkg);
     static char *kwlist[] = {"signature_data", NULL};
 
     rc = PyArg_ParseTupleAndKeywords(args, kwds, "y#", kwlist, &signature_data,
@@ -181,7 +173,7 @@ static PyObject * package_set_signature(BPAKPackage *self, PyObject *args,
 
     bpak_printf(2, "Sig data: %p, sz = %i\n", signature_data, signature_sz);
 
-    rc = bpak_pkg_sign(self->pkg, signature_data, signature_sz);
+    rc = bpak_pkg_sign(&self->pkg, signature_data, signature_sz);
 
     if (rc != BPAK_OK) {
         PyErr_SetString(BPAKPackageError, "Failed to set signature data");
@@ -196,7 +188,7 @@ static PyObject * package_set_key_id(BPAKPackage *self, PyObject *args,
 {
     int rc;
     long key_id;
-    struct bpak_header *h = bpak_pkg_header(self->pkg);
+    struct bpak_header *h = bpak_pkg_header(&self->pkg);
     static char *kwlist[] = {"key_id", NULL};
 
     rc = PyArg_ParseTupleAndKeywords(args, kwds, "l", kwlist, &key_id);
@@ -208,7 +200,7 @@ static PyObject * package_set_key_id(BPAKPackage *self, PyObject *args,
 
     bpak_set_key_id(h, (uint32_t) key_id);
 
-    rc = bpak_pkg_write_header(self->pkg);
+    rc = bpak_pkg_write_header(&self->pkg);
 
     if (rc != BPAK_OK) {
         PyErr_SetString(BPAKPackageError, "Could not write header");
@@ -223,7 +215,7 @@ static PyObject * package_set_keystore_id(BPAKPackage *self, PyObject *args,
 {
     int rc;
     long keystore_id;
-    struct bpak_header *h = bpak_pkg_header(self->pkg);
+    struct bpak_header *h = bpak_pkg_header(&self->pkg);
     static char *kwlist[] = {"keystore_id", NULL};
 
     rc = PyArg_ParseTupleAndKeywords(args, kwds, "l", kwlist, &keystore_id);
@@ -235,7 +227,7 @@ static PyObject * package_set_keystore_id(BPAKPackage *self, PyObject *args,
 
     bpak_set_keystore_id(h, (uint32_t) keystore_id);
 
-    rc = bpak_pkg_write_header(self->pkg);
+    rc = bpak_pkg_write_header(&self->pkg);
 
     if (rc != BPAK_OK) {
         PyErr_SetString(BPAKPackageError, "Could not write header");
@@ -252,7 +244,7 @@ static PyObject * package_read_raw_meta(BPAKPackage *self, PyObject *args,
     long meta_id, part_ref_id;
     char *meta_ptr = NULL;
     struct bpak_meta_header *meta_header = NULL;
-    struct bpak_header *h = bpak_pkg_header(self->pkg);
+    struct bpak_header *h = bpak_pkg_header(&self->pkg);
     static char *kwlist[] = {"meta_id", "part_ref_id", NULL};
 
     rc = PyArg_ParseTupleAndKeywords(args, kwds, "ll", kwlist,
@@ -285,7 +277,7 @@ static PyObject * package_write_raw_meta(BPAKPackage *self, PyObject *args,
     int meta_id, part_ref_id;
     void *meta = NULL;
     struct bpak_meta_header *meta_header = NULL;
-    struct bpak_header *h = bpak_pkg_header(self->pkg);
+    struct bpak_header *h = bpak_pkg_header(&self->pkg);
     static char *kwlist[] = {"meta_id", "part_ref_id", "data", NULL};
 
     rc = PyArg_ParseTupleAndKeywords(args, kwds, "lly#", kwlist,
@@ -314,7 +306,7 @@ static PyObject * package_write_raw_meta(BPAKPackage *self, PyObject *args,
 
         memcpy(meta, meta_data_in, meta_data_sz);
 
-        rc = bpak_pkg_write_header(self->pkg);
+        rc = bpak_pkg_write_header(&self->pkg);
 
         if (rc != BPAK_OK) {
             PyErr_SetString(BPAKPackageError, "Could not write header");
@@ -331,7 +323,7 @@ static PyObject * package_write_raw_meta(BPAKPackage *self, PyObject *args,
         memcpy(meta, meta_data_in, meta_data_sz);
         meta_header->size = meta_data_sz;
 
-        rc = bpak_pkg_write_header(self->pkg);
+        rc = bpak_pkg_write_header(&self->pkg);
 
         if (rc != BPAK_OK) {
             PyErr_SetString(BPAKPackageError, "Could not write header");
@@ -360,7 +352,7 @@ static PyObject * package_transport_encode(BPAKPackage *self,
     }
 
 
-    rc = bpak_pkg_transport_encode(self->pkg, output->pkg, origin->pkg);
+    rc = bpak_pkg_transport_encode(&self->pkg, &output->pkg, &origin->pkg);
 
     if (rc != BPAK_OK)
     {
@@ -377,7 +369,7 @@ static PyObject * package_read_digest(BPAKPackage *self)
 
     size_t hash_size = sizeof(digest_data);
 
-    if (bpak_pkg_compute_header_hash(self->pkg, digest_data, &hash_size, false) != BPAK_OK)
+    if (bpak_pkg_compute_header_hash(&self->pkg, digest_data, &hash_size, false) != BPAK_OK)
         return Py_None;
 
     return Py_BuildValue("y#", digest_data, hash_size);
@@ -389,7 +381,7 @@ static PyObject * package_read_signature(BPAKPackage *self)
 
     size_t sig_size = sizeof(signature_data);
 
-    if (bpak_copyz_signature(&self->pkg->header, signature_data, &sig_size) != BPAK_OK)
+    if (bpak_copyz_signature(&self->pkg.header, signature_data, &sig_size) != BPAK_OK)
         return Py_None;
 
     return Py_BuildValue("y#", signature_data, sig_size);
@@ -397,7 +389,7 @@ static PyObject * package_read_signature(BPAKPackage *self)
 
 static PyObject * package_deps(BPAKPackage *self)
 {
-    struct bpak_header *h = bpak_pkg_header(self->pkg);
+    struct bpak_header *h = bpak_pkg_header(&self->pkg);
     int n = 0;
 
     bpak_foreach_meta(h, m)

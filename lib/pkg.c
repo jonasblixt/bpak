@@ -16,7 +16,7 @@
 #include "sha256.h"
 #include "sha512.h"
 
-int bpak_pkg_open(struct bpak_package **pkg_, const char *filename,
+int bpak_pkg_open(struct bpak_package *pkg, const char *filename,
                   const char *mode)
 {
     int rc;
@@ -26,18 +26,12 @@ int bpak_pkg_open(struct bpak_package **pkg_, const char *filename,
 
     bpak_printf(1, "Opening BPAK file %s\n", filename);
 
-    *pkg_ = malloc(sizeof(struct bpak_package));
-    struct bpak_package *pkg = *pkg_;
-
-    if (!*pkg_)
-        return -BPAK_FAILED;
-
     memset(pkg, 0, sizeof(*pkg));
 
     rc = bpak_io_init_file(&pkg->io, filename, mode);
 
     if (rc != BPAK_OK)
-        goto err_free_pkg;
+        return rc;
 
     pkg->header_location = BPAK_HEADER_POS_FIRST;
     rc = bpak_io_seek(pkg->io, 0, BPAK_IO_SEEK_SET);
@@ -89,16 +83,15 @@ skip_header:
 
 err_close_io:
     bpak_io_close(pkg->io);
-err_free_pkg:
-    free(pkg);
-    *pkg_ = NULL;
     return rc;
 }
 
 int bpak_pkg_close(struct bpak_package *pkg)
 {
-    bpak_io_close(pkg->io);
-    free(pkg);
+    if (pkg->io != NULL) {
+        bpak_io_close(pkg->io);
+        pkg->io = NULL;
+    }
     return BPAK_OK;
 }
 
