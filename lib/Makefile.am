@@ -6,6 +6,7 @@ libbpak_la_SOURCES = bpak.c \
                      keystore.c \
                      merkle.c \
                      utils.c \
+                     id.c \
                      sais.c \
                      pkg.c \
                      pkg_create.c \
@@ -44,6 +45,7 @@ pkginclude_HEADERS = $(top_srcdir)/include/bpak/bpak.h \
                   $(top_srcdir)/include/bpak/keystore.h \
                   $(top_srcdir)/include/bpak/merkle.h \
                   $(top_srcdir)/include/bpak/utils.h \
+                  $(top_srcdir)/include/bpak/id.h \
                   $(top_srcdir)/include/bpak/pkg.h \
                   $(top_srcdir)/include/bpak/transport.h \
                   $(top_srcdir)/include/bpak/bsdiff.h \

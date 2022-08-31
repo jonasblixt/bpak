@@ -9,6 +9,7 @@
 
 #include <string.h>
 #include <bpak/bpak.h>
+#include <bpak/id.h>
 
 int bpak_get_meta_and_header(struct bpak_header *hdr, uint32_t id,
         uint32_t part_id_ref, void **output, void *offset,
@@ -249,21 +250,21 @@ const char *bpak_known_id(uint32_t id)
 {
     switch(id)
     {
-    case 0xfb2f1f3f:
+    case BPAK_ID_BPAK_PACKAGE:
         return "bpak-package";
-    case 0x2d44bbfb:
+    case BPAK_ID_BPAK_TRANSPORT:
         return "bpak-transport";
-    case  0x7c9b2f93:
+    case BPAK_ID_MERKLE_SALT:
         return "merkle-salt";
-    case 0xe68fc9be:
+    case BPAK_ID_MERKLE_ROOT_HASH:
         return "merkle-root-hash";
-    case 0xd1e64a4b:
+    case BPAK_ID_PB_LOAD_ADDR:
         return "pb-load-addr";
-    case 0x9a5bab69:
+    case BPAK_ID_BPAK_VERSION:
         return "bpak-version";
-    case 0x0ba87349:
+    case BPAK_ID_BPAK_DEPENDENCY:
         return "bpak-dependency";
-    case 0xfb367d9a:
+    case BPAK_ID_KEYSTORE_PROVIDER_ID:
         return "keystore-provider-id";
     default:
         return "";

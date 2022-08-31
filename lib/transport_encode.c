@@ -10,6 +10,7 @@
 #include <bpak/crc.h>
 #include <bpak/pkg.h>
 #include <bpak/utils.h>
+#include <bpak/id.h>
 #include <bpak/merkle.h>
 #include <bpak/bsdiff.h>
 #include <bpak/bsdiff_hs.h>
@@ -291,9 +292,8 @@ static ssize_t transport_merkle_generate(FILE *fp,
     }
 
     /* Load the salt that should be used */
-                                   /*  id("merkle-salt") */
-    rc = bpak_get_meta_with_ref(header,  0x7c9b2f93, fs_id, (void **) &salt,
-                                NULL);
+    rc = bpak_get_meta_with_ref(header, BPAK_ID_MERKLE_SALT, fs_id,
+                                (void **) &salt, NULL);
 
     if (rc != BPAK_OK) {
         bpak_printf(0, "Error: Could not load merkle salt for part 0x%x\n",
@@ -491,7 +491,7 @@ static int transport_process(struct bpak_transport_meta *tm,
     }
 
     switch (alg_id) {
-        case 0x9f7aacf9: /* id("bsdiff") heatshrink compressor */
+        case BPAK_ID_BSDIFF: /* heatshrink compressor */
             output_size = transport_bsdiff_hs(input_fp,
                                 bpak_part_offset(input_header, input_part),
                                 bpak_part_size(input_part),
@@ -503,13 +503,13 @@ static int transport_process(struct bpak_transport_meta *tm,
                                 bpak_part_offset(output_header, output_part) +
                                   output_offset);
         break;
-        case 0xb5bcc58f: /* id("merkle-generate") */
+        case BPAK_ID_MERKLE_GENERATE:
             output_size = transport_merkle_generate(output_fp,
                                                     &output->header,
                                                     part_ref_id,
                                                     output_offset);
         break;
-        case 0x57004cd0: /* id("remove-data") */
+        case BPAK_ID_REMOVE_DATA:
             /* No data is produced for this part */
             output_size = 0;
         break;
@@ -565,7 +565,7 @@ int bpak_transport_encode(struct bpak_package *input,
             break;
 
         if (bpak_get_meta_with_ref(&input->header,
-                                   bpak_id("bpak-transport"),
+                                   BPAK_ID_BPAK_TRANSPORT,
                                    ph->id,
                                    (void **) &tm, NULL) == BPAK_OK) {
             bpak_printf(2, "Transport encoding part: %x\n", ph->id);

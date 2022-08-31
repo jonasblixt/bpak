@@ -13,6 +13,7 @@
 #include <bpak/transport.h>
 #include <bpak/bspatch_hs.h>
 #include <bpak/merkle.h>
+#include <bpak/id.h>
 
 static ssize_t merkle_generate(struct bpak_transport_decode *ctx)
 {
@@ -41,8 +42,7 @@ static ssize_t merkle_generate(struct bpak_transport_decode *ctx)
     }
 
     /* Load the salt that should be used */
-                                   /*  id("merkle-salt") */
-    rc = bpak_get_meta_with_ref(ctx->patch_header,  0x7c9b2f93, fs_id,
+    rc = bpak_get_meta_with_ref(ctx->patch_header, BPAK_ID_MERKLE_SALT, fs_id,
                                 (void **) &salt, NULL);
 
     if (rc != BPAK_OK) {
@@ -183,7 +183,7 @@ int bpak_transport_decode_start(struct bpak_transport_decode *ctx,
 
     /* Check if there is any transport meta data for this part in the header */
     if (bpak_get_meta_with_ref(ctx->patch_header,
-                               0x2d44bbfb, /* bpak_id("bpak-transport") */
+                               BPAK_ID_BPAK_TRANSPORT,
                                part->id,
                                (void **) &tm, NULL) == BPAK_OK) {
         ctx->decoder_id = tm->alg_id_decode;
@@ -195,7 +195,7 @@ int bpak_transport_decode_start(struct bpak_transport_decode *ctx,
     size_t patch_input_length = bpak_part_size(part);
 
     switch (ctx->decoder_id) {
-        case 0xb5964388: /* id("bspatch") heatshrink decompressor*/
+        case BPAK_ID_BSPATCH: /* heatshrink decompressor*/
         {
             if (ctx->read_origin == NULL) {
                 /* bspach requires the origin stream */
@@ -217,7 +217,7 @@ int bpak_transport_decode_start(struct bpak_transport_decode *ctx,
                                      ctx->user);
         }
         break;
-        case 0xb5bcc58f: /* id("merkle-generate") */
+        case BPAK_ID_MERKLE_GENERATE:
             /* Merkle trees are generated from output data
              *  of a previous patch step, this is done in the final call */
             rc = BPAK_OK;
@@ -240,7 +240,7 @@ int bpak_transport_decode_write_chunk(struct bpak_transport_decode *ctx,
     int rc;
 
     switch (ctx->decoder_id) {
-        case 0xb5964388: /* id("bspatch") heatshrink decompressor*/
+        case BPAK_ID_BSPATCH: /* id("bspatch") heatshrink decompressor*/
         {
             struct bpak_bspatch_hs_context *hs_ctx = \
                     (struct bpak_bspatch_hs_context *) ctx->decode_context_buffer;
@@ -277,7 +277,7 @@ int bpak_transport_decode_finish(struct bpak_transport_decode *ctx)
     ssize_t output_length = 0;
 
     switch (ctx->decoder_id) {
-        case 0xb5964388: /* id("bspatch") heatshrink decompressor*/
+        case BPAK_ID_BSPATCH: /* id("bspatch") heatshrink decompressor*/
         {
             struct bpak_bspatch_hs_context *hs_ctx = \
                     (struct bpak_bspatch_hs_context *) ctx->decode_context_buffer;
@@ -285,7 +285,7 @@ int bpak_transport_decode_finish(struct bpak_transport_decode *ctx)
             output_length = bpak_bspatch_hs_final(hs_ctx);
         }
         break;
-        case 0xb5bcc58f: /* id("merkle-generate") */
+        case BPAK_ID_MERKLE_GENERATE: /* id("merkle-generate") */
             output_length = merkle_generate(ctx);
         break;
         case 0: /* Copy data */

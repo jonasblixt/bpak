@@ -15,6 +15,7 @@
 #include <bpak/bpak.h>
 #include <bpak/pkg.h>
 #include <bpak/utils.h>
+#include <bpak/id.h>
 #include <bpak/merkle.h>
 #include <mbedtls/config.h>
 #include <mbedtls/platform.h>
@@ -154,7 +155,7 @@ int bpak_pkg_add_file_with_merkle_tree(struct bpak_package *pkg,
     uint8_t *m = NULL;
     char tmp[512];
 
-    rc = bpak_add_meta(h, bpak_id("merkle-salt"), bpak_id(part_name), (void **) &m,
+    rc = bpak_add_meta(h, BPAK_ID_MERKLE_SALT, bpak_id(part_name), (void **) &m,
                             sizeof(bpak_merkle_hash_t));
 
     if (rc != BPAK_OK)
@@ -163,7 +164,7 @@ int bpak_pkg_add_file_with_merkle_tree(struct bpak_package *pkg,
     memcpy(m, salt, sizeof(bpak_merkle_hash_t));
 
     m = NULL;
-    rc = bpak_add_meta(h, bpak_id("merkle-root-hash"), bpak_id(part_name),
+    rc = bpak_add_meta(h, BPAK_ID_MERKLE_ROOT_HASH, bpak_id(part_name),
                         (void **) &m, sizeof(bpak_merkle_hash_t));
 
     if (rc != BPAK_OK)
