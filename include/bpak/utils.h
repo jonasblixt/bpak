@@ -30,15 +30,6 @@ extern "C" {
  */
 int bpak_bin2hex(uint8_t *data, size_t data_sz, char *buf, size_t buf_sz);
 
-/**
- * Translate a string to id value
- *
- * @param[in] str Input string
- *
- * @return BPAK ID of \ref str
- */
-uint32_t bpak_id(const char *str);
-
 #ifdef __cplusplus
 }  // extern "C"
 #endif
