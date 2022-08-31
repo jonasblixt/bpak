@@ -6,6 +6,7 @@
 #include <bpak/bpak.h>
 #include <bpak/pkg.h>
 #include <bpak/utils.h>
+#include <bpak/id.h>
 
 typedef struct
 {

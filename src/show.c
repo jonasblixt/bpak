@@ -16,6 +16,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <bpak/pkg.h>
+#include <bpak/id.h>
 #include "bpak_tool.h"
 
 int action_show(int argc, char **argv)

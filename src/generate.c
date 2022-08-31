@@ -13,6 +13,8 @@
 #include <mbedtls/entropy.h>
 #include <mbedtls/ctr_drbg.h>
 
+#include <bpak/id.h>
+
 #include "bpak_tool.h"
 #include "uuid/uuid.h"
 

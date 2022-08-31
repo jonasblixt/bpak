@@ -17,8 +17,8 @@
 #include <sys/stat.h>
 
 #include <bpak/bpak.h>
-#include <bpak/io.h>
 #include <bpak/pkg.h>
+#include <bpak/id.h>
 
 #include "bpak_tool.h"
 

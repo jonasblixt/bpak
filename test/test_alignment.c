@@ -1,6 +1,7 @@
 #include <string.h>
 #include <bpak/bpak.h>
 #include <bpak/utils.h>
+#include <bpak/id.h>
 #include "nala.h"
 
 TEST(part_alignment)

@@ -18,6 +18,7 @@
 #include <uuid.h>
 
 #include <bpak/pkg.h>
+#include <bpak/id.h>
 #include "bpak_tool.h"
 
 int action_add(int argc, char **argv)

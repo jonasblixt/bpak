@@ -15,6 +15,7 @@
 #include <getopt.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <bpak/id.h>
 
 #include "bpak_tool.h"
 
