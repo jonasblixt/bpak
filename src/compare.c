@@ -15,7 +15,7 @@
 #include <getopt.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-
+#include <bpak/id.h>
 #include "bpak_tool.h"
 
 int action_compare(int argc, char **argv)
@@ -178,7 +178,7 @@ int action_compare(int argc, char **argv)
 
         meta_to_string(h1p, m, string_output, sizeof(string_output));
         printf("   %8.8x   %-3u    %-20s %s\n", m->id, m->size,
-                                bpak_known_id(m->id), string_output);
+                                bpak_id_to_string(m->id), string_output);
         printf(NO_CLR);
     }
 
@@ -204,7 +204,7 @@ int action_compare(int argc, char **argv)
             printf(RED_YL);
             meta_to_string(h2p, m, string_output, sizeof(string_output));
             printf("+   %8.8x   %-3u    %-20s %s\n", m->id, m->size,
-                                    bpak_known_id(m->id), string_output);
+                                    bpak_id_to_string(m->id), string_output);
             printf(NO_CLR);
         }
     }

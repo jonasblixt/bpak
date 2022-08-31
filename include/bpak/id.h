@@ -42,6 +42,15 @@ extern "C" {
  */
 uint32_t bpak_id(const char *str);
 
+/**
+ * Return string representaion of known id's
+ *
+ * @param[in] id BPAK ID
+ * 
+ * @return Textual representation of BPAK ID
+ **/
+const char *bpak_id_to_string(uint32_t id);
+
 #ifdef __cplusplus
 }  // extern "C"
 #endif

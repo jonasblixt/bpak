@@ -409,16 +409,6 @@ size_t bpak_part_size_wo_pad(struct bpak_part_header *part);
  **/
 const char *bpak_error_string(int code);
 
-
-/**
- * Return string representaion of known id's
- *
- * @param[in] id BPAK ID
- * 
- * @return Textual representation of BPAK ID
- **/
-const char *bpak_known_id(uint32_t id);
-
 /**
  * Translates signature type to a textual version
  *
