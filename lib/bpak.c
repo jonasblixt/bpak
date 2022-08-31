@@ -262,8 +262,6 @@ const char *bpak_known_id(uint32_t id)
         return "pb-load-addr";
     case BPAK_ID_BPAK_VERSION:
         return "bpak-version";
-    case BPAK_ID_BPAK_DEPENDENCY:
-        return "bpak-dependency";
     case BPAK_ID_KEYSTORE_PROVIDER_ID:
         return "keystore-provider-id";
     default:

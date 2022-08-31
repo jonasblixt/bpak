@@ -19,27 +19,6 @@
 extern "C" {
 #endif
 
-/*! \public
- *
- * BPAK dependancy operators
- */
-enum
-{
-    BPAK_DEP_EQ,        /* == Equal */
-    BPAK_DEP_GT,        /* >  Greater than */
-    BPAK_DEP_GTE,       /* >= Greater than or equal */
-};
-
-/**
- * Dependency meta data
- *
- **/
-struct bpak_dependency
-{
-    uint8_t uuid[16];   /*!< Package UUID to depend on */
-    char constraint[];  /*!< Constrain expression for example >= 1.0.0 */
-} __attribute__ ((packed));
-
 /**
  * BPAK Package
  *

@@ -77,12 +77,6 @@ class Package:
         Transport encode package
         """
         return self.pkg.transport(origin.pkg, output.pkg)
-    def deps(self):
-        """
-        Read package dependencies
-        """
-        # return self.pkg.deps()
-        raise Exception("Broken, don't use this for the moment")
     def size(self):
         """
         Return the size of the package in bytes.

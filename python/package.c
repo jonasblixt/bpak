@@ -388,54 +388,10 @@ static PyObject * package_read_signature(BPAKPackage *self)
     return Py_BuildValue("y#", signature_data, sig_size);
 }
 
-static PyObject * package_deps(BPAKPackage *self)
-{
-    struct bpak_header *h = bpak_pkg_header(&self->pkg);
-    int n = 0;
-
-    bpak_foreach_meta(h, m)
-    {
-        if (m->id == 0x0ba87349) /* bpak-dependency */
-            n++;
-    }
-
-    if (!n)
-    {
-        return Py_BuildValue("");
-    }
-
-    PyObject *result = PyTuple_New(n);
-    n = 0;
-
-    bpak_foreach_meta(h, m)
-    {
-        if (m->id == 0x0ba87349) /* bpak-dependency */
-        {
-
-            char uuid_str[64];
-            struct bpak_dependency *d = \
-                       (struct bpak_dependency *) &(h->metadata[m->offset]);
-
-            // TODO: Fix this
-            //  Use python's uuid functions to parse the uuid byte array instead
-            //bpak_uuid_to_string(d->uuid, uuid_str, sizeof(uuid_str));
-
-            PyObject *dep = Py_BuildValue("s s", uuid_str, d->constraint);
-
-            PyTuple_SetItem(result, n++, dep);
-        }
-    }
-
-    return (PyObject *) result;
-}
-
 static PyMethodDef package_methods[] =
 {
     {"size", (PyCFunction) package_size, METH_NOARGS,
                 "Return the actual size of the archive"},
-
-    {"deps", (PyCFunction) package_deps, METH_NOARGS,
-                "Get package dependencies"},
 
     {"read_digest", (PyCFunction) package_read_digest, METH_NOARGS,
                 "Get package digest"},
@@ -578,10 +534,6 @@ PyMODINIT_FUNC PyInit__bpak(void)
         Py_DECREF(m_p);
         return NULL;
     }
-
-    PyModule_AddIntConstant(m_p, "BPAK_DEP_EQ", BPAK_DEP_EQ);
-    PyModule_AddIntConstant(m_p, "BPAK_DEP_GT", BPAK_DEP_GT);
-    PyModule_AddIntConstant(m_p, "BPAK_DEP_GTE", BPAK_DEP_GTE);
 
     return (m_p);
 }

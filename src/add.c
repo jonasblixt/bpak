@@ -143,10 +143,6 @@ int action_add(int argc, char **argv)
         if (part_ref)
             part_ref_id = bpak_id(part_ref);
 
-        /* Some known meta id's have predefined encoders */
-        if (strcmp(meta_name, "bpak-dependency") == 0)
-            encoder = "dependency";
-
         if (!from_string)
         {
             printf("Error: No input supplied with --from-string\n");
@@ -224,52 +220,6 @@ int action_add(int argc, char **argv)
                 if(bpak_get_verbosity())
                 {
                     printf("Adding %s <%x>\n", meta_name, value);
-                }
-            }
-            else if (strcmp(encoder, "dependency") == 0)
-            {
-                /* Dependency format: <uuid>-<semver>*/
-                struct bpak_dependency *d;
-
-                char uuid_text[37];
-                char *constraint_ptr = (char *) &from_string[37];
-
-                memset(uuid_text, 0, sizeof(uuid_text));
-                memcpy(uuid_text, from_string, 36);
-
-                if (from_string[36] != ':')
-                {
-                    rc = -BPAK_FAILED;
-                    printf("Error: malformed constraint\n");
-                    goto err_close_pkg_out;
-                }
-
-                size_t meta_size = sizeof(*d) + strlen(constraint_ptr);
-
-                rc = bpak_add_meta(h, bpak_id(meta_name), 0,
-                          (void **) &d, meta_size);
-
-                if (rc != BPAK_OK)
-                {
-                    printf("Error: Could not add meta data\n");
-                    goto err_close_pkg_out;
-                }
-
-                rc = uuid_parse(uuid_text, d->uuid);
-
-                if (rc != 0)
-                {
-                    rc = -BPAK_FAILED;
-                    printf("Error: Could not convert UUID string\n");
-                    goto err_close_pkg_out;
-                }
-
-                strncpy(d->constraint, constraint_ptr,
-                                        meta_size - sizeof(*d));
-
-                if(bpak_get_verbosity())
-                {
-                    printf("Adding dependency %s\n", from_string);
                 }
             }
             else

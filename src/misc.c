@@ -200,7 +200,6 @@ void print_add_usage(void)
     printf("    integer                         Encode as integer\n");
     printf("    uuid                            Encode as UUID\n");
     printf("    id                              Encode as bpak id\n");
-    printf("    dependency                      Encode as UUID-semver tuple\n");
     printf("\n");
 
     printf("Encoders that can be used together with --from-file:\n");
@@ -322,20 +321,6 @@ int meta_to_string(struct bpak_header *h, struct bpak_meta_header *m,
             return -BPAK_FAILED;
 
         memcpy(buf, byte_ptr, m->size);
-    }
-    else if (m->id == bpak_id("bpak-dependency"))
-    {
-
-        uint8_t uuid_str[64];
-
-        struct bpak_dependency *d = \
-                   (struct bpak_dependency *) &(h->metadata[m->offset]);
-
-
-        uuid_to_string(d->uuid, uuid_str, sizeof(uuid_str));
-
-        snprintf(buf, size, "%s (%s)", uuid_str, d->constraint);
-
     }
     else if (m->id == bpak_id("keystore-provider-id"))
     {
