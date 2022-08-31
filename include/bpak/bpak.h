@@ -101,6 +101,8 @@ enum bpak_errors
     BPAK_BUFFER_TOO_SMALL,
     BPAK_FILE_NOT_FOUND,
     BPAK_KEY_DECODE,
+    BPAK_VERIFY_FAIL,
+    BPAK_UNSUPPORTED_KEY,
 };
 
 /*! \public

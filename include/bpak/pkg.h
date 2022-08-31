@@ -146,8 +146,26 @@ struct bpak_header *bpak_pkg_header(struct bpak_package *pkg);
 int bpak_pkg_write_raw_signature(struct bpak_package *pkg,
                                     const uint8_t *signature, size_t size);
 
-
+/**
+ * Sign the package
+ *
+ * @param[in] pkg Package pointer
+ * @param[in] key_filename Full path of key to be used for signing
+ *
+ * @return BPAK_OK on success
+ */
 int bpak_pkg_sign(struct bpak_package *pkg, const char *key_filename);
+
+/**
+ * Verify the package
+ *
+ * @param[in] pkg Package pointer
+ * @param[in] key_filename Full path of key to be used for verify operation
+ *
+ * @return BPAK_OK on success
+ */
+int bpak_pkg_verify(struct bpak_package *pkg, const char *key_filename);
+
 /**
  * Transport encode package
  *

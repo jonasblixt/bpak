@@ -167,6 +167,14 @@ const char *bpak_error_string(int code)
             return "Decoder context too small";
         case -BPAK_BUFFER_TOO_SMALL:
             return "Buffer too small";
+        case -BPAK_FILE_NOT_FOUND:
+            return "File not found";
+        case -BPAK_KEY_DECODE:
+            return "Could not decode key";
+        case -BPAK_VERIFY_FAIL:
+            return "Verification failed";
+        case -BPAK_UNSUPPORTED_KEY:
+            return "Unsupported key";
         default:
             return "Unknown";
     }

@@ -324,8 +324,8 @@ int bpak_pkg_write_header(struct bpak_package *pkg)
     return BPAK_OK;
 }
 
-int bpak_pkg_sign(struct bpak_package *pkg, const uint8_t *signature,
-                    size_t size)
+int bpak_pkg_write_raw_signature(struct bpak_package *pkg,
+                                 const uint8_t *signature, size_t size)
 {
     int rc;
     uint8_t *signature_ptr = NULL;
