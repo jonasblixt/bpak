@@ -4,6 +4,10 @@
 #include <stdint.h>
 #include <stddef.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* Version 0.4.1 */
 #define HEATSHRINK_VERSION_MAJOR 0
 #define HEATSHRINK_VERSION_MINOR 4
@@ -94,6 +98,8 @@ HSE_poll_res heatshrink_encoder_poll(heatshrink_encoder *hse,
  * call heatshrink_encoder_poll and repeat. */
 HSE_finish_res heatshrink_encoder_finish(heatshrink_encoder *hse);
 
-
+#ifdef __cplusplus
+}  // extern "C"
+#endif
 
 #endif
