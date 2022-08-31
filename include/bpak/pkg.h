@@ -201,12 +201,46 @@ int bpak_pkg_transport_decode(struct bpak_package *input,
  */
 int bpak_pkg_write_header(struct bpak_package *pkg);
 
+/**
+ * Add a file part to a package
+ *
+ * @param[in] pkg Pointer to a bpak package
+ * @param[in] filename Full path to the file that should be added to the archive
+ * @param[in] part_name Name of part to be created
+ * @param[in] flags Optional flags for part meta data header
+ *
+ * @return BPAK_OK on success or a negative number
+ */
 int bpak_pkg_add_file(struct bpak_package *pkg, const char *filename,
                      const char *part_name, uint8_t flags);
 
+/**
+ * Add a file part to a package and create a separate part with a merkle
+ * hash tree.
+ *
+ * The hash tree part name will be bpak_id('part_name'-hash-tree')
+ *
+ * @param[in] pkg Pointer to a bpak package
+ * @param[in] filename Full path to the file that should be added to the archive
+ * @param[in] part_name Name of part to be created
+ * @param[in] flags Optional flags for part meta data header
+ *
+ * @return BPAK_OK on success or a negative number
+ */
 int bpak_pkg_add_file_with_merkle_tree(struct bpak_package *pkg,
             const char *filename, const char *part_name, uint8_t flags);
 
+/**
+ * Add a crypto key to the archive. This can add both PEM and DER encoded
+ * keys
+ *
+ * @param[in] pkg Pointer to a bpak package
+ * @param[in] filename Full path to the file that should be added to the archive
+ * @param[in] part_name Name of part to be created
+ * @param[in] flags Optional flags for part meta data header
+ *
+ * @return BPAK_OK on success or a negative number
+ */
 int bpak_pkg_add_key(struct bpak_package *pkg, const char *filename,
                      const char *part_name, uint8_t flags);
 
