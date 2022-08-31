@@ -3,7 +3,7 @@
  *
  * BPAK - Bit Packer
  *
- * Copyright (C) 2019 Jonas Blixt <jonpe960@gmail.com>
+ * Copyright (C) 2022 Jonas Blixt <jonpe960@gmail.com>
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -143,21 +143,11 @@ struct bpak_header *bpak_pkg_header(struct bpak_package *pkg);
  *
  * @return BPAK_OK on success
  */
-int bpak_pkg_sign(struct bpak_package *pkg, const uint8_t *signature,
-                    size_t size);
+int bpak_pkg_write_raw_signature(struct bpak_package *pkg,
+                                    const uint8_t *signature, size_t size);
 
-/**
- * Add transport metadata
- *
- * @param[in] pkg Package pointer
- * @param[in] part_ref Part reference, id of part we want to add meta data to
- * @param[in] encoder_id Which encoder to use for transport encoding
- * @param[in] decoder_id Which decoder to use for transport decoding
- *
- * @return BPAK_OK on success
- */
-int bpak_pkg_add_transport(struct bpak_package *pkg, uint32_t part_ref,
-                                uint32_t encoder_id, uint32_t decoder_id);
+
+int bpak_pkg_sign(struct bpak_package *pkg, const char *key_filename);
 /**
  * Transport encode package
  *
@@ -192,6 +182,15 @@ int bpak_pkg_transport_decode(struct bpak_package *input,
  * @return BPAK_OK on success
  */
 int bpak_pkg_write_header(struct bpak_package *pkg);
+
+int bpak_pkg_add_file(struct bpak_package *pkg, const char *filename,
+                     const char *part_name, uint8_t flags);
+
+int bpak_pkg_add_file_with_merkle_tree(struct bpak_package *pkg,
+            const char *filename, const char *part_name, uint8_t flags);
+
+int bpak_pkg_add_key(struct bpak_package *pkg, const char *filename,
+                     const char *part_name, uint8_t flags);
 
 #ifdef __cplusplus
 }  // extern "C"

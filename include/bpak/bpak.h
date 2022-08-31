@@ -99,6 +99,8 @@ enum bpak_errors
     BPAK_BAD_MAGIC,
     BPAK_DECODER_CTX_TOO_SMALL,
     BPAK_BUFFER_TOO_SMALL,
+    BPAK_FILE_NOT_FOUND,
+    BPAK_KEY_DECODE,
 };
 
 /*! \public
