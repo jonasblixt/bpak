@@ -378,14 +378,8 @@ static PyObject * package_read_digest(BPAKPackage *self)
 
 static PyObject * package_read_signature(BPAKPackage *self)
 {
-    char signature_data[512];
-
-    size_t sig_size = sizeof(signature_data);
-
-    if (bpak_copyz_signature(&self->pkg.header, signature_data, &sig_size) != BPAK_OK)
-        return Py_None;
-
-    return Py_BuildValue("y#", signature_data, sig_size);
+    return Py_BuildValue("y#", self->pkg.header.signature,
+                               self->pkg.header.signature_sz);
 }
 
 static PyMethodDef package_methods[] =

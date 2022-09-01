@@ -12,6 +12,7 @@ libbpak_la_SOURCES = bpak.c \
                      pkg_create.c \
                      pkg_sign.c \
                      pkg_verify.c \
+                     verify.c \
                      transport_decode.c \
                      transport_encode.c
 
@@ -47,6 +48,7 @@ pkginclude_HEADERS = $(top_srcdir)/include/bpak/bpak.h \
                   $(top_srcdir)/include/bpak/utils.h \
                   $(top_srcdir)/include/bpak/id.h \
                   $(top_srcdir)/include/bpak/pkg.h \
+                  $(top_srcdir)/include/bpak/verify.h \
                   $(top_srcdir)/include/bpak/transport.h \
                   $(top_srcdir)/include/bpak/bsdiff.h \
                   $(top_srcdir)/include/bpak/bsdiff_hs.h \

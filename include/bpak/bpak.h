@@ -103,6 +103,9 @@ enum bpak_errors
     BPAK_KEY_DECODE,
     BPAK_VERIFY_FAIL,
     BPAK_UNSUPPORTED_KEY,
+    BPAK_BAD_ROOT_HASH,
+    BPAK_BAD_PAYLOAD_HASH,
+    BPAK_MISSING_META_DATA,
 };
 
 /*! \public

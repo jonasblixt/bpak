@@ -176,6 +176,12 @@ const char *bpak_error_string(int code)
             return "Verification failed";
         case -BPAK_UNSUPPORTED_KEY:
             return "Unsupported key";
+        case -BPAK_BAD_ROOT_HASH:
+            return "Bad root hash";
+        case -BPAK_BAD_PAYLOAD_HASH:
+            return "Bad payload hash";
+        case -BPAK_MISSING_META_DATA:
+            return "Missing meta data";
         default:
             return "Unknown";
     }

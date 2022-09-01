@@ -22,6 +22,7 @@
 
 #include <bpak/bpak.h>
 #include <bpak/pkg.h>
+#include <bpak/verify.h>
 #include <bpak/keystore.h>
 
 static int hash_kind(int bpak_hash_kind)
@@ -97,31 +98,44 @@ err_free_ctx:
     return rc;
 }
 
+struct verify_payload_private
+{
+    FILE *fp;
+};
+
+static ssize_t verify_payload_read(off_t offset, uint8_t *buf, size_t size,
+                                void *user)
+{
+    struct verify_payload_private *priv = (struct verify_payload_private *) user;
+
+    if (fseek(priv->fp, offset, SEEK_SET) != 0)
+        return -BPAK_SEEK_ERROR;
+
+    size_t read_bytes = fread(buf, 1, size, priv->fp);
+
+    if (read_bytes != size)
+        return -BPAK_READ_ERROR;
+
+    return read_bytes;
+}
+
 int bpak_pkg_verify(struct bpak_package *pkg, const char *key_filename)
 {
     int rc;
     uint8_t hash_output[128];
-    uint8_t sig[1024];
-    size_t sig_size;
+    size_t hash_size = sizeof(hash_output);
+    struct verify_payload_private verify_payload_private;
+    struct bpak_key *key = NULL;
     const char *pers = "mbedtls_pk_sign";
     mbedtls_pk_context ctx;
     mbedtls_entropy_context entropy;
     mbedtls_ctr_drbg_context ctr_drbg;
 
-    sig_size = sizeof(sig);
-
-    rc = bpak_copyz_signature(&pkg->header, sig, &sig_size);
+    rc = bpak_verify_compute_header_hash(&pkg->header, hash_output, &hash_size);
 
     if (rc != BPAK_OK)
-        goto err_out;
+        return rc;
 
-    struct bpak_header *h = bpak_pkg_header(pkg);
-
-    size_t hash_size = sizeof(hash_output);
-    /* Update the header hash and payload hash */
-    bpak_pkg_update_hash(pkg, hash_output, &hash_size);
-
-    struct bpak_key *key = NULL;
     rc = load_public_key(key_filename, &key);
 
     if (rc != BPAK_OK)
@@ -149,10 +163,24 @@ int bpak_pkg_verify(struct bpak_package *pkg, const char *key_filename)
 
     rc = mbedtls_pk_verify(&ctx, hash_kind(pkg->header.hash_kind),
                             hash_output, hash_size,
-                            sig, sig_size);
+                            pkg->header.signature,
+                            pkg->header.signature_sz);
 
     if (rc != BPAK_OK) {
         rc = -BPAK_VERIFY_FAIL;
+        goto err_free_crypto_ctx_out;
+    }
+
+    memset(&verify_payload_private, 0, sizeof(verify_payload_private));
+    verify_payload_private.fp = pkg->fp;
+
+    rc = bpak_verify_payload(&pkg->header, 
+                             verify_payload_read,
+                             sizeof(struct bpak_header),
+                             &verify_payload_private);
+
+    if (rc != BPAK_OK) {
+        bpak_printf(0, "Error: payload verification failed\n");
         goto err_free_crypto_ctx_out;
     }
 
