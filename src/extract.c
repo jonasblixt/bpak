@@ -182,11 +182,7 @@ int action_extract(int argc, char **argv)
 
         uint64_t p_offset = 0;
 
-        if (pkg.header_location == BPAK_HEADER_POS_FIRST) {
-            p_offset = bpak_part_offset(h, part);
-        } else {
-            p_offset = bpak_part_offset(h, part) - sizeof(*h);
-        }
+        p_offset = bpak_part_offset(h, part);
 
         if (fseek(pkg.fp, p_offset, SEEK_SET) != 0) {
             fprintf(stderr, "Error: Could not seek in stream\n");

@@ -43,8 +43,6 @@ int bpak_pkg_open(struct bpak_package *pkg, const char *filename,
     if (pkg->fp == NULL)
         return -BPAK_NOT_FOUND;
 
-    pkg->header_location = BPAK_HEADER_POS_FIRST;
-
     if (fseek(pkg->fp, 0, SEEK_SET) != 0) {
         rc = -BPAK_SEEK_ERROR;
         goto err_close_io;
@@ -52,8 +50,7 @@ int bpak_pkg_open(struct bpak_package *pkg, const char *filename,
 
     size_t read_bytes = fread(&pkg->header, 1, sizeof(pkg->header), pkg->fp);
 
-    if (read_bytes != sizeof(pkg->header))
-    {
+    if (read_bytes != sizeof(pkg->header)) {
         rc = -BPAK_READ_ERROR;
         goto skip_header;
     }
@@ -61,27 +58,7 @@ int bpak_pkg_open(struct bpak_package *pkg, const char *filename,
     rc = bpak_valid_header(&pkg->header);
 
     if (rc != BPAK_OK) {
-        /* Check if the header is at the end */
-
-        if (fseek(pkg->fp, 4096, SEEK_END) != 0) {
-            rc = -BPAK_SEEK_ERROR;
-            goto skip_header;
-        }
-
-        read_bytes = fread(&pkg->header, 1, sizeof(pkg->header), pkg->fp);
-
-        if (read_bytes != sizeof(pkg->header))
-        {
-            rc = -BPAK_FAILED;
-            goto skip_header;
-        }
-
-        rc = bpak_valid_header(&pkg->header);
-
-        if (rc != BPAK_OK)
-            goto skip_header;
-
-        pkg->header_location = BPAK_HEADER_POS_LAST;
+        goto err_close_io;
     }
 
 skip_header:
@@ -180,14 +157,8 @@ struct bpak_header *bpak_pkg_header(struct bpak_package *pkg)
 
 int bpak_pkg_write_header(struct bpak_package *pkg)
 {
-    if (pkg->header_location == BPAK_HEADER_POS_FIRST) {
-        if (fseek(pkg->fp, 0, SEEK_SET) != 0) {
-            return -BPAK_SEEK_ERROR;
-        }
-    } else {
-        if (fseek(pkg->fp, sizeof(struct bpak_header), SEEK_END) != 0) {
-            return -BPAK_SEEK_ERROR;
-        }
+    if (fseek(pkg->fp, 0, SEEK_SET) != 0) {
+        return -BPAK_SEEK_ERROR;
     }
 
     size_t bytes_written = fwrite(&pkg->header, 1, sizeof(pkg->header), pkg->fp);

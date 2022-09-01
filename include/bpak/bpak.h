@@ -108,17 +108,6 @@ enum bpak_errors
     BPAK_MISSING_META_DATA,
 };
 
-/*! \public
- *
- * The BPAK header can be in the begining or the end of a file or block device
- *
- */
-enum bpak_header_pos
-{
-    BPAK_HEADER_POS_FIRST,
-    BPAK_HEADER_POS_LAST,
-};
-
 /*
  * \def BPAK_FLAG_EXCLUDE_FROM_HASH
  * Data within this part is not included in hashing context
