@@ -156,8 +156,28 @@ int bpak_transport_decode_set_origin(struct bpak_transport_decode *ctx,
                                      struct bpak_header *origin_header,
                                      bpak_io_t read_origin)
 {
+    int rc;
+    uint8_t *origin_package_uuid;
+    uint8_t *patch_package_uuid;
+
     ctx->origin_header = origin_header;
     ctx->read_origin = read_origin;
+
+    /* Origin and input package should have the same package-uuid */
+    rc = bpak_get_meta(origin_header, BPAK_ID_BPAK_PACKAGE,
+                                (void **) &origin_package_uuid, NULL);
+
+    if (rc != BPAK_OK)
+        return rc;
+
+    rc = bpak_get_meta(ctx->patch_header, BPAK_ID_BPAK_PACKAGE,
+                                (void **) &patch_package_uuid, NULL);
+
+    if (rc != BPAK_OK)
+        return rc;
+
+    if (memcmp(origin_package_uuid, patch_package_uuid, 16) != 0)
+        return -BPAK_PACKAGE_UUID_MISMATCH;
 
     return BPAK_OK;
 }

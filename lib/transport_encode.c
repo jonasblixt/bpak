@@ -525,6 +525,28 @@ int bpak_transport_encode(FILE *input_fp, struct bpak_header *input_header,
     struct bpak_part_header *ph = NULL;
     ssize_t written;
 
+
+    if ((origin_fp != NULL) && (origin_header != NULL)) {
+        uint8_t *origin_package_uuid;
+        uint8_t *patch_package_uuid;
+
+        /* Origin and input package should have the same package-uuid */
+        rc = bpak_get_meta(origin_header, BPAK_ID_BPAK_PACKAGE,
+                                    (void **) &origin_package_uuid, NULL);
+
+        if (rc != BPAK_OK)
+            return rc;
+
+        rc = bpak_get_meta(input_header, BPAK_ID_BPAK_PACKAGE,
+                                    (void **) &patch_package_uuid, NULL);
+
+        if (rc != BPAK_OK)
+            return rc;
+
+        if (memcmp(origin_package_uuid, patch_package_uuid, 16) != 0)
+            return -BPAK_PACKAGE_UUID_MISMATCH;
+    }
+
     /* Initialize output header by copying the input header */
     memcpy(output_header, input_header, sizeof(*input_header));
 

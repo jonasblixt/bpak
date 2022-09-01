@@ -182,6 +182,8 @@ const char *bpak_error_string(int code)
             return "Bad payload hash";
         case -BPAK_MISSING_META_DATA:
             return "Missing meta data";
+        case -BPAK_PACKAGE_UUID_MISMATCH:
+            return "Package UUID mismatch";
         default:
             return "Unknown";
     }
