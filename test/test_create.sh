@@ -3,7 +3,7 @@ BPAK=../src/bpak
 V=-vvvv
 echo Creating simple archive
 pwd
-set -e
+set -ex
 
 $BPAK --help
 

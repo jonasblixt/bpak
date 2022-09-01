@@ -370,7 +370,7 @@ static PyObject * package_read_digest(BPAKPackage *self)
 
     size_t hash_size = sizeof(digest_data);
 
-    if (bpak_pkg_compute_header_hash(&self->pkg, digest_data, &hash_size, false) != BPAK_OK)
+    if (bpak_pkg_update_hash(&self->pkg, digest_data, &hash_size) != BPAK_OK)
         return Py_None;
 
     return Py_BuildValue("y#", digest_data, hash_size);

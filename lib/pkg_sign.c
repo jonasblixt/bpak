@@ -129,7 +129,7 @@ int bpak_pkg_sign(struct bpak_package *pkg, const char *key_filename)
     mbedtls_entropy_context entropy;
     mbedtls_ctr_drbg_context ctr_drbg;
 
-    rc = bpak_pkg_compute_header_hash(pkg, hash_output, &hash_size, true);
+    rc = bpak_pkg_update_hash(pkg, hash_output, &hash_size);
 
     if (rc != BPAK_OK)
         goto err_out;

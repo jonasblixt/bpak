@@ -199,7 +199,7 @@ int bpak_pkg_add_file_with_merkle_tree(struct bpak_package *pkg,
         goto err_close_fp_out;
     }
 
-    if (bpak_pkg_update_payload_hash(pkg) != BPAK_OK) {
+    if (bpak_pkg_update_hash(pkg, NULL, NULL) != BPAK_OK) {
         bpak_printf(0, "Error: Could not update payload hash\n");
         rc = -BPAK_FAILED;
         goto err_close_fp_out;
@@ -292,7 +292,7 @@ int bpak_pkg_add_file(struct bpak_package *pkg, const char *filename,
         }
     }
 
-    if (bpak_pkg_update_payload_hash(pkg) != BPAK_OK) {
+    if (bpak_pkg_update_hash(pkg, NULL, NULL) != BPAK_OK) {
         bpak_printf(0, "Error: Could not update payload hash\n");
         rc = -BPAK_FAILED;
         goto err_close_fp;
@@ -387,7 +387,7 @@ int bpak_pkg_add_key(struct bpak_package *pkg, const char *filename,
     }
 
 
-    if (bpak_pkg_update_payload_hash(pkg) != BPAK_OK) {
+    if (bpak_pkg_update_hash(pkg, NULL, NULL) != BPAK_OK) {
         bpak_printf(0, "Error: Could not update payload hash\n");
         return -BPAK_FAILED;
     }

@@ -119,7 +119,7 @@ int bpak_pkg_verify(struct bpak_package *pkg, const char *key_filename)
 
     size_t hash_size = sizeof(hash_output);
     /* Update the header hash and payload hash */
-    bpak_pkg_compute_header_hash(pkg, hash_output, &hash_size, true);
+    bpak_pkg_update_hash(pkg, hash_output, &hash_size);
 
     struct bpak_key *key = NULL;
     rc = load_public_key(key_filename, &key);
