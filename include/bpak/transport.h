@@ -12,6 +12,7 @@
 #ifndef INCLUDE_BPAK_TRANSPORT_H_
 #define INCLUDE_BPAK_TRANSPORT_H_
 
+#include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -129,8 +130,27 @@ int bpak_transport_decode_finish(struct bpak_transport_decode *ctx);
  */
 void bpak_transport_decode_free(struct bpak_transport_decode *ctx);
 
-int bpak_transport_encode(struct bpak_package *input, struct bpak_package *output,
-                          struct bpak_package *origin);
+/**
+ * Transport encode package stream 'input_fp' according to metadata in package
+ *  and use package stream 'origin_fp' as origin data. The output package
+ *  is written to 'output_fp'.
+ *
+ * NOTE: The transport encode function only accepts input streams where
+ *  the bpak header is at the start of the stream and the data at
+ *  sizeof(struct bpak_header) offset from start.
+ *
+ * @param[in] input_fp Input file stream
+ * @param[in] input_header BPAK header from input stream
+ * @param[in] output_fp Output file stream
+ * @param[in] output_header BPAK header from output stream
+ * @param[in] origin_fp Origin file stream
+ * @param[in] origin_header BPAK header from origin stream
+ *
+ * @return BPAK_OK on success or a negative number on failure
+ */
+int bpak_transport_encode(FILE *input_fp, struct bpak_header *input_header,
+                          FILE *output_fp, struct bpak_header *output_header,
+                          FILE *origin_fp, struct bpak_header *origin_header);
 
 #ifdef __cplusplus
 }  // extern "C"

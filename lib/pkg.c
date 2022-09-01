@@ -533,5 +533,17 @@ int bpak_pkg_transport_encode(struct bpak_package *input,
                               struct bpak_package *output,
                               struct bpak_package *origin)
 {
-    return bpak_transport_encode(input, output, origin);
+    FILE *origin_fp = NULL;
+    struct bpak_header *origin_header = NULL;
+
+    if (origin != NULL) {
+        if (origin->fp != NULL) {
+            origin_fp = origin->fp;
+            origin_header = &origin->header;
+        }
+    }
+
+    return bpak_transport_encode(input->fp, &input->header,
+                                 output->fp, &output->header,
+                                 origin_fp, origin_header);
 }

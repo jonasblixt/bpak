@@ -1,3 +1,12 @@
+/**
+ * BPAK - Bit Packer
+ *
+ * Copyright (C) 2022 Jonas Blixt <jonpe960@gmail.com>
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
@@ -6,25 +15,21 @@
 #include <sys/mman.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+
 #include <bpak/bpak.h>
 #include <bpak/crc.h>
-#include <bpak/pkg.h>
 #include <bpak/utils.h>
 #include <bpak/id.h>
 #include <bpak/merkle.h>
 #include <bpak/bsdiff.h>
 #include <bpak/bsdiff_hs.h>
 #include <bpak/transport.h>
-#include "sha256.h"
-#include "sha512.h"
 
 static int transport_copy(struct bpak_header *hdr, uint32_t id,
-                          struct bpak_package *input,
-                          struct bpak_package *output)
+                          FILE *input_fp,
+                          FILE *output_fp)
 {
     int rc;
-    FILE *input_fp = input->fp;
-    FILE *output_fp = output->fp;
     struct bpak_part_header *p = NULL;
     uint64_t part_offset = 0;
 
@@ -378,91 +383,66 @@ static ssize_t transport_merkle_generate(FILE *fp,
         return rc;
 }
 
-static int transport_process(struct bpak_transport_meta *tm,
+static int transport_encode_part(struct bpak_transport_meta *tm,
                                  uint32_t part_ref_id,
-                                 struct bpak_package *input,
-                                 struct bpak_package *output,
-                                 struct bpak_package *origin)
+                                 FILE *input_fp, struct bpak_header *input_header,
+                                 FILE *output_fp, struct bpak_header *output_header,
+                                 FILE *origin_fp, struct bpak_header *origin_header)
 {
     int rc = 0;
     struct bpak_part_header *input_part = NULL;
     struct bpak_part_header *output_part = NULL;
     struct bpak_part_header *origin_part = NULL;
-    FILE *input_fp = input->fp;
-    FILE *output_fp = output->fp;
-    FILE *origin_fp = NULL;
     uint64_t bytes_to_copy = 0;
     size_t chunk_sz = 0;
     size_t read_bytes = 0;
     size_t written_bytes = 0;
     uint32_t alg_id = 0;
     ssize_t output_size = -1;
-    struct bpak_header *input_header = bpak_pkg_header(input);
-    struct bpak_header *output_header = bpak_pkg_header(output);
-    struct bpak_header *origin_header = bpak_pkg_header(origin);
-
-    if (origin) {
-        origin_fp = origin->fp;
-    }
 
     rc = bpak_get_part(input_header, part_ref_id, &input_part);
 
-    if (rc != BPAK_OK)
-    {
+    if (rc != BPAK_OK) {
         bpak_printf(0, "Error could not get part with ref %x\n", part_ref_id);
         return rc;
     }
 
     rc = bpak_get_part(output_header, part_ref_id, &output_part);
 
-    if (rc != BPAK_OK)
-    {
+    if (rc != BPAK_OK) {
         bpak_printf(0, "Error could not get part with ref %x\n", part_ref_id);
         return rc;
     }
 
-    rc = bpak_get_part(origin_header, part_ref_id, &origin_part);
+    if (origin_header != NULL) {
+        rc = bpak_get_part(origin_header, part_ref_id, &origin_part);
 
-    if (rc != BPAK_OK)
-    {
-        bpak_printf(0, "Error could not get part with ref %x\n", part_ref_id);
-        return rc;
+        if (rc != BPAK_OK) {
+            bpak_printf(0, "Error could not get part with ref %x\n", part_ref_id);
+            return rc;
+        }
     }
-
-    bpak_printf(2, "Encoding part %x (%p)\n", part_ref_id, input_part);
 
     alg_id = tm->alg_id_encode;
-
-    bpak_printf(2, "Using alg: %x\n", alg_id);
+    bpak_printf(2, "Encoding part 0x%x using encoder 0x%x\n", part_ref_id,
+                    alg_id);
 
     /* Already processed for transport ?*/
     if ((output_part->flags & BPAK_FLAG_TRANSPORT))
         return BPAK_OK;
 
-    /* Populate the header in the output stream */
-    rc = fseek(output_fp, 0, SEEK_SET);
-
-    if (rc != 0) {
-        bpak_printf(0, "%s: Error, could not seek output stream", __func__);
-        return -BPAK_SEEK_ERROR;
-    }
-
-    if (fwrite(output_header, 1, sizeof(*output_header), output_fp) !=
-                sizeof(*output_header)) {
-        bpak_printf(0, "Error: Could not write output header\n");
-        return -BPAK_WRITE_ERROR;
-    }
-
     bpak_printf(1, "Initializing alg, input size %li bytes\n",
                 bpak_part_size(input_part));
 
-    rc = fseek(origin_fp,
-                 bpak_part_offset(origin_header, origin_part),
-                 SEEK_SET);
+    if (origin_header != NULL) {
+        rc = fseek(origin_fp,
+                     bpak_part_offset(origin_header, origin_part),
+                     SEEK_SET);
 
-    if (rc != 0) {
-        bpak_printf(0, "%s: Error, could not seek origin stream", __func__);
-        return rc;
+        if (rc != 0) {
+            bpak_printf(0, "%s: Error, could not seek origin stream", __func__);
+            return rc;
+        }
     }
 
     rc = fseek(input_fp,
@@ -486,12 +466,13 @@ static int transport_process(struct bpak_transport_meta *tm,
     off_t output_offset = 0;
     off_t origin_offset = 0;
 
-    if (origin->header_location == BPAK_HEADER_POS_LAST) {
-        origin_offset = -sizeof(struct bpak_header);
-    }
-
     switch (alg_id) {
         case BPAK_ID_BSDIFF: /* heatshrink compressor */
+            if (origin_header == NULL) {
+                bpak_printf(0, "Error: Need an origin stream for diff operation\n");
+                rc = -BPAK_FAILED;
+                goto err_out;
+            }
             output_size = transport_bsdiff_hs(input_fp,
                                 bpak_part_offset(input_header, input_part),
                                 bpak_part_size(input_part),
@@ -505,7 +486,7 @@ static int transport_process(struct bpak_transport_meta *tm,
         break;
         case BPAK_ID_MERKLE_GENERATE:
             output_size = transport_merkle_generate(output_fp,
-                                                    &output->header,
+                                                    output_header,
                                                     part_ref_id,
                                                     output_offset);
         break;
@@ -531,54 +512,43 @@ static int transport_process(struct bpak_transport_meta *tm,
     output_part->transport_size = output_size;
     output_part->flags |= BPAK_FLAG_TRANSPORT;
 
-    /* Position output stream at the end of the processed part*/
-    rc = fseek(output_fp, bpak_part_offset(output_header, output_part) +
-                          bpak_part_size(output_part),
-                          SEEK_SET);
-
-    if (rc != BPAK_OK) {
-        bpak_printf(0, "%s: Error: Could not seek\n", __func__);
-        bpak_printf(0, "    offset: %li\n", bpak_part_offset(output_header, output_part));
-        bpak_printf(0, "    size:   %li\n", bpak_part_size(output_part));
-        rc = -BPAK_SEEK_ERROR;
-        goto err_out;
-    }
-
 err_out:
     return rc;
 }
 
-int bpak_transport_encode(struct bpak_package *input,
-                          struct bpak_package *output,
-                          struct bpak_package *origin)
+int bpak_transport_encode(FILE *input_fp, struct bpak_header *input_header,
+                          FILE *output_fp, struct bpak_header *output_header,
+                          FILE *origin_fp, struct bpak_header *origin_header)
 {
     int rc = BPAK_OK;
-    struct bpak_header *h = bpak_pkg_header(input);
-    struct bpak_header *oh = bpak_pkg_header(output);
     struct bpak_transport_meta *tm = NULL;
     struct bpak_part_header *ph = NULL;
     ssize_t written;
-    memcpy(oh, h, sizeof(*h));
 
-    bpak_foreach_part(&input->header, ph) {
+    /* Initialize output header by copying the input header */
+    memcpy(output_header, input_header, sizeof(*input_header));
+
+    bpak_foreach_part(input_header, ph) {
         if (ph->id == 0)
             break;
 
-        if (bpak_get_meta_with_ref(&input->header,
+        if (bpak_get_meta_with_ref(input_header,
                                    BPAK_ID_BPAK_TRANSPORT,
                                    ph->id,
                                    (void **) &tm, NULL) == BPAK_OK) {
             bpak_printf(2, "Transport encoding part: %x\n", ph->id);
 
-            rc = transport_process(tm, ph->id,
-                                   input, output, origin);
+            rc = transport_encode_part(tm, ph->id,
+                                   input_fp, input_header,
+                                   output_fp, output_header,
+                                   origin_fp, origin_header);
 
             if (rc != BPAK_OK)
                 break;
         } else { /* No transport coding, copy data */
             bpak_printf(2, "Copying part: %x\n", ph->id);
 
-            rc = transport_copy(&input->header, ph->id, input, output);
+            rc = transport_copy(input_header, ph->id, input_fp, output_fp);
 
             if (rc != BPAK_OK)
                 break;
@@ -590,8 +560,7 @@ int bpak_transport_encode(struct bpak_package *input,
         goto err_out;
     }
 
-    // TODO: Header at the end?
-    rc = fseek(output->fp, 0, SEEK_SET);
+    rc = fseek(output_fp, 0, SEEK_SET);
 
     if (rc != 0) {
         bpak_printf(0, "Error: Could not seek\n");
@@ -599,9 +568,9 @@ int bpak_transport_encode(struct bpak_package *input,
         goto err_out;
     }
 
-    written = fwrite(oh, 1, sizeof(*oh), output->fp);
+    written = fwrite(output_header, 1, sizeof(*output_header), output_fp);
 
-    if (written != sizeof(*oh)) {
+    if (written != sizeof(*output_header)) {
         bpak_printf(0, "Error: could not write header");
         rc = -1;
     }
