@@ -3,7 +3,6 @@
 
 #include <bpak/bpak.h>
 #include <bpak/merkle.h>
-#include <bpak/alg.h>
 #include <bpak/utils.h>
 #include <bpak/keystore.h>
 #include <bpak/pkg.h>
