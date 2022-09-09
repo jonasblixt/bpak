@@ -80,7 +80,11 @@ TESTS = test_core_meta \
         test_multiple_bsdiff.sh \
         test_openssl_sign.sh \
         test_bsdiff_hs \
-        test_bsdiff
+        test_bsdiff \
+        test_corrupt_payload.sh \
+        test_corrupt_payload2.sh \
+        test_corrupt_header.sh \
+        test_corrupt_merkle_tree.sh
 
 if BUILD_BPAK_PYTHON_LIB
 TESTS += test_python_lib.py \
