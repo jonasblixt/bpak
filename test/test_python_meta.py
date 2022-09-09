@@ -13,6 +13,9 @@ def log_callback(level, message):
 
 bpak.utils.set_log_function(log_callback)
 
+# Call prepare script
+assert os.system("%s/test_python_meta_prepare.sh"%(srcdir)) == 0
+
 p = Package("test_python_meta.bpak", "r+")
 print("Loaded package: " + str(p.id()))
 assert str(p.id()) == "0888b0fa-9c48-4524-9845-06a641b61edd"

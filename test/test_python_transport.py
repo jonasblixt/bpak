@@ -12,6 +12,9 @@ def log_callback(level, message):
 
 utils.set_log_function(log_callback)
 
+# Call prepare script
+assert os.system("%s/test_python_transport_prepare.sh"%(srcdir)) == 0
+
 from_pkg = Package("test_python_transport_A.bpak", "rb+")
 print("From pkg: " + str(from_pkg))
 
