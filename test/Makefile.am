@@ -64,8 +64,6 @@ TESTS = test_core_meta \
         test_signec384.sh \
         test_signec521.sh \
         test_generate_id.sh \
-        test_sign_openssl.sh \
-        test_sign_openssl2.sh \
         test_dep_version.sh \
         test_help_output.sh \
         test_sign_rsa4096.sh \

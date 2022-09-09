@@ -1,19 +1,29 @@
-#!/bin/sh
+# Test: test_dep_version
+#
+# Description: This test creates an archive with a few 'bpak-dependency'
+#  meta data's
+#
+# Purpose: To test package uuid + semver string decoder
+#
+
+#!/bin/bash
 BPAK=../src/bpak
+TEST_NAME=test_dep_version
+TEST_SRC_DIR=$srcdir
+source $TEST_SRC_DIR/common.sh
+V=-vvv
+echo $TEST_NAME Begin
+echo $TEST_SRC_DIR
 set -e
 
-$BPAK --help
+$BPAK --version
 
-IMG=test_dep_version.bpak
+IMG=${TEST_NAME}.bpak
 PKG_UUID=0888b0fa-9c48-4524-9845-06a641b61edd
-PKG_UNIQUE_ID_A=$(uuidgen)
-V=-vvv
 
 $BPAK create $IMG -Y --hash-kind sha256 --signature-kind prime256v1 $V
 
 $BPAK add $IMG --meta bpak-package --from-string $PKG_UUID --encoder uuid $V
-$BPAK add $IMG --meta bpak-package-uid --from-string $PKG_UNIQUE_ID_A \
-                 --encoder uuid $V
 
 $BPAK add $IMG --meta bpak-version --from-string "1.2.3" $V
 echo Adding first dep

@@ -1,161 +1,104 @@
-#!/bin/sh
+# Test: test_transport5
+#
+# Description: Create archives with multiple parts that should be diffed/patched
+#
+# Purpose: To test that diffing/patching works on archives that have many
+#   parts that shoule be diffed
+#
+
+#!/bin/bash
 BPAK=../src/bpak
-echo --- Creating simple archive ---
-set -ex
-
-$BPAK --help
-
-IMG_A=vA_multi.bpak
-IMG_B=vB_multi.bpak
-PKG_UUID=0888b0fa-9c48-4524-9845-06a641b61edd
-PKG_UNIQUE_ID_A=$(uuidgen)
-PKG_UNIQUE_ID_B=$(uuidgen)
-V=-vvvv
+TEST_NAME=test_transport5
+TEST_SRC_DIR=$srcdir
+source $TEST_SRC_DIR/common.sh
+V=-vvv
+echo $TEST_NAME Begin
+echo $TEST_SRC_DIR
 set -e
 
-dd if=/dev/urandom of=p0A bs=1024 count=64
-dd if=/dev/urandom of=p0A_ bs=1024 count=32
-cat p0A p0A_ > p0B
+$BPAK --version
 
-dd if=/dev/urandom of=p1A bs=1024 count=64
-dd if=/dev/urandom of=p1A_ bs=1024 count=32
-cat p1A p1A_ > p1B
+IMG_O=${TEST_NAME}_origin.bpak
+IMG_T=${TEST_NAME}_target.bpak
+IMG_P=${TEST_NAME}_patch.bpak
+IMG_I=${TEST_NAME}_install.bpak
 
-dd if=/dev/urandom of=p2A bs=1024 count=64
-dd if=/dev/urandom of=p2A_ bs=1024 count=32
-cat p2A p2A_ > p2B
+PKG_UUID=0888b0fa-9c48-4524-9845-06a641b61edd
 
-dd if=/dev/urandom of=p3A bs=1024 count=64
-dd if=/dev/urandom of=p3A_ bs=1024 count=32
-cat p3A p3A_ > p3B
+$BPAK create $IMG_O -Y $V
 
-dd if=/dev/urandom of=p4A bs=1024 count=64
-dd if=/dev/urandom of=p4A_ bs=1024 count=32
-cat p4A p4A_ > p4B
+$BPAK add $IMG_O --meta bpak-package --from-string $PKG_UUID --encoder uuid $V
 
-dd if=/dev/urandom of=p5A bs=1024 count=64
-dd if=/dev/urandom of=p5A_ bs=1024 count=32
-cat p5A p5A_ > p5B
-
-# Create A package
-echo --- Creating package A ---
-$BPAK create $IMG_A -Y $V
-
-$BPAK add $IMG_A --meta bpak-package --from-string $PKG_UUID --encoder uuid $V
-$BPAK add $IMG_A --meta bpak-package-uid --from-string $PKG_UNIQUE_ID_A \
-                 --encoder uuid $V
-
-$BPAK transport $IMG_A --add --part p0 --encoder bsdiff \
+$BPAK transport $IMG_O --add --part p0 --encoder bsdiff \
                                         --decoder bspatch $V
 
-$BPAK transport $IMG_A --add --part p1 --encoder bsdiff \
+$BPAK transport $IMG_O --add --part p1 --encoder bsdiff \
                                         --decoder bspatch $V
 
-$BPAK transport $IMG_A --add --part p2 --encoder bsdiff \
+$BPAK transport $IMG_O --add --part p2 --encoder bsdiff \
                                         --decoder bspatch $V
 
-$BPAK transport $IMG_A --add --part p3 --encoder bsdiff \
-                                        --decoder bspatch $V
+$BPAK add $IMG_O --part p0 \
+                 --from-file $TEST_SRC_DIR/diff2_origin.bin $V
 
-$BPAK transport $IMG_A --add --part p4 --encoder bsdiff \
-                                        --decoder bspatch $V
+$BPAK add $IMG_O --part p1 \
+                 --from-file $TEST_SRC_DIR/diff2_origin.bin $V
 
-$BPAK transport $IMG_A --add --part p5 --encoder bsdiff \
-                                        --decoder bspatch $V
+$BPAK add $IMG_O --part p2 \
+                 --from-file $TEST_SRC_DIR/diff2_origin.bin $V
 
-$BPAK add $IMG_A --part p0 \
-                 --from-file p0A $V
 
-$BPAK add $IMG_A --part p1 \
-                 --from-file p1A $V
-
-$BPAK add $IMG_A --part p2 \
-                 --from-file p2A $V
-
-$BPAK add $IMG_A --part p3 \
-                 --from-file p3A $V
-
-$BPAK add $IMG_A --part p4 \
-                 --from-file p4A $V
-
-$BPAK add $IMG_A --part p5 \
-                 --from-file p5A $V
-
-$BPAK set $IMG_A --key-id pb-development \
+$BPAK set $IMG_O --key-id pb-development \
                  --keystore-id pb-internal $V
 
-$BPAK sign $IMG_A --key $srcdir/secp256r1-key-pair.pem $V
+$BPAK sign $IMG_O --key $TEST_SRC_DIR/secp256r1-key-pair.pem $V
 
-# Create B package
-echo --- Creating package B ---
-$BPAK create $IMG_B -Y $V
+# Create target package
+$BPAK create $IMG_T -Y $V
 
-$BPAK add $IMG_B --meta bpak-package --from-string $PKG_UUID --encoder uuid $V
-$BPAK add $IMG_B --meta bpak-package-uid --from-string $PKG_UNIQUE_ID_B \
-                 --encoder uuid $V
+$BPAK add $IMG_T --meta bpak-package --from-string $PKG_UUID --encoder uuid $V
 
-$BPAK transport $IMG_B --add --part p0 --encoder bsdiff \
+$BPAK transport $IMG_T --add --part p0 --encoder bsdiff \
                                         --decoder bspatch $V
 
-$BPAK transport $IMG_B --add --part p1 --encoder bsdiff \
+$BPAK transport $IMG_T --add --part p1 --encoder bsdiff \
                                         --decoder bspatch $V
 
-$BPAK transport $IMG_B --add --part p2 --encoder bsdiff \
+$BPAK transport $IMG_T --add --part p2 --encoder bsdiff \
                                         --decoder bspatch $V
 
-$BPAK transport $IMG_B --add --part p3 --encoder bsdiff \
-                                        --decoder bspatch $V
+$BPAK add $IMG_T --part p0 \
+                 --from-file $TEST_SRC_DIR/diff2_target.bin $V
 
-$BPAK transport $IMG_B --add --part p4 --encoder bsdiff \
-                                        --decoder bspatch $V
+$BPAK add $IMG_T --part p1 \
+                 --from-file $TEST_SRC_DIR/diff2_target.bin $V
 
-$BPAK transport $IMG_B --add --part p5 --encoder bsdiff \
-                                        --decoder bspatch $V
+$BPAK add $IMG_T --part p2 \
+                 --from-file $TEST_SRC_DIR/diff2_target.bin $V
 
-$BPAK add $IMG_B --part p0 \
-                 --from-file p0B $V
-
-$BPAK add $IMG_B --part p1 \
-                 --from-file p1B $V
-
-$BPAK add $IMG_B --part p2 \
-                 --from-file p2B $V
-
-$BPAK add $IMG_B --part p3 \
-                 --from-file p3B $V
-
-$BPAK add $IMG_B --part p4 \
-                 --from-file p4B $V
-
-$BPAK add $IMG_B --part p5 \
-                 --from-file p5B $V
-
-$BPAK set $IMG_B --key-id pb-development \
+$BPAK set $IMG_T --key-id pb-development \
                  --keystore-id pb-internal $V
 
-$BPAK sign $IMG_B --key $srcdir/secp256r1-key-pair.pem $V
+$BPAK sign $IMG_T --key $TEST_SRC_DIR/secp256r1-key-pair.pem $V
 
 # Test Transport encoding / decoding
 echo --- Transport encoding ---
 
-$BPAK transport $IMG_B --encode --origin $IMG_A \
-                                --output vB_multi_transport.bpak \
+$BPAK transport $IMG_T --encode --origin $IMG_O \
+                                --output $IMG_P \
                                 $V
-
 
 echo --- Transport decoding ---
 
-$BPAK transport vB_multi_transport.bpak --decode \
-                                  --origin $IMG_A \
-                                  --output vB_multi_install.bpak \
-                                  $V
+$BPAK transport $IMG_P --decode \
+                      --origin $IMG_O \
+                      --output $IMG_I \
+                      $V
 
-$BPAK compare $IMG_B vB_multi_install.bpak $V
+$BPAK compare $IMG_T $IMG_I $V
 
-#sha256sum $IMG_B
-#sha256sum vB_install.bpak
-first_sha256=$(sha256sum $IMG_B | cut -d ' ' -f 1)
-second_sha256=$(sha256sum vB_multi_install.bpak | cut -d ' ' -f 1)
+first_sha256=$(sha256sum $IMG_T | cut -d ' ' -f 1)
+second_sha256=$(sha256sum $IMG_I | cut -d ' ' -f 1)
 
 if [ $first_sha256 != $second_sha256  ];
 then
@@ -163,5 +106,5 @@ then
     exit 1
 fi
 
-$BPAK show vB_multi_transport.bpak $V
-$BPAK show $IMG_B $V
+$BPAK show $IMG_P $V
+$BPAK show $IMG_T $V

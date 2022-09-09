@@ -1,13 +1,28 @@
-#!/bin/sh
-BPAK=../src/bpak
-set -ex
-V=-vvv
+# Test: test_extract
+#
+# Description: This test creates an archive with data and meta data and
+#  then tests the 'extract' command
+#
+# Purpose: To ensure that the extract command can extract part data and meta
+#  data from an archive
+#
 
-IMG=extract_test.bpak
+#!/bin/bash
+BPAK=../src/bpak
+TEST_NAME=test_extract
+TEST_SRC_DIR=$srcdir
+source $TEST_SRC_DIR/common.sh
+V=-vvv
+echo $TEST_NAME Begin
+echo $TEST_SRC_DIR
+set -e
+
+$BPAK --version
+
+IMG=${TEST_NAME}.bpak
 PKG_UUID=0888b0fa-9c48-4524-9845-06a641b61edd
 
-
-dd if=/dev/urandom of=test_extract.data bs=1024 count=4096
+create_data ${TEST_NAME}_data.bin 128
 
 $BPAK create $IMG -Y --hash-kind sha256 --signature-kind prime256v1 $V
 
@@ -20,14 +35,14 @@ $BPAK set $IMG --key-id pb-development \
                --keystore-id pb-internal $V
 
 $BPAK add $IMG --part fs \
-               --from-file test_extract.data \
+               --from-file ${TEST_NAME}_data.bin \
                --set-flag dont-hash \
                --encoder merkle $V
 
-$BPAK extract $IMG --part fs --output test_extract.dump
+$BPAK extract $IMG --part fs --output ${TEST_NAME}_dump.bin
 
-first_sha256=$(sha256sum test_extract.dump | cut -d ' ' -f 1)
-second_sha256=$(sha256sum test_extract.data | cut -d ' ' -f 1)
+first_sha256=$(sha256sum ${TEST_NAME}_dump.bin | cut -d ' ' -f 1)
+second_sha256=$(sha256sum ${TEST_NAME}_data.bin | cut -d ' ' -f 1)
 
 if [ $first_sha256 != $second_sha256  ];
 then
@@ -35,17 +50,16 @@ then
     exit 1
 fi
 
-$BPAK extract $IMG --meta test-meta --output test_extract.dump
+$BPAK extract $IMG --meta test-meta --output ${TEST_NAME}_meta_dump.bin
 
-
-if [ "$(cat test_extract.dump)" != "Test string" ];
+if [ "$(cat ${TEST_NAME}_meta_dump.bin)" != "Test string" ];
 then
     echo "Meta data mismatch"
     exit 1
 fi
 
-$BPAK extract $IMG --meta test-meta2 --output test_extract.dump
-hexdump_string=$(hexdump -v -e '/1 "%02X "' < test_extract.dump)
+$BPAK extract $IMG --meta test-meta2 --output ${TEST_NAME}_meta_dump2.bin
+hexdump_string=$(hexdump -v -e '/1 "%02X "' < ${TEST_NAME}_meta_dump2.bin)
 
 if [ "$hexdump_string" != "44 33 22 11 00 00 00 00 " ];
 then

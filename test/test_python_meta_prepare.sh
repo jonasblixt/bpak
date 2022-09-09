@@ -1,20 +1,21 @@
-#!/bin/sh
+#!/bin/bash
 BPAK=../src/bpak
-IMG=test_python_meta.bpak
-PKG_UUID=0888b0fa-9c48-4524-9845-06a641b61edd
-PKG_UNIQUE_ID=$(uuidgen)
-V=-vvvv
+TEST_NAME=test_python_meta
+TEST_SRC_DIR=$srcdir
+source $TEST_SRC_DIR/common.sh
+V=-vvv
+echo $TEST_NAME Begin
+echo $TEST_SRC_DIR
 set -e
 
-dd if=/dev/urandom of=A_transp bs=1024 count=4096
+$BPAK --version
 
-# Create A package
-echo --- Creating package A ---
+IMG=${TEST_NAME}.bpak
+PKG_UUID=0888b0fa-9c48-4524-9845-06a641b61edd
+
 $BPAK create $IMG -Y $V
 
 $BPAK add $IMG --meta bpak-package --from-string $PKG_UUID --encoder uuid $V
-$BPAK add $IMG --meta bpak-package-uid --from-string $PKG_UNIQUE_ID_A \
-                 --encoder uuid $V
 $BPAK add $IMG --meta bpak-version --from-string "1.0.0" $V
 
 $BPAK transport $IMG --add --part fs --encoder bsdiff \
@@ -26,12 +27,12 @@ $BPAK transport $IMG --add --part fs-hash-tree \
                        --decoder merkle-generate $V
 
 $BPAK add $IMG --part fs \
-                 --from-file A_transp \
+                 --from-file ${TEST_SRC_DIR}/diff2_origin.bin \
                  --set-flag dont-hash \
                  --encoder merkle $V
 
 $BPAK set $IMG --key-id pb-development \
                --keystore-id pb-internal $V
 
-$BPAK sign $IMG --key $srcdir/secp256r1-key-pair.pem $V
+$BPAK sign $IMG --key $TEST_SRC_DIR/secp256r1-key-pair.pem $V
 

@@ -1,48 +1,48 @@
-#!/bin/sh
+# Test: test_create
+#
+# Description: This test creates an archive with a data block that has a 
+#  merkle hash tree, signs the archive and then verifies it
+#
+# Purpose: To test some of the basic functionallity when creating new archives
+#  and the sign/verfy steps
+#
+
+#!/bin/bash
 BPAK=../src/bpak
-V=-vvvv
-echo Creating simple archive
-pwd
-set -ex
-
-$BPAK --help
-
-IMG_A=vA.bpak
-PKG_UUID=0888b0fa-9c48-4524-9845-06a641b61edd
-PKG_UNIQUE_ID_A=$(uuidgen)
+TEST_NAME=test_create
+TEST_SRC_DIR=$srcdir
+source $TEST_SRC_DIR/common.sh
+V=-vvv
+echo $TEST_NAME Begin
+echo $TEST_SRC_DIR
 set -e
 
-dd if=/dev/urandom of=A bs=1024 count=4096
+$BPAK --version
 
-# Create A package
-echo Creating package A
-$BPAK create $IMG_A -Y
+IMG=${TEST_NAME}.bpak
+PKG_UUID=0888b0fa-9c48-4524-9845-06a641b61edd
 
-$BPAK add $IMG_A --meta bpak-package --from-string $PKG_UUID --encoder uuid -v
-$BPAK add $IMG_A --meta bpak-package-uid --from-string $PKG_UNIQUE_ID_A \
-                 --encoder uuid -v
+create_data ${TEST_NAME}_data.bin 128
 
-$BPAK transport $IMG_A --add --part fs --encoder bsdiff \
-                                       --decoder bspatch -v
+echo $TEST_NAME Creating package
+$BPAK create $IMG -Y $V
+$BPAK add $IMG --meta bpak-package --from-string $PKG_UUID --encoder uuid $V
 
-
-$BPAK transport $IMG_A --add --part fs-hash-tree \
-                       --encoder remove-data \
-                       --decoder merkle-generate
-
-$BPAK add $IMG_A --part fs \
-                 --from-file A \
+$BPAK add $IMG --part fs \
+                 --from-file ${TEST_NAME}_data.bin \
                  --set-flag dont-hash \
-                 --encoder merkle -v
+                 --encoder merkle $V
 
-$BPAK set $IMG_A --key-id pb-development \
+$BPAK set $IMG --key-id pb-development \
                  --keystore-id pb-internal $V
 echo SIGN
-$BPAK sign $IMG_A --key $srcdir/secp256r1-key-pair.pem $V
+$BPAK sign $IMG --key $srcdir/secp256r1-key-pair.pem $V
 echo SHOW
-$BPAK show $IMG_A -vvv
+$BPAK show $IMG $V
 echo VERIFY
-$BPAK verify $IMG_A --key $srcdir/secp256r1-pub-key.der -vvv
+$BPAK verify $IMG --key $srcdir/secp256r1-pub-key.der $V
 echo SHOW
-$BPAK show $IMG_A --part fs -vvv
-$BPAK show $IMG_A --meta bpak-package -vvv
+$BPAK show $IMG --part fs $V
+$BPAK show $IMG --meta bpak-package $V
+
+echo $TEST_NAME End

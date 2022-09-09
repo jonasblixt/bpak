@@ -1,14 +1,12 @@
 #!/bin/sh
 BPAK=../src/bpak
+TEST_SRC_DIR=$srcdir
 IMG_A=test_python_transport_A.bpak
 PKG_UUID_A=0888b0fa-9c48-4524-9845-06a641b61edd
 IMG_B=test_python_transport_B.bpak
 PKG_UUID_B=0888b0fa-9c48-4524-9845-06a641b61edd
 V=-vvvv
 set -e
-
-dd if=/dev/urandom of=test_python_transport_A bs=1024 count=4096
-dd if=/dev/urandom of=test_python_transport_B bs=1024 count=4096
 
 # Create A package
 echo --- Creating package A ---
@@ -25,14 +23,14 @@ $BPAK transport $IMG_A --add --part fs-hash-tree \
                        --decoder merkle-generate $V
 
 $BPAK add $IMG_A --part fs \
-                 --from-file test_python_transport_A \
+                 --from-file $TEST_SRC_DIR/diff2_origin.bin \
                  --set-flag dont-hash \
                  --encoder merkle $V
 
 $BPAK set $IMG_A --key-id pb-development \
                --keystore-id pb-internal $V
 
-$BPAK sign $IMG_A --key $srcdir/secp256r1-key-pair.pem $V
+$BPAK sign $IMG_A --key $TEST_SRC_DIR/secp256r1-key-pair.pem $V
 
 # Create B package
 echo --- Creating package B ---
@@ -49,12 +47,12 @@ $BPAK transport $IMG_B --add --part fs-hash-tree \
                        --decoder merkle-generate $V
 
 $BPAK add $IMG_B --part fs \
-                 --from-file test_python_transport_B \
+                 --from-file $TEST_SRC_DIR/diff2_target.bin \
                  --set-flag dont-hash \
                  --encoder merkle $V
 
 $BPAK set $IMG_B --key-id pb-development \
                --keystore-id pb-internal $V
 
-$BPAK sign $IMG_B --key $srcdir/secp256r1-key-pair.pem $V
+$BPAK sign $IMG_B --key $TEST_SRC_DIR/secp256r1-key-pair.pem $V
 
