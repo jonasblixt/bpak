@@ -276,7 +276,6 @@ static ssize_t transport_merkle_generate(FILE *fp,
     struct bpak_part_header *part;
     struct bpak_part_header *fs_part;
     uint8_t chunk_buffer[4096];
-    uint8_t buffer2[4096];
     uint32_t fs_id = 0;
     uint8_t *salt = NULL;
     size_t bytes_to_process;
@@ -324,11 +323,11 @@ static ssize_t transport_merkle_generate(FILE *fp,
     bpak_printf(2, "Tree offset: %i\n", merkle_priv.tree_offset);
 
     rc = bpak_merkle_init(&merkle,
-                          buffer2, 4096,
                           bpak_part_size(fs_part),
-                          salt,
+                          salt, 32,
                           merkle_tree_wr,
                           merkle_tree_rd,
+                          true,
                           &merkle_priv);
 
     if (rc != BPAK_OK) {
@@ -348,7 +347,7 @@ static ssize_t transport_merkle_generate(FILE *fp,
         chunk_length = fread(chunk_buffer, 1,
                             BPAK_MIN(sizeof(chunk_buffer), bytes_to_process), fp);
 
-        rc = bpak_merkle_process(&merkle, chunk_buffer, chunk_length);
+        rc = bpak_merkle_write_chunk(&merkle, chunk_buffer, chunk_length);
 
         if (rc != BPAK_OK) {
             bpak_printf(0, "Error: merkle processing failed (%i)\n", rc);
@@ -358,17 +357,8 @@ static ssize_t transport_merkle_generate(FILE *fp,
         bytes_to_process -= chunk_length;
     }
 
-    do {
-        rc = bpak_merkle_process(&merkle, NULL, 0);
-
-        if (rc != BPAK_OK) {
-            bpak_printf(0, "Error: merkle processing failed (%i)\n", rc);
-            return rc;
-        }
-    } while (bpak_merkle_done(&merkle) != true);
-
     bpak_merkle_hash_t roothash;
-    rc = bpak_merkle_out(&merkle, roothash);
+    rc = bpak_merkle_finish(&merkle, roothash);
 
     if (rc != BPAK_OK) {
         bpak_printf(0, "Error: merkle processing failed (%i)\n", rc);

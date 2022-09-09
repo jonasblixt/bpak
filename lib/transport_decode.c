@@ -61,12 +61,12 @@ static ssize_t merkle_generate(struct bpak_transport_decode *ctx)
     }
 
     rc = bpak_merkle_init(&merkle,
-                          ctx->buffer,
-                          ctx->buffer_length,
                           bpak_part_size(fs_part),
                           salt,
+                          32,
                           ctx->write_output,
                           ctx->read_output,
+                          true,
                           ctx->user);
 
     if (rc != BPAK_OK) {
@@ -89,7 +89,7 @@ static ssize_t merkle_generate(struct bpak_transport_decode *ctx)
         if (chunk_length != sizeof(chunk_buffer))
             return -BPAK_READ_ERROR;
 
-        rc = bpak_merkle_process(&merkle, chunk_buffer, chunk_length);
+        rc = bpak_merkle_write_chunk(&merkle, chunk_buffer, chunk_length);
 
         if (rc != BPAK_OK) {
             bpak_printf(0, "Error: merkle processing failed (%i)\n", rc);
@@ -100,17 +100,8 @@ static ssize_t merkle_generate(struct bpak_transport_decode *ctx)
         bytes_to_process -= chunk_length;
     }
 
-    do {
-        rc = bpak_merkle_process(&merkle, NULL, 0);
-
-        if (rc != BPAK_OK) {
-            bpak_printf(0, "Error: merkle processing failed (%i)\n", rc);
-            return rc;
-        }
-    } while (bpak_merkle_done(&merkle) != true);
-
     bpak_merkle_hash_t roothash;
-    rc = bpak_merkle_out(&merkle, roothash);
+    rc = bpak_merkle_finish(&merkle, roothash);
 
     if (rc != BPAK_OK) {
         bpak_printf(0, "Error: merkle processing failed (%i)\n", rc);

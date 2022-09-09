@@ -211,8 +211,7 @@ int bpak_verify_merkle_tree(bpak_io_t read_payload,
 {
     int rc;
     struct bpak_merkle_context ctx;
-    uint8_t runtime_buffer[4096];
-    uint8_t chunk_buffer[4096];
+    uint8_t chunk_buffer[128];
     struct merkle_verify_private merkle_verify_private;
 
     memset(&merkle_verify_private, 0, sizeof(merkle_verify_private));
@@ -220,10 +219,8 @@ int bpak_verify_merkle_tree(bpak_io_t read_payload,
     merkle_verify_private.user = user;
     merkle_verify_private.tree_offset = tree_offset;
 
-    rc = bpak_merkle_init(&ctx, runtime_buffer, sizeof(runtime_buffer),
-                          data_length, salt,
-                          merkle_verify_wr, merkle_verify_rd,
-                          &merkle_verify_private);
+    rc = bpak_merkle_init(&ctx, data_length, salt, 32, merkle_verify_wr,
+                            merkle_verify_rd, false, &merkle_verify_private);
 
     if (rc != BPAK_OK) {
         return rc;
@@ -243,7 +240,7 @@ int bpak_verify_merkle_tree(bpak_io_t read_payload,
         if (bytes_read != chunk_length)
             return -BPAK_READ_ERROR;
 
-        rc = bpak_merkle_process(&ctx, chunk_buffer, chunk_length);
+        rc = bpak_merkle_write_chunk(&ctx, chunk_buffer, chunk_length);
 
         if (rc != BPAK_OK) {
             return rc;
@@ -253,16 +250,9 @@ int bpak_verify_merkle_tree(bpak_io_t read_payload,
         current_offset += chunk_length;
     }
 
-    while (!bpak_merkle_done(&ctx)) {
-        rc = bpak_merkle_process(&ctx, NULL, 0);
-
-        if (rc != BPAK_OK)
-            break;
-    }
-
     bpak_merkle_hash_t calculated_root_hash;
 
-    rc = bpak_merkle_out(&ctx, calculated_root_hash);
+    rc = bpak_merkle_finish(&ctx, calculated_root_hash);
 
     if (rc != BPAK_OK)
         return rc;

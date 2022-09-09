@@ -45,20 +45,6 @@ static ssize_t merkle_rd(off_t offset,
     return size;
 }
 
-static void merkle_status(struct bpak_merkle_context *ctx)
-{
-    if ((ctx->current.byte_counter % (MERKLE_BLOCK_SZ)) == 0)
-    {
-        printf("\r %i: %li %%", ctx->current.level,
-            100 * ctx->current.byte_counter / ctx->current.size);
-        fflush(stdout);
-    }
-    else if(ctx->current.byte_counter == ctx->current.size)
-    {
-        printf("\r %i: 100 %%\n", ctx->current.level);
-    }
-}
-
 int bpak_pkg_add_file_with_merkle_tree(struct bpak_package *pkg,
             const char *filename, const char *part_name, uint8_t flags)
 {
@@ -67,7 +53,6 @@ int bpak_pkg_add_file_with_merkle_tree(struct bpak_package *pkg,
     struct bpak_merkle_context ctx;
     struct stat statbuf;
     uint8_t block_buf[4096];
-    uint8_t buffer2[4096];
     size_t chunk_sz;
     uint64_t new_offset = sizeof(*h);
 
@@ -81,7 +66,7 @@ int bpak_pkg_add_file_with_merkle_tree(struct bpak_package *pkg,
     if (rc != 0)
         return rc;
 
-    size_t merkle_sz = bpak_merkle_compute_size(statbuf.st_size, -1, true);
+    size_t merkle_sz = bpak_merkle_compute_size(statbuf.st_size);
     char *merkle_buf = malloc(merkle_sz);
 
     memset(merkle_buf, 0, merkle_sz);
@@ -98,14 +83,14 @@ int bpak_pkg_add_file_with_merkle_tree(struct bpak_package *pkg,
         salt_ptr++;
     }
 
-    rc = bpak_merkle_init(&ctx, buffer2, 4096, statbuf.st_size, salt,
-                            merkle_wr, merkle_rd, merkle_buf);
-
-    for (int i = 0; i < ctx.no_of_levels; i++)
-        bpak_printf(1, "Level %i size %li bytes\n", i,
-                bpak_merkle_compute_size(statbuf.st_size, i, false));
-
-    bpak_merkle_set_status_cb(&ctx, merkle_status);
+    rc = bpak_merkle_init(&ctx,
+                          statbuf.st_size,
+                          salt,
+                          32,
+                          merkle_wr,
+                          merkle_rd,
+                          true,
+                          merkle_buf);
 
     FILE *fp = fopen(filename, "rb");
 
@@ -121,29 +106,19 @@ int bpak_pkg_add_file_with_merkle_tree(struct bpak_package *pkg,
         if (chunk_sz == 0)
             break;
 
-        rc = bpak_merkle_process(&ctx, block_buf, chunk_sz);
+        rc = bpak_merkle_write_chunk(&ctx, block_buf, chunk_sz);
 
         if (rc != BPAK_OK)
-            break;
+            goto err_close_fp_out;
 
     }
-
-    if (rc != BPAK_OK)
-        goto err_close_fp_out;
-
-    while (!bpak_merkle_done(&ctx)) {
-        rc = bpak_merkle_process(&ctx, NULL, 0);
-
-        if (rc != BPAK_OK)
-            break;
-    }
-
-    if (rc != BPAK_OK)
-        goto err_close_fp_out;
 
     bpak_merkle_hash_t hash;
 
-    rc = bpak_merkle_out(&ctx, hash);
+    rc = bpak_merkle_finish(&ctx, hash);
+
+    if (rc != BPAK_OK)
+        goto err_close_fp_out;
 
     /* Write tree to bpak file */
 
