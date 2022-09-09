@@ -12,14 +12,6 @@ import semver
 from bpak.utils import id
 import bpak
 
-HAVE_CRYPTO = False
-try:
-    from ecdsa import SigningKey, VerifyingKey, NIST256p, NIST384p, NIST521p
-    from ecdsa.util import sigdecode_der, sigencode_der
-    HAVE_CRYPTO = True
-except:
-    pass
-
 class Package:
     """
     BPAK Python wrapper
@@ -114,70 +106,9 @@ class Package:
         """
         Sign a package using a DER or PEM encoded private key
         """
-        if not HAVE_CRYPTO:
-            raise Exception("ecdsa library not installed")
-
-        raw_key_data = ""
-        with open(signing_key_path, "rb") as f:
-            raw_key_data = f.read()
-
-        sk = None
-        try:
-            sk = SigningKey.from_der(raw_key_data)
-        except:
-            pass
-
-        try:
-            sk = SigningKey.from_pem(raw_key_data)
-        except:
-            pass
-
-        if sk is None:
-            raise Exception("Could not load private key")
-
-        digest = self.pkg.read_digest()
-        hash_kind = self.pkg.read_hash_kind()
-        sha_func = None
-
-        if hash_kind == bpak.BPAK_HASH_SHA256:
-            sha_func = hashlib.sha256
-        elif hash_kind == bpak.BPAK_HASH_SHA384:
-            sha_func = hashlib.sha384
-        elif hash_kind == bpak.BPAK_HASH_SHA512:
-            sha_func = hashlib.sha512
-        else:
-            raise Exception("Unknown hash kind %i"%(hash_kind))
-
-        sig = sk.sign_digest_deterministic(digest, sha_func,
-                                            sigencode=sigencode_der)
-        self.pkg.set_signature(sig)
-        return True
+        return self.pkg.sign(signing_key_path)
     def verify(self, verify_key_path):
         """Verify the package using a DER or PEM encoded public key"""
-        if not HAVE_CRYPTO:
-            raise Exception("ecdsa library not installed")
-
-        raw_key_data = ""
-        with open(verify_key_path, "rb") as f:
-            raw_key_data = f.read()
-
-        vk = None
-        try:
-            vk = VerifyingKey.from_der(raw_key_data)
-        except:
-            pass
-
-        try:
-            vk = VerifyingKey.from_pem(raw_key_data)
-        except:
-            pass
-
-        if vk is None:
-            raise Exception("Could not load public key")
-
-        sig = self.pkg.read_signature()
-        digest = self.pkg.read_digest()
-
-        return vk.verify_digest(sig, digest, sigdecode=sigdecode_der)
+        return self.pkg.verify(verify_key_path)
     def __str__(self):
         return "<BPAK %s>"%(self.id())

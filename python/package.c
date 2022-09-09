@@ -28,8 +28,11 @@ static PyObject * package_new(PyTypeObject *type, PyObject *args,
 
 static void package_dealloc(BPAKPackage *self)
 {
-    bpak_pkg_close(&self->pkg);
-    Py_TYPE(self)->tp_free((PyObject *) self);
+    if (self != NULL) {
+        bpak_pkg_close(&self->pkg);
+        Py_TYPE(self)->tp_free((PyObject *) self);
+        self = NULL;
+    }
 }
 
 int bpak_printf(int verbosity, const char *fmt, ...)
@@ -334,6 +337,67 @@ static PyObject * package_write_raw_meta(BPAKPackage *self, PyObject *args,
 
     return Py_None;
 }
+
+static PyObject * package_verify(BPAKPackage *self, PyObject *args,
+                                                        PyObject *kwds)
+{
+    int rc;
+    char *verify_key_path;
+    struct bpak_header *h = bpak_pkg_header(&self->pkg);
+    static char *kwlist[] = {"verify_key_path", NULL};
+
+    rc = PyArg_ParseTupleAndKeywords(args, kwds, "s", kwlist,
+                                     &verify_key_path);
+
+    if (!rc) {
+        PyErr_SetString(BPAKPackageError, "Invalid argument");
+        Py_RETURN_FALSE;
+    }
+
+    rc = bpak_pkg_verify(&self->pkg, verify_key_path);
+
+    if (rc != BPAK_OK) {
+        PyErr_SetString(BPAKPackageError, "Verification failed");
+        Py_RETURN_FALSE;
+    }
+
+    Py_RETURN_TRUE;
+}
+
+static PyObject * package_sign(BPAKPackage *self, PyObject *args,
+                                                        PyObject *kwds)
+{
+    int rc;
+    char *sign_key_path;
+    struct bpak_header *h = bpak_pkg_header(&self->pkg);
+    static char *kwlist[] = {"sign_key_path", NULL};
+
+    rc = PyArg_ParseTupleAndKeywords(args, kwds, "s", kwlist,
+                                     &sign_key_path);
+
+    if (!rc) {
+        PyErr_SetString(BPAKPackageError, "Invalid argument");
+        Py_RETURN_FALSE;
+    }
+
+    rc = bpak_pkg_sign(&self->pkg, sign_key_path);
+
+    if (rc != BPAK_OK) {
+        PyErr_SetString(BPAKPackageError, "Signing failed");
+        Py_RETURN_FALSE;
+    }
+
+    rc = bpak_pkg_write_header(&self->pkg);
+
+    if (rc != BPAK_OK) {
+        PyErr_SetString(BPAKPackageError, "Could not update header");
+        Py_RETURN_FALSE;
+    }
+
+    Py_RETURN_TRUE;
+}
+
+
 static PyObject * package_transport_encode(BPAKPackage *self,
                                             PyObject *args, PyObject *kwds)
 {
@@ -413,6 +477,12 @@ static PyMethodDef package_methods[] =
 
     {"set_keystore_id", (PyCFunction) package_set_keystore_id, METH_VARARGS | METH_KEYWORDS,
                 "Sets keystore id"},
+
+    {"verify", (PyCFunction) package_verify, METH_VARARGS | METH_KEYWORDS,
+                "Verify package using a public key"},
+
+    {"sign", (PyCFunction) package_sign, METH_VARARGS | METH_KEYWORDS,
+                "Sign package using a private key"},
 
     {"transport", (PyCFunction) package_transport_encode, METH_VARARGS | METH_KEYWORDS,
                 "Encode package for transport"},

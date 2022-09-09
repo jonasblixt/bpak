@@ -25,7 +25,6 @@ print("Pkg: " + str(p))
 # Test verify
 
 assert p.verify("%s/secp256r1-pub-key.pem"%(srcdir))
-
 p.close()
 
 print("Setting new key-id and keystore-id")
@@ -48,12 +47,14 @@ print("Setting new key-id and keystore-id")
 p = Package("test_python_lib.bpak", "r+")
 p.set_key_id(utils.id("test-key-id"))
 p.set_keystore_id(utils.id("test-keystore-id"))
-print("Signing:")
+print("Signing ec384:")
 p.sign("%s/secp384r1-key-pair.pem"%(srcdir))
 p.close()
-print("Verify:")
+print("Verify ec384:")
 # Check signature again
 p = Package("test_python_lib.bpak", "r")
 assert p.verify("%s/secp384r1-pub-key.pem"%(srcdir))
 assert os.system("../src/bpak verify test_python_lib.bpak --key %s/secp384r1-pub-key.pem"%(srcdir)) == 0
 p.close()
+
+print("Test end")
