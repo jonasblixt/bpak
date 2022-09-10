@@ -25,6 +25,7 @@
 #include <mbedtls/entropy.h>
 #include <mbedtls/ctr_drbg.h>
 
+#ifdef BPAK_BUILD_MERKLE
 static ssize_t merkle_wr(off_t offset,
                          uint8_t *buf,
                          size_t size,
@@ -187,6 +188,8 @@ err_free_buf_out:
     free(merkle_buf);
     return rc;
 }
+
+#endif  // BPAK_BUILD_MERKLE
 
 int bpak_pkg_add_file(struct bpak_package *pkg, const char *filename,
                      const char *part_name, uint8_t flags)

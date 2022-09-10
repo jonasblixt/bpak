@@ -18,6 +18,7 @@
 
 #include "bpak_tool.h"
 
+#ifdef BPAK_BUILD_PKG_SIGN
 int action_sign(int argc, char **argv)
 {
     int opt;
@@ -117,6 +118,12 @@ err_out:
     bpak_pkg_close(&pkg);
     return rc;
 }
+#else
+int action_sign(int argc, char **argv)
+{
+    return -BPAK_NOT_SUPPORTED;
+}
+#endif  // BPAK_BUILD_PKG_SIGN
 
 int action_verify(int argc, char **argv)
 {

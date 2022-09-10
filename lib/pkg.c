@@ -376,6 +376,7 @@ err_out:
     return rc;
 }
 
+#ifdef BPAK_BUILD_TRANSPORT_ENCODE
 int bpak_pkg_transport_encode(struct bpak_package *input,
                               struct bpak_package *output,
                               struct bpak_package *origin)
@@ -394,3 +395,4 @@ int bpak_pkg_transport_encode(struct bpak_package *input,
                                  output->fp, &output->header,
                                  origin_fp, origin_header);
 }
+#endif  // BPAK_BUILD_TRANSPORT_ENCODE

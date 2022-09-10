@@ -268,13 +268,17 @@ int action_add(int argc, char **argv)
     }
     else if (strcmp(encoder, "merkle") == 0)
     {
+#ifdef BPAK_BUILD_MERKLE
         if (bpak_get_verbosity())
             printf("Writing filesystem...\n");
 
         rc = bpak_pkg_add_file_with_merkle_tree(&pkg, from_file, part_name, flags);
-
+#else
+        rc = -BPAK_NOT_SUPPORTED;
+#endif
         if (rc != BPAK_OK)
             goto err_close_pkg_out;
+
     }
     else
     {

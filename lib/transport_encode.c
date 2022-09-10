@@ -87,6 +87,7 @@ err_out:
     return rc;
 }
 
+#ifdef BPAK_BUILD_BSDIFF
 struct bsdiff_private
 {
     int fd;
@@ -120,7 +121,6 @@ static ssize_t bsdiff_write_output(off_t offset,
 
     return bytes_written;
 }
-
 
 static ssize_t transport_bsdiff_hs(FILE *target,
                                    off_t target_offset,
@@ -209,6 +209,9 @@ err_munmap_target:
     munmap(target_data_mmap, target_file_sz);
     return rc;
 }
+#endif //  BPAK_BUILD_BSDIFF
+
+#ifdef BPAK_BUILD_MERKLE
 
 struct merkle_priv_ctx {
     FILE *out;
@@ -373,6 +376,8 @@ static ssize_t transport_merkle_generate(FILE *fp,
         return rc;
 }
 
+#endif  // BPAK_BUILD_MERKLE
+
 static int transport_encode_part(struct bpak_transport_meta *tm,
                                  uint32_t part_ref_id,
                                  FILE *input_fp, struct bpak_header *input_header,
@@ -457,6 +462,7 @@ static int transport_encode_part(struct bpak_transport_meta *tm,
     off_t origin_offset = 0;
 
     switch (alg_id) {
+#ifdef BPAK_BUILD_BSDIFF
         case BPAK_ID_BSDIFF: /* heatshrink compressor */
             if (origin_header == NULL) {
                 bpak_printf(0, "Error: Need an origin stream for diff operation\n");
@@ -474,12 +480,15 @@ static int transport_encode_part(struct bpak_transport_meta *tm,
                                 bpak_part_offset(output_header, output_part) +
                                   output_offset);
         break;
+#endif
+#ifdef BPAK_BUILD_MERKLE
         case BPAK_ID_MERKLE_GENERATE:
             output_size = transport_merkle_generate(output_fp,
                                                     output_header,
                                                     part_ref_id,
                                                     output_offset);
         break;
+#endif
         case BPAK_ID_REMOVE_DATA:
             /* No data is produced for this part */
             output_size = 0;

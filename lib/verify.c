@@ -158,6 +158,7 @@ int bpak_verify_compute_payload_hash(struct bpak_header *header,
     return BPAK_OK;
 }
 
+#ifdef BPAK_BUILD_MERKLE
 struct merkle_verify_private
 {
     void *user;
@@ -264,6 +265,7 @@ int bpak_verify_merkle_tree(bpak_io_t read_payload,
 
     return BPAK_OK;
 }
+#endif  // BPAK_BUILD_MERKLE
 
 int bpak_verify_payload(struct bpak_header *header,
                         bpak_io_t read_payload,
@@ -292,6 +294,7 @@ int bpak_verify_payload(struct bpak_header *header,
         return -BPAK_BAD_PAYLOAD_HASH;
     }
 
+#ifdef BPAK_BUILD_MERKLE
     /* Compute and compare merkle hash trees and root hashes */
     bpak_foreach_part(header, p) {
         if (!p->id)
@@ -347,6 +350,7 @@ int bpak_verify_payload(struct bpak_header *header,
             return rc;
         }
     }
+#endif  // BPAK_BUILD_MERKLE
 
     return BPAK_OK;
 }

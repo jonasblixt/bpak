@@ -1,22 +1,36 @@
-if BUILD_BPAK_TOOL
+if BPAK_BUILD_CLI
 
 bin_PROGRAMS = bpak
 
 bpak_SOURCES  = main.c \
                 misc.c \
                 show.c \
-                create.c \
-                add.c \
                 sign.c \
                 generate.c \
                 transport.c \
                 compare.c \
-                set.c \
                 extract.c
 
 bpak_CFLAGS  = -I$(top_srcdir)/include \
 			   $(LIBUUID_CFLAGS) \
                $(CODE_COVERAGE_CFLAGS)
+
+if BPAK_BUILD_MERKLE
+bpak_CFLAGS  += -DBPAK_BUILD_MERKLE
+endif
+
+if BPAK_BUILD_PKG_CREATE
+bpak_SOURCES += create.c add.c set.c
+bpak_CFLAGS  += -DBPAK_BUILD_PKG_CREATE
+endif
+
+if BPAK_BUILD_TRANSPORT_ENCODE
+bpak_CFLAGS  += -DBPAK_BUILD_TRANSPORT_ENCODE
+endif
+
+if BPAK_BUILD_PKG_SIGN
+bpak_CFLAGS  += -DBPAK_BUILD_PKG_SIGN
+endif
 
 bpak_LDFLAGS = $(LIBUUID_LIBS) -lmbedtls -lmbedcrypto
 

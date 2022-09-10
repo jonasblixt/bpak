@@ -15,6 +15,7 @@
 #include <bpak/merkle.h>
 #include <bpak/id.h>
 
+#ifdef BPAK_BUILD_MERKLE
 static ssize_t merkle_generate(struct bpak_transport_decode *ctx)
 {
     int rc;
@@ -117,6 +118,8 @@ static ssize_t merkle_generate(struct bpak_transport_decode *ctx)
         return rc;
 }
 
+#endif  // BPAK_BUILD_MERKLE
+
 int bpak_transport_decode_init(struct bpak_transport_decode *ctx,
                                uint8_t *buffer,
                                size_t buffer_length,
@@ -206,6 +209,7 @@ int bpak_transport_decode_start(struct bpak_transport_decode *ctx,
     size_t patch_input_length = bpak_part_size(part);
 
     switch (ctx->decoder_id) {
+#ifdef BPAK_BUILD_BSPATCH
         case BPAK_ID_BSPATCH: /* heatshrink decompressor*/
         {
             if (ctx->read_origin == NULL) {
@@ -228,11 +232,14 @@ int bpak_transport_decode_start(struct bpak_transport_decode *ctx,
                                      ctx->user);
         }
         break;
+#endif
+#ifdef BPAK_BUILD_MERKLE
         case BPAK_ID_MERKLE_GENERATE:
             /* Merkle trees are generated from output data
              *  of a previous patch step, this is done in the final call */
             rc = BPAK_OK;
         break;
+#endif
         case 0: /* Copy data */
             ctx->copy_offset = 0;
             rc = BPAK_OK;
@@ -251,6 +258,7 @@ int bpak_transport_decode_write_chunk(struct bpak_transport_decode *ctx,
     int rc;
 
     switch (ctx->decoder_id) {
+#ifdef BPAK_BUILD_BSPATCH
         case BPAK_ID_BSPATCH: /* id("bspatch") heatshrink decompressor*/
         {
             struct bpak_bspatch_hs_context *hs_ctx = \
@@ -259,6 +267,7 @@ int bpak_transport_decode_write_chunk(struct bpak_transport_decode *ctx,
             rc = bpak_bspatch_hs_write(hs_ctx, buffer, length);
         }
         break;
+#endif
         case 0: /* Copy data */
         {
             ssize_t bytes_written = ctx->write_output(ctx->copy_offset,
@@ -288,6 +297,7 @@ int bpak_transport_decode_finish(struct bpak_transport_decode *ctx)
     ssize_t output_length = 0;
 
     switch (ctx->decoder_id) {
+#ifdef BPAK_BUILD_BSPATCH
         case BPAK_ID_BSPATCH: /* id("bspatch") heatshrink decompressor*/
         {
             struct bpak_bspatch_hs_context *hs_ctx = \
@@ -296,9 +306,12 @@ int bpak_transport_decode_finish(struct bpak_transport_decode *ctx)
             output_length = bpak_bspatch_hs_final(hs_ctx);
         }
         break;
+#endif
+#ifdef BPAK_BUILD_MERKLE
         case BPAK_ID_MERKLE_GENERATE: /* id("merkle-generate") */
             output_length = merkle_generate(ctx);
         break;
+#endif
         case 0: /* Copy data */
             rc = BPAK_OK;
             output_length = ctx->part->size;
