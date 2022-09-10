@@ -8,13 +8,12 @@ static ssize_t compressor_write(off_t offset,
 {
     struct bpak_bsdiff_hs_context *ctx_hs =
                 (struct bpak_bsdiff_hs_context *) user_priv;
-    int8_t output_buffer[4096];
+    unsigned char output_buffer[4096];
     size_t sink_sz = 0;
     size_t poll_sz = 0;
     size_t sunk = 0;
     HSE_poll_res pres = 0;
     HSE_sink_res sres = 0;
-    HSE_finish_res fres = 0;
 
     do {
         if (length > 0) {
@@ -75,7 +74,6 @@ int bpak_bsdiff_hs(struct bpak_bsdiff_hs_context *ctx)
     uint8_t output_buffer[4096];
     size_t poll_sz = 0;
     HSE_poll_res pres = 0;
-    HSE_sink_res sres = 0;
     HSE_finish_res fres = 0;
 
     rc = bpak_bsdiff(&ctx->bsdiff_ctx);
@@ -104,6 +102,8 @@ int bpak_bsdiff_hs(struct bpak_bsdiff_hs_context *ctx)
             }
         }
     } while (fres == HSER_FINISH_MORE);
+
+    return BPAK_OK;
 }
 
 int bpak_bsdiff_hs_free(struct bpak_bsdiff_hs_context *ctx)

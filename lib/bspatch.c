@@ -49,7 +49,6 @@ int bpak_bspatch_write(struct bpak_bspatch_context *ctx,
                         size_t length)
 {
     uint8_t *pp = NULL; // Patch pointer within the current chunk
-    uint8_t buf[8];
     int rc = 0;
     size_t bytes_available = length;
 

@@ -287,10 +287,9 @@ int bpak_pkg_add_key(struct bpak_package *pkg, const char *filename,
                      const char *part_name, uint8_t flags)
 {
     int rc;
-    char tmp[4096];
+    unsigned char tmp[4096];
     struct bpak_header *h = bpak_pkg_header(pkg);
     struct bpak_part_header *p = NULL;
-    struct stat statbuf;
     uint64_t new_offset = sizeof(struct bpak_header);
     mbedtls_pk_context ctx;
     mbedtls_pk_init(&ctx);

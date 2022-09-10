@@ -25,8 +25,6 @@ int action_transport(int argc, char **argv)
 {
     int opt;
     int long_index = 0;
-    bool verbose = false;
-    uint32_t flags = 0;
     const char *filename = NULL;
     const char *origin_file = NULL;
     const char *output_file = NULL;
@@ -132,8 +130,6 @@ int action_transport(int argc, char **argv)
         printf("Error: Could not open package %s\n", filename);
         return -BPAK_FAILED;
     }
-
-    struct bpak_header *h = bpak_pkg_header(&input);
 
     if (origin_file) {
         rc = bpak_pkg_open(&origin, origin_file, "rb+");

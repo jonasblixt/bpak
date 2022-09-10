@@ -25,7 +25,6 @@ int action_add(int argc, char **argv)
 {
     int opt;
     int long_index = 0;
-    bool verbose = false;
     uint32_t flags = 0;
     const char *filename = NULL;
     const char *part_name = NULL;
@@ -137,7 +136,7 @@ int action_add(int argc, char **argv)
 
     if (meta_name)
     {
-        char *meta_data = NULL;
+        unsigned char *meta_data = NULL;
         uint32_t part_ref_id = 0;
 
         if (part_ref)

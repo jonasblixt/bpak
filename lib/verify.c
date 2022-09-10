@@ -24,7 +24,6 @@ int bpak_verify_compute_header_hash(struct bpak_header *header,
                                     uint8_t *output,
                                     size_t *size)
 {
-    int rc;
     uint8_t signature[BPAK_SIGNATURE_MAX_BYTES];
     uint16_t signature_sz;
     mbedtls_sha256_context sha256;
@@ -64,10 +63,10 @@ int bpak_verify_compute_header_hash(struct bpak_header *header,
     }
 
     if (header->hash_kind == BPAK_HASH_SHA256)
-        rc = mbedtls_sha256_update_ret(&sha256, (const unsigned char *) header,
+        mbedtls_sha256_update_ret(&sha256, (const unsigned char *) header,
                                         sizeof(*header));
     else
-        rc = mbedtls_sha512_update_ret(&sha512, (const unsigned char *) header,
+        mbedtls_sha512_update_ret(&sha512, (const unsigned char *) header,
                                         sizeof(*header));
 
     if (header->hash_kind == BPAK_HASH_SHA256)
@@ -88,8 +87,9 @@ int bpak_verify_compute_payload_hash(struct bpak_header *header,
                                     uint8_t *output,
                                     size_t *size)
 {
-    int rc;
     off_t current_offset = data_offset;
+    unsigned char hash_buffer[512];
+
     mbedtls_sha256_context sha256;
     mbedtls_sha512_context sha512;
 
@@ -118,7 +118,6 @@ int bpak_verify_compute_payload_hash(struct bpak_header *header,
         default:
             return -BPAK_NOT_SUPPORTED;
     }
-    char hash_buffer[512];
 
     bpak_foreach_part(header, p) {
         size_t bytes_to_read = bpak_part_size(p);
@@ -141,9 +140,9 @@ int bpak_verify_compute_payload_hash(struct bpak_header *header,
             }
 
             if (header->hash_kind == BPAK_HASH_SHA256)
-                rc = mbedtls_sha256_update_ret(&sha256, hash_buffer, chunk);
+                mbedtls_sha256_update_ret(&sha256, hash_buffer, chunk);
             else
-                rc = mbedtls_sha512_update_ret(&sha512, hash_buffer, chunk);
+                mbedtls_sha512_update_ret(&sha512, hash_buffer, chunk);
 
             bytes_to_read -= chunk;
             current_offset += chunk;
@@ -319,7 +318,7 @@ int bpak_verify_payload(struct bpak_header *header,
         /* Compute the part id for the merkle tree, this is always an
          *  extension of the data part id, suffixed with '-hash-tree'
          */
-        uint32_t merkle_tree_part_id = bpak_crc32(p->id, hash_tree_suffix,
+        uint32_t merkle_tree_part_id = bpak_crc32(p->id, (uint8_t *) hash_tree_suffix,
                                                  strlen(hash_tree_suffix));
 
         struct bpak_part_header *merkle_tree_part = NULL;

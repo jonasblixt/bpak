@@ -49,7 +49,7 @@ static int hash_kind(int bpak_hash_kind)
 static int load_private_key(const char *filename, struct bpak_key **k)
 {
     int rc = BPAK_OK;
-    char tmp[4096];
+    unsigned char tmp[4096];
     mbedtls_pk_context ctx;
     mbedtls_pk_init(&ctx);
     mbedtls_pk_parse_keyfile(&ctx, filename, NULL);
@@ -129,7 +129,7 @@ int bpak_pkg_sign(struct bpak_package *pkg, const char *key_filename)
     mbedtls_entropy_context entropy;
     mbedtls_ctr_drbg_context ctr_drbg;
 
-    rc = bpak_pkg_update_hash(pkg, hash_output, &hash_size);
+    rc = bpak_pkg_update_hash(pkg, (char *) hash_output, &hash_size);
 
     if (rc != BPAK_OK)
         goto err_out;
@@ -183,7 +183,6 @@ err_free_crypto_ctx_out:
     mbedtls_entropy_free(&entropy);
     mbedtls_ctr_drbg_free(&ctr_drbg);
     mbedtls_pk_free(&ctx);
-err_free_key_out:
     free(sign_key);
 err_out:
     return rc;

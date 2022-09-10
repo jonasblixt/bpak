@@ -23,8 +23,6 @@ int action_set(int argc, char **argv)
 {
     int opt;
     int long_index = 0;
-    bool verbose = false;
-    uint32_t flags = 0;
     const char *filename = NULL;
     const char *meta_name = NULL;
     const char *from_string = NULL;
@@ -173,7 +171,6 @@ int action_set(int argc, char **argv)
             }
 
             struct bpak_header *new_header = malloc(sizeof(struct bpak_header));
-            struct bpak_meta_header *meta_tmp = NULL;
 
             memcpy(new_header, h, sizeof(*h));
             memset(new_header->meta, 0, sizeof(new_header->meta));

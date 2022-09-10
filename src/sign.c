@@ -23,7 +23,6 @@ int action_sign(int argc, char **argv)
 {
     int opt;
     int long_index = 0;
-    bool verbose = false;
     const char *filename = NULL;
     const char *signature_file = NULL;
     const char *key_source = NULL;
@@ -102,7 +101,7 @@ int action_sign(int argc, char **argv)
             printf("Loaded signature %li bytes\n", size);
         }
 
-        rc = bpak_pkg_write_raw_signature(&pkg, sig, size);
+        rc = bpak_pkg_write_raw_signature(&pkg, (uint8_t *) sig, size);
 
         if (rc != BPAK_OK)
             goto err_out;
@@ -129,7 +128,6 @@ int action_verify(int argc, char **argv)
 {
     int opt;
     int long_index = 0;
-    bool verbose = false;
     const char *filename = NULL;
     const char *key_source = NULL;
     struct bpak_package pkg;

@@ -134,7 +134,7 @@ int action_generate(int argc, char **argv)
             goto err_free_io_out;
         }
 
-        char *package_id = NULL;
+        unsigned char *package_id = NULL;
 
         rc = bpak_get_meta(h, bpak_id("bpak-package"), (void **) &package_id,
                             NULL);
@@ -149,8 +149,7 @@ int action_generate(int argc, char **argv)
 
         uuid_parse(BPAK_KEYSTORE_UUID, keystore_uuid);
 
-        if (uuid_compare(keystore_uuid, package_id) != 0)
-        {
+        if (uuid_compare(keystore_uuid, package_id) != 0) {
             fprintf(stderr, "Error: This is not a keystore file\n");
             rc = -BPAK_FAILED;
             goto err_free_io_out;
@@ -170,7 +169,7 @@ int action_generate(int argc, char **argv)
         mbedtls_pk_context ctx;
 
         int key_index = 0;
-        char key_buffer[4096];
+        unsigned char key_buffer[4096];
         mbedtls_pk_init(&ctx);
 
         printf("/* Automatically generated with %s %s */\n", PACKAGE_NAME,

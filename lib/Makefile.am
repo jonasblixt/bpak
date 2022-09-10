@@ -12,7 +12,8 @@ libbpak_la_SOURCES = bpak.c \
                      transport_decode.c
 
 libbpak_la_CFLAGS = -I$(top_srcdir)/include \
-                     $(CODE_COVERAGE_CFLAGS)
+                     $(CODE_COVERAGE_CFLAGS) \
+					 -Wall -Werror
 
 libbpak_la_LDFLAGS =  -lmbedtls -lmbedcrypto
 

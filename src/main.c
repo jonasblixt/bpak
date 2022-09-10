@@ -26,7 +26,6 @@ int main(int argc, char **argv)
     int opt;
     int long_index = 0;
     const char *action = NULL;
-    const char *filename = NULL;
 
     struct option long_options[] =
     {

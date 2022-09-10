@@ -126,12 +126,9 @@ size_t bpak_merkle_get_size(struct bpak_merkle_context *ctx)
 int bpak_merkle_write_chunk(struct bpak_merkle_context *ctx, uint8_t *buffer,
                             size_t length)
 {
-    int rc;
     size_t data_to_process = length;
     size_t chunk_length;
     uint8_t *chunk_buffer = buffer;
-    off_t output_offset;
-    ssize_t bytes_written;
 
     while (data_to_process > 0) {
         if (ctx->block_byte_counter == BPAK_MERKLE_BLOCK_SZ) {

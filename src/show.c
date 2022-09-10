@@ -259,7 +259,7 @@ int action_show(int argc, char **argv)
         goto err_pkg_close;
     }
 
-    bpak_bin2hex(hash_output, hash_size, hash_str, sizeof(hash_str));
+    bpak_bin2hex((uint8_t *) hash_output, hash_size, hash_str, sizeof(hash_str));
     printf("\nHeader hash:  %s\n", hash_str);
     bpak_bin2hex(pkg.header.payload_hash, hash_size, hash_str, sizeof(hash_str));
     printf("Payload hash: %s\n", hash_str);

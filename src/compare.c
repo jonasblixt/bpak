@@ -122,7 +122,6 @@ int action_compare(int argc, char **argv)
     char *data1 = NULL;
     char *data2 = NULL;
     bool change;
-    bool added;
     bool removed;
 
     #define RED_CLR "\033[31;1m"
@@ -140,7 +139,6 @@ int action_compare(int argc, char **argv)
         data1 = NULL;
         data2 = NULL;
         change = false;
-        added = false;
         removed = false;
 
         bpak_get_meta(h1p, m->id, (void **) &data1, data1);
@@ -191,7 +189,6 @@ int action_compare(int argc, char **argv)
         data1 = NULL;
         data2 = NULL;
         change = false;
-        added = false;
         removed = false;
 
         bpak_get_meta(h2p, m->id, (void **) &data1, data1);
@@ -354,7 +351,6 @@ int action_compare(int argc, char **argv)
     }
 err_close_fp1_out:
     fclose(fp1);
-err_close_fp2_out:
     fclose(fp2);
     return rc;
 }

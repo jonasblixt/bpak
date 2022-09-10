@@ -114,7 +114,8 @@ int bpak_pkg_update_hash(struct bpak_package *pkg, char *output, size_t *size)
         return rc;
 
     if ((output) != 0 && (size != NULL)) {
-        rc = bpak_verify_compute_header_hash(&pkg->header, output, size);
+        rc = bpak_verify_compute_header_hash(&pkg->header, (uint8_t *) output,
+                                             size);
         if (rc != BPAK_OK)
             return rc;
     }
@@ -174,13 +175,9 @@ int bpak_pkg_write_header(struct bpak_package *pkg)
 int bpak_pkg_write_raw_signature(struct bpak_package *pkg,
                                  const uint8_t *signature, size_t size)
 {
-    int rc;
-    uint8_t *signature_ptr = NULL;
-
     memset(pkg->header.signature, 0, sizeof(pkg->header.signature));
     memcpy(pkg->header.signature, signature, size);
     pkg->header.signature_sz = size;
-
     return bpak_pkg_write_header(pkg);
 }
 
@@ -258,13 +255,11 @@ int bpak_pkg_transport_decode(struct bpak_package *input,
     int rc;
 
     struct bpak_header *patch_header = bpak_pkg_header(input);
-    struct bpak_part_header *part = NULL;
     struct bpak_part_header *origin_part = NULL;
     struct bpak_transport_decode decode_ctx;
     uint8_t decode_buffer[4096];
     uint8_t chunk_buffer[4096];
     uint8_t decode_context_buffer[1024];
-    ssize_t chunk_length;
     struct decode_private decode_private;
 
     memset(&decode_private, 0, sizeof(struct decode_private));

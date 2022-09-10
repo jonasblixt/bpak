@@ -28,13 +28,11 @@ int action_extract(int argc, char **argv)
     int opt;
     int rc;
     int long_index = 0;
-    bool verbose = false;
     const char *filename = NULL;
     const char *output_filename = NULL;
     uint32_t meta_id = 0;
     uint32_t part_id = 0;
     uint32_t part_id_ref = 0;
-    char output_path[16];
     FILE *fp = NULL;
 
     struct option long_options[] =

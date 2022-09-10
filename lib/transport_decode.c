@@ -20,7 +20,6 @@ static ssize_t merkle_generate(struct bpak_transport_decode *ctx)
 {
     int rc;
     struct bpak_merkle_context merkle;
-    struct bpak_part_header *part;
     struct bpak_part_header *fs_part;
     uint8_t chunk_buffer[4096];
     uint32_t fs_id = 0;
@@ -31,7 +30,7 @@ static ssize_t merkle_generate(struct bpak_transport_decode *ctx)
     /* The part id currently begin processed is for the hash tree,
      *  Locate the filesystem that should be used */
     bpak_foreach_part(ctx->patch_header, part) {
-        if (bpak_crc32(part->id, "-hash-tree", 10) == ctx->part->id) {
+        if (bpak_crc32(part->id, (uint8_t *) "-hash-tree", 10) == ctx->part->id) {
             fs_id = part->id;
             break;
         }
@@ -182,7 +181,6 @@ int bpak_transport_decode_start(struct bpak_transport_decode *ctx,
     int rc;
     struct bpak_transport_meta *tm = NULL;
     ssize_t bytes_written;
-    ssize_t output_size;
 
     bytes_written = ctx->write_output_header(0, (uint8_t *) ctx->patch_header,
                                              sizeof(struct bpak_header),
@@ -292,7 +290,6 @@ int bpak_transport_decode_write_chunk(struct bpak_transport_decode *ctx,
 
 int bpak_transport_decode_finish(struct bpak_transport_decode *ctx)
 {
-    int rc;
     ssize_t bytes_written;
     ssize_t output_length = 0;
 
@@ -313,7 +310,6 @@ int bpak_transport_decode_finish(struct bpak_transport_decode *ctx)
         break;
 #endif
         case 0: /* Copy data */
-            rc = BPAK_OK;
             output_length = ctx->part->size;
         break;
         default:

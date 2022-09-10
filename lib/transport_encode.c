@@ -276,7 +276,6 @@ static ssize_t transport_merkle_generate(FILE *fp,
     int rc;
     struct bpak_merkle_context merkle;
     struct merkle_priv_ctx merkle_priv;
-    struct bpak_part_header *part;
     struct bpak_part_header *fs_part;
     uint8_t chunk_buffer[4096];
     uint32_t fs_id = 0;
@@ -287,7 +286,7 @@ static ssize_t transport_merkle_generate(FILE *fp,
     /* The part id currently begin processed is for the hash tree,
      *  Locate the filesystem that should be used */
     bpak_foreach_part(header, part) {
-        if (bpak_crc32(part->id, "-hash-tree", 10) == merkle_tree_id) {
+        if (bpak_crc32(part->id, (uint8_t *) "-hash-tree", 10) == merkle_tree_id) {
             fs_id = part->id;
             break;
         }
@@ -388,10 +387,6 @@ static int transport_encode_part(struct bpak_transport_meta *tm,
     struct bpak_part_header *input_part = NULL;
     struct bpak_part_header *output_part = NULL;
     struct bpak_part_header *origin_part = NULL;
-    uint64_t bytes_to_copy = 0;
-    size_t chunk_sz = 0;
-    size_t read_bytes = 0;
-    size_t written_bytes = 0;
     uint32_t alg_id = 0;
     ssize_t output_size = -1;
 
@@ -521,7 +516,6 @@ int bpak_transport_encode(FILE *input_fp, struct bpak_header *input_header,
 {
     int rc = BPAK_OK;
     struct bpak_transport_meta *tm = NULL;
-    struct bpak_part_header *ph = NULL;
     ssize_t written;
 
 

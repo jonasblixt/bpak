@@ -18,7 +18,7 @@ struct bpak_bsdiff_context
     int new_fd;
     uint8_t *new_data;
     size_t new_length;
-    uint64_t *suffix_array;
+    int64_t *suffix_array;
     size_t suffix_array_size;
     int64_t scan;
     int64_t len;

@@ -13,7 +13,8 @@ bpak_SOURCES  = main.c \
 
 bpak_CFLAGS  = -I$(top_srcdir)/include \
 			   $(LIBUUID_CFLAGS) \
-               $(CODE_COVERAGE_CFLAGS)
+               $(CODE_COVERAGE_CFLAGS) \
+			   -Wall -Werror
 
 if BPAK_BUILD_MERKLE
 bpak_CFLAGS  += -DBPAK_BUILD_MERKLE

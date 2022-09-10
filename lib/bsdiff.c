@@ -100,7 +100,6 @@ static void offtout(int64_t x, uint8_t *buf)
 
 static int write_diff_extra_and_adjustment(struct bpak_bsdiff_context *ctx)
 {
-    int res;
     int64_t s;
     int64_t sf;
     int64_t diff_size;
@@ -214,7 +213,8 @@ static int write_diff_extra_and_adjustment(struct bpak_bsdiff_context *ctx)
                                       buffer, 8, ctx->user_priv);
 
     if (bytes_written < 0)
-        return res;
+        return bytes_written;
+
     ctx->output_pos += bytes_written;
 
     /* Write diff data */
@@ -234,11 +234,13 @@ static int write_diff_extra_and_adjustment(struct bpak_bsdiff_context *ctx)
         bytes_written = ctx->write_output(ctx->output_pos,
                                           buffer, chunk_len, ctx->user_priv);
 
+        if (bytes_written < 0)
+            return bytes_written;
+
         if (bytes_written != chunk_len) {
-            res = -BPAK_FAILED;
             bpak_printf(0, "Error: Write error (%i != %li)\n", bytes_written,
                                                                chunk_len);
-            return bytes_written;
+            return -BPAK_WRITE_ERROR;
         }
         ctx->output_pos += chunk_len;
         data_to_write -= chunk_len;

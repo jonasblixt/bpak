@@ -14,14 +14,12 @@ int action_create(int argc, char **argv)
     int opt;
     int long_index = 0;
     bool force_overwrite = false;
-    int max_parts = 64;
     const char *filename;
     const char *hash_kind_str = NULL;
     const char *signature_kind_str = NULL;
     uint8_t hash_kind = BPAK_HASH_INVALID;
     uint8_t signature_kind = BPAK_SIGN_INVALID;
     int rc = 0;
-    struct bpak_context *ctx;
 
     struct option long_options[] =
     {
