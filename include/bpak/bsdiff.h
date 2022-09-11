@@ -38,7 +38,6 @@ struct bpak_bsdiff_context
     int64_t last_pos;
     int64_t last_offset;
     int64_t scsc;
-    char suffix_fn[64];
     bpak_io_t write_output;
     size_t output_pos;
     void *user_priv;
