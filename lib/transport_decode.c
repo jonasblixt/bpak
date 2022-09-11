@@ -21,7 +21,6 @@ static ssize_t merkle_generate(struct bpak_transport_decode *ctx)
     int rc;
     struct bpak_merkle_context merkle;
     struct bpak_part_header *fs_part;
-    uint8_t chunk_buffer[4096];
     uint32_t fs_id = 0;
     uint8_t *salt = NULL;
     size_t bytes_to_process;
@@ -82,14 +81,15 @@ static ssize_t merkle_generate(struct bpak_transport_decode *ctx)
 
     bytes_to_process = bpak_part_size(fs_part);
     while (bytes_to_process) {
-        chunk_length = ctx->read_output(data_offset, chunk_buffer,
-                                        sizeof(chunk_buffer),
+        size_t bytes_to_read = BPAK_MIN(bytes_to_process, ctx->buffer_length);
+        chunk_length = ctx->read_output(data_offset, ctx->buffer,
+                                        bytes_to_read,
                                         ctx->user);
 
-        if (chunk_length != sizeof(chunk_buffer))
+        if (chunk_length != bytes_to_read)
             return -BPAK_READ_ERROR;
 
-        rc = bpak_merkle_write_chunk(&merkle, chunk_buffer, chunk_length);
+        rc = bpak_merkle_write_chunk(&merkle, ctx->buffer, chunk_length);
 
         if (rc != BPAK_OK) {
             bpak_printf(0, "Error: merkle processing failed (%i)\n", rc);
