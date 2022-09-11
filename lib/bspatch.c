@@ -210,8 +210,7 @@ ssize_t bpak_bspatch_final(struct bpak_bspatch_context *ctx)
     return ctx->output_position;
 }
 
-int bpak_bspatch_free(struct bpak_bspatch_context *ctx)
+void bpak_bspatch_free(struct bpak_bspatch_context *ctx)
 {
     (void) ctx;
-    return 0;
 }

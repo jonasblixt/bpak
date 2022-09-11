@@ -3,7 +3,7 @@
  *
  * BPAK - Bit Packer
  *
- * Copyright (C) 2019 Jonas Blixt <jonpe960@gmail.com>
+ * Copyright (C) 2022 Jonas Blixt <jonpe960@gmail.com>
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -240,7 +240,6 @@ struct bpak_header
  * @return BPAK_OK on success -BPAK_NOT_FOUND if the metadata is missing
  *
  **/
-
 int bpak_get_meta(struct bpak_header *hdr, uint32_t id, void **output,
                     void *offset);
 
@@ -251,8 +250,9 @@ int bpak_get_meta(struct bpak_header *hdr, uint32_t id, void **output,
  * @param[in] hdr BPAK Header
  * @param[in] id Meta data identifier
  * @param[in] part_id_ref Part reference identifier
- * @param[out] ptr Pointer is assigned to the location of the metadata within
+ * @param[out] output Pointer is assigned to the location of the metadata within
  *  the hdr->metadata byte array.
+ * @param[in] offset Optional offset within the meta data array
  *
  * @return BPAK_OK on success -BPAK_NOT_FOUND if the metadata is missing
  *
@@ -267,8 +267,9 @@ int bpak_get_meta_with_ref(struct bpak_header *hdr, uint32_t id,
  * @param[in] hdr BPAK Header
  * @param[in] id Meta data identifier
  * @param[in] part_id_ref Part reference identifier
- * @param[out] ptr Pointer is assigned to the location of the metadata within
+ * @param[out] output Pointer is assigned to the location of the metadata within
  *  the hdr->metadata byte array.
+ * @param[in] offset Optional offset within the meta data array
  * @param[out] header Pointer to the metadata header
  *
  * @return BPAK_OK on success -BPAK_NOT_FOUND if the metadata is missing

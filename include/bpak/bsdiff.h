@@ -1,3 +1,14 @@
+/**
+ * \file bsdiff.h
+ *
+ * BPAK - Bit Packer
+ *
+ * Copyright (C) 2022 Jonas Blixt <jonpe960@gmail.com>
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
+ */
+
 #ifndef BPAK_BSDIFF_H
 #define BPAK_BSDIFF_H
 
@@ -33,7 +44,20 @@ struct bpak_bsdiff_context
     void *user_priv;
 };
 
-
+/**
+ * Initialize a bsdiff context
+ *
+ * @param[in] ctx The bsdiff context
+ * @param[in] origin_data pointer to origin/source data
+ * @param[in] origin_length Length of origin data
+ * @param[in] new_data New, or target data
+ * @param[in] new_length Length of target data
+ * @param[in] write_output I/O callback for writing output data
+ * @param[in] user_priv Priv context for i/o callback
+ *
+ * @return BPAK_OK on success or a negative number
+ *
+ **/
 int bpak_bsdiff_init(struct bpak_bsdiff_context *ctx,
                       uint8_t *origin_data,
                       size_t origin_length,
@@ -42,9 +66,21 @@ int bpak_bsdiff_init(struct bpak_bsdiff_context *ctx,
                       bpak_io_t write_output,
                       void *user_priv);
 
+/**
+ * Perform the diff process
+ *
+ * @param[in] ctx The bsdiff context
+ *
+ * @return BPAK_OK on success or a negative number
+ */
 int bpak_bsdiff(struct bpak_bsdiff_context *ctx);
 
-int bpak_bsdiff_free(struct bpak_bsdiff_context *ctx);
+/**
+ * Free the diff context
+ *
+ * @param[in] ctx The bsdiff context
+ */
+void bpak_bsdiff_free(struct bpak_bsdiff_context *ctx);
 
 #ifdef __cplusplus
 }  // extern "C"

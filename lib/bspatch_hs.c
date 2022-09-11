@@ -31,9 +31,9 @@ ssize_t bpak_bspatch_hs_final(struct bpak_bspatch_hs_context *hs_ctx)
     return bpak_bspatch_final(&hs_ctx->bspatch_ctx);
 }
 
-int bpak_bspatch_hs_free(struct bpak_bspatch_hs_context *hs_ctx)
+void bpak_bspatch_hs_free(struct bpak_bspatch_hs_context *hs_ctx)
 {
-    return bpak_bspatch_free(&hs_ctx->bspatch_ctx);
+    bpak_bspatch_free(&hs_ctx->bspatch_ctx);
 }
 
 int bpak_bspatch_hs_write(struct bpak_bspatch_hs_context *hs_ctx,

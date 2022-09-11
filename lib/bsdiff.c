@@ -362,12 +362,10 @@ int bpak_bsdiff(struct bpak_bsdiff_context *ctx)
     return BPAK_OK;
 }
 
-int bpak_bsdiff_free(struct bpak_bsdiff_context *ctx)
+void bpak_bsdiff_free(struct bpak_bsdiff_context *ctx)
 {
     if (ctx->suffix_array != NULL) {
         free(ctx->suffix_array);
         ctx->suffix_array = NULL;
     }
-
-    return BPAK_OK;
 }

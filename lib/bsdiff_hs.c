@@ -106,7 +106,7 @@ int bpak_bsdiff_hs(struct bpak_bsdiff_hs_context *ctx)
     return BPAK_OK;
 }
 
-int bpak_bsdiff_hs_free(struct bpak_bsdiff_hs_context *ctx)
+void bpak_bsdiff_hs_free(struct bpak_bsdiff_hs_context *ctx)
 {
-    return bpak_bsdiff_free(&ctx->bsdiff_ctx);
+    bpak_bsdiff_free(&ctx->bsdiff_ctx);
 }

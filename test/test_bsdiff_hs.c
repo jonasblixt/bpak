@@ -315,8 +315,7 @@ TEST(diff_patch_hs_in_memory)
     rc = bpak_bsdiff_hs(&bsdiff);
     ASSERT(rc == 0);
 
-    rc = bpak_bsdiff_hs_free(&bsdiff);
-    ASSERT(rc == 0);
+    bpak_bsdiff_hs_free(&bsdiff);
 
     /* Apply patch */
     printf("Applying patch, length = %zu\n", patch_length);

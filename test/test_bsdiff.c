@@ -160,8 +160,7 @@ TEST(diff_patch_no_comp)
     rc = bpak_bsdiff(&bsdiff);
     ASSERT(rc == 0);
 
-    rc = bpak_bsdiff_free(&bsdiff);
-    ASSERT(rc == 0);
+    bpak_bsdiff_free(&bsdiff);
 
     /* Apply patch */
 

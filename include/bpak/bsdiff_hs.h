@@ -31,6 +31,20 @@ struct bpak_bsdiff_hs_context {
     bpak_io_t write_output;
 };
 
+/**
+ * Initialize a bsdiff heatshrink context
+ *
+ * @param[in] ctx The bsdiff context
+ * @param[in] origin_data pointer to origin/source data
+ * @param[in] origin_length Length of origin data
+ * @param[in] new_data New, or target data
+ * @param[in] new_length Length of target data
+ * @param[in] write_output I/O callback for writing output data
+ * @param[in] user_priv Priv context for i/o callback
+ *
+ * @return BPAK_OK on success or a negative number
+ *
+ **/
 int bpak_bsdiff_hs_init(struct bpak_bsdiff_hs_context *ctx,
                       uint8_t *origin_data,
                       size_t origin_length,
@@ -39,9 +53,21 @@ int bpak_bsdiff_hs_init(struct bpak_bsdiff_hs_context *ctx,
                       bpak_io_t write_output,
                       void *user_priv);
 
+/**
+ * Perform the diff process
+ *
+ * @param[in] ctx The bsdiff context
+ *
+ * @return BPAK_OK on success or a negative number
+ */
 int bpak_bsdiff_hs(struct bpak_bsdiff_hs_context *ctx);
 
-int bpak_bsdiff_hs_free(struct bpak_bsdiff_hs_context *ctx);
+/**
+ * Free the diff context
+ *
+ * @param[in] ctx The bsdiff context
+ */
+void bpak_bsdiff_hs_free(struct bpak_bsdiff_hs_context *ctx);
 
 #ifdef __cplusplus
 }  // extern "C"
