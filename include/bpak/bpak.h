@@ -49,6 +49,11 @@ extern "C" {
 #define BPAK_PART_ALIGN 512
 #define BPAK_META_ALIGN 8
 #define BPAK_SIGNATURE_MAX_BYTES 512
+#define BPAK_HASH_MAX_LENGTH 64
+
+#ifndef BPAK_CHUNK_BUFFER_LENGTH
+#define BPAK_CHUNK_BUFFER_LENGTH 4096
+#endif
 
 /*! \public
  *
@@ -107,6 +112,14 @@ enum bpak_errors
     BPAK_BAD_PAYLOAD_HASH,
     BPAK_MISSING_META_DATA,
     BPAK_PACKAGE_UUID_MISMATCH,
+    BPAK_UNSUPPORTED_COMPRESSION,
+};
+
+
+enum bpak_compression {
+    BPAK_COMPRESSION_NONE,
+    BPAK_COMPRESSION_HS,
+    BPAK_COMPRESSION_LZMA,
 };
 
 /*
@@ -128,11 +141,6 @@ enum bpak_errors
 
 /* Bits 2 - 7 are reserved */
 
-typedef ssize_t (*bpak_io_t)(off_t offset,
-                             uint8_t *buffer,
-                             size_t length,
-                             void *user);
-
 /**
  * Transport mode meta data
  *
@@ -144,6 +152,15 @@ struct bpak_transport_meta
     uint32_t alg_id_decode; /*!< Algorithm decoder ID */
     uint8_t data[24];       /*!< Algorithm specific data */
 } __attribute__ ((packed));
+
+typedef ssize_t (*bpak_io_t)(off_t offset,
+                             uint8_t *buffer,
+                             size_t length,
+                             void *user);
+
+typedef void * (*bpak_calloc_t)(size_t, size_t);
+
+typedef void (*bpak_free_t)(void *);
 
 /**
  * BPAK part header
@@ -473,6 +490,16 @@ int bpak_add_transport_meta(struct bpak_header *header, uint32_t part_id,
  * @return Library version as a text string
  **/
 const char *bpak_version(void);
+
+/**
+ * Override the default allocator
+ *
+ * @return BPAK_OK on success,
+ */
+int bpak_set_calloc_free(bpak_calloc_t calloc_func, bpak_free_t free_func);
+
+void *bpak_calloc(size_t nmemb, size_t size);
+void bpak_free(void *ptr);
 
 #ifdef __cplusplus
 }  // extern "C"

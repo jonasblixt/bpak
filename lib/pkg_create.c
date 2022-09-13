@@ -67,7 +67,11 @@ int bpak_pkg_add_file_with_merkle_tree(struct bpak_package *pkg,
     if (rc != 0)
         return rc;
 
-    size_t merkle_sz = bpak_merkle_compute_size(statbuf.st_size);
+    ssize_t merkle_sz = bpak_merkle_compute_size(statbuf.st_size);
+
+    if (merkle_sz < 0)
+        return merkle_sz;
+
     char *merkle_buf = malloc(merkle_sz);
 
     memset(merkle_buf, 0, merkle_sz);

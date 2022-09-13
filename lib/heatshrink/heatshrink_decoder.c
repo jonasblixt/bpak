@@ -30,7 +30,7 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include <bpak/heatshrink_decoder.h>
+#include "heatshrink_decoder.h"
 
 
 /* States for the polling state machine. */

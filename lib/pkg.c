@@ -257,9 +257,7 @@ int bpak_pkg_transport_decode(struct bpak_package *input,
     struct bpak_header *patch_header = bpak_pkg_header(input);
     struct bpak_part_header *origin_part = NULL;
     struct bpak_transport_decode decode_ctx;
-    uint8_t decode_buffer[4096];
-    uint8_t chunk_buffer[4096];
-    uint8_t decode_context_buffer[1024];
+    uint8_t chunk_buffer[BPAK_CHUNK_BUFFER_LENGTH];
     struct decode_private decode_private;
 
     memset(&decode_private, 0, sizeof(struct decode_private));
@@ -270,10 +268,7 @@ int bpak_pkg_transport_decode(struct bpak_package *input,
         decode_private.origin_fp = NULL;
 
     rc = bpak_transport_decode_init(&decode_ctx,
-                                    decode_buffer,
-                                    sizeof(decode_buffer),
-                                    decode_context_buffer,
-                                    sizeof(decode_context_buffer),
+                                    BPAK_CHUNK_BUFFER_LENGTH,
                                     patch_header,
                                     decode_write_output,
                                     decode_read_output,

@@ -3,6 +3,13 @@
 #include <bpak/bpak.h>
 #include <bpak/bspatch.h>
 
+#include "heatshrink/heatshrink_decoder.h"
+
+#ifdef BPAK_BUILD_LZMA
+#include <lzma.h>
+#endif
+
+
 static int64_t offtin(uint8_t *buf)
 {
     int64_t y;
@@ -21,41 +28,13 @@ static int64_t offtin(uint8_t *buf)
     return y;
 }
 
-int bpak_bspatch_init(struct bpak_bspatch_context *ctx,
-                      uint8_t *buffer,
-                      size_t buffer_length,
-                      bpak_io_t read_origin,
-                      bpak_io_t write_output,
-                      void *user_priv)
-{
-    if (buffer_length % 2 != 0)
-        return -BPAK_SIZE_ERROR;
-
-    memset(ctx, 0, sizeof(*ctx));
-
-    ctx->patch_buffer = buffer;
-    ctx->patch_buffer_length = buffer_length/2;
-    ctx->input_buffer = &buffer[buffer_length/2];
-    ctx->input_buffer_length = buffer_length/2;
-    ctx->read_origin = read_origin;
-    ctx->write_output = write_output;
-    ctx->user_priv = user_priv;
-
-    return 0;
-}
-
-int bpak_bspatch_write(struct bpak_bspatch_context *ctx,
+static int bspatch_write(struct bpak_bspatch_context *ctx,
                         uint8_t *buffer,
                         size_t length)
 {
-    uint8_t *pp = NULL; // Patch pointer within the current chunk
+    uint8_t *pp = buffer; // Patch pointer within the current chunk
     int rc = 0;
     size_t bytes_available = length;
-
-    if (buffer != NULL)
-        pp = buffer;
-    else
-        pp = ctx->input_buffer;
 
 process_more:
 
@@ -97,9 +76,6 @@ process_more:
         {
             size_t data_to_process = BPAK_MIN(BPAK_MIN(bytes_available,
                                     ctx->diff_count), ctx->patch_buffer_length);
-
-            if (data_to_process <= 0)
-                break;
 
             ctx->diff_count -= data_to_process;
             bytes_available -= data_to_process;
@@ -145,7 +121,7 @@ process_more:
 
             ctx->output_position += nwritten;
 
-            if (ctx->diff_count <= 0) {
+            if (ctx->diff_count == 0) {
                 if (ctx->extra_count > 0) {
                     ctx->state = BPAK_PATCH_STATE_APPLY_EXTRA;
                 } else {
@@ -155,8 +131,9 @@ process_more:
                 }
             }
 
-            if (bytes_available)
+            if (bytes_available > 0) {
                 goto process_more;
+            }
         }
         break;
         case BPAK_PATCH_STATE_APPLY_EXTRA:
@@ -183,17 +160,19 @@ process_more:
             ctx->output_position += nwritten;
             pp += data_to_process;
 
-            if (ctx->extra_count <= 0) {
+            if (ctx->extra_count == 0) {
                 ctx->state = BPAK_PATCH_STATE_FILL_CTRL_BUF;
                 ctx->ctrl_buf_count = 0;
                 ctx->origin_position += ctx->adjust;
 
-                if (bytes_available)
+                if (bytes_available > 0) {
                     goto process_more;
+                }
             }
         }
         break;
         case BPAK_PATCH_STATE_ERROR:
+            bpak_printf(0,"bspatch error\n");
             return -1;
         break;
         default:
@@ -203,14 +182,281 @@ process_more:
     return rc;
 }
 
+
+static int decompressor_init(struct bpak_bspatch_context *ctx)
+{
+    switch (ctx->compression) {
+        case BPAK_COMPRESSION_NONE:
+        break;
+        case BPAK_COMPRESSION_HS:
+            ctx->decompressor_priv = bpak_calloc(sizeof(heatshrink_decoder), 1);
+
+            if (ctx->decompressor_priv == NULL)
+                return -BPAK_FAILED;
+
+            heatshrink_decoder_reset((heatshrink_decoder *) ctx->decompressor_priv);
+        break;
+        case BPAK_COMPRESSION_LZMA:
+            lzma_stream *strm = bpak_calloc(sizeof(lzma_stream), 1);
+            ctx->decompressor_priv = strm;
+
+            if (ctx->decompressor_priv == NULL) {
+                return -BPAK_FAILED;
+            }
+
+            lzma_ret ret = lzma_stream_decoder(
+                    strm, UINT64_MAX, LZMA_CONCATENATED);
+
+            if (ret != LZMA_OK) {
+                bpak_printf(0, "lzma init error (%u)\n", ret);
+                return -BPAK_FAILED;
+            }
+        break;
+        default:
+            return -BPAK_UNSUPPORTED_COMPRESSION;
+    }
+
+    return BPAK_OK;
+}
+
+static void decompressor_free(struct bpak_bspatch_context *ctx)
+{
+
+    switch (ctx->compression) {
+        case BPAK_COMPRESSION_NONE:
+        break;
+        case BPAK_COMPRESSION_HS:
+            if (ctx->decompressor_priv != NULL) {
+                bpak_free(ctx->decompressor_priv);
+                ctx->decompressor_priv = NULL;
+            }
+        break;
+        case BPAK_COMPRESSION_LZMA:
+            if (ctx->decompressor_priv != NULL) {
+                lzma_end((lzma_stream *) ctx->decompressor_priv);
+                bpak_free(ctx->decompressor_priv);
+                ctx->decompressor_priv = NULL;
+            }
+        break;
+        default:
+            return ;
+    }
+}
+
+static int bspatch_lzma_write(struct bpak_bspatch_context *ctx,
+                            uint8_t *buffer,
+                            size_t length)
+{
+    int rc;
+    lzma_stream *strm = (lzma_stream *) ctx->decompressor_priv;
+    lzma_action action;
+    uint8_t outbuf[BUFSIZ];
+
+    if (length == 0)
+        action = LZMA_FINISH;
+    else
+        action = LZMA_RUN;
+
+    strm->next_in = buffer;
+    strm->avail_in = length;
+    strm->next_out = outbuf;
+    strm->avail_out = sizeof(outbuf);
+
+    if (action == LZMA_FINISH)
+        bpak_printf(2, "lzma finish\n");
+
+    while (strm->avail_in > 0 || action == LZMA_FINISH) {
+        lzma_ret ret = lzma_code(strm, action);
+
+        size_t write_size = sizeof(outbuf) - strm->avail_out;
+
+        if (write_size > 0) {
+            if (action == LZMA_FINISH)
+                bpak_printf(2, "finishing write %zu\n", write_size);
+            rc = bspatch_write(ctx, outbuf, write_size);
+
+            if (rc != BPAK_OK) {
+                bpak_printf(0, "bspatch failed (%i)\n", rc);
+                return rc;
+            }
+
+            strm->next_out = outbuf;
+            strm->avail_out = sizeof(outbuf);
+        }
+
+        if (ret != LZMA_OK) {
+            if (ret == LZMA_STREAM_END) {
+                bpak_printf(2, "stream end\n");
+                return BPAK_OK;
+            }
+            bpak_printf(0, "lzma: Decoder error: %u\n", ret);
+            return -BPAK_FAILED;
+        }
+    }
+
+    ctx->input_position += length;
+
+    return BPAK_OK;
+}
+
+static int bspatch_hs_write(struct bpak_bspatch_context *ctx,
+                            uint8_t *buffer,
+                            size_t length)
+{
+    int rc;
+    size_t sink_sz = 0;
+    size_t poll_sz = 0;
+    size_t sunk = 0;
+    HSD_poll_res pres = 0;
+    HSD_sink_res sres = 0;
+    HSD_finish_res fres = 0;
+    heatshrink_decoder *hsd = (heatshrink_decoder *) ctx->decompressor_priv;
+
+    if (ctx->input_position >= ctx->input_length) {
+        bpak_printf(0, "Error: Tried to write %lu extra bytes, ignoring\n",
+                        length);
+        return -1;
+    }
+
+    do {
+        sres = heatshrink_decoder_sink(hsd, &buffer[sunk],
+                                        length - sunk, &sink_sz);
+
+        if (sres < 0)
+            return -BPAK_DECOMPRESSOR_ERROR;
+
+        sunk += sink_sz;
+        ctx->input_position += sink_sz;
+
+        do {
+poll_more:
+            pres = heatshrink_decoder_poll(hsd,
+                                           ctx->input_buffer,
+                                           ctx->input_buffer_length,
+                                           &poll_sz);
+
+            if (pres < 0)
+                return -BPAK_DECOMPRESSOR_ERROR;
+
+            rc = bspatch_write(ctx, ctx->input_buffer, poll_sz);
+
+            if (rc != BPAK_OK) {
+                bpak_printf(0, "bspatch failed (%i)\n", rc);
+                return rc;
+            }
+
+        } while(pres == HSDR_POLL_MORE);
+
+        if (poll_sz == 0 && (ctx->input_position >= ctx->input_length)) {
+            fres = heatshrink_decoder_finish(hsd);
+
+            if (fres == HSDR_FINISH_MORE)
+                goto poll_more;
+            if (fres < 0)
+                return -BPAK_DECOMPRESSOR_ERROR;
+        }
+    } while(sunk < length);
+
+    return BPAK_OK;
+}
+
+int bpak_bspatch_init(struct bpak_bspatch_context *ctx,
+                      size_t buffer_length,
+                      size_t input_length,
+                      bpak_io_t read_origin,
+                      bpak_io_t write_output,
+                      enum bpak_compression compression,
+                      void *user_priv)
+{
+    int rc;
+
+    memset(ctx, 0, sizeof(*ctx));
+
+    ctx->patch_buffer = bpak_calloc(buffer_length, 1);
+
+    if (ctx->patch_buffer == NULL)
+        return -BPAK_FAILED;
+
+    ctx->input_buffer = bpak_calloc(buffer_length, 1);
+
+    if (ctx->input_buffer == NULL) {
+        bpak_free(ctx->patch_buffer);
+        return -BPAK_FAILED;
+    }
+
+    ctx->patch_buffer_length = buffer_length;
+    ctx->input_buffer_length = buffer_length;
+
+    ctx->read_origin = read_origin;
+    ctx->write_output = write_output;
+    ctx->compression = compression;
+    ctx->input_length = input_length;
+    ctx->user_priv = user_priv;
+
+    rc = decompressor_init(ctx);
+
+    if (rc != BPAK_OK) {
+        goto err_free_buffers_out;
+    }
+    return BPAK_OK;
+
+err_free_buffers_out:
+    bpak_free(ctx->input_buffer);
+    bpak_free(ctx->patch_buffer);
+    return rc;
+}
+
+int bpak_bspatch_write(struct bpak_bspatch_context *ctx,
+                        uint8_t *buffer,
+                        size_t length)
+{
+    int rc;
+    switch (ctx->compression) {
+        case BPAK_COMPRESSION_NONE:
+            rc = bspatch_write(ctx, buffer, length);
+            return rc;
+        break;
+        case BPAK_COMPRESSION_HS:
+            return bspatch_hs_write(ctx, buffer, length);
+        break;
+        case BPAK_COMPRESSION_LZMA:
+            return bspatch_lzma_write(ctx, buffer, length);
+        break;
+        default:
+            return -BPAK_NOT_SUPPORTED;
+    }
+
+    return BPAK_OK;
+}
+
 ssize_t bpak_bspatch_final(struct bpak_bspatch_context *ctx)
 {
+    int rc;
+
     if (ctx->state == BPAK_PATCH_STATE_ERROR)
         return -1;
+
+    switch (ctx->compression) {
+        case BPAK_COMPRESSION_NONE:
+        break;
+        case BPAK_COMPRESSION_HS:
+        break;
+        case BPAK_COMPRESSION_LZMA:
+            rc = bspatch_lzma_write(ctx, NULL, 0);
+
+            if (rc != BPAK_OK)
+                return rc;
+        break;
+        default:
+            return -BPAK_NOT_SUPPORTED;
+    }
+
     return ctx->output_position;
 }
 
 void bpak_bspatch_free(struct bpak_bspatch_context *ctx)
 {
-    (void) ctx;
+    bpak_free(ctx->patch_buffer);
+    bpak_free(ctx->input_buffer);
+    decompressor_free(ctx);
 }

@@ -9,13 +9,19 @@ libbpak_la_SOURCES = bpak.c \
                      pkg.c \
                      pkg_verify.c \
                      verify.c \
+					 mem.c \
                      transport_decode.c
 
 libbpak_la_CFLAGS = -I$(top_srcdir)/include \
                      $(CODE_COVERAGE_CFLAGS) \
-					 -Wall -Werror
+					 -Wall -Werror -DBPAK_BUILD_MBEDTLS
 
 libbpak_la_LDFLAGS =  -lmbedtls -lmbedcrypto
+
+if BPAK_BUILD_LZMA
+libbpak_la_CFLAGS  += -DBPAK_BUILD_LZMA $(LIBLZMA_CFLAGS)
+libbpak_la_LDFLAGS += $(LIBLZMA_LDFLAGS) $(LIBLZMA_LIBS)
+endif
 
 if BPAK_BUILD_MERKLE
 libbpak_la_SOURCES += merkle.c
@@ -23,12 +29,12 @@ libbpak_la_CFLAGS  += -DBPAK_BUILD_MERKLE
 endif
 
 if BPAK_BUILD_BSDIFF
-libbpak_la_SOURCES += bsdiff.c bsdiff_hs.c sais.c heatshrink/heatshrink_encoder.c
+libbpak_la_SOURCES += bsdiff.c sais.c heatshrink/heatshrink_encoder.c
 libbpak_la_CFLAGS  += -DBPAK_BUILD_BSDIFF
 endif
 
 if BPAK_BUILD_BSPATCH
-libbpak_la_SOURCES += bspatch.c bspatch_hs.c heatshrink/heatshrink_decoder.c
+libbpak_la_SOURCES += bspatch.c heatshrink/heatshrink_decoder.c
 libbpak_la_CFLAGS  += -DBPAK_BUILD_BSPATCH
 endif
 
@@ -62,8 +68,4 @@ pkginclude_HEADERS = $(top_srcdir)/include/bpak/bpak.h \
                   $(top_srcdir)/include/bpak/verify.h \
                   $(top_srcdir)/include/bpak/transport.h \
                   $(top_srcdir)/include/bpak/bsdiff.h \
-                  $(top_srcdir)/include/bpak/bsdiff_hs.h \
-                  $(top_srcdir)/include/bpak/bspatch.h \
-                  $(top_srcdir)/include/bpak/bspatch_hs.h \
-                  $(top_srcdir)/include/bpak/heatshrink_decoder.h \
-                  $(top_srcdir)/include/bpak/heatshrink_encoder.h
+                  $(top_srcdir)/include/bpak/bspatch.h

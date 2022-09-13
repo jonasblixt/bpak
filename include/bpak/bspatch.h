@@ -40,6 +40,8 @@ struct bpak_bspatch_context {
     size_t patch_buffer_length;     /*!< Length of patch buffer */
     uint8_t *input_buffer;
     size_t input_buffer_length;
+    size_t input_length;
+    size_t input_position;
     bpak_io_t read_origin;          /*!< Callback for reading origin data */
     bpak_io_t write_output;         /*!< Callback for writing output data */
     uint8_t ctrl_buf[BPAK_BSPATCH_CTRL_BUFFER_LENGTH];
@@ -48,6 +50,8 @@ struct bpak_bspatch_context {
     int64_t diff_count;             /*!< Current patch block: amount of diff bytes */
     int64_t extra_count;            /*!< Current patch block: extra bytes */
     int64_t adjust;                 /*!< Current patch block: Origin offset adjustment */
+    void *decompressor_priv;
+    enum bpak_compression compression;
     void *user_priv;
 };
 
@@ -55,8 +59,7 @@ struct bpak_bspatch_context {
  *  Initialize the BPAK bspatch context
  *
  *  @param[in] ctx           Pointer to the context
- *  @param[in] buffer        Pointer to bspatch state buffer
- *  @param[in] buffer_length Length of `buffer` in bytes, must be a power of two
+ *  @param[in] buffer_length Size of bspatch internal buffers in bytes
  *  @param[in] read_origin   Callback for reading origin data
  *  @param[in] write_output  Callback for writing output data
  *  @param[in] user_priv     User context sent to call backs
@@ -64,14 +67,15 @@ struct bpak_bspatch_context {
  *  @return BPAK_OK on success or a negative number
  */
 int bpak_bspatch_init(struct bpak_bspatch_context *ctx,
-                      uint8_t *buffer,
                       size_t buffer_length,
+                      size_t input_length,
                       bpak_io_t read_origin,
                       bpak_io_t write_output,
+                      enum bpak_compression compression,
                       void *user_priv);
 
 /**
- * Feed bspatch with un-compressed input data
+ * Feed bspatch with input data
  *
  * @param[in] ctx      Pointer to bspatch context
  * @param[in] buffer   Input buffer

@@ -39,7 +39,10 @@ struct bpak_bsdiff_context
     int64_t last_offset;
     int64_t scsc;
     bpak_io_t write_output;
+    off_t output_offset;
     size_t output_pos;
+    enum bpak_compression compression;
+    void *compressor_priv;
     void *user_priv;
 };
 
@@ -63,6 +66,8 @@ int bpak_bsdiff_init(struct bpak_bsdiff_context *ctx,
                       uint8_t *new_data,
                       size_t new_length,
                       bpak_io_t write_output,
+                      off_t output_offset,
+                      enum bpak_compression compression,
                       void *user_priv);
 
 /**
@@ -70,9 +75,9 @@ int bpak_bsdiff_init(struct bpak_bsdiff_context *ctx,
  *
  * @param[in] ctx The bsdiff context
  *
- * @return BPAK_OK on success or a negative number
+ * @return size out output patch on success or a negative number
  */
-int bpak_bsdiff(struct bpak_bsdiff_context *ctx);
+ssize_t bpak_bsdiff(struct bpak_bsdiff_context *ctx);
 
 /**
  * Free the diff context

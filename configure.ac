@@ -68,6 +68,23 @@ if test "x$enable_tool" = "xyes"; then
     AC_SUBST(LIBUUID_LIBS)
 fi
 
+dnl lzma support
+
+AC_ARG_ENABLE([lzma],
+             AS_HELP_STRING([--disable-lzma], [Don''t use lzma]),
+             [enable_lzma=$enableval],
+             [enable_lzma="yes"])
+
+AC_MSG_RESULT($enable_lzma)
+AM_CONDITIONAL([BPAK_BUILD_LZMA], [test x$enable_lzma = xyes])
+
+if test "x$enable_lzma" = "xyes"; then
+    PKG_CHECK_MODULES(LIBLZMA, [liblzma >= 4.0.0])
+    AC_SUBST(LIBLZMA_CFLAGS)
+    AC_SUBST(LIBLZMA_LDFLAGS)
+    AC_SUBST(LIBLZMA_LIBS)
+fi
+
 dnl Enable merkle encoder
 AC_ARG_ENABLE([merkle],
              AS_HELP_STRING([--disable-merkle], [Don''t build the bpak merkle encoder]),

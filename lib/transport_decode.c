@@ -11,7 +11,7 @@
 #include <bpak/bpak.h>
 #include <bpak/crc.h>
 #include <bpak/transport.h>
-#include <bpak/bspatch_hs.h>
+#include <bpak/bspatch.h>
 #include <bpak/merkle.h>
 #include <bpak/id.h>
 
@@ -21,6 +21,7 @@ static ssize_t merkle_generate(struct bpak_transport_decode *ctx)
     int rc;
     struct bpak_merkle_context merkle;
     struct bpak_part_header *fs_part;
+    uint8_t chunk_buffer[BPAK_CHUNK_BUFFER_LENGTH];
     uint32_t fs_id = 0;
     uint8_t *salt = NULL;
     size_t bytes_to_process;
@@ -81,15 +82,15 @@ static ssize_t merkle_generate(struct bpak_transport_decode *ctx)
 
     bytes_to_process = bpak_part_size(fs_part);
     while (bytes_to_process) {
-        size_t bytes_to_read = BPAK_MIN(bytes_to_process, ctx->buffer_length);
-        chunk_length = ctx->read_output(data_offset, ctx->buffer,
+        size_t bytes_to_read = BPAK_MIN(bytes_to_process, sizeof(chunk_buffer));
+        chunk_length = ctx->read_output(data_offset, chunk_buffer,
                                         bytes_to_read,
                                         ctx->user);
 
         if (chunk_length != bytes_to_read)
             return -BPAK_READ_ERROR;
 
-        rc = bpak_merkle_write_chunk(&merkle, ctx->buffer, chunk_length);
+        rc = bpak_merkle_write_chunk(&merkle, chunk_buffer, chunk_length);
 
         if (rc != BPAK_OK) {
             bpak_printf(0, "Error: merkle processing failed (%i)\n", rc);
@@ -120,10 +121,7 @@ static ssize_t merkle_generate(struct bpak_transport_decode *ctx)
 #endif  // BPAK_BUILD_MERKLE
 
 int bpak_transport_decode_init(struct bpak_transport_decode *ctx,
-                               uint8_t *buffer,
                                size_t buffer_length,
-                               uint8_t *decode_context_buffer,
-                               size_t decode_context_buffer_length,
                                struct bpak_header *patch_header,
                                bpak_io_t write_output,
                                bpak_io_t read_output,
@@ -132,10 +130,7 @@ int bpak_transport_decode_init(struct bpak_transport_decode *ctx,
 {
     memset(ctx, 0, sizeof(*ctx));
 
-    ctx->buffer = buffer;
     ctx->buffer_length = buffer_length;
-    ctx->decode_context_buffer = decode_context_buffer;
-    ctx->decode_context_buffer_length = decode_context_buffer_length;
     ctx->patch_header = patch_header;
     ctx->write_output = write_output;
     ctx->read_output = read_output;
@@ -206,6 +201,7 @@ int bpak_transport_decode_start(struct bpak_transport_decode *ctx,
 
     size_t patch_input_length = bpak_part_size(part);
 
+    bpak_printf(2, "Patch input length: %zu\n", patch_input_length);
     switch (ctx->decoder_id) {
 #ifdef BPAK_BUILD_BSPATCH
         case BPAK_ID_BSPATCH: /* heatshrink decompressor*/
@@ -215,19 +211,74 @@ int bpak_transport_decode_start(struct bpak_transport_decode *ctx,
                 return -BPAK_PATCH_READ_ORIGIN_ERROR;
             }
 
-            if (ctx->decode_context_buffer_length < sizeof(struct bpak_bspatch_hs_context))
-                return -BPAK_DECODER_CTX_TOO_SMALL;
+            ctx->decoder_priv = bpak_calloc(sizeof(struct bpak_bspatch_context), 1);
 
-            struct bpak_bspatch_hs_context *hs_ctx = \
-                    (struct bpak_bspatch_hs_context *) ctx->decode_context_buffer;
+            struct bpak_bspatch_context *bspatch = \
+                    (struct bpak_bspatch_context *) ctx->decoder_priv;
 
-            rc = bpak_bspatch_hs_init(hs_ctx,
-                                     ctx->buffer,
+            rc = bpak_bspatch_init(bspatch,
                                      ctx->buffer_length,
                                      patch_input_length,
                                      ctx->read_origin,
                                      ctx->write_output,
+                                     BPAK_COMPRESSION_HS,
                                      ctx->user);
+
+            if (rc != BPAK_OK) {
+                bpak_free(bspatch);
+            }
+        }
+        break;
+        case BPAK_ID_BSPATCH_NO_COMP:
+        {
+            if (ctx->read_origin == NULL) {
+                /* bspach requires the origin stream */
+                return -BPAK_PATCH_READ_ORIGIN_ERROR;
+            }
+
+            ctx->decoder_priv = bpak_calloc(sizeof(struct bpak_bspatch_context), 1);
+
+            struct bpak_bspatch_context *bspatch = \
+                    (struct bpak_bspatch_context *) ctx->decoder_priv;
+
+            rc = bpak_bspatch_init(bspatch,
+                                     ctx->buffer_length,
+                                     patch_input_length,
+                                     ctx->read_origin,
+                                     ctx->write_output,
+                                     BPAK_COMPRESSION_NONE,
+                                     ctx->user);
+
+            if (rc != BPAK_OK) {
+                bpak_free(bspatch);
+            }
+        }
+        break;
+#endif
+#if (BPAK_BUILD_BSPATCH && BPAK_BUILD_LZMA)
+        case BPAK_ID_BSPATCH_LZMA:
+        {
+            if (ctx->read_origin == NULL) {
+                /* bspach requires the origin stream */
+                return -BPAK_PATCH_READ_ORIGIN_ERROR;
+            }
+
+            ctx->decoder_priv = bpak_calloc(sizeof(struct bpak_bspatch_context), 1);
+
+            struct bpak_bspatch_context *bspatch = \
+                    (struct bpak_bspatch_context *) ctx->decoder_priv;
+
+            rc = bpak_bspatch_init(bspatch,
+                                     ctx->buffer_length,
+                                     patch_input_length,
+                                     ctx->read_origin,
+                                     ctx->write_output,
+                                     BPAK_COMPRESSION_LZMA,
+                                     ctx->user);
+
+            if (rc != BPAK_OK) {
+                bpak_free(bspatch);
+            }
         }
         break;
 #endif
@@ -257,12 +308,17 @@ int bpak_transport_decode_write_chunk(struct bpak_transport_decode *ctx,
 
     switch (ctx->decoder_id) {
 #ifdef BPAK_BUILD_BSPATCH
+        case BPAK_ID_BSPATCH_NO_COMP:
+        case BPAK_ID_BSPATCH_LZMA:
         case BPAK_ID_BSPATCH: /* id("bspatch") heatshrink decompressor*/
         {
-            struct bpak_bspatch_hs_context *hs_ctx = \
-                    (struct bpak_bspatch_hs_context *) ctx->decode_context_buffer;
+            struct bpak_bspatch_context *bspatch = \
+                    (struct bpak_bspatch_context *) ctx->decoder_priv;
 
-            rc = bpak_bspatch_hs_write(hs_ctx, buffer, length);
+            rc = bpak_bspatch_write(bspatch, buffer, length);
+
+            if (rc != BPAK_OK)
+                bpak_free(bspatch);
         }
         break;
 #endif
@@ -295,12 +351,17 @@ int bpak_transport_decode_finish(struct bpak_transport_decode *ctx)
 
     switch (ctx->decoder_id) {
 #ifdef BPAK_BUILD_BSPATCH
+        case BPAK_ID_BSPATCH_NO_COMP:
+        case BPAK_ID_BSPATCH_LZMA:
         case BPAK_ID_BSPATCH: /* id("bspatch") heatshrink decompressor*/
         {
-            struct bpak_bspatch_hs_context *hs_ctx = \
-                    (struct bpak_bspatch_hs_context *) ctx->decode_context_buffer;
+            struct bpak_bspatch_context *bspatch = \
+                    (struct bpak_bspatch_context *) ctx->decoder_priv;
 
-            output_length = bpak_bspatch_hs_final(hs_ctx);
+            output_length = bpak_bspatch_final(bspatch);
+
+            bpak_bspatch_free(bspatch);
+            bpak_free(bspatch);
         }
         break;
 #endif

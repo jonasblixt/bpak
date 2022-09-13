@@ -184,6 +184,8 @@ const char *bpak_error_string(int code)
             return "Missing meta data";
         case -BPAK_PACKAGE_UUID_MISMATCH:
             return "Package UUID mismatch";
+        case -BPAK_UNSUPPORTED_COMPRESSION:
+            return "Unsupported compression method";
         default:
             return "Unknown";
     }

@@ -88,7 +88,7 @@ int bpak_verify_compute_payload_hash(struct bpak_header *header,
                                     size_t *size)
 {
     off_t current_offset = data_offset;
-    unsigned char hash_buffer[512];
+    unsigned char chunk_buffer[BPAK_CHUNK_BUFFER_LENGTH];
 
     mbedtls_sha256_context sha256;
     mbedtls_sha512_context sha512;
@@ -132,17 +132,17 @@ int bpak_verify_compute_payload_hash(struct bpak_header *header,
         }
 
         do {
-            chunk = (bytes_to_read > sizeof(hash_buffer))?
-                        sizeof(hash_buffer):bytes_to_read;
+            chunk = (bytes_to_read > sizeof(chunk_buffer))?
+                        sizeof(chunk_buffer):bytes_to_read;
 
-            if (read_payload(current_offset, hash_buffer, chunk, user) != chunk) {
+            if (read_payload(current_offset, chunk_buffer, chunk, user) != chunk) {
                 return -BPAK_READ_ERROR;
             }
 
             if (header->hash_kind == BPAK_HASH_SHA256)
-                mbedtls_sha256_update_ret(&sha256, hash_buffer, chunk);
+                mbedtls_sha256_update_ret(&sha256, chunk_buffer, chunk);
             else
-                mbedtls_sha512_update_ret(&sha512, hash_buffer, chunk);
+                mbedtls_sha512_update_ret(&sha512, chunk_buffer, chunk);
 
             bytes_to_read -= chunk;
             current_offset += chunk;
@@ -168,7 +168,7 @@ struct merkle_verify_private
 static ssize_t merkle_verify_wr(off_t offset, uint8_t *buf, size_t size,
                                 void *user)
 {
-    uint8_t chunk_buffer[32];
+    uint8_t chunk_buffer[BPAK_CHUNK_BUFFER_LENGTH];
     size_t chunk_length;
     size_t bytes_to_process = size;
     struct merkle_verify_private *priv = (struct merkle_verify_private *) user;
@@ -211,7 +211,7 @@ int bpak_verify_merkle_tree(bpak_io_t read_payload,
 {
     int rc;
     struct bpak_merkle_context ctx;
-    uint8_t chunk_buffer[128];
+    uint8_t chunk_buffer[BPAK_CHUNK_BUFFER_LENGTH];
     struct merkle_verify_private merkle_verify_private;
 
     memset(&merkle_verify_private, 0, sizeof(merkle_verify_private));
@@ -272,7 +272,7 @@ int bpak_verify_payload(struct bpak_header *header,
                         void *user)
 {
     int rc;
-    uint8_t hash[128];
+    uint8_t hash[BPAK_HASH_MAX_LENGTH];
     size_t hash_length = sizeof(hash);
     const char *hash_tree_suffix = "-hash-tree";
     uint8_t *part_merkle_root_hash;

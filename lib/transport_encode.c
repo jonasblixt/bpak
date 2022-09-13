@@ -22,7 +22,6 @@
 #include <bpak/id.h>
 #include <bpak/merkle.h>
 #include <bpak/bsdiff.h>
-#include <bpak/bsdiff_hs.h>
 #include <bpak/transport.h>
 
 static int transport_copy(struct bpak_header *hdr, uint32_t id,
@@ -91,9 +90,6 @@ err_out:
 struct bsdiff_private
 {
     int fd;
-    off_t offset;
-    ssize_t length;
-    size_t position;
 };
 
 /* Write's the compressed output of bsdiff */
@@ -104,7 +100,7 @@ static ssize_t bsdiff_write_output(off_t offset,
 {
     struct bsdiff_private *priv = (struct bsdiff_private *) user_priv;
 
-    if (lseek(priv->fd, priv->offset + priv->position, SEEK_SET) == -1) {
+    if (lseek(priv->fd, offset, SEEK_SET) == -1) {
         bpak_printf(0, "Error: bsdiff_write_output seek\n");
         return -BPAK_SEEK_ERROR;
     }
@@ -116,24 +112,22 @@ static ssize_t bsdiff_write_output(off_t offset,
         return -BPAK_WRITE_ERROR;
     }
 
-    priv->position += bytes_written;
-    priv->length += bytes_written;
-
     return bytes_written;
 }
 
-static ssize_t transport_bsdiff_hs(FILE *target,
+static ssize_t transport_bsdiff(FILE *target,
                                    off_t target_offset,
                                    size_t target_length,
                                    FILE *origin,
                                    off_t origin_offset,
                                    size_t origin_length,
                                    FILE *output,
-                                   off_t output_offset)
+                                   off_t output_offset,
+                                   enum bpak_compression compression)
 {
     ssize_t rc;
     struct bsdiff_private priv;
-    struct bpak_bsdiff_hs_context bsdiff;
+    struct bpak_bsdiff_context bsdiff;
     uint8_t *origin_data = NULL;
     uint8_t *origin_data_mmap = NULL;
     uint8_t *target_data = NULL;
@@ -143,7 +137,6 @@ static ssize_t transport_bsdiff_hs(FILE *target,
 
     memset(&priv, 0, sizeof(priv));
     priv.fd = fileno(output);
-    priv.offset = output_offset;
 
     /* Map the entrire file because mmap's offset must be page aligned and
      * we need to handle non page aligned offsets */
@@ -180,29 +173,30 @@ static ssize_t transport_bsdiff_hs(FILE *target,
     /* Calculate pointer to where the needed data starts */
     origin_data = origin_data_mmap + origin_offset;
 
-    rc = bpak_bsdiff_hs_init(&bsdiff, origin_data, origin_length,
+    rc = bpak_bsdiff_init(&bsdiff, origin_data, origin_length,
                                 target_data, target_length,
                                 bsdiff_write_output,
+                                output_offset,
+                                compression,
                                 &priv);
 
     if (rc != BPAK_OK) {
-        bpak_printf(0, "Error: bpak_bsdiff_hs_init failed (%i)\n", rc);
+        bpak_printf(0, "Error: bpak_bsdiff_init failed (%i)\n", rc);
         goto err_munmap_origin;
     }
 
-    rc = bpak_bsdiff_hs(&bsdiff);
+    rc = bpak_bsdiff(&bsdiff);
 
-    if (rc != BPAK_OK) {
-        bpak_printf(0, "Error: bpak_bsdiff_hs failed (%i)\n", rc);
+    if (rc < 0) {
+        bpak_printf(0, "Error: bpak_bsdiff failed (%i)\n", rc);
         goto err_bsdiff_free;
     }
 
-    bpak_printf(1, "bsdiff_hs completed, output size = %zu\n",
-                    priv.length);
+    bpak_printf(1, "bsdiff completed, output size = %zu\n",
+                    rc);
 
-    rc = priv.length;
 err_bsdiff_free:
-    bpak_bsdiff_hs_free(&bsdiff);
+    bpak_bsdiff_free(&bsdiff);
 err_munmap_origin:
     munmap(origin_data_mmap, origin_file_sz);
 err_munmap_target:
@@ -464,7 +458,7 @@ static int transport_encode_part(struct bpak_transport_meta *tm,
                 rc = -BPAK_FAILED;
                 goto err_out;
             }
-            output_size = transport_bsdiff_hs(input_fp,
+            output_size = transport_bsdiff(input_fp,
                                 bpak_part_offset(input_header, input_part),
                                 bpak_part_size(input_part),
                                 origin_fp,
@@ -473,7 +467,26 @@ static int transport_encode_part(struct bpak_transport_meta *tm,
                                 bpak_part_size(origin_part),
                                 output_fp,
                                 bpak_part_offset(output_header, output_part) +
-                                  output_offset);
+                                  output_offset,
+                                BPAK_COMPRESSION_HS);
+        break;
+        case BPAK_ID_BSDIFF_NO_COMP:
+            if (origin_header == NULL) {
+                bpak_printf(0, "Error: Need an origin stream for diff operation\n");
+                rc = -BPAK_FAILED;
+                goto err_out;
+            }
+            output_size = transport_bsdiff(input_fp,
+                                bpak_part_offset(input_header, input_part),
+                                bpak_part_size(input_part),
+                                origin_fp,
+                                bpak_part_offset(origin_header, origin_part) +
+                                  origin_offset,
+                                bpak_part_size(origin_part),
+                                output_fp,
+                                bpak_part_offset(output_header, output_part) +
+                                  output_offset,
+                                BPAK_COMPRESSION_NONE);
         break;
 #endif
 #ifdef BPAK_BUILD_MERKLE
@@ -482,6 +495,26 @@ static int transport_encode_part(struct bpak_transport_meta *tm,
                                                     output_header,
                                                     part_ref_id,
                                                     output_offset);
+        break;
+#endif
+#if (BPAK_BUILD_BSDIFF && BPAK_BUILD_LZMA)
+        case BPAK_ID_BSDIFF_LZMA:
+            if (origin_header == NULL) {
+                bpak_printf(0, "Error: Need an origin stream for diff operation\n");
+                rc = -BPAK_FAILED;
+                goto err_out;
+            }
+            output_size = transport_bsdiff(input_fp,
+                                bpak_part_offset(input_header, input_part),
+                                bpak_part_size(input_part),
+                                origin_fp,
+                                bpak_part_offset(origin_header, origin_part) +
+                                  origin_offset,
+                                bpak_part_size(origin_part),
+                                output_fp,
+                                bpak_part_offset(output_header, output_part) +
+                                  output_offset,
+                                BPAK_COMPRESSION_LZMA);
         break;
 #endif
         case BPAK_ID_REMOVE_DATA:

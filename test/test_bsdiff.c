@@ -5,7 +5,7 @@
 #include <string.h>
 #include <bpak/bpak.h>
 #include <bpak/utils.h>
-#include <bpak/bspatch_hs.h>
+#include <bpak/bspatch.h>
 #include <bpak/bsdiff.h>
 #include "nala.h"
 
@@ -145,7 +145,6 @@ TEST(diff_patch_no_comp)
     struct bpak_bsdiff_context bsdiff;
     struct bpak_bspatch_context bspatch;
     struct bspatch_priv priv;
-    uint8_t bspatch_buffer[1024*16]; // Internal run-time buffer for bspatch
 
     /* Generate un-compressed patch */
     printf("Generating patch\n");
@@ -153,12 +152,13 @@ TEST(diff_patch_no_comp)
 
     rc = bpak_bsdiff_init(&bsdiff, origin_data, DIFF_PATCH_NO_COMP_LEN,
                                 new_data, DIFF_PATCH_NO_COMP_LEN,
-                                write_patch_output,
+                                write_patch_output, 0,
+                                BPAK_COMPRESSION_NONE,
                                 (void *) patch_buffer);
     ASSERT(rc == 0);
 
     rc = bpak_bsdiff(&bsdiff);
-    ASSERT(rc == 0);
+    ASSERT(rc > 0);
 
     bpak_bsdiff_free(&bsdiff);
 
@@ -171,10 +171,11 @@ TEST(diff_patch_no_comp)
     priv.output_length = DIFF_PATCH_NO_COMP_LEN;
 
     rc = bpak_bspatch_init(&bspatch,
-                           bspatch_buffer,
-                           sizeof(bspatch_buffer),
+                           8192,
+                           patch_length,
                            read_origin,
                            write_output,
+                           BPAK_COMPRESSION_NONE,
                            &priv);
     ASSERT_EQ(rc, 0);
 
@@ -184,6 +185,8 @@ TEST(diff_patch_no_comp)
     ssize_t output_length = bpak_bspatch_final(&bspatch);
     printf("Patch output length: %li\n", output_length);
     ASSERT(output_length > 0);
+
+    bpak_bspatch_free(&bspatch);
 
     ASSERT_MEMORY(output, new_data, DIFF_PATCH_NO_COMP_LEN);
 

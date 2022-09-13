@@ -25,7 +25,6 @@ extern "C" {
 
 struct bpak_transport_decode
 {
-    uint8_t *buffer;
     size_t buffer_length;
     struct bpak_header *patch_header;
     struct bpak_header *origin_header;
@@ -35,9 +34,8 @@ struct bpak_transport_decode
     bpak_io_t read_origin;
     bpak_io_t write_output_header;
     uint32_t decoder_id;
-    uint8_t *decode_context_buffer;
-    size_t decode_context_buffer_length;
     off_t copy_offset;
+    void *decoder_priv;
     void *user;
 };
 
@@ -49,8 +47,6 @@ struct bpak_transport_decode
  *  reading/writing at offset zero means where the data starts.
  *
  * @param[in] ctx Pointer to a transport decode context
- * @param[in] buffer Working buffer for decoders
- * @param[in] buffer_length Length of 'buffer' in bytes
  * @param[in] patch_header Input patch BPAK header
  * @param[in] write_output Callback for writing output
  * @param[in] read_output Callback for reading output
@@ -60,10 +56,7 @@ struct bpak_transport_decode
  * @return BPAK_OK on success or a negative number on failure
  */
 int bpak_transport_decode_init(struct bpak_transport_decode *ctx,
-                               uint8_t *buffer,
                                size_t buffer_length,
-                               uint8_t *decode_context_buffer,
-                               size_t decode_context_buffer_length,
                                struct bpak_header *patch_header,
                                bpak_io_t write_output,
                                bpak_io_t read_output,
