@@ -372,7 +372,7 @@ poll_more:
 
         } while(pres == HSDR_POLL_MORE);
 
-        if (poll_sz == 0 && (ctx->input_position >= ctx->input_length)) {
+        if (ctx->input_position == ctx->input_length) {
             fres = heatshrink_decoder_finish(hsd);
 
             if (fres == HSDR_FINISH_MORE)
