@@ -100,14 +100,24 @@ int action_compare(int argc, char **argv)
     if (fread(&h1, 1, sizeof(h1), fp1) != sizeof(h1)) {
         printf("Could not read first header\n");
         rc = -BPAK_READ_ERROR;
-        goto err_close_fp1_out;
+        goto err_close_fp2_out;
     }
 
     if (fread(&h2, 1, sizeof(h2), fp2) != sizeof(h2)) {
         printf("Could not read second header\n");
         rc = -BPAK_READ_ERROR;
-        goto err_close_fp1_out;
+        goto err_close_fp2_out;
     }
+
+    rc = bpak_valid_header(&h1);
+
+    if (rc != BPAK_OK)
+        goto err_close_fp2_out;
+
+    rc = bpak_valid_header(&h2);
+
+    if (rc != BPAK_OK)
+        goto err_close_fp2_out;
 
     printf("BPAK comparison between:\n1: '%s'\n2: '%s'\n", filename1, filename2);
     printf("\n");
@@ -260,11 +270,11 @@ int action_compare(int argc, char **argv)
 
                     if (fread(chunk1, 1, chunk, fp1) != chunk) {
                         rc = -BPAK_READ_ERROR;
-                        goto err_close_fp1_out;
+                        goto err_close_fp2_out;
                     }
                     if (fread(chunk2, 1, chunk, fp2) != chunk) {
                         rc = -BPAK_READ_ERROR;
-                        goto err_close_fp1_out;
+                        goto err_close_fp2_out;
                     }
 
                     if (memcmp(chunk1, chunk2, chunk) != 0) {
@@ -349,8 +359,10 @@ int action_compare(int argc, char **argv)
             }
         }
     }
+
+err_close_fp2_out:
+    fclose(fp2);
 err_close_fp1_out:
     fclose(fp1);
-    fclose(fp2);
     return rc;
 }

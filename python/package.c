@@ -175,8 +175,6 @@ static PyObject * package_set_signature(BPAKPackage *self, PyObject *args,
         return NULL;
     }
 
-    bpak_printf(2, "Sig data: %p, sz = %i\n", signature_data, signature_sz);
-
     rc = bpak_pkg_write_raw_signature(&self->pkg, signature_data, signature_sz);
 
     if (rc != BPAK_OK) {

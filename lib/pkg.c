@@ -50,8 +50,11 @@ int bpak_pkg_open(struct bpak_package *pkg, const char *filename,
 
     size_t read_bytes = fread(&pkg->header, 1, sizeof(pkg->header), pkg->fp);
 
+    if (read_bytes < 0) {
+        goto skip_header;
+    }
+
     if (read_bytes != sizeof(pkg->header)) {
-        rc = -BPAK_READ_ERROR;
         goto skip_header;
     }
 
@@ -306,7 +309,7 @@ int bpak_pkg_transport_decode(struct bpak_package *input,
             break;
 
         /* Compute origin and output offsets */
-        if (origin->fp != NULL) {
+        if (origin != NULL) {
             rc = bpak_get_part(&origin->header, part->id, &origin_part);
 
             if (rc != BPAK_OK) {

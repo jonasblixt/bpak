@@ -110,12 +110,7 @@ static ssize_t merkle_generate(struct bpak_transport_decode *ctx)
     }
 
     // TODO: Check roothash?
-    bpak_printf(2, "merkle done (%i)\n", rc);
-
-    if (rc == 0)
-        return bpak_merkle_get_size(&merkle);
-    else
-        return rc;
+    return bpak_merkle_get_size(&merkle);
 }
 
 #endif  // BPAK_BUILD_MERKLE

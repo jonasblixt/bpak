@@ -113,8 +113,7 @@ int action_create(int argc, char **argv)
     /* Check if file exists */
     struct stat s;
 
-    if (stat(filename, &s) == 0 && !force_overwrite)
-    {
+    if (stat(filename, &s) == 0 && !force_overwrite) {
         printf("Warning: File '%s' already exists, overwrite? Y/N: ", filename);
         fflush(stdout);
         char response = getc(stdin);

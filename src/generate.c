@@ -191,7 +191,7 @@ int action_generate(int argc, char **argv)
 
             if (fseek(fp, p->offset, SEEK_SET) != 0) {
                 rc = -BPAK_SEEK_ERROR;
-                goto err_free_ctx;
+                goto err_free_keystore_name;
             }
 
             read_bytes = fread(key_buffer, 1, p->size, fp);
@@ -199,7 +199,7 @@ int action_generate(int argc, char **argv)
             if (read_bytes != p->size) {
                 rc = -BPAK_READ_ERROR;
                 fprintf(stderr, "Error: Could not read key\n");
-                goto err_free_header_out;
+                goto err_free_keystore_name;
             }
 
             mbedtls_pk_free(&ctx);
@@ -208,7 +208,7 @@ int action_generate(int argc, char **argv)
             if (rc != 0) {
                 fprintf(stderr, "Error: Coult not parse key\n");
                 rc = -BPAK_KEY_DECODE;
-                goto err_free_ctx;
+                goto err_free_keystore_name;
             }
 
             if (strcmp(mbedtls_pk_get_name(&ctx), "EC") == 0) {
@@ -226,7 +226,7 @@ int action_generate(int argc, char **argv)
                         fprintf(stderr, "Unknown bit-length (%li)\n",
                                 mbedtls_pk_get_bitlen(&ctx));
                         rc = -BPAK_UNSUPPORTED_KEY;
-                        goto err_free_ctx;
+                        goto err_free_keystore_name;
                 };
             } else if(strcmp(mbedtls_pk_get_name(&ctx), "RSA") == 0) {
                 if (mbedtls_pk_get_bitlen(&ctx) == 4096) {
@@ -235,12 +235,12 @@ int action_generate(int argc, char **argv)
                     fprintf(stderr, "Unknown bit-length (%li)\n",
                             mbedtls_pk_get_bitlen(&ctx));
                     rc = -BPAK_UNSUPPORTED_KEY;
-                    goto err_free_ctx;
+                    goto err_free_keystore_name;
                 }
             } else {
                 fprintf(stderr, "Error: Unknown key type (%s)\n", mbedtls_pk_get_name(&ctx));
                 rc = -BPAK_UNSUPPORTED_KEY;
-                goto err_free_ctx;
+                goto err_free_keystore_name;
             }
             printf("    .data =\n");
             printf("    {\n");
@@ -273,13 +273,13 @@ int action_generate(int argc, char **argv)
                                                 keystore_name_copy, i);
         printf("    },\n");
         printf("};\n");
-    err_free_ctx:
+    err_free_keystore_name:
+        free(keystore_name_copy);
         mbedtls_pk_free(&ctx);
-    err_free_header_out:
-        free(h);
     err_free_io_out:
         fclose(fp);
-
+    err_free_header_out:
+        free(h);
     }
 
     return rc;

@@ -78,7 +78,7 @@ int bpak_merkle_init(struct bpak_merkle_context *ctx,
         ctx->hash_tree_length += level_length;
         level = level + 1;
 
-        if (level > BPAK_MERKLE_MAX_LEVELS)
+        if (level >= BPAK_MERKLE_MAX_LEVELS)
             return -BPAK_NO_SPACE_LEFT;
 
     } while (level_length != BPAK_MERKLE_BLOCK_SZ);

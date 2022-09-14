@@ -143,7 +143,11 @@ static ssize_t transport_bsdiff(FILE *target,
     if (fseek(target, 0, SEEK_END) != 0)
         return -BPAK_SEEK_ERROR;
 
-    size_t target_file_sz = ftell(target);
+    long target_file_sz = ftell(target);
+
+    if (target_file_sz == -1)
+        return -BPAK_SEEK_ERROR;
+
     target_data_mmap = mmap(NULL, target_file_sz, PROT_READ, MAP_SHARED,
                             target_fd, 0);
 
@@ -156,10 +160,18 @@ static ssize_t transport_bsdiff(FILE *target,
     /* Calculate pointer to where the needed data starts */
     target_data = target_data_mmap + target_offset;
 
-    if (fseek(origin, 0, SEEK_END) != 0)
-        return -BPAK_SEEK_ERROR;
+    if (fseek(origin, 0, SEEK_END) != 0) {
+        rc = -BPAK_SEEK_ERROR;
+        goto err_munmap_target;
+    }
 
-    size_t origin_file_sz = ftell(origin);
+    long origin_file_sz = ftell(origin);
+
+    if (origin_file_sz == -1) {
+        rc = -BPAK_SEEK_ERROR;
+        goto err_munmap_target;
+    }
+
     origin_data_mmap = mmap(NULL, origin_file_sz, PROT_READ, MAP_SHARED,
                             origin_fd, 0);
 
@@ -219,7 +231,10 @@ static ssize_t merkle_tree_rd(off_t offset,
 {
     struct merkle_priv_ctx *priv = (struct merkle_priv_ctx *) user_priv;
 
-    int64_t pos = ftell(priv->out);
+    long pos = ftell(priv->out);
+
+    if (pos == -1)
+        return -BPAK_SEEK_ERROR;
 
     if (fseek(priv->out, priv->tree_offset + offset,
                         SEEK_SET) != 0) {
@@ -244,7 +259,10 @@ static ssize_t merkle_tree_wr(off_t offset,
 {
     struct merkle_priv_ctx *priv = (struct merkle_priv_ctx *) user_priv;
 
-    int64_t pos = ftell(priv->out);
+    long pos = ftell(priv->out);
+
+    if (pos == -1)
+        return -BPAK_SEEK_ERROR;
 
     if (fseek(priv->out, priv->tree_offset + offset,
                         SEEK_SET) != BPAK_OK) {
@@ -361,12 +379,7 @@ static ssize_t transport_merkle_generate(FILE *fp,
         return rc;
     }
 
-    bpak_printf(2, "merkle done (%i)\n", rc);
-
-    if (rc == 0)
-        return bpak_merkle_get_size(&merkle);
-    else
-        return rc;
+    return bpak_merkle_get_size(&merkle);
 }
 
 #endif  // BPAK_BUILD_MERKLE
@@ -418,7 +431,7 @@ static int transport_encode_part(struct bpak_transport_meta *tm,
     bpak_printf(1, "Initializing alg, input size %li bytes\n",
                 bpak_part_size(input_part));
 
-    if (origin_header != NULL) {
+    if (origin_header != NULL && origin_fp != NULL) {
         rc = fseek(origin_fp,
                      bpak_part_offset(origin_header, origin_part),
                      SEEK_SET);
@@ -456,7 +469,7 @@ static int transport_encode_part(struct bpak_transport_meta *tm,
         case BPAK_ID_BSDIFF_NO_COMP:
         case BPAK_ID_BSDIFF_LZMA:
         {
-            if (origin_header == NULL) {
+            if ((origin_header == NULL) || (origin_fp == NULL)) {
                 bpak_printf(0, "Error: Need an origin stream for diff operation\n");
                 rc = -BPAK_PATCH_READ_ORIGIN_ERROR;
                 goto err_out;
@@ -470,8 +483,6 @@ static int transport_encode_part(struct bpak_transport_meta *tm,
                 compression = BPAK_COMPRESSION_NONE;
             else if (alg_id == BPAK_ID_BSDIFF_LZMA)
                 compression = BPAK_COMPRESSION_LZMA;
-            else
-                return -BPAK_UNSUPPORTED_COMPRESSION;
 
             output_size = transport_bsdiff(input_fp,
                                 bpak_part_offset(input_header, input_part),
