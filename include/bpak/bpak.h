@@ -494,11 +494,21 @@ const char *bpak_version(void);
 /**
  * Override the default allocator
  *
+ * @param[in] calloc_func Override calloc
+ * @param[in] free_func Ovverride free
+ *
  * @return BPAK_OK on success,
  */
 int bpak_set_calloc_free(bpak_calloc_t calloc_func, bpak_free_t free_func);
 
+/**
+ * Memory allocation wrapper
+ */
 void *bpak_calloc(size_t nmemb, size_t size);
+
+/**
+ * Memory allocation wrapper
+ */
 void bpak_free(void *ptr);
 
 #ifdef __cplusplus

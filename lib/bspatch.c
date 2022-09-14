@@ -7,6 +7,21 @@
 
 #ifdef BPAK_BUILD_LZMA
 #include <lzma.h>
+
+static void *lzma_alloc_wrap(void *opaque, size_t nmemb, size_t size) {
+    (void) opaque;
+    return bpak_calloc(nmemb, size);
+}
+
+static void lzma_free_wrap(void *opaque, void *ptr) {
+    (void) opaque;
+    bpak_free(ptr);
+}
+
+static const lzma_allocator lzma_alloc = {
+    .alloc = lzma_alloc_wrap,
+    .free = lzma_free_wrap,
+};
 #endif
 
 
@@ -196,6 +211,7 @@ static int decompressor_init(struct bpak_bspatch_context *ctx)
 
             heatshrink_decoder_reset((heatshrink_decoder *) ctx->decompressor_priv);
         break;
+#ifdef BPAK_BUILD_LZMA
         case BPAK_COMPRESSION_LZMA:
             lzma_stream *strm = bpak_calloc(sizeof(lzma_stream), 1);
             ctx->decompressor_priv = strm;
@@ -211,7 +227,10 @@ static int decompressor_init(struct bpak_bspatch_context *ctx)
                 bpak_printf(0, "lzma init error (%u)\n", ret);
                 return -BPAK_FAILED;
             }
+
+            strm->allocator = &lzma_alloc;
         break;
+#endif
         default:
             return -BPAK_UNSUPPORTED_COMPRESSION;
     }
@@ -231,6 +250,7 @@ static void decompressor_free(struct bpak_bspatch_context *ctx)
                 ctx->decompressor_priv = NULL;
             }
         break;
+#ifdef BPAK_BUILD_LZMA
         case BPAK_COMPRESSION_LZMA:
             if (ctx->decompressor_priv != NULL) {
                 lzma_end((lzma_stream *) ctx->decompressor_priv);
@@ -238,11 +258,13 @@ static void decompressor_free(struct bpak_bspatch_context *ctx)
                 ctx->decompressor_priv = NULL;
             }
         break;
+#endif
         default:
             return ;
     }
 }
 
+#ifdef BPAK_BUILD_LZMA
 static int bspatch_lzma_write(struct bpak_bspatch_context *ctx,
                             uint8_t *buffer,
                             size_t length)
@@ -298,6 +320,7 @@ static int bspatch_lzma_write(struct bpak_bspatch_context *ctx,
 
     return BPAK_OK;
 }
+#endif
 
 static int bspatch_hs_write(struct bpak_bspatch_context *ctx,
                             uint8_t *buffer,
@@ -419,9 +442,11 @@ int bpak_bspatch_write(struct bpak_bspatch_context *ctx,
         case BPAK_COMPRESSION_HS:
             return bspatch_hs_write(ctx, buffer, length);
         break;
+#ifdef BPAK_BUILD_LZMA
         case BPAK_COMPRESSION_LZMA:
             return bspatch_lzma_write(ctx, buffer, length);
         break;
+#endif
         default:
             return -BPAK_NOT_SUPPORTED;
     }
@@ -431,7 +456,6 @@ int bpak_bspatch_write(struct bpak_bspatch_context *ctx,
 
 ssize_t bpak_bspatch_final(struct bpak_bspatch_context *ctx)
 {
-    int rc;
 
     if (ctx->state == BPAK_PATCH_STATE_ERROR)
         return -1;
@@ -441,12 +465,16 @@ ssize_t bpak_bspatch_final(struct bpak_bspatch_context *ctx)
         break;
         case BPAK_COMPRESSION_HS:
         break;
+#ifdef BPAK_BUILD_LZMA
         case BPAK_COMPRESSION_LZMA:
-            rc = bspatch_lzma_write(ctx, NULL, 0);
+        {
+            int rc = bspatch_lzma_write(ctx, NULL, 0);
 
             if (rc != BPAK_OK)
                 return rc;
+        }
         break;
+#endif
         default:
             return -BPAK_NOT_SUPPORTED;
     }

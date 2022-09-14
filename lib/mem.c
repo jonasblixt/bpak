@@ -10,6 +10,11 @@
 #include <stdlib.h>
 #include <bpak/bpak.h>
 
+#ifdef BPAK_BUILD_MBEDTLS
+#   include <mbedtls/config.h>
+#   include <mbedtls/platform.h>
+#endif
+
 static bpak_calloc_t _calloc_func = NULL;
 static bpak_free_t _free_func = NULL;
 
@@ -19,32 +24,34 @@ int bpak_set_calloc_free(bpak_calloc_t calloc_func, bpak_free_t free_func)
         return -BPAK_FAILED;
     _calloc_func = calloc_func;
     _free_func = free_func;
-#ifdef BPAK_BUILD_LZMA
-        // TODO: set lzma allocator
-#endif
-#ifdef BPAK_BUILD_MBEDTLS
-        //TODO: set mbedtls allocator
+#if (BPAK_BUILD_MBEDTLS && MBEDTLS_PLATFORM_MEMORY)
+        mbedtls_platform_set_calloc_free(bpak_calloc, bpak_free);
 #endif
     return BPAK_OK;
 }
 
 void *bpak_calloc(size_t nmemb, size_t size)
 {
+    void *result = NULL;
+
     if (_calloc_func != NULL) {
-        void *ptr = _calloc_func(nmemb, size);
-        bpak_printf(2, "<%p> = bpak_calloc(%zu, %zu)\n", ptr, nmemb, size);
-        return ptr;
+        result = _calloc_func(nmemb, size);
     } else {
-        return calloc(nmemb, size);
+        result = calloc(nmemb, size);
     }
+
+    // bpak_printf(2, "<%p> = bpak_calloc(%zu, %zu)\n", result, nmemb, size);
+
+    return result;
 }
 
 void bpak_free(void *ptr)
 {
     if (_free_func != NULL) {
-        bpak_printf(2, "bpak_free(%p)\n", ptr);
         _free_func(ptr);
     } else {
         free(ptr);
     }
+
+    // bpak_printf(2, "bpak_free(%p)\n", ptr);
 }

@@ -28,6 +28,7 @@
 #include <assert.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <bpak/bpak.h>
 #include "sais.h"
 
 #ifndef UCHAR_SIZE
@@ -40,8 +41,8 @@
 
 #define SAIS_LMSSORT2_LIMIT 0x3fffffff
 
-#define SAIS_MYMALLOC(_num, _type) ((_type *)malloc((_num) * sizeof(_type)))
-#define SAIS_MYFREE(_ptr, _num, _type) free((_ptr))
+#define SAIS_MYMALLOC(_num, _type) ((_type *)bpak_calloc((_num), sizeof(_type)))
+#define SAIS_MYFREE(_ptr, _num, _type) bpak_free((_ptr))
 #define chr(_a) (cs == sizeof(int64_t)          \
                  ? ((int64_t *)t_p)[(_a)]       \
                  : ((uint8_t *)t_p)[(_a)])

@@ -72,7 +72,7 @@ int bpak_pkg_add_file_with_merkle_tree(struct bpak_package *pkg,
     if (merkle_sz < 0)
         return merkle_sz;
 
-    char *merkle_buf = malloc(merkle_sz);
+    char *merkle_buf = bpak_calloc(merkle_sz, 1);
 
     memset(merkle_buf, 0, merkle_sz);
 
@@ -189,7 +189,7 @@ int bpak_pkg_add_file_with_merkle_tree(struct bpak_package *pkg,
 err_close_fp_out:
     fclose(fp);
 err_free_buf_out:
-    free(merkle_buf);
+    bpak_free(merkle_buf);
     return rc;
 }
 

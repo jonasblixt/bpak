@@ -52,37 +52,44 @@ if test "x$enable_python_library" = "xyes"; then
     AC_SUBST(PYTHON_INCLUDES)
 fi
 
-dnl bpak tool options
-AC_ARG_ENABLE([tool],
-             AS_HELP_STRING([--disable-tool], [Don''t build the bpak tool]),
-             [enable_tool=$enableval],
-             [enable_tool="yes"])
-
-AC_MSG_RESULT($enable_tool)
-AM_CONDITIONAL([BPAK_BUILD_CLI], [test x$enable_tool = xyes])
-
-if test "x$enable_tool" = "xyes"; then
-    PKG_CHECK_MODULES(LIBUUID, [uuid >= 1.0.0])
-    AC_SUBST(LIBUUID_CFLAGS)
-    AC_SUBST(LIBUUID_LDFLAGS)
-    AC_SUBST(LIBUUID_LIBS)
-fi
-
 dnl lzma support
 
 AC_ARG_ENABLE([lzma],
-             AS_HELP_STRING([--disable-lzma], [Don''t use lzma]),
+             AS_HELP_STRING([--disable-lzma], [Don''t build bpak with lzma support]),
              [enable_lzma=$enableval],
              [enable_lzma="yes"])
-
-AC_MSG_RESULT($enable_lzma)
 AM_CONDITIONAL([BPAK_BUILD_LZMA], [test x$enable_lzma = xyes])
 
+AC_MSG_CHECKING([Checking for lzma])
+PKG_CHECK_MODULES(LIBLZMA, [liblzma >= 4.0.0], [have_lzma=true], [have_lzma=false])
+AM_CONDITIONAL([HAVE_LIBLZMA], $have_lzma)
+
 if test "x$enable_lzma" = "xyes"; then
-    PKG_CHECK_MODULES(LIBLZMA, [liblzma >= 4.0.0])
-    AC_SUBST(LIBLZMA_CFLAGS)
-    AC_SUBST(LIBLZMA_LDFLAGS)
-    AC_SUBST(LIBLZMA_LIBS)
+
+    if $have_lzma; then
+        AC_DEFINE([BPAK_BUILD_LZMA], [1], [Build with lzma support])
+        CFLAGS="$CFLAGS $LIBLZMA_CFLAGS"
+        LIBS="$LIBS $LIBLZMA_LIBS"
+    fi
+fi
+
+dnl bpak tool options
+AC_ARG_ENABLE([tool],
+             AS_HELP_STRING([--disable-tool], [Don''t build bpak CLI]),
+             [enable_tool=$enableval],
+             [enable_tool="yes"])
+AM_CONDITIONAL([BPAK_BUILD_TOOL], [test x$enable_tool = xyes])
+
+AC_MSG_CHECKING([Checking for libuuid])
+PKG_CHECK_MODULES(LIBUUID, [uuid >= 1.0.0], [have_uuid=true], [have_uuid=false])
+AM_CONDITIONAL([HAVE_LIBUUID], $have_uuid)
+
+if test "x$enable_tool" = "xyes"; then
+    if $have_uuid; then
+        AC_DEFINE([BPAK_BUILD_TOOL], [1], [Build tool])
+        CFLAGS="$CFLAGS $LIBUUID_CFLAGS"
+        LIBS="$LIBS $LIBUUID_LIBS"
+    fi
 fi
 
 dnl Enable merkle encoder
@@ -93,6 +100,10 @@ AC_ARG_ENABLE([merkle],
 
 AM_CONDITIONAL([BPAK_BUILD_MERKLE], [test x$enable_merkle = xyes])
 
+if test "x$enable_merkle" = "xyes"; then
+    AC_DEFINE([BPAK_BUILD_MERKLE], [1], [Build with merkle encoder support])
+fi
+
 dnl Enable bsdiff
 AC_ARG_ENABLE([bsdiff],
              AS_HELP_STRING([--disable-bsdiff], [Don''t build bpak bsdiff]),
@@ -100,6 +111,10 @@ AC_ARG_ENABLE([bsdiff],
              [enable_bsdiff="yes"])
 
 AM_CONDITIONAL([BPAK_BUILD_BSDIFF], [test x$enable_bsdiff = xyes])
+
+if test "x$enable_bsdiff" = "xyes"; then
+    AC_DEFINE([BPAK_BUILD_BSDIFF], [1], [Build with bsdiff support])
+fi
 
 dnl Enable bspatch
 AC_ARG_ENABLE([bspatch],
@@ -109,6 +124,10 @@ AC_ARG_ENABLE([bspatch],
 
 AM_CONDITIONAL([BPAK_BUILD_BSPATCH], [test x$enable_bspatch = xyes])
 
+if test "x$enable_bspatch" = "xyes"; then
+    AC_DEFINE([BPAK_BUILD_BSPATCH], [1], [Build with bspatch support])
+fi
+
 dnl Enable pkg_create
 AC_ARG_ENABLE([pkg-create],
              AS_HELP_STRING([--disable-pkg-create], [Don''t build pkg create]),
@@ -117,7 +136,11 @@ AC_ARG_ENABLE([pkg-create],
 
 AM_CONDITIONAL([BPAK_BUILD_PKG_CREATE], [test x$enable_pkg_create = xyes])
 
-dnl Enable pkg_create
+if test "x$enable_pkg_create" = "xyes"; then
+    AC_DEFINE([BPAK_BUILD_PKG_CREATE], [1], [Build with support for creating packages])
+fi
+
+dnl Enable transport encode
 AC_ARG_ENABLE([transport-encode],
              AS_HELP_STRING([--disable-transport-encode], [Don''t build transport encode]),
              [enable_transport_encode=$enableval],
@@ -125,6 +148,9 @@ AC_ARG_ENABLE([transport-encode],
 
 AM_CONDITIONAL([BPAK_BUILD_TRANSPORT_ENCODE], [test x$enable_transport_encode = xyes])
 
+if test "x$enable_transport_encode" = "xyes"; then
+    AC_DEFINE([BPAK_BUILD_TRANSPORT_ENCODE], [1], [Build with encoding packages for transport])
+fi
 dnl Enable pkg_sign
 AC_ARG_ENABLE([pkg-sign],
              AS_HELP_STRING([--disable-pkg-sign], [Don''t build pkg sign]),
@@ -132,6 +158,10 @@ AC_ARG_ENABLE([pkg-sign],
              [enable_pkg_sign="yes"])
 
 AM_CONDITIONAL([BPAK_BUILD_PKG_SIGN], [test x$enable_pkg_sign = xyes])
+
+if test "x$enable_pkg_sign" = "xyes"; then
+    AC_DEFINE([BPAK_BUILD_PKG_SIGN], [1], [Build with support for signing packages])
+fi
 
 AC_CONFIG_FILES([Makefile
                 src/Makefile

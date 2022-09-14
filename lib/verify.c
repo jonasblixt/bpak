@@ -274,9 +274,6 @@ int bpak_verify_payload(struct bpak_header *header,
     int rc;
     uint8_t hash[BPAK_HASH_MAX_LENGTH];
     size_t hash_length = sizeof(hash);
-    const char *hash_tree_suffix = "-hash-tree";
-    uint8_t *part_merkle_root_hash;
-    uint8_t *part_merkle_salt;
 
     /* Compute and compare payload hash */
     rc = bpak_verify_compute_payload_hash(header,
@@ -294,6 +291,10 @@ int bpak_verify_payload(struct bpak_header *header,
     }
 
 #ifdef BPAK_BUILD_MERKLE
+    const char *hash_tree_suffix = "-hash-tree";
+    uint8_t *part_merkle_root_hash;
+    uint8_t *part_merkle_salt;
+
     /* Compute and compare merkle hash trees and root hashes */
     bpak_foreach_part(header, p) {
         if (!p->id)

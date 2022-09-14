@@ -15,6 +15,20 @@
 
 #if BPAK_BUILD_LZMA
 #include <lzma.h>
+static void *lzma_alloc_wrap(void *opaque, size_t nmemb, size_t size) {
+    (void) opaque;
+    return bpak_calloc(nmemb, size);
+}
+
+static void lzma_free_wrap(void *opaque, void *ptr) {
+    (void) opaque;
+    bpak_free(ptr);
+}
+
+static const lzma_allocator lzma_alloc = {
+    .alloc = lzma_alloc_wrap,
+    .free = lzma_free_wrap,
+};
 #endif
 
 static int32_t matchlen(uint8_t *from_p,
@@ -103,6 +117,7 @@ static void offtout(int64_t x, uint8_t *buf)
     if(x<0) buf[7]|=0x80;
 }
 
+#ifdef BPAK_BUILD_LZMA
 static int lzma_compressor_write(struct bpak_bsdiff_context *ctx,
                                uint8_t *buffer,
                                size_t length)
@@ -187,6 +202,8 @@ static int lzma_compressor_final(struct bpak_bsdiff_context *ctx)
 
     return BPAK_OK;
 }
+
+#endif  // BPAK_BUILD_LZMA
 
 static int hs_compressor_write(struct bpak_bsdiff_context *ctx,
                                uint8_t *buffer,
@@ -291,6 +308,7 @@ static int compressor_init(struct bpak_bsdiff_context *ctx)
 
             heatshrink_encoder_reset((heatshrink_encoder *) ctx->compressor_priv);
         break;
+#ifdef BPAK_BUILD_LZMA
         case BPAK_COMPRESSION_LZMA:
         {
             lzma_stream *stream;
@@ -316,8 +334,11 @@ static int compressor_init(struct bpak_bsdiff_context *ctx)
 
             if (stream == NULL)
                 return -BPAK_FAILED;
+
+            stream->allocator = &lzma_alloc;
         }
         break;
+#endif
         default:
             return -BPAK_UNSUPPORTED_COMPRESSION;
     }
@@ -350,9 +371,11 @@ static int compressor_write(struct bpak_bsdiff_context *ctx,
         case BPAK_COMPRESSION_HS:
             return hs_compressor_write(ctx, buffer, length);
         break;
+#ifdef BPAK_BUILD_LZMA
         case BPAK_COMPRESSION_LZMA:
             return lzma_compressor_write(ctx, buffer, length);
         break;
+#endif
         default:
             return -BPAK_UNSUPPORTED_COMPRESSION;
     }
@@ -368,9 +391,11 @@ static int compressor_final(struct bpak_bsdiff_context *ctx)
         case BPAK_COMPRESSION_HS:
             return hs_compressor_final(ctx);
         break;
+#ifdef BPAK_BUILD_LZMA
         case BPAK_COMPRESSION_LZMA:
             return lzma_compressor_final(ctx);
         break;
+#endif
         default:
             return -BPAK_UNSUPPORTED_COMPRESSION;
     }
@@ -386,10 +411,12 @@ static void compressor_free(struct bpak_bsdiff_context *ctx)
         case BPAK_COMPRESSION_HS:
             bpak_free(ctx->compressor_priv);
         break;
+#ifdef BPAK_BUILD_LZMA
         case BPAK_COMPRESSION_LZMA:
             lzma_end((lzma_stream *) ctx->compressor_priv);
             bpak_free(ctx->compressor_priv);
         break;
+#endif
         default:
         break;
     }
@@ -414,7 +441,7 @@ static int write_diff_extra_and_adjustment(struct bpak_bsdiff_context *ctx)
     int64_t last_pos;
     uint64_t chunk_len = 0;
     int rc;
-    uint8_t buffer[4096];
+    uint8_t buffer[BPAK_CHUNK_BUFFER_LENGTH];
 
     last_scan = ctx->last_scan;
     last_pos = ctx->last_pos;

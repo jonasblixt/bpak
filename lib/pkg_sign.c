@@ -64,7 +64,7 @@ static int load_private_key(const char *filename, struct bpak_key **k)
 
     bpak_printf(1, "Loaded private key %i bytes\n", len);
 
-    *k = malloc(sizeof(struct bpak_key) + len);
+    *k = bpak_calloc(sizeof(struct bpak_key) + len, 1);
     struct bpak_key *key = *k;
 
     if (key == NULL) {
@@ -112,7 +112,7 @@ static int load_private_key(const char *filename, struct bpak_key **k)
     return rc;
 
 err_free_key_out:
-    free(key);
+    bpak_free(key);
 err_free_ctx_out:
     mbedtls_pk_free(&ctx);
     return rc;
@@ -122,7 +122,7 @@ int bpak_pkg_sign(struct bpak_package *pkg, const char *key_filename)
 {
     int rc;
     struct bpak_key *sign_key = NULL;
-    uint8_t hash_output[128];
+    uint8_t hash_output[BPAK_HASH_MAX_LENGTH];
     size_t hash_size = sizeof(hash_output);
     const char *pers = "mbedtls_pk_sign";
     mbedtls_pk_context ctx;
@@ -183,7 +183,7 @@ err_free_crypto_ctx_out:
     mbedtls_entropy_free(&entropy);
     mbedtls_ctr_drbg_free(&ctr_drbg);
     mbedtls_pk_free(&ctx);
-    free(sign_key);
+    bpak_free(sign_key);
 err_out:
     return rc;
 }

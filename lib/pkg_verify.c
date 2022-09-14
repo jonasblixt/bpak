@@ -49,7 +49,7 @@ static int hash_kind(int bpak_hash_kind)
 static int load_public_key(const char *filename, struct bpak_key **k)
 {
     int rc = BPAK_OK;
-    unsigned char tmp[4096];
+    unsigned char tmp[1024];
     mbedtls_pk_context ctx;
     mbedtls_pk_init(&ctx);
     mbedtls_pk_parse_public_keyfile(&ctx, filename);
@@ -61,7 +61,7 @@ static int load_public_key(const char *filename, struct bpak_key **k)
         goto err_free_ctx;
     }
 
-    *k = malloc(sizeof(struct bpak_key) + len);
+    *k = bpak_calloc(sizeof(struct bpak_key) + len, 1);
     struct bpak_key *key = *k;
     key->size = len;
 
@@ -122,7 +122,7 @@ static ssize_t verify_payload_read(off_t offset, uint8_t *buf, size_t size,
 int bpak_pkg_verify(struct bpak_package *pkg, const char *key_filename)
 {
     int rc;
-    uint8_t hash_output[128];
+    uint8_t hash_output[BPAK_HASH_MAX_LENGTH];
     size_t hash_size = sizeof(hash_output);
     struct verify_payload_private verify_payload_private;
     struct bpak_key *key = NULL;
@@ -188,7 +188,7 @@ err_free_crypto_ctx_out:
     mbedtls_entropy_free(&entropy);
     mbedtls_ctr_drbg_free(&ctr_drbg);
     mbedtls_pk_free(&ctx);
-    free(key);
+    bpak_free(key);
 err_out:
     return rc;
 }
