@@ -338,9 +338,9 @@ int bpak_transport_decode_finish(struct bpak_transport_decode *ctx)
 
     /* Check that the produced output length matches what the patch input
      * header says */
-    if (output_length != ctx->part->size) {
+    if (output_length != (ctx->part->size + ctx->part->pad_bytes)) {
         bpak_printf(0, "Error: Decoded part size does not match the expected size %zu != %zu\n",
-                        ctx->part->size, output_length);
+                        (ctx->part->size + ctx->part->pad_bytes), output_length);
         return -BPAK_SIZE_ERROR;
     }
 
