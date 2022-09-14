@@ -39,6 +39,8 @@ $BPAK transport $IMG_A --add --part fs-hash-tree \
 $BPAK transport $IMG_A --add --part fs2 --encoder bsdiff \
                                        --decoder bspatch $V
 
+$BPAK transport $IMG_A --add --part data --encoder bsdiff \
+                                       --decoder bspatch $V
 
 $BPAK transport $IMG_A --add --part fs2-hash-tree \
                        --encoder remove-data \
@@ -53,6 +55,9 @@ $BPAK add $IMG_A --part fs2 \
                  --from-file ${TEST_SRC_DIR}/diff2_origin.bin \
                  --set-flag dont-hash \
                  --encoder merkle $V
+
+$BPAK add $IMG_A --part data \
+                 --from-file ${TEST_SRC_DIR}/diff3_origin.bin $V
 
 $BPAK set $IMG_A --key-id pb-development \
                  --keystore-id pb-internal $V
@@ -76,6 +81,8 @@ $BPAK transport $IMG_B --add --part fs-hash-tree \
 $BPAK transport $IMG_B --add --part fs2 --encoder bsdiff \
                                        --decoder bspatch $V
 
+$BPAK transport $IMG_B --add --part data --encoder bsdiff \
+                                       --decoder bspatch $V
 
 $BPAK transport $IMG_B --add --part fs2-hash-tree \
                        --encoder remove-data \
@@ -90,6 +97,9 @@ $BPAK add $IMG_B --part fs2 \
                  --from-file ${TEST_SRC_DIR}/diff2_target.bin \
                  --set-flag dont-hash \
                  --encoder merkle $V
+
+$BPAK add $IMG_B --part data \
+                 --from-file ${TEST_SRC_DIR}/diff3_target.bin $V
 
 $BPAK set $IMG_B --key-id pb-development \
                  --keystore-id pb-internal $V
