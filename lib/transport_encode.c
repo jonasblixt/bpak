@@ -271,7 +271,7 @@ static ssize_t transport_merkle_generate(FILE *fp,
     struct bpak_merkle_context merkle;
     struct merkle_priv_ctx merkle_priv;
     struct bpak_part_header *fs_part;
-    uint8_t chunk_buffer[4096];
+    uint8_t chunk_buffer[BPAK_CHUNK_BUFFER_LENGTH];
     uint32_t fs_id = 0;
     uint8_t *salt = NULL;
     size_t bytes_to_process;
@@ -453,29 +453,26 @@ static int transport_encode_part(struct bpak_transport_meta *tm,
     switch (alg_id) {
 #ifdef BPAK_BUILD_BSDIFF
         case BPAK_ID_BSDIFF: /* heatshrink compressor */
-            if (origin_header == NULL) {
-                bpak_printf(0, "Error: Need an origin stream for diff operation\n");
-                rc = -BPAK_FAILED;
-                goto err_out;
-            }
-            output_size = transport_bsdiff(input_fp,
-                                bpak_part_offset(input_header, input_part),
-                                bpak_part_size(input_part),
-                                origin_fp,
-                                bpak_part_offset(origin_header, origin_part) +
-                                  origin_offset,
-                                bpak_part_size(origin_part),
-                                output_fp,
-                                bpak_part_offset(output_header, output_part) +
-                                  output_offset,
-                                BPAK_COMPRESSION_HS);
-        break;
         case BPAK_ID_BSDIFF_NO_COMP:
+        case BPAK_ID_BSDIFF_LZMA:
+        {
             if (origin_header == NULL) {
                 bpak_printf(0, "Error: Need an origin stream for diff operation\n");
                 rc = -BPAK_FAILED;
                 goto err_out;
             }
+
+            enum bpak_compression compression;
+
+            if (alg_id == BPAK_ID_BSDIFF)
+                compression = BPAK_COMPRESSION_HS;
+            else if (alg_id == BPAK_ID_BSDIFF_NO_COMP)
+                compression = BPAK_COMPRESSION_NONE;
+            else if (alg_id == BPAK_ID_BSDIFF_LZMA)
+                compression = BPAK_COMPRESSION_LZMA;
+            else
+                return -BPAK_UNSUPPORTED_COMPRESSION;
+
             output_size = transport_bsdiff(input_fp,
                                 bpak_part_offset(input_header, input_part),
                                 bpak_part_size(input_part),
@@ -486,7 +483,8 @@ static int transport_encode_part(struct bpak_transport_meta *tm,
                                 output_fp,
                                 bpak_part_offset(output_header, output_part) +
                                   output_offset,
-                                BPAK_COMPRESSION_NONE);
+                                compression);
+        }
         break;
 #endif
 #ifdef BPAK_BUILD_MERKLE
@@ -495,26 +493,6 @@ static int transport_encode_part(struct bpak_transport_meta *tm,
                                                     output_header,
                                                     part_ref_id,
                                                     output_offset);
-        break;
-#endif
-#if (BPAK_BUILD_BSDIFF && BPAK_BUILD_LZMA)
-        case BPAK_ID_BSDIFF_LZMA:
-            if (origin_header == NULL) {
-                bpak_printf(0, "Error: Need an origin stream for diff operation\n");
-                rc = -BPAK_FAILED;
-                goto err_out;
-            }
-            output_size = transport_bsdiff(input_fp,
-                                bpak_part_offset(input_header, input_part),
-                                bpak_part_size(input_part),
-                                origin_fp,
-                                bpak_part_offset(origin_header, origin_part) +
-                                  origin_offset,
-                                bpak_part_size(origin_part),
-                                output_fp,
-                                bpak_part_offset(output_header, output_part) +
-                                  output_offset,
-                                BPAK_COMPRESSION_LZMA);
         break;
 #endif
         case BPAK_ID_REMOVE_DATA:

@@ -113,13 +113,35 @@ enum bpak_errors
     BPAK_MISSING_META_DATA,
     BPAK_PACKAGE_UUID_MISMATCH,
     BPAK_UNSUPPORTED_COMPRESSION,
+    BPAK_KEY_NOT_FOUND,
 };
 
 
+/*! \public
+ *
+ * BPAK Compression methods
+ */
 enum bpak_compression {
     BPAK_COMPRESSION_NONE,
     BPAK_COMPRESSION_HS,
     BPAK_COMPRESSION_LZMA,
+};
+
+/*! \public
+ *
+ * BPAK key types
+ */
+enum bpak_key_kind
+{
+    BPAK_KEY_INVALID,
+    BPAK_KEY_PUB_RSA4096,
+    BPAK_KEY_PUB_PRIME256v1,
+    BPAK_KEY_PUB_SECP384r1,
+    BPAK_KEY_PUB_SECP521r1,
+    BPAK_KEY_PRI_RSA4096,
+    BPAK_KEY_PRI_PRIME256v1,
+    BPAK_KEY_PRI_SECP384r1,
+    BPAK_KEY_PRI_SECP521r1,
 };
 
 /*

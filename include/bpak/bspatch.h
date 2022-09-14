@@ -35,6 +35,7 @@ enum bpak_bspatch_state
 struct bpak_bspatch_context {
     off_t origin_position;          /*!< Current position in origin data */
     off_t output_position;          /*!< Current position in output data */
+    off_t output_offset;            /*!< Output stream offset */
     enum bpak_bspatch_state state;  /*!< Current state of bspatch */
     uint8_t *patch_buffer;          /*!< Chunk of patch data input */
     size_t patch_buffer_length;     /*!< Length of patch buffer */
@@ -71,6 +72,7 @@ int bpak_bspatch_init(struct bpak_bspatch_context *ctx,
                       size_t input_length,
                       bpak_io_t read_origin,
                       bpak_io_t write_output,
+                      off_t output_offset,
                       enum bpak_compression compression,
                       void *user_priv);
 

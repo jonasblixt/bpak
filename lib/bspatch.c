@@ -119,7 +119,7 @@ process_more:
 
             pp += data_to_process;
 
-            ssize_t nwritten = ctx->write_output(ctx->output_position,
+            ssize_t nwritten = ctx->write_output(ctx->output_offset + ctx->output_position,
                                              ctx->patch_buffer, data_to_process,
                                              ctx->user_priv);
 
@@ -158,7 +158,7 @@ process_more:
             ctx->extra_count -= data_to_process;
             bytes_available -= data_to_process;
 
-            ssize_t nwritten = ctx->write_output(ctx->output_position,
+            ssize_t nwritten = ctx->write_output(ctx->output_offset + ctx->output_position,
                                       pp, data_to_process,
                                       ctx->user_priv);
 
@@ -388,6 +388,7 @@ int bpak_bspatch_init(struct bpak_bspatch_context *ctx,
                       size_t input_length,
                       bpak_io_t read_origin,
                       bpak_io_t write_output,
+                      off_t output_offset,
                       enum bpak_compression compression,
                       void *user_priv)
 {
@@ -415,6 +416,7 @@ int bpak_bspatch_init(struct bpak_bspatch_context *ctx,
     ctx->compression = compression;
     ctx->input_length = input_length;
     ctx->user_priv = user_priv;
+    ctx->output_offset = output_offset;
 
     rc = decompressor_init(ctx);
 

@@ -211,7 +211,7 @@ static int hs_compressor_write(struct bpak_bsdiff_context *ctx,
 {
     heatshrink_encoder *hse = (heatshrink_encoder *) ctx->compressor_priv;
 
-    unsigned char output_buffer[4096];
+    unsigned char output_buffer[BPAK_CHUNK_BUFFER_LENGTH];
     size_t sink_sz = 0;
     size_t poll_sz = 0;
     size_t sunk = 0;
@@ -257,7 +257,7 @@ static int hs_compressor_write(struct bpak_bsdiff_context *ctx,
 static int hs_compressor_final(struct bpak_bsdiff_context *ctx)
 {
     heatshrink_encoder *hse = (heatshrink_encoder *) ctx->compressor_priv;
-    uint8_t output_buffer[4096];
+    uint8_t output_buffer[BPAK_CHUNK_BUFFER_LENGTH];
     size_t poll_sz = 0;
     ssize_t n_written;
     HSE_poll_res pres = 0;

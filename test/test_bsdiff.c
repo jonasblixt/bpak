@@ -174,7 +174,7 @@ TEST(diff_patch_no_comp)
                            8192,
                            patch_length,
                            read_origin,
-                           write_output,
+                           write_output, 0,
                            BPAK_COMPRESSION_NONE,
                            &priv);
     ASSERT_EQ(rc, 0);

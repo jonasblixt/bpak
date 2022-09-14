@@ -1,7 +1,7 @@
 /**
  * BPAK - Bit Packer
  *
- * Copyright (C) 2019 Jonas Blixt <jonpe960@gmail.com>
+ * Copyright (C) 2022 Jonas Blixt <jonpe960@gmail.com>
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -61,8 +61,7 @@ int bpak_add_meta(struct bpak_header *hdr, uint32_t id, uint32_t part_ref_id,
 {
     uint16_t new_offset = 0;
 
-    bpak_foreach_meta(hdr, m)
-    {
+    bpak_foreach_meta(hdr, m) {
         if (!m->id) {
             m->id = id;
             m->offset = new_offset;
@@ -130,8 +129,7 @@ int bpak_init_header(struct bpak_header *hdr)
 
 const char *bpak_error_string(int code)
 {
-    switch (code)
-    {
+    switch (code) {
         case BPAK_OK:
             return "OK";
         case -BPAK_FAILED:
@@ -197,8 +195,7 @@ int bpak_valid_header(struct bpak_header *hdr)
         return -BPAK_BAD_MAGIC;
 
     /* Check alignment of part data blocks */
-    bpak_foreach_part(hdr, p)
-    {
+    bpak_foreach_part(hdr, p) {
         if (!p->id)
             break;
 
@@ -207,8 +204,7 @@ int bpak_valid_header(struct bpak_header *hdr)
     }
 
     /* Check for out-of-bounds metadata */
-    bpak_foreach_meta(hdr, m)
-    {
+    bpak_foreach_meta(hdr, m) {
         if (!m->id)
             break;
 
@@ -258,8 +254,7 @@ size_t bpak_part_size_wo_pad(struct bpak_part_header *part)
 
 const char *bpak_signature_kind(uint8_t signature_kind)
 {
-    switch(signature_kind)
-    {
+    switch(signature_kind) {
         case BPAK_SIGN_PRIME256v1:
             return "prime256v1";
         case BPAK_SIGN_SECP384r1:
@@ -275,8 +270,7 @@ const char *bpak_signature_kind(uint8_t signature_kind)
 
 const char *bpak_hash_kind(uint8_t hash_kind)
 {
-    switch(hash_kind)
-    {
+    switch(hash_kind) {
         case BPAK_HASH_SHA256:
             return "sha256";
         case BPAK_HASH_SHA384:

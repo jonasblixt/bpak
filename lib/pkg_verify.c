@@ -98,20 +98,15 @@ err_free_ctx:
     return rc;
 }
 
-struct verify_payload_private
-{
-    FILE *fp;
-};
-
 static ssize_t verify_payload_read(off_t offset, uint8_t *buf, size_t size,
                                 void *user)
 {
-    struct verify_payload_private *priv = (struct verify_payload_private *) user;
+    FILE *fp = (FILE *) user;
 
-    if (fseek(priv->fp, offset, SEEK_SET) != 0)
+    if (fseek(fp, offset, SEEK_SET) != 0)
         return -BPAK_SEEK_ERROR;
 
-    size_t read_bytes = fread(buf, 1, size, priv->fp);
+    size_t read_bytes = fread(buf, 1, size, fp);
 
     if (read_bytes != size)
         return -BPAK_READ_ERROR;
@@ -124,7 +119,6 @@ int bpak_pkg_verify(struct bpak_package *pkg, const char *key_filename)
     int rc;
     uint8_t hash_output[BPAK_HASH_MAX_LENGTH];
     size_t hash_size = sizeof(hash_output);
-    struct verify_payload_private verify_payload_private;
     struct bpak_key *key = NULL;
     const char *pers = "mbedtls_pk_sign";
     mbedtls_pk_context ctx;
@@ -171,13 +165,10 @@ int bpak_pkg_verify(struct bpak_package *pkg, const char *key_filename)
         goto err_free_crypto_ctx_out;
     }
 
-    memset(&verify_payload_private, 0, sizeof(verify_payload_private));
-    verify_payload_private.fp = pkg->fp;
-
     rc = bpak_verify_payload(&pkg->header, 
                              verify_payload_read,
                              sizeof(struct bpak_header),
-                             &verify_payload_private);
+                             pkg->fp);
 
     if (rc != BPAK_OK) {
         bpak_printf(0, "Error: payload verification failed\n");

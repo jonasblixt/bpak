@@ -112,7 +112,7 @@ TEST(diffpatch1)
                            8192,
                            patch_length, // patch length
                            read_origin,
-                           write_output,
+                           write_output, 0,
                            BPAK_COMPRESSION_HS,
                            &priv);
     ASSERT_EQ(rc, 0);
@@ -162,7 +162,7 @@ TEST(diffpatch2)
                            8192,
                            patch_length, // patch length
                            read_origin,
-                           write_output,
+                           write_output, 0,
                            BPAK_COMPRESSION_HS,
                            &priv);
     ASSERT_EQ(rc, 0);
@@ -219,7 +219,7 @@ TEST(diffpatch2_no_comp)
                            8192,
                            patch_length,
                            read_origin,
-                           write_output,
+                           write_output, 0,
                            BPAK_COMPRESSION_NONE,
                            &priv);
     ASSERT_EQ(rc, 0);
@@ -330,7 +330,7 @@ TEST(diff_patch_hs_in_memory)
                            8192,
                            patch_length,
                            read_origin,
-                           write_output,
+                           write_output, 0,
                            BPAK_COMPRESSION_HS,
                            &priv);
     ASSERT_EQ(rc, 0);
@@ -389,7 +389,7 @@ TEST(diff_patch_lzma_in_memory)
                            8192,
                            patch_length,
                            read_origin,
-                           write_output,
+                           write_output, 0,
                            BPAK_COMPRESSION_LZMA,
                            &priv);
     ASSERT_EQ(rc, 0);

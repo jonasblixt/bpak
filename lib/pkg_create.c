@@ -53,7 +53,7 @@ int bpak_pkg_add_file_with_merkle_tree(struct bpak_package *pkg,
     struct bpak_header *h = bpak_pkg_header(pkg);
     struct bpak_merkle_context ctx;
     struct stat statbuf;
-    uint8_t block_buf[4096];
+    uint8_t block_buf[BPAK_CHUNK_BUFFER_LENGTH];
     size_t chunk_sz;
     uint64_t new_offset = sizeof(*h);
 

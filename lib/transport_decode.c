@@ -205,57 +205,7 @@ int bpak_transport_decode_start(struct bpak_transport_decode *ctx,
     switch (ctx->decoder_id) {
 #ifdef BPAK_BUILD_BSPATCH
         case BPAK_ID_BSPATCH: /* heatshrink decompressor*/
-        {
-            if (ctx->read_origin == NULL) {
-                /* bspach requires the origin stream */
-                return -BPAK_PATCH_READ_ORIGIN_ERROR;
-            }
-
-            ctx->decoder_priv = bpak_calloc(sizeof(struct bpak_bspatch_context), 1);
-
-            struct bpak_bspatch_context *bspatch = \
-                    (struct bpak_bspatch_context *) ctx->decoder_priv;
-
-            rc = bpak_bspatch_init(bspatch,
-                                     ctx->buffer_length,
-                                     patch_input_length,
-                                     ctx->read_origin,
-                                     ctx->write_output,
-                                     BPAK_COMPRESSION_HS,
-                                     ctx->user);
-
-            if (rc != BPAK_OK) {
-                bpak_free(bspatch);
-            }
-        }
-        break;
         case BPAK_ID_BSPATCH_NO_COMP:
-        {
-            if (ctx->read_origin == NULL) {
-                /* bspach requires the origin stream */
-                return -BPAK_PATCH_READ_ORIGIN_ERROR;
-            }
-
-            ctx->decoder_priv = bpak_calloc(sizeof(struct bpak_bspatch_context), 1);
-
-            struct bpak_bspatch_context *bspatch = \
-                    (struct bpak_bspatch_context *) ctx->decoder_priv;
-
-            rc = bpak_bspatch_init(bspatch,
-                                     ctx->buffer_length,
-                                     patch_input_length,
-                                     ctx->read_origin,
-                                     ctx->write_output,
-                                     BPAK_COMPRESSION_NONE,
-                                     ctx->user);
-
-            if (rc != BPAK_OK) {
-                bpak_free(bspatch);
-            }
-        }
-        break;
-#endif
-#if (BPAK_BUILD_BSPATCH && BPAK_BUILD_LZMA)
         case BPAK_ID_BSPATCH_LZMA:
         {
             if (ctx->read_origin == NULL) {
@@ -263,6 +213,17 @@ int bpak_transport_decode_start(struct bpak_transport_decode *ctx,
                 return -BPAK_PATCH_READ_ORIGIN_ERROR;
             }
 
+            enum bpak_compression compression;
+
+            if (ctx->decoder_id == BPAK_ID_BSPATCH)
+                compression = BPAK_COMPRESSION_HS;
+            else if (ctx->decoder_id == BPAK_ID_BSPATCH_NO_COMP)
+                compression = BPAK_COMPRESSION_NONE;
+            else if (ctx->decoder_id == BPAK_ID_BSPATCH_LZMA)
+                compression = BPAK_COMPRESSION_LZMA;
+            else
+                return -BPAK_UNSUPPORTED_COMPRESSION;
+
             ctx->decoder_priv = bpak_calloc(sizeof(struct bpak_bspatch_context), 1);
 
             struct bpak_bspatch_context *bspatch = \
@@ -272,8 +233,8 @@ int bpak_transport_decode_start(struct bpak_transport_decode *ctx,
                                      ctx->buffer_length,
                                      patch_input_length,
                                      ctx->read_origin,
-                                     ctx->write_output,
-                                     BPAK_COMPRESSION_LZMA,
+                                     ctx->write_output, 0,
+                                     compression,
                                      ctx->user);
 
             if (rc != BPAK_OK) {
