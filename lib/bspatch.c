@@ -213,6 +213,7 @@ static int decompressor_init(struct bpak_bspatch_context *ctx)
         break;
 #ifdef BPAK_BUILD_LZMA
         case BPAK_COMPRESSION_LZMA:
+        {
             lzma_stream *strm = bpak_calloc(sizeof(lzma_stream), 1);
             ctx->decompressor_priv = strm;
 
@@ -229,6 +230,7 @@ static int decompressor_init(struct bpak_bspatch_context *ctx)
             }
 
             strm->allocator = &lzma_alloc;
+        }
         break;
 #endif
         default:
