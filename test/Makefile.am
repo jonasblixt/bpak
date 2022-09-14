@@ -14,7 +14,12 @@ check_PROGRAMS = test_core_meta \
                  test_alignment \
                  test_alg_heatshrink \
                  test_struct_sz \
-                 test_meta_align
+                 test_meta_align \
+                 test_misc
+
+test_misc_SOURCES = test_misc.c common.c
+test_misc_LDADD = $(COMMON_TEST_LDADD) 
+test_misc_CFLAGS = $(COMMON_TEST_CFLAGS)
 
 test_core_meta_SOURCES = test_core_meta.c common.c
 test_core_meta_LDADD = $(COMMON_TEST_LDADD) 
@@ -58,6 +63,7 @@ TESTS = test_core_meta \
         test_struct_sz \
         test_meta_align \
         test_merkle \
+        test_misc \
         test_create.sh \
         test_keystore_gen.sh \
         test_signec256.sh \
