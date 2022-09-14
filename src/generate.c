@@ -68,48 +68,35 @@ int action_generate(int argc, char **argv)
         }
     }
 
-
-    if (optind < argc)
-    {
+    if (optind < argc) {
         generator = (const char *) argv[optind++];
-    }
-    else
-    {
+    } else {
         fprintf(stderr, "Missing generator argument\n");
         return -1;
     }
 
-    if (strcmp(generator, "id") == 0)
-    {
+    if (strcmp(generator, "id") == 0) {
         char *id_string = NULL;
 
         if (optind < argc)
         {
             id_string =  argv[optind++];
-        }
-        else
-        {
+        } else {
             fprintf(stderr, "Missing id-string argument\n");
             return -1;
         }
 
         printf("id(\"%s\") = 0x%8.8x\n", id_string, bpak_id(id_string));
         rc = BPAK_OK;
-    }
-    else if (strcmp(generator, "keystore") == 0)
-    {
-        if (optind < argc)
-        {
+    } else if (strcmp(generator, "keystore") == 0) {
+        if (optind < argc) {
             filename = (const char *) argv[optind++];
-        }
-        else
-        {
+        } else {
             fprintf(stderr, "Missing filename argument\n");
             return -1;
         }
 
-        if(keystore_name == NULL)
-        {
+        if (keystore_name == NULL) {
             fprintf(stderr, "Error: Missing --name parameter\n");
             return -BPAK_FAILED;
         }
@@ -130,7 +117,7 @@ int action_generate(int argc, char **argv)
         size_t read_bytes = fread(h, 1, sizeof(*h), fp);
 
         if (read_bytes != sizeof(*h)) {
-            rc = -BPAK_FAILED;
+            rc = -BPAK_READ_ERROR;
             goto err_free_io_out;
         }
 
@@ -139,8 +126,7 @@ int action_generate(int argc, char **argv)
         rc = bpak_get_meta(h, bpak_id("bpak-package"), (void **) &package_id,
                             NULL);
 
-        if (rc != BPAK_OK)
-        {
+        if (rc != BPAK_OK) {
             fprintf(stderr, "Error: Could not read bpak-package-id\n");
             goto err_free_io_out;
         }
@@ -151,7 +137,7 @@ int action_generate(int argc, char **argv)
 
         if (uuid_compare(keystore_uuid, package_id) != 0) {
             fprintf(stderr, "Error: This is not a keystore file\n");
-            rc = -BPAK_FAILED;
+            rc = -BPAK_PACKAGE_UUID_MISMATCH;
             goto err_free_io_out;
         }
 
@@ -160,8 +146,7 @@ int action_generate(int argc, char **argv)
         rc = bpak_get_meta(h, bpak_id("keystore-provider-id"),
                               (void **) &keystore_provider_id, NULL);
 
-        if (rc != BPAK_OK)
-        {
+        if (rc != BPAK_OK) {
             fprintf(stderr, "Error: Could not read keystore-provider-id meta\n");
             goto err_free_io_out;
         }
@@ -222,7 +207,7 @@ int action_generate(int argc, char **argv)
 
             if (rc != 0) {
                 fprintf(stderr, "Error: Coult not parse key\n");
-                rc = -BPAK_FAILED;
+                rc = -BPAK_KEY_DECODE;
                 goto err_free_ctx;
             }
 
@@ -240,7 +225,7 @@ int action_generate(int argc, char **argv)
                     default:
                         fprintf(stderr, "Unknown bit-length (%li)\n",
                                 mbedtls_pk_get_bitlen(&ctx));
-                        rc = -BPAK_FAILED;
+                        rc = -BPAK_UNSUPPORTED_KEY;
                         goto err_free_ctx;
                 };
             } else if(strcmp(mbedtls_pk_get_name(&ctx), "RSA") == 0) {
@@ -249,12 +234,12 @@ int action_generate(int argc, char **argv)
                 } else {
                     fprintf(stderr, "Unknown bit-length (%li)\n",
                             mbedtls_pk_get_bitlen(&ctx));
-                    rc = -BPAK_FAILED;
+                    rc = -BPAK_UNSUPPORTED_KEY;
                     goto err_free_ctx;
                 }
             } else {
                 fprintf(stderr, "Error: Unknown key type (%s)\n", mbedtls_pk_get_name(&ctx));
-                rc = -BPAK_FAILED;
+                rc = -BPAK_UNSUPPORTED_KEY;
                 goto err_free_ctx;
             }
             printf("    .data =\n");

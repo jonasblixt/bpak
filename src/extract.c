@@ -108,23 +108,20 @@ int action_extract(int argc, char **argv)
 
     rc = bpak_pkg_open(&pkg, filename, "r+");
 
-    if (rc != BPAK_OK)
-    {
+    if (rc != BPAK_OK) {
         printf("Error: Could not open package\n");
-        return -BPAK_FAILED;
+        return rc;
     }
 
     struct bpak_header *h = bpak_pkg_header(&pkg);
 
-    if (!((meta_id > 0) ^ (part_id > 0)))
-    {
+    if (!((meta_id > 0) ^ (part_id > 0))) {
         printf("Error: Select either --part or --meta\n");
         rc = -BPAK_FAILED;
         goto err_close_pkg_out;
     }
 
-    if (meta_id)
-    {
+    if (meta_id) {
         struct bpak_meta_header *meta_header = NULL;
         void *data_ptr = NULL;
 
@@ -153,7 +150,7 @@ int action_extract(int argc, char **argv)
             if (written != 1)
             {
                 fprintf(stderr, "Error: write error\n");
-                rc = -BPAK_FAILED;
+                rc = -BPAK_WRITE_ERROR;
                 goto err_close_fp_out;
             }
         } else {
@@ -166,15 +163,12 @@ int action_extract(int argc, char **argv)
         }
     }
 
-    if (part_id)
-    {
+    if (part_id) {
         struct bpak_part_header *part = NULL;
         rc = bpak_get_part(h, part_id, &part);
 
-        if (rc != BPAK_OK)
-        {
+        if (rc != BPAK_OK) {
             fprintf(stderr, "Error: No such part\n");
-            rc = -BPAK_FAILED;
             goto err_close_pkg_out;
         }
 
@@ -191,8 +185,7 @@ int action_extract(int argc, char **argv)
         if (output_filename) {
             fp = fopen(output_filename, "w+");
 
-            if (fp == NULL)
-            {
+            if (fp == NULL) {
                 fprintf(stderr, "Error: Could not create '%s'\n",
                                 output_filename);
                 rc = -BPAK_FAILED;
@@ -203,8 +196,7 @@ int action_extract(int argc, char **argv)
             size_t bytes_to_copy = bpak_part_size(part) - part->pad_bytes;
             size_t chunk = 0;
 
-            while (bytes_to_copy)
-            {
+            while (bytes_to_copy) {
                 if (bytes_to_copy > sizeof(copy_buffer)) {
                     chunk = sizeof(copy_buffer);
                 } else {

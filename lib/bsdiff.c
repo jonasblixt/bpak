@@ -138,7 +138,7 @@ static int lzma_compressor_write(struct bpak_bsdiff_context *ctx,
 
         if (ret != LZMA_OK) {
             bpak_printf(0, "lzma error %u\n", ret);
-            return -BPAK_FAILED;
+            return -BPAK_COMPRESSOR_ERROR;
         }
 
         if (write_size > 0) {
@@ -176,7 +176,7 @@ static int lzma_compressor_final(struct bpak_bsdiff_context *ctx)
 
         if ((ret != LZMA_OK) && (ret != LZMA_STREAM_END)) {
             bpak_printf(0, "lzma final error %u\n", ret);
-            return -BPAK_FAILED;
+            return -BPAK_COMPRESSOR_ERROR;
         }
 
         size_t write_size = sizeof(outbuf) - strm->avail_out;
@@ -318,7 +318,7 @@ static int compressor_init(struct bpak_bsdiff_context *ctx)
             lzma_options_lzma opt_lzma2;
             if (lzma_lzma_preset(&opt_lzma2, LZMA_PRESET_DEFAULT)) {
                 bpak_free(stream);
-                return -BPAK_FAILED;
+                return -BPAK_COMPRESSOR_ERROR;
             }
 
             lzma_filter filters[] = {
@@ -330,7 +330,7 @@ static int compressor_init(struct bpak_bsdiff_context *ctx)
             lzma_ret ret = lzma_stream_encoder(stream, filters, LZMA_CHECK_CRC64);
 
             if (ret != LZMA_OK)
-                return -BPAK_FAILED;
+                return -BPAK_COMPRESSOR_ERROR;
 
             if (stream == NULL)
                 return -BPAK_FAILED;
@@ -660,7 +660,7 @@ ssize_t bpak_bsdiff(struct bpak_bsdiff_context *ctx)
             rc = write_diff_extra_and_adjustment(ctx);
 
             if (rc != 0) {
-                return -BPAK_FAILED;
+                return rc;
             }
         }
     }

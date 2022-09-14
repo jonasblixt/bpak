@@ -125,10 +125,9 @@ int action_transport(int argc, char **argv)
 
     rc = bpak_pkg_open(&input, filename, "rb+");
 
-    if (rc != BPAK_OK)
-    {
+    if (rc != BPAK_OK) {
         printf("Error: Could not open package %s\n", filename);
-        return -BPAK_FAILED;
+        return rc;
     }
 
     if (origin_file) {
@@ -136,7 +135,7 @@ int action_transport(int argc, char **argv)
 
         if (rc != BPAK_OK) {
             printf("Error: Could not open package %s\n", origin_file);
-            return -BPAK_FAILED;
+            return rc;
         }
     }
 

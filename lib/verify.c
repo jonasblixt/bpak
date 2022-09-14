@@ -39,27 +39,27 @@ int bpak_verify_compute_header_hash(struct bpak_header *header,
     switch (header->hash_kind) {
         case BPAK_HASH_SHA256:
             if (*size < 32)
-                return -BPAK_FAILED;
+                return -BPAK_NO_SPACE_LEFT;
             *size = 32;
             mbedtls_sha256_init(&sha256);
             mbedtls_sha256_starts_ret(&sha256, 0);
         break;
         case BPAK_HASH_SHA384:
             if (*size < 48)
-                return -BPAK_FAILED;
+                return -BPAK_NO_SPACE_LEFT;
             *size = 48;
             mbedtls_sha512_init(&sha512);
             mbedtls_sha512_starts_ret(&sha512, 1);
         break;
         case BPAK_HASH_SHA512:
             if (*size < 64)
-                return -BPAK_FAILED;
+                return -BPAK_NO_SPACE_LEFT;
             *size = 64;
             mbedtls_sha512_init(&sha512);
             mbedtls_sha512_starts_ret(&sha512, 0);
         break;
         default:
-            return -BPAK_NOT_SUPPORTED;
+            return -BPAK_UNSUPPORTED_HASH_ALG;
     }
 
     if (header->hash_kind == BPAK_HASH_SHA256)
@@ -96,27 +96,27 @@ int bpak_verify_compute_payload_hash(struct bpak_header *header,
     switch (header->hash_kind) {
         case BPAK_HASH_SHA256:
             if (*size < 32)
-                return -BPAK_FAILED;
+                return -BPAK_NO_SPACE_LEFT;
             *size = 32;
             mbedtls_sha256_init(&sha256);
             mbedtls_sha256_starts_ret(&sha256, 0);
         break;
         case BPAK_HASH_SHA384:
             if (*size < 48)
-                return -BPAK_FAILED;
+                return -BPAK_NO_SPACE_LEFT;
             *size = 48;
             mbedtls_sha512_init(&sha512);
             mbedtls_sha512_starts_ret(&sha512, 1);
         break;
         case BPAK_HASH_SHA512:
             if (*size < 64)
-                return -BPAK_FAILED;
+                return -BPAK_NO_SPACE_LEFT;
             *size = 64;
             mbedtls_sha512_init(&sha512);
             mbedtls_sha512_starts_ret(&sha512, 0);
         break;
         default:
-            return -BPAK_NOT_SUPPORTED;
+            return -BPAK_UNSUPPORTED_HASH_ALG;
     }
 
     bpak_foreach_part(header, p) {

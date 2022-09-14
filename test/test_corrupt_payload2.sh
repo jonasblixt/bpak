@@ -44,7 +44,7 @@ set +e
 echo VERIFY
 $BPAK verify $IMG --key $srcdir/secp256r1-pub-key.der $V
 result_code=$?
-if [ $result_code -ne 233 ];
+if [ $result_code -ne 232 ];
 then
     exit $result_code
 fi

@@ -87,13 +87,13 @@ int action_compare(int argc, char **argv)
     fp1 = fopen(filename1, "r");
 
     if (fp1 == NULL) {
-        return -BPAK_FAILED;
+        return -BPAK_FILE_NOT_FOUND;
     }
 
     fp2 = fopen(filename2, "r");
 
     if (fp2 == NULL) {
-        rc = -BPAK_FAILED;
+        rc = -BPAK_FILE_NOT_FOUND;
         goto err_close_fp1_out;
     }
 

@@ -40,7 +40,7 @@ static int hash_kind(int bpak_hash_kind)
             hash_kind = MBEDTLS_MD_SHA512;
         break;
         default:
-            return -BPAK_FAILED;
+            return -BPAK_UNSUPPORTED_HASH_ALG;
     }
 
     return hash_kind;

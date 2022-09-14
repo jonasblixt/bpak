@@ -109,29 +109,26 @@ int action_show(int argc, char **argv)
 
     rc = bpak_pkg_open(&pkg, filename, "rb");
 
-    if (rc != BPAK_OK)
-    {
+    if (rc != BPAK_OK) {
         fprintf(stderr, "Error: Could not open package\n");
-        return -BPAK_FAILED;
+        return rc;
     }
 
     struct bpak_header *h = bpak_pkg_header(&pkg);
 
-    if (bpak_valid_header(h) != BPAK_OK) {
+    rc = bpak_valid_header(h);
+    if (rc != BPAK_OK) {
         fprintf(stderr, "Error: Invalid BPAK header\n");
-        return -BPAK_FAILED;
+        return rc;
     }
 
     memset(string_output, 0, sizeof(string_output));
 
-    if (meta_name)
-    {
-        rc = -BPAK_FAILED;
+    if (meta_name) {
+        rc = -BPAK_MISSING_META_DATA;
 
-        bpak_foreach_meta(h, m)
-        {
-            if (m->id == meta_id)
-            {
+        bpak_foreach_meta(h, m) {
+            if (m->id == meta_id) {
                 if (part_name)
                     if (part_id != m->part_id_ref)
                         continue;
@@ -145,30 +142,25 @@ int action_show(int argc, char **argv)
             }
         }
 
-        if (rc != BPAK_OK)
-        {
+        if (rc != BPAK_OK) {
             printf("Error: Could not find meta '%s'\n", meta_name);
         }
 
         goto err_pkg_close;
     }
 
-    if (part_name)
-    {
-        rc = -BPAK_FAILED;
+    if (part_name) {
+        rc = -BPAK_NOT_FOUND;
 
-        bpak_foreach_part(h, p)
-        {
-            if (p->id == part_id)
-            {
+        bpak_foreach_part(h, p) {
+            if (p->id == part_id) {
                 printf("Found 0x%x, %li bytes\n", p->id, p->size);
                 rc = BPAK_OK;
                 break;
             }
         }
 
-        if (rc != BPAK_OK)
-        {
+        if (rc != BPAK_OK) {
             printf("Error: Could not find part '%s'\n", part_name);
             goto err_pkg_close;
         }

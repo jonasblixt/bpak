@@ -38,7 +38,7 @@ static ssize_t merkle_generate(struct bpak_transport_decode *ctx)
 
     if (!fs_id) {
         bpak_printf(0, "Error: could not find hash tree\n");
-        return -BPAK_FAILED;
+        return -BPAK_MISSING_META_DATA;
     }
 
     /* Load the salt that should be used */

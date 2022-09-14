@@ -75,59 +75,39 @@ int action_create(int argc, char **argv)
         return -1;
     }
 
-    if (!hash_kind_str)
-    {
+    if (!hash_kind_str) {
         if (bpak_get_verbosity())
             printf("Using default hash: SHA256\n");
 
         hash_kind = BPAK_HASH_SHA256;
-    }
-    else if (strcmp(hash_kind_str, "sha256") == 0)
-    {
+    } else if (strcmp(hash_kind_str, "sha256") == 0) {
         hash_kind = BPAK_HASH_SHA256;
-    }
-    else if (strcmp(hash_kind_str, "sha384") == 0)
-    {
+    } else if (strcmp(hash_kind_str, "sha384") == 0) {
         hash_kind = BPAK_HASH_SHA384;
-    }
-    else if (strcmp(hash_kind_str, "sha512") == 0)
-    {
+    } else if (strcmp(hash_kind_str, "sha512") == 0) {
         hash_kind = BPAK_HASH_SHA512;
-    }
-    else
-    {
+    } else {
         printf("Error: '%s' is not a known hash method\n", hash_kind_str);
-        return -BPAK_FAILED;
+        return -BPAK_UNSUPPORTED_HASH_ALG;
     }
 
-    if (!signature_kind_str)
-    {
+    if (!signature_kind_str) {
         if (bpak_get_verbosity())
             printf("Using default signature method: prime256v1\n");
 
         signature_kind = BPAK_SIGN_PRIME256v1;
-    }
-    else if (strcmp(signature_kind_str, "prime256v1") == 0)
-    {
+    } else if (strcmp(signature_kind_str, "prime256v1") == 0) {
         signature_kind = BPAK_SIGN_PRIME256v1;
-    }
-    else if (strcmp(signature_kind_str, "secp384r1") == 0)
-    {
+    } else if (strcmp(signature_kind_str, "secp384r1") == 0) {
         signature_kind = BPAK_SIGN_SECP384r1;
-    }
-    else if (strcmp(signature_kind_str, "secp521r1") == 0)
-    {
+    } else if (strcmp(signature_kind_str, "secp521r1") == 0) {
         signature_kind = BPAK_SIGN_SECP521r1;
-    }
-    else if (strcmp(signature_kind_str, "rsa4096") == 0)
-    {
+    } else if (strcmp(signature_kind_str, "rsa4096") == 0) {
         signature_kind = BPAK_SIGN_RSA4096;
-    }
-    else
-    {
+    } else {
         printf("Error: '%s' is not a known signature method\n",
                             signature_kind_str);
-        return -BPAK_FAILED;
+        return -BPAK_UNSUPPORTED_KEY;
     }
 
     /* Check if file exists */
@@ -166,14 +146,14 @@ int action_create(int argc, char **argv)
     fp = fopen(filename, "wb");
 
     if (fp == NULL) {
-        rc = -BPAK_FAILED;
+        rc = -BPAK_FILE_NOT_FOUND;
         goto err_free_header_out;
     }
 
     size_t written = fwrite(h, 1, sizeof(*h), fp);
 
     if (written != sizeof(*h)) {
-        rc = -BPAK_FAILED;
+        rc = -BPAK_WRITE_ERROR;
         goto err_close_io_out;
     }
 

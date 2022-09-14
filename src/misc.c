@@ -260,7 +260,7 @@ void print_usage(void)
 int uuid_to_string(const uint8_t *data, char *buf, size_t size)
 {
     if (size < 37)
-        return -BPAK_FAILED;
+        return -BPAK_SIZE_ERROR;
 
     uuid_unparse(data, buf);
 
@@ -318,7 +318,7 @@ int meta_to_string(struct bpak_header *h, struct bpak_meta_header *m,
         bpak_get_meta(h, m->id, (void **) &byte_ptr, NULL);
 
         if (m->size > size)
-            return -BPAK_FAILED;
+            return -BPAK_SIZE_ERROR;
 
         memcpy(buf, byte_ptr, m->size);
     }

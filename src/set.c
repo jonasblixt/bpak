@@ -122,7 +122,7 @@ int action_set(int argc, char **argv)
     fp = fopen(filename, "r+");
 
     if (fp == NULL) {
-        rc = -BPAK_FAILED;
+        rc = -BPAK_FILE_NOT_FOUND;
         goto err_free_header_out;
     }
 
@@ -141,8 +141,7 @@ int action_set(int argc, char **argv)
 
     rc = bpak_valid_header(h);
 
-    if (rc != BPAK_OK)
-    {
+    if (rc != BPAK_OK) {
         printf("Error: Invalid header. Not a BPAK file?\n");
         goto err_close_fp_out;
     }
@@ -155,17 +154,13 @@ int action_set(int argc, char **argv)
         rc = bpak_get_meta_and_header(h, bpak_id(meta_name), 0, &meta, NULL,
                                         &meta_header);
 
-        if (rc != BPAK_OK || meta == NULL)
-        {
+        if (rc != BPAK_OK || meta == NULL) {
             printf("Error: Could not find '%s'\n", meta_name);
-            rc = -BPAK_FAILED;
             goto err_close_fp_out;
         }
 
-        if (!encoder)
-        {
-            if (bpak_get_verbosity() > 2)
-            {
+        if (!encoder) {
+            if (bpak_get_verbosity() > 2) {
                 printf("Need to grow metadata field with %li bytes\n",
                             strlen(from_string) - meta_header->size);
             }
@@ -222,7 +217,7 @@ int action_set(int argc, char **argv)
         } else if (strcmp(encoder, "integer") == 0) {
             if (meta_header->size != 8) {
                 printf("Incorrect meta data length\n");
-                rc = -BPAK_FAILED;
+                rc = -BPAK_SIZE_ERROR;
                 goto err_close_fp_out;
             }
 
@@ -231,14 +226,12 @@ int action_set(int argc, char **argv)
         } else if (strcmp(encoder, "id") == 0) {
             if (meta_header->size != 4) {
                 printf("Incorrect meta data length\n");
-                rc = -BPAK_FAILED;
+                rc = -BPAK_SIZE_ERROR;
                 goto err_close_fp_out;
             }
             uint32_t *val = (uint32_t *) meta;
             (*val) = bpak_id(from_string);
-        }
-        else
-        {
+        } else {
             rc = -BPAK_FAILED;
             printf("Error: Unknown encoder\n");
         }
@@ -259,9 +252,7 @@ int action_set(int argc, char **argv)
                 printf("Setting keystore-id to  0x%08x\n", keystore_id);
             }
         }
-    }
-    else
-    {
+    } else {
         rc = -BPAK_FAILED;
         printf("Error: Don't know what to do\n");
     }

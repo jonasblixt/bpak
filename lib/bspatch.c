@@ -225,7 +225,7 @@ static int decompressor_init(struct bpak_bspatch_context *ctx)
 
             if (ret != LZMA_OK) {
                 bpak_printf(0, "lzma init error (%u)\n", ret);
-                return -BPAK_FAILED;
+                return -BPAK_DECOMPRESSOR_ERROR;
             }
 
             strm->allocator = &lzma_alloc;
@@ -312,7 +312,7 @@ static int bspatch_lzma_write(struct bpak_bspatch_context *ctx,
                 return BPAK_OK;
             }
             bpak_printf(0, "lzma: Decoder error: %u\n", ret);
-            return -BPAK_FAILED;
+            return -BPAK_DECOMPRESSOR_ERROR;
         }
     }
 

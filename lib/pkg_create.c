@@ -179,9 +179,10 @@ int bpak_pkg_add_file_with_merkle_tree(struct bpak_package *pkg,
         goto err_close_fp_out;
     }
 
-    if (bpak_pkg_update_hash(pkg, NULL, NULL) != BPAK_OK) {
+    rc = bpak_pkg_update_hash(pkg, NULL, NULL);
+
+    if (rc != BPAK_OK) {
         bpak_printf(0, "Error: Could not update payload hash\n");
-        rc = -BPAK_FAILED;
         goto err_close_fp_out;
     }
 
@@ -206,7 +207,7 @@ int bpak_pkg_add_file(struct bpak_package *pkg, const char *filename,
 
     if (stat(filename, &statbuf) != 0) {
         bpak_printf(0, "Error: can't open file '%s'\n", filename);
-        return -BPAK_FAILED;
+        return -BPAK_FILE_NOT_FOUND;
     }
 
     FILE *in_fp = NULL;
@@ -247,7 +248,7 @@ int bpak_pkg_add_file(struct bpak_package *pkg, const char *filename,
 
     if (!in_fp) {
         bpak_printf(0, "Could not open input file: %s\n", filename);
-        return -BPAK_FAILED;
+        return -BPAK_FILE_NOT_FOUND;
     }
 
     char chunk_buffer[512];
@@ -274,9 +275,10 @@ int bpak_pkg_add_file(struct bpak_package *pkg, const char *filename,
         }
     }
 
-    if (bpak_pkg_update_hash(pkg, NULL, NULL) != BPAK_OK) {
+    rc = bpak_pkg_update_hash(pkg, NULL, NULL);
+
+    if (rc != BPAK_OK) {
         bpak_printf(0, "Error: Could not update payload hash\n");
-        rc = -BPAK_FAILED;
         goto err_close_fp;
     }
 
@@ -303,7 +305,7 @@ int bpak_pkg_add_key(struct bpak_package *pkg, const char *filename,
 
     if (len < 0) {
         bpak_printf(0, "Error: Could not load public key '%s'\n", filename);
-        rc = -BPAK_FAILED;
+        rc = -BPAK_KEY_DECODE;
         return rc;
     }
 
@@ -367,10 +369,11 @@ int bpak_pkg_add_key(struct bpak_package *pkg, const char *filename,
         return -BPAK_WRITE_ERROR;
     }
 
+    rc = bpak_pkg_update_hash(pkg, NULL, NULL);
 
-    if (bpak_pkg_update_hash(pkg, NULL, NULL) != BPAK_OK) {
+    if (rc != BPAK_OK) {
         bpak_printf(0, "Error: Could not update payload hash\n");
-        return -BPAK_FAILED;
+        return rc;
     }
 
     return bpak_pkg_write_header(pkg);

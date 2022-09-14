@@ -67,7 +67,7 @@ static int transport_copy(struct bpak_header *hdr, uint32_t id,
 
         if (read_bytes != chunk) {
             bpak_printf(0, "Error: Could not read chunk");
-            rc = -BPAK_FAILED;
+            rc = -BPAK_READ_ERROR;
             goto err_out;
         }
 
@@ -75,7 +75,7 @@ static int transport_copy(struct bpak_header *hdr, uint32_t id,
 
         if (written_bytes != read_bytes) {
             bpak_printf(0, "Error: Could not write chunk");
-            rc = -BPAK_FAILED;
+            rc = -BPAK_WRITE_ERROR;
             goto err_out;
         }
 
@@ -288,7 +288,7 @@ static ssize_t transport_merkle_generate(FILE *fp,
 
     if (!fs_id) {
         bpak_printf(0, "Error: could not find hash tree\n");
-        return -BPAK_FAILED;
+        return -BPAK_MISSING_META_DATA;
     }
 
     /* Load the salt that should be used */
@@ -458,7 +458,7 @@ static int transport_encode_part(struct bpak_transport_meta *tm,
         {
             if (origin_header == NULL) {
                 bpak_printf(0, "Error: Need an origin stream for diff operation\n");
-                rc = -BPAK_FAILED;
+                rc = -BPAK_PATCH_READ_ORIGIN_ERROR;
                 goto err_out;
             }
 

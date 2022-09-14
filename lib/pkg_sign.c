@@ -40,7 +40,7 @@ static int hash_kind(int bpak_hash_kind)
             hash_kind = MBEDTLS_MD_SHA512;
         break;
         default:
-            return -BPAK_FAILED;
+            return -BPAK_UNSUPPORTED_HASH_ALG;
     }
 
     return hash_kind;
@@ -58,7 +58,7 @@ static int load_private_key(const char *filename, struct bpak_key **k)
 
     if (len < 0) {
         bpak_printf(0, "Error: Could not load private key (%i)\n", len);
-        rc = -BPAK_FAILED;
+        rc = -BPAK_KEY_DECODE;
         goto err_free_ctx_out;
     }
 
@@ -173,7 +173,7 @@ int bpak_pkg_sign(struct bpak_package *pkg, const char *key_filename)
 
     if (rc != 0) {
         bpak_printf(0, "Error: Signing failed (mbedtls: %i)\n", rc);
-        rc = -BPAK_FAILED;
+        rc = -BPAK_SIGN_FAIL;
         goto err_free_crypto_ctx_out;
     }
 

@@ -162,8 +162,8 @@ const char *bpak_error_string(int code)
             return "Read error";
         case -BPAK_BAD_MAGIC:
             return "Bad magic";
-        case -BPAK_DECODER_CTX_TOO_SMALL:
-            return "Decoder context too small";
+        case -BPAK_UNSUPPORTED_HASH_ALG:
+            return "Unsupported hash algorithm";
         case -BPAK_BUFFER_TOO_SMALL:
             return "Buffer too small";
         case -BPAK_FILE_NOT_FOUND:
@@ -172,6 +172,8 @@ const char *bpak_error_string(int code)
             return "Could not decode key";
         case -BPAK_VERIFY_FAIL:
             return "Verification failed";
+        case -BPAK_SIGN_FAIL:
+            return "Signing failed";
         case -BPAK_UNSUPPORTED_KEY:
             return "Unsupported key";
         case -BPAK_BAD_ROOT_HASH:
@@ -184,6 +186,8 @@ const char *bpak_error_string(int code)
             return "Package UUID mismatch";
         case -BPAK_UNSUPPORTED_COMPRESSION:
             return "Unsupported compression method";
+        case -BPAK_KEY_NOT_FOUND:
+            return "Key not found";
         default:
             return "Unknown";
     }

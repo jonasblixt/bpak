@@ -81,7 +81,7 @@ int action_sign(int argc, char **argv)
 
     if (rc != BPAK_OK) {
         printf("Error: Could not open package\n");
-        return -BPAK_FAILED;
+        return rc;
     }
 
     FILE *sig_fp = NULL;
@@ -178,7 +178,7 @@ int action_verify(int argc, char **argv)
 
     if (rc != BPAK_OK) {
         printf("Error: Could not open package\n");
-        return -BPAK_FAILED;
+        return rc;
     }
 
     rc = bpak_pkg_verify(&pkg, key_source);
