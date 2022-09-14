@@ -25,6 +25,35 @@ Running tests::
     $ ./configure --enable-code-coverage
     $ make && make check
 
+
+configure options
+-----------------
+
+===========================  ====================================================
+Option                       Description
+===========================  ====================================================
+--disable-lzma               Disable support for lzma compression
+--disable-tool               Disable the cli
+--disable-bsdiff             Disable support for bspatch
+--disable-bspatch            Disable support for bspatch
+--disable-merkle             Disable the merkle tree generator
+--disable-pkg-create         Disable support for creating packages
+--disable-transport-encode   Disables the encoding portion of the transport layer
+--disable-pkg-sign           Disable support for singing packages
+===========================  ====================================================
+
+The default setting is that everything is enabled
+
+
+Build settings
+--------------
+
+========================  ===========
+Parameter                 Description
+========================  ===========
+BPAK_CHUNK_BUFFER_LENGTH  Sets size of chunk buffers (Default: 4096b)
+========================  ===========
+
 .. toctree::
    :maxdepth: 1
    :glob:

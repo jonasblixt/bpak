@@ -4,7 +4,7 @@
 .. module:: verify
    :synopsis: BPAK verify API
 
-TODO: verify
+The verify layer provides functions for verifying a BPAK package.
 
 ----------------------------------------------
 

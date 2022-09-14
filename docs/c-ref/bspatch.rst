@@ -4,7 +4,8 @@
 .. module:: bspatch
    :synopsis: BPAK bspatch
 
-TODO: bspatch...
+The BPAK bspatch module, bspatch is used to apply a binary patch one some
+source data to produce target data.
 
 ----------------------------------------------
 

@@ -4,7 +4,9 @@
 .. module:: transport
    :synopsis: BPAK transport API
 
-TODO: transport
+The BPAK transport layer handles encoding and decoding of packages for transport.
+This typically means that two versions of the same package is transport encoded
+using the bsdiff algorithm.
 
 ----------------------------------------------
 
