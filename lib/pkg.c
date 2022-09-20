@@ -21,10 +21,6 @@
 #include <bpak/pkg.h>
 #include <bpak/utils.h>
 #include <bpak/transport.h>
-#include <mbedtls/config.h>
-#include <mbedtls/platform.h>
-#include <mbedtls/sha256.h>
-#include <mbedtls/sha512.h>
 
 int bpak_pkg_open(struct bpak_package *pkg, const char *filename,
                   const char *mode)

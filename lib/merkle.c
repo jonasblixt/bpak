@@ -10,6 +10,8 @@
 #include <string.h>
 #include <bpak/bpak.h>
 #include <bpak/merkle.h>
+
+#include <mbedtls/version.h>
 #include <mbedtls/sha256.h>
 
 ssize_t bpak_merkle_compute_size(size_t input_data_length)
@@ -133,15 +135,24 @@ int bpak_merkle_write_chunk(struct bpak_merkle_context *ctx, uint8_t *buffer,
     while (data_to_process > 0) {
         if (ctx->block_byte_counter == BPAK_MERKLE_BLOCK_SZ) {
             mbedtls_sha256_init(&ctx->running_hash);
+#if MBEDTLS_VERSION_MAJOR >= 3
+            mbedtls_sha256_starts(&ctx->running_hash, 0);
+            mbedtls_sha256_update(&ctx->running_hash, ctx->salt,
+                                                          ctx->salt_length);
+#else
             mbedtls_sha256_starts_ret(&ctx->running_hash, 0);
             mbedtls_sha256_update_ret(&ctx->running_hash, ctx->salt,
                                                           ctx->salt_length);
+#endif
         }
 
         chunk_length = BPAK_MIN(ctx->block_byte_counter, data_to_process);
 
+#if MBEDTLS_VERSION_MAJOR >= 3
+        mbedtls_sha256_update(&ctx->running_hash, chunk_buffer, chunk_length);
+#else
         mbedtls_sha256_update_ret(&ctx->running_hash, chunk_buffer, chunk_length);
-
+#endif
         chunk_buffer += chunk_length;
         ctx->block_byte_counter -= chunk_length;
         data_to_process -= chunk_length;
@@ -149,7 +160,11 @@ int bpak_merkle_write_chunk(struct bpak_merkle_context *ctx, uint8_t *buffer,
 
         if (ctx->block_byte_counter == 0) {
             ctx->block_byte_counter = BPAK_MERKLE_BLOCK_SZ;
+#if MBEDTLS_VERSION_MAJOR >= 3
+            mbedtls_sha256_finish(&ctx->running_hash, ctx->buffer);
+#else
             mbedtls_sha256_finish_ret(&ctx->running_hash, ctx->buffer);
+#endif
 
             off_t output_offset = ctx->input_chunk_counter + ctx->level_offset[0];
             ssize_t bytes_written = ctx->wr(output_offset, ctx->buffer,
@@ -200,10 +215,15 @@ int bpak_merkle_finish(struct bpak_merkle_context *ctx,
         for (unsigned int n = 0; n < input_block_count; n++) {
             bpak_printf(2, "Computing block %i on level %i\n", n, i);
             mbedtls_sha256_init(&ctx->running_hash);
+#if MBEDTLS_VERSION_MAJOR >= 3
+            mbedtls_sha256_starts(&ctx->running_hash, 0);
+            mbedtls_sha256_update(&ctx->running_hash, ctx->salt,
+                                                          ctx->salt_length);
+#else
             mbedtls_sha256_starts_ret(&ctx->running_hash, 0);
             mbedtls_sha256_update_ret(&ctx->running_hash, ctx->salt,
                                                           ctx->salt_length);
-
+#endif
             /* Read sizof(ctx->buffer) sized chunks and update hash for block
              *  n */
             for (unsigned int c = 0; c < BPAK_MERKLE_BLOCK_SZ; c += sizeof(ctx->buffer)) {
@@ -214,12 +234,20 @@ int bpak_merkle_finish(struct bpak_merkle_context *ctx,
                 if (n_read != sizeof(ctx->buffer))
                     return -BPAK_READ_ERROR;
 
+#if MBEDTLS_VERSION_MAJOR >= 3
+                mbedtls_sha256_update(&ctx->running_hash, ctx->buffer,
+                                                  sizeof(ctx->buffer));
+#else
                 mbedtls_sha256_update_ret(&ctx->running_hash, ctx->buffer,
                                                   sizeof(ctx->buffer));
+#endif
             }
 
+#if MBEDTLS_VERSION_MAJOR >= 3
+            mbedtls_sha256_finish(&ctx->running_hash, ctx->buffer);
+#else
             mbedtls_sha256_finish_ret(&ctx->running_hash, ctx->buffer);
-
+#endif
             n_written = ctx->wr(output_offset, ctx->buffer, sizeof(ctx->buffer),
                                     ctx->priv);
 
@@ -237,9 +265,16 @@ int bpak_merkle_finish(struct bpak_merkle_context *ctx,
     /* Compute the root hash, which is the hash of the top level */
     bpak_printf(2, "Computing root hash\n");
     mbedtls_sha256_init(&ctx->running_hash);
+
+#if MBEDTLS_VERSION_MAJOR >= 3
+    mbedtls_sha256_starts(&ctx->running_hash, 0);
+    mbedtls_sha256_update(&ctx->running_hash, ctx->salt,
+                                                  ctx->salt_length);
+#else
     mbedtls_sha256_starts_ret(&ctx->running_hash, 0);
     mbedtls_sha256_update_ret(&ctx->running_hash, ctx->salt,
                                                   ctx->salt_length);
+#endif
 
     bytes_to_process = ctx->level_length[ctx->no_of_levels - 1];
     input_offset = ctx->level_offset[ctx->no_of_levels - 1];
@@ -251,13 +286,20 @@ int bpak_merkle_finish(struct bpak_merkle_context *ctx,
             return n_read;
         if (n_read != chunk_length)
             return -BPAK_READ_ERROR;
-
+#if MBEDTLS_VERSION_MAJOR >= 3
+        mbedtls_sha256_update(&ctx->running_hash, ctx->buffer, chunk_length);
+#else
         mbedtls_sha256_update_ret(&ctx->running_hash, ctx->buffer, chunk_length);
+#endif
         bytes_to_process -= chunk_length;
         input_offset += chunk_length;
     }
 
+#if MBEDTLS_VERSION_MAJOR >= 3
+    mbedtls_sha256_finish(&ctx->running_hash, roothash);
+#else
     mbedtls_sha256_finish_ret(&ctx->running_hash, roothash);
+#endif
     ctx->finished = true;
 
     return BPAK_OK;

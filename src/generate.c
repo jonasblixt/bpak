@@ -6,7 +6,7 @@
 #include <getopt.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-
+#include <mbedtls/version.h>
 #include <mbedtls/sha256.h>
 #include <mbedtls/sha512.h>
 #include <mbedtls/pk.h>

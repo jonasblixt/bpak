@@ -308,7 +308,7 @@ static int transport_encode_part(struct bpak_transport_meta *tm,
                 goto err_out;
             }
 
-            enum bpak_compression compression;
+            enum bpak_compression compression = BPAK_COMPRESSION_NONE;
 
             if (alg_id == BPAK_ID_BSDIFF)
                 compression = BPAK_COMPRESSION_HS;

@@ -13,6 +13,7 @@
 #include <getopt.h>
 #include <string.h>
 
+#include <mbedtls/version.h>
 #include <mbedtls/platform.h>
 #include <mbedtls/sha256.h>
 #include <mbedtls/sha512.h>
@@ -52,7 +53,31 @@ static int load_private_key(const char *filename, struct bpak_key **k)
     unsigned char tmp[4096];
     mbedtls_pk_context ctx;
     mbedtls_pk_init(&ctx);
-    mbedtls_pk_parse_keyfile(&ctx, filename, NULL);
+
+#if MBEDTLS_VERSION_MAJOR >= 3
+    mbedtls_ctr_drbg_context ctr_drbg;
+    mbedtls_entropy_context entropy;
+    const char *pers = "mbedtls_pk_sign";
+
+    mbedtls_entropy_init(&entropy);
+    mbedtls_ctr_drbg_init(&ctr_drbg);
+
+    rc = mbedtls_ctr_drbg_seed(&ctr_drbg, mbedtls_entropy_func, &entropy,
+                               (const unsigned char *) pers,
+                               strlen(pers));
+
+    if (rc != 0) {
+        rc = -BPAK_FAILED;
+        goto err_free_ctx_out;
+    }
+
+    rc = mbedtls_pk_parse_keyfile(&ctx,
+                                  filename,
+                                  NULL,
+                                  mbedtls_ctr_drbg_random, &ctr_drbg);
+#else
+    rc = mbedtls_pk_parse_keyfile(&ctx, filename, NULL);
+#endif
 
     int len = mbedtls_pk_write_key_der(&ctx, tmp, sizeof(tmp));
 
@@ -153,8 +178,14 @@ int bpak_pkg_sign(struct bpak_package *pkg, const char *key_filename)
         goto err_free_crypto_ctx_out;
     }
 
+#if MBEDTLS_VERSION_MAJOR >= 3
+    rc = mbedtls_pk_parse_key(&ctx, sign_key->data, sign_key->size,
+                                NULL, 0,
+                                mbedtls_ctr_drbg_random, &ctr_drbg);
+#else
     rc = mbedtls_pk_parse_key(&ctx, sign_key->data, sign_key->size,
                                 NULL, 0);
+#endif
 
     if (rc != 0) {
         bpak_printf(0, "Error: Key parse (mbedtls: %i)\n", rc);
@@ -163,6 +194,17 @@ int bpak_pkg_sign(struct bpak_package *pkg, const char *key_filename)
     }
 
     memset(pkg->header.signature, 0, sizeof(pkg->header.signature));
+
+#if MBEDTLS_VERSION_MAJOR >= 3
+    size_t signature_size = 0;
+
+    rc = mbedtls_pk_sign(&ctx, hash_kind(pkg->header.hash_kind),
+                        hash_output, hash_size,
+                        pkg->header.signature, 
+                        sizeof(pkg->header.signature),
+                        &signature_size,
+                        mbedtls_ctr_drbg_random, &ctr_drbg);
+#else
     size_t signature_size = sizeof(pkg->header.signature);
 
     rc = mbedtls_pk_sign(&ctx, hash_kind(pkg->header.hash_kind),
@@ -170,6 +212,7 @@ int bpak_pkg_sign(struct bpak_package *pkg, const char *key_filename)
                         pkg->header.signature, 
                         &signature_size,
                         mbedtls_ctr_drbg_random, &ctr_drbg);
+#endif
 
     if (rc != 0) {
         bpak_printf(0, "Error: Signing failed (mbedtls: %i)\n", rc);

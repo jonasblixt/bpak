@@ -13,6 +13,7 @@
 #include <getopt.h>
 #include <string.h>
 
+#include <mbedtls/version.h>
 #include <mbedtls/platform.h>
 #include <mbedtls/sha256.h>
 #include <mbedtls/sha512.h>

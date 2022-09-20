@@ -17,10 +17,9 @@
 #include <bpak/utils.h>
 #include <bpak/id.h>
 #include <bpak/merkle.h>
-#include <mbedtls/config.h>
+
+#include <mbedtls/version.h>
 #include <mbedtls/platform.h>
-#include <mbedtls/sha256.h>
-#include <mbedtls/sha512.h>
 #include <mbedtls/pk.h>
 #include <mbedtls/entropy.h>
 #include <mbedtls/ctr_drbg.h>

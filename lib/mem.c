@@ -11,7 +11,6 @@
 #include <bpak/bpak.h>
 
 #ifdef BPAK_BUILD_MBEDTLS
-#   include <mbedtls/config.h>
 #   include <mbedtls/platform.h>
 #endif
 
