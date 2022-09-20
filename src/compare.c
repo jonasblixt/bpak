@@ -184,7 +184,7 @@ int action_compare(int argc, char **argv)
             printf("=");
         }
 
-        meta_to_string(h1p, m, string_output, sizeof(string_output));
+        bpak_meta_to_string(h1p, m, string_output, sizeof(string_output));
         printf("   %8.8x   %-3u    %-20s %s\n", m->id, m->size,
                                 bpak_id_to_string(m->id), string_output);
         printf(NO_CLR);
@@ -209,7 +209,7 @@ int action_compare(int argc, char **argv)
         if (rc != BPAK_OK)
         {
             printf(RED_YL);
-            meta_to_string(h2p, m, string_output, sizeof(string_output));
+            bpak_meta_to_string(h2p, m, string_output, sizeof(string_output));
             printf("+   %8.8x   %-3u    %-20s %s\n", m->id, m->size,
                                     bpak_id_to_string(m->id), string_output);
             printf(NO_CLR);

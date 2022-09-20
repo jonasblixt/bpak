@@ -30,6 +30,9 @@ extern "C" {
  */
 int bpak_bin2hex(uint8_t *data, size_t data_sz, char *buf, size_t buf_sz);
 
+int bpak_uuid_to_string(const uint8_t *data, char *buf, size_t size);
+int bpak_meta_to_string(struct bpak_header *h, struct bpak_meta_header *m,
+                        char *buf, size_t size);
 #ifdef __cplusplus
 }  // extern "C"
 #endif

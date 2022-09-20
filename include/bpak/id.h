@@ -22,6 +22,8 @@
 #define BPAK_ID_BPAK_VERSION (0x9a5bab69)
 #define BPAK_ID_PB_LOAD_ADDR (0xd1e64a4b)
 #define BPAK_ID_BPAK_PACKAGE (0xfb2f1f3f)
+#define BPAK_ID_BPAK_KEY_ID (0x7da19399)
+#define BPAK_ID_BPAK_KEY_STORE (0x106c13a7)
 
 /* Algorithm ID's */
 #define BPAK_ID_BSDIFF (0x9f7aacf9)

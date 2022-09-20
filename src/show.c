@@ -133,7 +133,7 @@ int action_show(int argc, char **argv)
                     if (part_id != m->part_id_ref)
                         continue;
 
-                meta_to_string(h, m, string_output, sizeof(string_output));
+                bpak_meta_to_string(h, m, string_output, sizeof(string_output));
                 if (strlen(string_output))
                     printf("%s\n", string_output);
 
@@ -198,7 +198,7 @@ int action_show(int argc, char **argv)
     {
         if (m->id)
         {
-            meta_to_string(h, m, string_output, sizeof(string_output));
+            bpak_meta_to_string(h, m, string_output, sizeof(string_output));
             printf("    %8.8x   %-3u    %-20s ", m->id, m->size,
                          bpak_id_to_string(m->id));
 
