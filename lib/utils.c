@@ -9,7 +9,7 @@
 
 #include <stdio.h>
 #include <string.h>
-#include <uuid/uuid.h>
+#include "uuid/uuid.h"
 #include <bpak/bpak.h>
 #include <bpak/utils.h>
 #include <bpak/crc.h>

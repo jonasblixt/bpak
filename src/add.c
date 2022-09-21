@@ -15,11 +15,11 @@
 #include <getopt.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <uuid.h>
 
 #include <bpak/pkg.h>
 #include <bpak/id.h>
 #include "bpak_tool.h"
+#include "uuid/uuid.h"
 
 int action_add(int argc, char **argv)
 {
@@ -149,7 +149,6 @@ int action_add(int argc, char **argv)
         if (encoder) {
             if (strcmp(encoder, "uuid") == 0) {
                 uuid_t uu;
-                char uuid_text[37];
                 rc = uuid_parse(from_string, uu);
 
                 if (rc != 0) {
@@ -169,8 +168,7 @@ int action_add(int argc, char **argv)
                 memcpy(meta_data, uu, 16);
 
                 if(bpak_get_verbosity()) {
-                    uuid_unparse(meta_data, uuid_text);
-                    printf("Adding %s <%s>\n", meta_name, uuid_text);
+                    printf("Adding %s <%s>\n", meta_name, from_string);
                 }
             } else if (strcmp(encoder, "integer") == 0) {
                 long value = strtol(from_string, NULL, 0);

@@ -1,7 +1,7 @@
 dnl Bit Packer
 
 AC_PREREQ(2.59)
-AC_INIT([bpak], [0.6.2], [Jonas Blixt, <jonpe960@gmail.com>])
+AC_INIT([bpak], [0.6.3], [Jonas Blixt, <jonpe960@gmail.com>])
 
 m4_pattern_forbid([^AX_(CHECK_ENABLE_DEBUG|CODE_COVERAGE|COMPILER_FLAGS|COMPILER_FLAGS_(CFLAGS|CXXFLAGS|LDFLAGS))\b],
   [Unexpanded AX_ macro found. Please install GNU autoconf-archive])
@@ -79,18 +79,6 @@ AC_ARG_ENABLE([tool],
              [enable_tool=$enableval],
              [enable_tool="yes"])
 AM_CONDITIONAL([BPAK_BUILD_TOOL], [test x$enable_tool = xyes])
-
-AC_MSG_CHECKING([Checking for libuuid])
-PKG_CHECK_MODULES(LIBUUID, [uuid >= 1.0.0], [have_uuid=true], [have_uuid=false])
-AM_CONDITIONAL([HAVE_LIBUUID], $have_uuid)
-
-if test "x$enable_tool" = "xyes"; then
-    if $have_uuid; then
-        AC_DEFINE([BPAK_BUILD_TOOL], [1], [Build tool])
-        CFLAGS="$CFLAGS $LIBUUID_CFLAGS"
-        LIBS="$LIBS $LIBUUID_LIBS"
-    fi
-fi
 
 dnl Enable merkle encoder
 AC_ARG_ENABLE([merkle],

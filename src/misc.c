@@ -14,7 +14,6 @@
 #include <bpak/crc.h>
 #include <bpak/id.h>
 #include "bpak_tool.h"
-#include <uuid.h>
 
 static int verbosity;
 
