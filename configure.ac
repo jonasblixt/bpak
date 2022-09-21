@@ -151,6 +151,19 @@ AM_CONDITIONAL([BPAK_BUILD_TRANSPORT_ENCODE], [test x$enable_transport_encode = 
 if test "x$enable_transport_encode" = "xyes"; then
     AC_DEFINE([BPAK_BUILD_TRANSPORT_ENCODE], [1], [Build with encoding packages for transport])
 fi
+
+dnl Enable transport decode
+AC_ARG_ENABLE([transport-decode],
+             AS_HELP_STRING([--disable-transport-decode], [Don''t build transport decode]),
+             [enable_transport_decode=$enableval],
+             [enable_transport_decode="yes"])
+
+AM_CONDITIONAL([BPAK_BUILD_TRANSPORT_DECODE], [test x$enable_transport_decode = xyes])
+
+if test "x$enable_transport_decode" = "xyes"; then
+    AC_DEFINE([BPAK_BUILD_TRANSPORT_DECODE], [1], [Build with support for transport decode])
+fi
+
 dnl Enable pkg_sign
 AC_ARG_ENABLE([pkg-sign],
              AS_HELP_STRING([--disable-pkg-sign], [Don''t build pkg sign]),
@@ -158,9 +171,37 @@ AC_ARG_ENABLE([pkg-sign],
              [enable_pkg_sign="yes"])
 
 AM_CONDITIONAL([BPAK_BUILD_PKG_SIGN], [test x$enable_pkg_sign = xyes])
+AM_CONDITIONAL([BPAK_BUILD_MBEDTLS], [test x$enable_pkg_sign = xyes])
 
 if test "x$enable_pkg_sign" = "xyes"; then
     AC_DEFINE([BPAK_BUILD_PKG_SIGN], [1], [Build with support for signing packages])
+    AC_DEFINE([BPAK_BUILD_MBEDTLS], [1], [Use MBEDTLS])
+fi
+
+dnl Enable pkg_verify
+AC_ARG_ENABLE([pkg-verify],
+             AS_HELP_STRING([--disable-pkg-verify], [Don''t build pkg verify]),
+             [enable_pkg_verify=$enableval],
+             [enable_pkg_verify="yes"])
+
+AM_CONDITIONAL([BPAK_BUILD_PKG_VERIFY], [test x$enable_pkg_verify = xyes])
+AM_CONDITIONAL([BPAK_BUILD_MBEDTLS], [test x$enable_pkg_verify = xyes])
+
+if test "x$enable_pkg_verify" = "xyes"; then
+    AC_DEFINE([BPAK_BUILD_PKG_VERIFY], [1], [Build with support for verifying packages])
+    AC_DEFINE([BPAK_BUILD_MBEDTLS], [1], [Use MBEDTLS])
+fi
+
+dnl Enable pkg
+AC_ARG_ENABLE([pkg],
+             AS_HELP_STRING([--disable-pkg], [Don''t build pkg]),
+             [enable_pkg=$enableval],
+             [enable_pkg="yes"])
+
+AM_CONDITIONAL([BPAK_BUILD_PKG], [test x$enable_pkg = xyes])
+
+if test "x$enable_pkg" = "xyes"; then
+    AC_DEFINE([BPAK_BUILD_PKG], [1], [Build with support for packages])
 fi
 
 AC_CONFIG_FILES([Makefile

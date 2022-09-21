@@ -6,17 +6,19 @@ libbpak_la_SOURCES = bpak.c \
                      keystore.c \
                      utils.c \
                      id.c \
-                     pkg.c \
-                     pkg_verify.c \
-                     verify.c \
-					 mem.c \
-                     transport_decode.c
+                     uuid/unparse.c \
+                     uuid/unpack.c \
+                     mem.c
 
 libbpak_la_CFLAGS = -I$(top_srcdir)/include \
                      $(CODE_COVERAGE_CFLAGS) \
-					 -Wall -Werror -DBPAK_BUILD_MBEDTLS
+                     -Wall -Werror
 
-libbpak_la_LDFLAGS =  -lmbedtls -lmbedcrypto
+libbpak_la_LDFLAGS =
+
+if BPAK_BUILD_MBEDTLS
+libbpak_la_LDFLAGS +=  -lmbedtls -lmbedcrypto
+endif
 
 if BPAK_BUILD_MERKLE
 libbpak_la_SOURCES += merkle.c
@@ -38,8 +40,20 @@ if BPAK_BUILD_TRANSPORT_ENCODE
 libbpak_la_SOURCES += transport_encode.c
 endif
 
+if BPAK_BUILD_TRANSPORT_DECODE
+libbpak_la_SOURCES += transport_decode.c
+endif
+
 if BPAK_BUILD_PKG_SIGN
 libbpak_la_SOURCES += pkg_sign.c
+endif
+
+if BPAK_BUILD_PKG_VERIFY
+libbpak_la_SOURCES += pkg_verify.c verify.c
+endif
+
+if BPAK_BUILD_PKG
+libbpak_la_SOURCES += pkg.c
 endif
 
 pkgconfigdir = $(libdir)/pkgconfig
