@@ -185,7 +185,7 @@ int bpak_transport_decode_start(struct bpak_transport_decode *ctx,
     ctx->decoder_id = 0;
 
     /* Check if there is any transport meta data for this part in the header */
-    if (part->flags && BPAK_FLAG_TRANSPORT) {
+    if (part->flags & BPAK_FLAG_TRANSPORT) {
         if (bpak_get_meta_with_ref(ctx->patch_header,
                                    BPAK_ID_BPAK_TRANSPORT,
                                    part->id,
