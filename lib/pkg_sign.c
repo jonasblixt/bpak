@@ -89,14 +89,15 @@ static int load_private_key(const char *filename, struct bpak_key **k)
 
     bpak_printf(1, "Loaded private key %i bytes\n", len);
 
-    *k = bpak_calloc(sizeof(struct bpak_key) + len, 1);
-    struct bpak_key *key = *k;
+    struct bpak_key *key = bpak_calloc(sizeof(struct bpak_key) + len, 1);
+    (*k) = NULL;
 
     if (key == NULL) {
         rc = -BPAK_FAILED;
         goto err_free_ctx_out;
     }
 
+    (*k) = key;
     key->size = len;
 
     if (strcmp(mbedtls_pk_get_name(&ctx), "EC") == 0) {
