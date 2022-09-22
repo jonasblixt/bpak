@@ -79,6 +79,7 @@ TESTS = test_core_meta \
         test_extract.sh \
         test_transport.sh \
         test_transport_lzma.sh \
+        test_transport4.sh \
         test_transport5.sh \
         test_transport6.sh \
         test_sign_dont_hash.sh \

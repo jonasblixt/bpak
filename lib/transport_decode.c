@@ -182,16 +182,16 @@ int bpak_transport_decode_start(struct bpak_transport_decode *ctx,
         return -BPAK_WRITE_ERROR;
 
     ctx->part = part;
+    ctx->decoder_id = 0;
 
     /* Check if there is any transport meta data for this part in the header */
-    if (bpak_get_meta_with_ref(ctx->patch_header,
-                               BPAK_ID_BPAK_TRANSPORT,
-                               part->id,
-                               (void **) &tm, NULL) == BPAK_OK) {
-        ctx->decoder_id = tm->alg_id_decode;
-    } else {
-        /* Un-coded part, just copy the data */
-        ctx->decoder_id = 0;
+    if (part->flags && BPAK_FLAG_TRANSPORT) {
+        if (bpak_get_meta_with_ref(ctx->patch_header,
+                                   BPAK_ID_BPAK_TRANSPORT,
+                                   part->id,
+                                   (void **) &tm, NULL) == BPAK_OK) {
+            ctx->decoder_id = tm->alg_id_decode;
+        }
     }
 
     size_t patch_input_length = bpak_part_size(part);
