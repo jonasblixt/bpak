@@ -93,6 +93,7 @@ int bpak_pkg_add_file_with_merkle_tree(struct bpak_package *pkg,
                           32,
                           merkle_wr,
                           merkle_rd,
+                          0,
                           true,
                           merkle_buf);
 

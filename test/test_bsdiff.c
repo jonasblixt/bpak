@@ -173,7 +173,7 @@ TEST(diff_patch_no_comp)
     rc = bpak_bspatch_init(&bspatch,
                            8192,
                            patch_length,
-                           read_origin,
+                           read_origin, 0,
                            write_output, 0,
                            BPAK_COMPRESSION_NONE,
                            &priv);

@@ -111,7 +111,7 @@ TEST(diffpatch1)
     rc = bpak_bspatch_init(&bspatch,
                            8192,
                            patch_length, // patch length
-                           read_origin,
+                           read_origin, 0,
                            write_output, 0,
                            BPAK_COMPRESSION_HS,
                            &priv);
@@ -161,7 +161,7 @@ TEST(diffpatch2)
     rc = bpak_bspatch_init(&bspatch,
                            8192,
                            patch_length, // patch length
-                           read_origin,
+                           read_origin, 0,
                            write_output, 0,
                            BPAK_COMPRESSION_HS,
                            &priv);
@@ -218,7 +218,7 @@ TEST(diffpatch2_no_comp)
     rc = bpak_bspatch_init(&bspatch,
                            8192,
                            patch_length,
-                           read_origin,
+                           read_origin, 0,
                            write_output, 0,
                            BPAK_COMPRESSION_NONE,
                            &priv);
@@ -329,7 +329,7 @@ TEST(diff_patch_hs_in_memory)
     rc = bpak_bspatch_init(&bspatch,
                            8192,
                            patch_length,
-                           read_origin,
+                           read_origin, 0,
                            write_output, 0,
                            BPAK_COMPRESSION_HS,
                            &priv);
@@ -388,7 +388,7 @@ TEST(diff_patch_lzma_in_memory)
     rc = bpak_bspatch_init(&bspatch,
                            8192,
                            patch_length,
-                           read_origin,
+                           read_origin, 0,
                            write_output, 0,
                            BPAK_COMPRESSION_LZMA,
                            &priv);

@@ -120,7 +120,7 @@ static void test_merkle(const char *test_name,
 
 /* 8effc062924445d3389c6b360b29cf1c142d29497df783a63eabcea6f7779436*/
     rc = bpak_merkle_init(&ctx, data_size, salt, sizeof(salt),
-                            merkle_wr, merkle_rd, true, merkle_buf);
+                            merkle_wr, merkle_rd, 0, true, merkle_buf);
 
     uint32_t data_to_process = data_size;
     uint32_t pos = 0;
@@ -234,7 +234,7 @@ TEST(merkle_unaligned_input)
 
 /* 8effc062924445d3389c6b360b29cf1c142d29497df783a63eabcea6f7779436*/
     rc = bpak_merkle_init(&ctx, data_size, salt, sizeof(salt),
-                            merkle_wr, merkle_rd, true, merkle_buf);
+                            merkle_wr, merkle_rd, 0, true, merkle_buf);
 
     uint32_t data_to_process = data_size;
     uint32_t pos = 0;

@@ -184,8 +184,6 @@ struct decode_private
 {
     FILE *output_fp;
     FILE *origin_fp;
-    off_t origin_offset;
-    off_t output_offset;
 };
 
 static ssize_t decode_write_output(off_t offset,
@@ -195,7 +193,7 @@ static ssize_t decode_write_output(off_t offset,
 {
     struct decode_private *priv = (struct decode_private *) user;
 
-    if (fseek(priv->output_fp, priv->output_offset + offset, SEEK_SET) != 0) {
+    if (fseek(priv->output_fp, offset, SEEK_SET) != 0) {
         return -BPAK_SEEK_ERROR;
     }
 
@@ -209,7 +207,7 @@ static ssize_t decode_read_output(off_t offset,
 {
     struct decode_private *priv = (struct decode_private *) user;
 
-    if (fseek(priv->output_fp, priv->output_offset + offset, SEEK_SET) != 0) {
+    if (fseek(priv->output_fp, offset, SEEK_SET) != 0) {
         return -BPAK_SEEK_ERROR;
     }
 
@@ -240,7 +238,7 @@ static ssize_t decode_read_origin(off_t offset,
 {
     struct decode_private *priv = (struct decode_private *) user;
 
-    if (fseek(priv->origin_fp, priv->origin_offset + offset, SEEK_SET) != 0) {
+    if (fseek(priv->origin_fp, offset, SEEK_SET) != 0) {
         return -BPAK_SEEK_ERROR;
     }
 
@@ -271,6 +269,7 @@ int bpak_pkg_transport_decode(struct bpak_package *input,
                                     patch_header,
                                     decode_write_output,
                                     decode_read_output,
+                                    sizeof(struct bpak_header),
                                     decode_write_output_header,
                                     &decode_private);
 
@@ -285,7 +284,8 @@ int bpak_pkg_transport_decode(struct bpak_package *input,
 
         rc = bpak_transport_decode_set_origin(&decode_ctx,
                                               origin_header,
-                                              decode_read_origin);
+                                              decode_read_origin,
+                                              sizeof(struct bpak_header));
 
         if (rc != BPAK_OK) {
             bpak_printf(0, "Error: Origin stream init failed (%i) %s\n",
@@ -312,12 +312,7 @@ int bpak_pkg_transport_decode(struct bpak_package *input,
                 bpak_printf(0, "Error could not get part with ref %x\n", part->id);
                 goto err_out;
             }
-
-            decode_private.origin_offset = bpak_part_offset(&origin->header,
-                                                            origin_part);
         }
-
-        decode_private.output_offset = bpak_part_offset(patch_header, part);
 
         rc = bpak_transport_decode_start(&decode_ctx, part);
 

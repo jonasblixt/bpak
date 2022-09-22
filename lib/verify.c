@@ -212,7 +212,6 @@ int bpak_verify_compute_payload_hash(struct bpak_header *header,
 struct merkle_verify_private
 {
     void *user;
-    off_t tree_offset;
     bpak_io_t read_payload;
 };
 
@@ -228,8 +227,8 @@ static ssize_t merkle_verify_wr(off_t offset, uint8_t *buf, size_t size,
     while (bytes_to_process) {
         chunk_length = BPAK_MIN(bytes_to_process, sizeof(chunk_buffer));
 
-        ssize_t bytes_read = priv->read_payload(current_offset + offset +
-                    priv->tree_offset, chunk_buffer, chunk_length, priv->user);
+        ssize_t bytes_read = priv->read_payload(current_offset + offset,
+                                     chunk_buffer, chunk_length, priv->user);
 
         if (bytes_read < 0)
             return bytes_read;
@@ -249,7 +248,7 @@ static ssize_t merkle_verify_rd(off_t offset, uint8_t *buf, size_t size,
                                 void *user)
 {
     struct merkle_verify_private *priv = (struct merkle_verify_private *) user;
-    return priv->read_payload(offset + priv->tree_offset, buf, size, priv->user);
+    return priv->read_payload(offset, buf, size, priv->user);
 }
 
 int bpak_verify_merkle_tree(bpak_io_t read_payload,
@@ -268,10 +267,16 @@ int bpak_verify_merkle_tree(bpak_io_t read_payload,
     memset(&merkle_verify_private, 0, sizeof(merkle_verify_private));
     merkle_verify_private.read_payload = read_payload;
     merkle_verify_private.user = user;
-    merkle_verify_private.tree_offset = tree_offset;
 
-    rc = bpak_merkle_init(&ctx, data_length, salt, 32, merkle_verify_wr,
-                            merkle_verify_rd, false, &merkle_verify_private);
+    rc = bpak_merkle_init(&ctx,
+                          data_length,
+                          salt,
+                          32,
+                          merkle_verify_wr,
+                          merkle_verify_rd,
+                          tree_offset,
+                          false,
+                          &merkle_verify_private);
 
     if (rc != BPAK_OK) {
         return rc;

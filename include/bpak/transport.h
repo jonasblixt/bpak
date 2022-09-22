@@ -35,6 +35,8 @@ struct bpak_transport_decode
     bpak_io_t write_output_header;
     uint32_t decoder_id;
     off_t copy_offset;
+    off_t output_offset;
+    off_t origin_offset;
     void *decoder_priv;
     void *user;
 };
@@ -50,6 +52,7 @@ struct bpak_transport_decode
  * @param[in] patch_header Input patch BPAK header
  * @param[in] write_output Callback for writing output
  * @param[in] read_output Callback for reading output
+ * @param[in] output_offset Offset where output data should be written
  * @param[in] write_output_header Callback for writing the output header
  * @param[in] user User pointer for io callbacks
  *
@@ -60,6 +63,7 @@ int bpak_transport_decode_init(struct bpak_transport_decode *ctx,
                                struct bpak_header *patch_header,
                                bpak_io_t write_output,
                                bpak_io_t read_output,
+                               off_t output_offset,
                                bpak_io_t write_output_header,
                                void *user);
 /**
@@ -70,13 +74,15 @@ int bpak_transport_decode_init(struct bpak_transport_decode *ctx,
  * @param[in] ctx Pointer to a transport decode context
  * @param[in] origin_header Origin BPAK header
  * @param[in] read_origin Callback for reading origin data
+ * @param[in] origin_offset Offset where origin data block starts
  * @param[in] origin_data_offset Origin data offset
  *
  * @return BPAK_OK on success or a negative number on failure
  */
 int bpak_transport_decode_set_origin(struct bpak_transport_decode *ctx,
                                      struct bpak_header *origin_header,
-                                     bpak_io_t read_origin);
+                                     bpak_io_t read_origin,
+                                     off_t origin_offset);
 /**
  * Starts the decoding process. Some parts are re-created, for example
  * merkle hash tress, and therefore the input size is zero. In this case the

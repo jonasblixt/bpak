@@ -60,12 +60,19 @@ static ssize_t merkle_generate(struct bpak_transport_decode *ctx)
         return rc;
     }
 
+    off_t output_offset = bpak_part_offset(ctx->patch_header, ctx->part) -
+                            sizeof(struct bpak_header) +
+                            ctx->output_offset;
+
+    bpak_printf(0, "Merkle tree at offset: %i\n", output_offset);
+
     rc = bpak_merkle_init(&merkle,
                           bpak_part_size(fs_part),
                           salt,
                           32,
                           ctx->write_output,
                           ctx->read_output,
+                          output_offset,
                           true,
                           ctx->user);
 
@@ -78,17 +85,23 @@ static ssize_t merkle_generate(struct bpak_transport_decode *ctx)
      * And the user read/write calls are expected to offset io calls
      * to the hashtree, therefore the data should be at an offset
      * of -bpak_part_size(fs_part) */
-    off_t data_offset = -bpak_part_size(fs_part);
+    off_t data_offset = bpak_part_offset(ctx->patch_header, fs_part) -
+                            sizeof(struct bpak_header) + ctx->output_offset;
 
     bytes_to_process = bpak_part_size(fs_part);
     while (bytes_to_process) {
         size_t bytes_to_read = BPAK_MIN(bytes_to_process, sizeof(chunk_buffer));
-        chunk_length = ctx->read_output(data_offset, chunk_buffer,
+        chunk_length = ctx->read_output(data_offset,
+                                        chunk_buffer,
                                         bytes_to_read,
                                         ctx->user);
 
-        if (chunk_length != bytes_to_read)
+        if (chunk_length != bytes_to_read) {
+            bpak_printf(0, "Error: Wanted to read %zu at offset %i but got %i\n",
+                            bytes_to_read, ctx->output_offset + data_offset,
+                            chunk_length);
             return -BPAK_READ_ERROR;
+        }
 
         rc = bpak_merkle_write_chunk(&merkle, chunk_buffer, chunk_length);
 
@@ -120,6 +133,7 @@ int bpak_transport_decode_init(struct bpak_transport_decode *ctx,
                                struct bpak_header *patch_header,
                                bpak_io_t write_output,
                                bpak_io_t read_output,
+                               off_t output_offset,
                                bpak_io_t write_output_header,
                                void *user)
 {
@@ -130,6 +144,7 @@ int bpak_transport_decode_init(struct bpak_transport_decode *ctx,
     ctx->write_output = write_output;
     ctx->read_output = read_output;
     ctx->write_output_header = write_output_header;
+    ctx->output_offset = output_offset;
     ctx->user = user;
 
     return BPAK_OK;
@@ -137,7 +152,8 @@ int bpak_transport_decode_init(struct bpak_transport_decode *ctx,
 
 int bpak_transport_decode_set_origin(struct bpak_transport_decode *ctx,
                                      struct bpak_header *origin_header,
-                                     bpak_io_t read_origin)
+                                     bpak_io_t read_origin,
+                                     off_t origin_offset)
 {
     int rc;
     uint8_t *origin_package_uuid;
@@ -145,6 +161,7 @@ int bpak_transport_decode_set_origin(struct bpak_transport_decode *ctx,
 
     ctx->origin_header = origin_header;
     ctx->read_origin = read_origin;
+    ctx->origin_offset = origin_offset;
 
     /* Origin and input package should have the same package-uuid */
     rc = bpak_get_meta(origin_header, BPAK_ID_BPAK_PACKAGE,
@@ -194,9 +211,6 @@ int bpak_transport_decode_start(struct bpak_transport_decode *ctx,
         }
     }
 
-    size_t patch_input_length = bpak_part_size(part);
-
-    bpak_printf(2, "Patch input length: %zu\n", patch_input_length);
     switch (ctx->decoder_id) {
 #ifdef BPAK_BUILD_BSPATCH
         case BPAK_ID_BSPATCH: /* heatshrink decompressor*/
@@ -207,6 +221,9 @@ int bpak_transport_decode_start(struct bpak_transport_decode *ctx,
                 /* bspach requires the origin stream */
                 return -BPAK_PATCH_READ_ORIGIN_ERROR;
             }
+
+            size_t patch_input_length = bpak_part_size(part);
+            bpak_printf(2, "Patch input length: %zu\n", patch_input_length);
 
             enum bpak_compression compression;
 
@@ -224,11 +241,22 @@ int bpak_transport_decode_start(struct bpak_transport_decode *ctx,
             struct bpak_bspatch_context *bspatch = \
                     (struct bpak_bspatch_context *) ctx->decoder_priv;
 
+            /* Compute output and origin offsets */
+            off_t output_offset = bpak_part_offset(ctx->patch_header, part) -
+                                    sizeof(struct bpak_header) +
+                                    ctx->output_offset;
+
+            off_t origin_offset = bpak_part_offset(ctx->origin_header, part) -
+                                    sizeof(struct bpak_header) +
+                                    ctx->origin_offset;
+
             rc = bpak_bspatch_init(bspatch,
                                      ctx->buffer_length,
                                      patch_input_length,
                                      ctx->read_origin,
-                                     ctx->write_output, 0,
+                                     origin_offset,
+                                     ctx->write_output,
+                                     output_offset,
                                      compression,
                                      ctx->user);
 
@@ -280,7 +308,12 @@ int bpak_transport_decode_write_chunk(struct bpak_transport_decode *ctx,
 #endif
         case 0: /* Copy data */
         {
-            ssize_t bytes_written = ctx->write_output(ctx->copy_offset,
+            off_t write_offset = bpak_part_offset(ctx->patch_header, ctx->part) -
+                                    sizeof(struct bpak_header) +
+                                    ctx->output_offset +
+                                    ctx->copy_offset;
+
+            ssize_t bytes_written = ctx->write_output(write_offset,
                                                       buffer,
                                                       length,
                                                       ctx->user);

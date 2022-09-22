@@ -50,6 +50,7 @@ struct bpak_merkle_context
     uint8_t salt[32];                  /*!< Input salt for hashing */
     bpak_io_t wr;                      /*!< Function to write to the hash tree */
     bpak_io_t rd;                      /*!< Function to read from the hash tree */
+    off_t offset;
     void *priv;                        /*!< Externalt context variable */
 };
 
@@ -73,6 +74,7 @@ size_t bpak_merkle_get_size(struct bpak_merkle_context *ctx);
  * @param[in] salt_length Length of salt in bytes
  * @param[in] wr Write callback function
  * @param[in] rd Read callback function
+ * @param[in] offset Offset where hash tree data starts
  * @param[in] priv Optional private context
  *
  * @return BPAK_OK on success and non zero number on error
@@ -84,6 +86,7 @@ int bpak_merkle_init(struct bpak_merkle_context *ctx,
                         size_t salt_length,
                         bpak_io_t wr,
                         bpak_io_t rd,
+                        off_t offset,
                         bool zero_fill_output,
                         void *priv);
 

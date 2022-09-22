@@ -95,9 +95,10 @@ process_more:
             ctx->diff_count -= data_to_process;
             bytes_available -= data_to_process;
 
-            ssize_t nread = ctx->read_origin(ctx->origin_position,
-                                  ctx->patch_buffer, data_to_process,
-                                  ctx->user_priv);
+            ssize_t nread = ctx->read_origin(ctx->origin_offset + ctx->origin_position,
+                                              ctx->patch_buffer,
+                                              data_to_process,
+                                              ctx->user_priv);
 
             if (nread != data_to_process) {
                 bpak_printf(0, "Could not read %li bytes from origin\n",
@@ -389,6 +390,7 @@ int bpak_bspatch_init(struct bpak_bspatch_context *ctx,
                       size_t buffer_length,
                       size_t input_length,
                       bpak_io_t read_origin,
+                      off_t origin_offset,
                       bpak_io_t write_output,
                       off_t output_offset,
                       enum bpak_compression compression,
@@ -419,6 +421,7 @@ int bpak_bspatch_init(struct bpak_bspatch_context *ctx,
     ctx->input_length = input_length;
     ctx->user_priv = user_priv;
     ctx->output_offset = output_offset;
+    ctx->origin_offset = origin_offset;
 
     rc = decompressor_init(ctx);
 

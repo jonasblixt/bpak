@@ -45,6 +45,7 @@ int bpak_merkle_init(struct bpak_merkle_context *ctx,
                         size_t salt_length,
                         bpak_io_t wr,
                         bpak_io_t rd,
+                        off_t offset,
                         bool zero_fill_output,
                         void *priv)
 {
@@ -57,6 +58,7 @@ int bpak_merkle_init(struct bpak_merkle_context *ctx,
     memset(ctx, 0, sizeof(*ctx));
     ctx->wr = wr;
     ctx->rd = rd;
+    ctx->offset = offset;
     ctx->input_data_length = input_data_length;
     ctx->block_byte_counter = BPAK_MERKLE_BLOCK_SZ;
     ctx->salt_length = salt_length;
@@ -101,7 +103,7 @@ int bpak_merkle_init(struct bpak_merkle_context *ctx,
     if (zero_fill_output) {
         bpak_printf(2, "Zero filling tree\n");
         size_t zero_fill_bytes = ctx->hash_tree_length;
-        off_t output_offset = 0;
+        off_t output_offset = offset;
         while (zero_fill_bytes > 0) {
             ssize_t n_written = ctx->wr(output_offset, ctx->buffer,
                                         sizeof(ctx->buffer), priv);
@@ -167,7 +169,7 @@ int bpak_merkle_write_chunk(struct bpak_merkle_context *ctx, uint8_t *buffer,
 #endif
 
             off_t output_offset = ctx->input_chunk_counter + ctx->level_offset[0];
-            ssize_t bytes_written = ctx->wr(output_offset, ctx->buffer,
+            ssize_t bytes_written = ctx->wr(ctx->offset + output_offset, ctx->buffer,
                                                 sizeof(ctx->buffer), ctx->priv);
 
             if (bytes_written < 0)
@@ -227,7 +229,7 @@ int bpak_merkle_finish(struct bpak_merkle_context *ctx,
             /* Read sizof(ctx->buffer) sized chunks and update hash for block
              *  n */
             for (unsigned int c = 0; c < BPAK_MERKLE_BLOCK_SZ; c += sizeof(ctx->buffer)) {
-                n_read = ctx->rd(input_offset + c, ctx->buffer, sizeof(ctx->buffer),
+                n_read = ctx->rd(ctx->offset + input_offset + c, ctx->buffer, sizeof(ctx->buffer),
                                     ctx->priv);
                 if (n_read < 0)
                     return n_read;
@@ -248,7 +250,7 @@ int bpak_merkle_finish(struct bpak_merkle_context *ctx,
 #else
             mbedtls_sha256_finish_ret(&ctx->running_hash, ctx->buffer);
 #endif
-            n_written = ctx->wr(output_offset, ctx->buffer, sizeof(ctx->buffer),
+            n_written = ctx->wr(ctx->offset + output_offset, ctx->buffer, sizeof(ctx->buffer),
                                     ctx->priv);
 
             if (n_written < 0)
@@ -280,7 +282,7 @@ int bpak_merkle_finish(struct bpak_merkle_context *ctx,
     input_offset = ctx->level_offset[ctx->no_of_levels - 1];
     while (bytes_to_process > 0) {
         chunk_length = BPAK_MIN(sizeof(ctx->buffer), bytes_to_process);
-        n_read = ctx->rd(input_offset, ctx->buffer, chunk_length, ctx->priv);
+        n_read = ctx->rd(ctx->offset + input_offset, ctx->buffer, chunk_length, ctx->priv);
 
         if (n_read < 0)
             return n_read;
