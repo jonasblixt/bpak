@@ -47,6 +47,8 @@ $BPAK add $IMG_O --part p1 \
 $BPAK add $IMG_O --part p2 \
                  --from-file $TEST_SRC_DIR/diff2_origin.bin $V
 
+$BPAK add $IMG_O --part p3 \
+                 --from-file $TEST_SRC_DIR/diff4_origin.bin $V
 
 $BPAK set $IMG_O --key-id pb-development \
                  --keystore-id pb-internal $V
@@ -75,6 +77,9 @@ $BPAK add $IMG_T --part p1 \
 
 $BPAK add $IMG_T --part p2 \
                  --from-file $TEST_SRC_DIR/diff2_target.bin $V
+
+$BPAK add $IMG_T --part p3 \
+                 --from-file $TEST_SRC_DIR/diff4_target.bin $V
 
 $BPAK set $IMG_T --key-id pb-development \
                  --keystore-id pb-internal $V
