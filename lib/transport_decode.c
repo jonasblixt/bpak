@@ -360,7 +360,7 @@ int bpak_transport_decode_finish(struct bpak_transport_decode *ctx)
         break;
 #endif
         case 0: /* Copy data */
-            output_length = ctx->part->size;
+            output_length = bpak_part_size(ctx->part);
         break;
         default:
             return -BPAK_NOT_SUPPORTED;
