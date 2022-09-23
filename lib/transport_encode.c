@@ -24,7 +24,9 @@
 #include <bpak/bsdiff.h>
 #include <bpak/transport.h>
 
-static int transport_copy(struct bpak_header *hdr, uint32_t id,
+static int transport_copy(struct bpak_header *input_hdr,
+                          struct bpak_header *output_hdr,
+                          uint32_t id,
                           FILE *input_fp,
                           FILE *output_fp)
 {
@@ -32,14 +34,14 @@ static int transport_copy(struct bpak_header *hdr, uint32_t id,
     struct bpak_part_header *p = NULL;
     uint64_t part_offset = 0;
 
-    rc = bpak_get_part(hdr, id, &p);
+    rc = bpak_get_part(input_hdr, id, &p);
 
     if (rc != BPAK_OK) {
         bpak_printf(0, "Error could not get part with ref %x\n", id);
         return rc;
     }
 
-    part_offset = bpak_part_offset(hdr, p);
+    part_offset = bpak_part_offset(input_hdr, p);
 
     rc = fseek(input_fp, part_offset, SEEK_SET);
 
@@ -49,7 +51,7 @@ static int transport_copy(struct bpak_header *hdr, uint32_t id,
     }
 
     rc = fseek(output_fp,
-                 bpak_part_offset(hdr, p),
+                 bpak_part_offset(output_hdr, p),
                  SEEK_SET);
 
     if (rc != 0) {
@@ -410,7 +412,11 @@ int bpak_transport_encode(FILE *input_fp, struct bpak_header *input_header,
         } else { /* No transport coding, copy data */
             bpak_printf(2, "Copying part: %x\n", ph->id);
 
-            rc = transport_copy(input_header, ph->id, input_fp, output_fp);
+            rc = transport_copy(input_header,
+                                output_header,
+                                ph->id,
+                                input_fp,
+                                output_fp);
 
             if (rc != BPAK_OK)
                 break;
