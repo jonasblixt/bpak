@@ -24,7 +24,7 @@
 #include <mbedtls/entropy.h>
 #include <mbedtls/ctr_drbg.h>
 
-#ifdef BPAK_BUILD_MERKLE
+#if BPAK_CONFIG_MERKLE == 1
 static ssize_t merkle_wr(off_t offset,
                          uint8_t *buf,
                          size_t size,
@@ -45,7 +45,7 @@ static ssize_t merkle_rd(off_t offset,
     return size;
 }
 
-int bpak_pkg_add_file_with_merkle_tree(struct bpak_package *pkg,
+BPAK_EXPORT int bpak_pkg_add_file_with_merkle_tree(struct bpak_package *pkg,
             const char *filename, const char *part_name, uint8_t flags)
 {
     int rc;
@@ -82,7 +82,7 @@ int bpak_pkg_add_file_with_merkle_tree(struct bpak_package *pkg,
 
     uint32_t *salt_ptr = (uint32_t *) salt;
 
-    for (int i = 0; i < sizeof(salt)/sizeof(uint32_t); i++) {
+    for (unsigned int i = 0; i < sizeof(salt)/sizeof(uint32_t); i++) {
         (*salt_ptr) = random() & 0xFFFFFFFF;
         salt_ptr++;
     }
@@ -174,7 +174,7 @@ int bpak_pkg_add_file_with_merkle_tree(struct bpak_package *pkg,
         goto err_close_fp_out;
     }
 
-    if (fwrite(merkle_buf, 1, merkle_sz, pkg->fp) != merkle_sz) {
+    if (fwrite(merkle_buf, 1, merkle_sz, pkg->fp) != (size_t) merkle_sz) {
         rc = -BPAK_WRITE_ERROR;
         goto err_close_fp_out;
     }
@@ -194,9 +194,9 @@ err_free_buf_out:
     return rc;
 }
 
-#endif  // BPAK_BUILD_MERKLE
+#endif  // BPAK_CONFIG_MERKLE
 
-int bpak_pkg_add_file(struct bpak_package *pkg, const char *filename,
+BPAK_EXPORT int bpak_pkg_add_file(struct bpak_package *pkg, const char *filename,
                      const char *part_name, uint8_t flags)
 {
     int rc;
@@ -289,7 +289,7 @@ err_close_fp:
     return rc;
 }
 
-int bpak_pkg_add_key(struct bpak_package *pkg, const char *filename,
+BPAK_EXPORT int bpak_pkg_add_key(struct bpak_package *pkg, const char *filename,
                      const char *part_name, uint8_t flags)
 {
     int rc;
@@ -327,7 +327,7 @@ int bpak_pkg_add_key(struct bpak_package *pkg, const char *filename,
 
     p->id = bpak_id(part_name);
     p->offset = new_offset;
-    p->flags = 0;
+    p->flags = flags;
     p->size = len;
 
     if (len % BPAK_PART_ALIGN)

@@ -15,7 +15,7 @@
 #include <bpak/merkle.h>
 #include <bpak/id.h>
 
-#ifdef BPAK_BUILD_MERKLE
+#if BPAK_CONFIG_MERKLE == 1
 static ssize_t merkle_generate(struct bpak_transport_decode *ctx)
 {
     int rc;
@@ -126,7 +126,7 @@ static ssize_t merkle_generate(struct bpak_transport_decode *ctx)
     return bpak_merkle_get_size(&merkle);
 }
 
-#endif  // BPAK_BUILD_MERKLE
+#endif  // BPAK_CONFIG_MERKLE
 
 int bpak_transport_decode_init(struct bpak_transport_decode *ctx,
                                size_t buffer_length,
@@ -212,7 +212,6 @@ int bpak_transport_decode_start(struct bpak_transport_decode *ctx,
     }
 
     switch (ctx->decoder_id) {
-#ifdef BPAK_BUILD_BSPATCH
         case BPAK_ID_BSPATCH: /* heatshrink decompressor*/
         case BPAK_ID_BSPATCH_NO_COMP:
         case BPAK_ID_BSPATCH_LZMA:
@@ -265,8 +264,7 @@ int bpak_transport_decode_start(struct bpak_transport_decode *ctx,
             }
         }
         break;
-#endif
-#ifdef BPAK_BUILD_MERKLE
+#if BPAK_CONFIG_MERKLE == 1
         case BPAK_ID_MERKLE_GENERATE:
             /* Merkle trees are generated from output data
              *  of a previous patch step, this is done in the final call */
@@ -291,7 +289,6 @@ int bpak_transport_decode_write_chunk(struct bpak_transport_decode *ctx,
     int rc;
 
     switch (ctx->decoder_id) {
-#ifdef BPAK_BUILD_BSPATCH
         case BPAK_ID_BSPATCH_NO_COMP:
         case BPAK_ID_BSPATCH_LZMA:
         case BPAK_ID_BSPATCH: /* id("bspatch") heatshrink decompressor*/
@@ -305,7 +302,6 @@ int bpak_transport_decode_write_chunk(struct bpak_transport_decode *ctx,
                 bpak_free(bspatch);
         }
         break;
-#endif
         case 0: /* Copy data */
         {
             off_t write_offset = bpak_part_offset(ctx->patch_header, ctx->part) -
@@ -319,7 +315,7 @@ int bpak_transport_decode_write_chunk(struct bpak_transport_decode *ctx,
                                                       ctx->user);
             if (bytes_written < 0)
                 return bytes_written;
-            if (bytes_written != length)
+            if (bytes_written != (ssize_t) length)
                 return -BPAK_WRITE_ERROR;
 
             ctx->copy_offset += bytes_written;
@@ -339,7 +335,6 @@ int bpak_transport_decode_finish(struct bpak_transport_decode *ctx)
     ssize_t output_length = 0;
 
     switch (ctx->decoder_id) {
-#ifdef BPAK_BUILD_BSPATCH
         case BPAK_ID_BSPATCH_NO_COMP:
         case BPAK_ID_BSPATCH_LZMA:
         case BPAK_ID_BSPATCH: /* id("bspatch") heatshrink decompressor*/
@@ -353,8 +348,7 @@ int bpak_transport_decode_finish(struct bpak_transport_decode *ctx)
             bpak_free(bspatch);
         }
         break;
-#endif
-#ifdef BPAK_BUILD_MERKLE
+#if BPAK_CONFIG_MERKLE == 1
         case BPAK_ID_MERKLE_GENERATE: /* id("merkle-generate") */
             output_length = merkle_generate(ctx);
         break;
@@ -371,7 +365,7 @@ int bpak_transport_decode_finish(struct bpak_transport_decode *ctx)
 
     /* Check that the produced output length matches what the patch input
      * header says */
-    if (output_length != (ctx->part->size + ctx->part->pad_bytes)) {
+    if (output_length != (ssize_t) (ctx->part->size + ctx->part->pad_bytes)) {
         bpak_printf(0, "Error: Decoded part size does not match the expected size %zu != %zu\n",
                         (ctx->part->size + ctx->part->pad_bytes), output_length);
         return -BPAK_SIZE_ERROR;
@@ -395,4 +389,5 @@ int bpak_transport_decode_finish(struct bpak_transport_decode *ctx)
 void bpak_transport_decode_free(struct bpak_transport_decode *ctx)
 {
     /* Nothing to implement so far */
+    (void) ctx;
 }

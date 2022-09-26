@@ -144,7 +144,7 @@ err_free_ctx_out:
     return rc;
 }
 
-int bpak_pkg_sign(struct bpak_package *pkg, const char *key_filename)
+BPAK_EXPORT int bpak_pkg_sign(struct bpak_package *pkg, const char *key_filename)
 {
     int rc;
     struct bpak_key *sign_key = NULL;

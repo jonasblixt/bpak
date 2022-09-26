@@ -22,7 +22,7 @@
 #include <bpak/utils.h>
 #include <bpak/transport.h>
 
-int bpak_pkg_open(struct bpak_package *pkg, const char *filename,
+BPAK_EXPORT int bpak_pkg_open(struct bpak_package *pkg, const char *filename,
                   const char *mode)
 {
     int rc;
@@ -69,7 +69,7 @@ err_close_io:
     return rc;
 }
 
-int bpak_pkg_close(struct bpak_package *pkg)
+BPAK_EXPORT int bpak_pkg_close(struct bpak_package *pkg)
 {
     if (pkg->fp != NULL) {
         fclose(pkg->fp);
@@ -92,7 +92,7 @@ static ssize_t pkg_read_payload(off_t offset, uint8_t *buf, size_t length,
     return read_bytes;
 }
 
-int bpak_pkg_update_hash(struct bpak_package *pkg, char *output, size_t *size)
+BPAK_EXPORT int bpak_pkg_update_hash(struct bpak_package *pkg, char *output, size_t *size)
 {
     int rc;
 
@@ -108,7 +108,7 @@ int bpak_pkg_update_hash(struct bpak_package *pkg, char *output, size_t *size)
     if (rc != BPAK_OK)
         return rc;
 
-    if ((output) != 0 && (size != NULL)) {
+    if ((output != NULL) && (size != NULL)) {
         rc = bpak_verify_compute_header_hash(&pkg->header, (uint8_t *) output,
                                              size);
         if (rc != BPAK_OK)
@@ -118,7 +118,7 @@ int bpak_pkg_update_hash(struct bpak_package *pkg, char *output, size_t *size)
     return BPAK_OK;
 }
 
-size_t bpak_pkg_installed_size(struct bpak_package *pkg)
+BPAK_EXPORT size_t bpak_pkg_installed_size(struct bpak_package *pkg)
 {
     size_t installed_size = 0;
 
@@ -129,7 +129,7 @@ size_t bpak_pkg_installed_size(struct bpak_package *pkg)
     return installed_size;
 }
 
-size_t bpak_pkg_size(struct bpak_package *pkg)
+BPAK_EXPORT size_t bpak_pkg_size(struct bpak_package *pkg)
 {
     size_t transport_size = 0;
 
@@ -146,12 +146,12 @@ size_t bpak_pkg_size(struct bpak_package *pkg)
     return transport_size;
 }
 
-struct bpak_header *bpak_pkg_header(struct bpak_package *pkg)
+BPAK_EXPORT struct bpak_header *bpak_pkg_header(struct bpak_package *pkg)
 {
     return &pkg->header;
 }
 
-int bpak_pkg_write_header(struct bpak_package *pkg)
+BPAK_EXPORT int bpak_pkg_write_header(struct bpak_package *pkg)
 {
     if (fseek(pkg->fp, 0, SEEK_SET) != 0) {
         return -BPAK_SEEK_ERROR;
@@ -167,7 +167,7 @@ int bpak_pkg_write_header(struct bpak_package *pkg)
     return BPAK_OK;
 }
 
-int bpak_pkg_write_raw_signature(struct bpak_package *pkg,
+BPAK_EXPORT int bpak_pkg_write_raw_signature(struct bpak_package *pkg,
                                  const uint8_t *signature, size_t size)
 {
     memset(pkg->header.signature, 0, sizeof(pkg->header.signature));
@@ -216,6 +216,7 @@ static ssize_t decode_write_output_header(off_t offset,
                              void *user)
 {
     struct decode_private *priv = (struct decode_private *) user;
+    (void) offset;
 
     if (length != sizeof(struct bpak_header))
         return -BPAK_SIZE_ERROR;
@@ -241,7 +242,7 @@ static ssize_t decode_read_origin(off_t offset,
     return fread(buffer, 1, length, priv->origin_fp);
 }
 
-int bpak_pkg_transport_decode(struct bpak_package *input,
+BPAK_EXPORT int bpak_pkg_transport_decode(struct bpak_package *input,
                               struct bpak_package *output,
                               struct bpak_package *origin)
 {
@@ -356,8 +357,7 @@ err_out:
     return rc;
 }
 
-#ifdef BPAK_BUILD_TRANSPORT_ENCODE
-int bpak_pkg_transport_encode(struct bpak_package *input,
+BPAK_EXPORT int bpak_pkg_transport_encode(struct bpak_package *input,
                               struct bpak_package *output,
                               struct bpak_package *origin)
 {
@@ -375,4 +375,3 @@ int bpak_pkg_transport_encode(struct bpak_package *input,
                                  output->fp, &output->header,
                                  origin_fp, origin_header);
 }
-#endif  // BPAK_BUILD_TRANSPORT_ENCODE

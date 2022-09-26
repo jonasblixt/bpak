@@ -9,28 +9,33 @@
 
 #include <stdio.h>
 #include <string.h>
-#include "uuid/uuid.h"
+#include <uuid/uuid.h>
 #include <bpak/bpak.h>
 #include <bpak/utils.h>
 #include <bpak/crc.h>
 #include <bpak/pkg.h>
 #include <bpak/id.h>
 
-int bpak_bin2hex(uint8_t *data, size_t data_sz, char *buf, size_t buf_sz)
+BPAK_EXPORT int bpak_bin2hex(uint8_t *data, size_t data_sz, char *buf, size_t buf_sz)
 {
     uint8_t b;
-    int i = data_sz;
-    int n = 0;
+    size_t i = data_sz;
+    size_t n = 0;
 
-    for (i = 0; i < data_sz; i++)
-    {
+    for (i = 0; i < data_sz; i++) {
         b = data[i];
         b = (b >> 4) & 0x0F;
         buf[n++] = (b > 9)?('a' + (b-10)):('0' + b);
 
+        if (n > buf_sz)
+            return -1;
+
         b = data[i];
         b = b & 0x0F;
         buf[n++] = (b > 9)?('a' + (b-10)):('0' + b);
+
+        if (n > buf_sz)
+            return -1;
     }
 
     buf[n] = 0;
@@ -38,7 +43,7 @@ int bpak_bin2hex(uint8_t *data, size_t data_sz, char *buf, size_t buf_sz)
     return BPAK_OK;
 }
 
-int bpak_uuid_to_string(const uint8_t *data, char *buf, size_t size)
+BPAK_EXPORT int bpak_uuid_to_string(const uint8_t *data, char *buf, size_t size)
 {
     if (size < 37)
         return -BPAK_SIZE_ERROR;
@@ -48,7 +53,7 @@ int bpak_uuid_to_string(const uint8_t *data, char *buf, size_t size)
     return BPAK_OK;
 }
 
-int bpak_meta_to_string(struct bpak_header *h, struct bpak_meta_header *m,
+BPAK_EXPORT int bpak_meta_to_string(struct bpak_header *h, struct bpak_meta_header *m,
                         char *buf, size_t size)
 {
     uint32_t *id_ptr = NULL;

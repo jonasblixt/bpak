@@ -5,7 +5,7 @@
 
 #include "heatshrink/heatshrink_decoder.h"
 
-#ifdef BPAK_BUILD_LZMA
+#if BPAK_CONFIG_LZMA == 1
 #include <lzma.h>
 
 static void *lzma_alloc_wrap(void *opaque, size_t nmemb, size_t size) {
@@ -89,8 +89,8 @@ process_more:
         break;
         case BPAK_PATCH_STATE_APPLY_DIFF:
         {
-            size_t data_to_process = BPAK_MIN(BPAK_MIN(bytes_available,
-                                    ctx->diff_count), ctx->patch_buffer_length);
+            ssize_t data_to_process = BPAK_MIN(BPAK_MIN((ssize_t) bytes_available,
+                                    (ssize_t) ctx->diff_count), (ssize_t) ctx->patch_buffer_length);
 
             ctx->diff_count -= data_to_process;
             bytes_available -= data_to_process;
@@ -154,8 +154,8 @@ process_more:
         break;
         case BPAK_PATCH_STATE_APPLY_EXTRA:
         {
-            size_t data_to_process = BPAK_MIN(bytes_available,
-                                             ctx->extra_count);
+            ssize_t data_to_process = BPAK_MIN((ssize_t) bytes_available,
+                                             (ssize_t) ctx->extra_count);
             ctx->extra_count -= data_to_process;
             bytes_available -= data_to_process;
 
@@ -212,7 +212,7 @@ static int decompressor_init(struct bpak_bspatch_context *ctx)
 
             heatshrink_decoder_reset((heatshrink_decoder *) ctx->decompressor_priv);
         break;
-#ifdef BPAK_BUILD_LZMA
+#if BPAK_CONFIG_LZMA == 1
         case BPAK_COMPRESSION_LZMA:
         {
             lzma_stream *strm = bpak_calloc(sizeof(lzma_stream), 1);
@@ -253,7 +253,7 @@ static void decompressor_free(struct bpak_bspatch_context *ctx)
                 ctx->decompressor_priv = NULL;
             }
         break;
-#ifdef BPAK_BUILD_LZMA
+#if BPAK_CONFIG_LZMA == 1
         case BPAK_COMPRESSION_LZMA:
             if (ctx->decompressor_priv != NULL) {
                 lzma_end((lzma_stream *) ctx->decompressor_priv);
@@ -267,7 +267,7 @@ static void decompressor_free(struct bpak_bspatch_context *ctx)
     }
 }
 
-#ifdef BPAK_BUILD_LZMA
+#if BPAK_CONFIG_LZMA == 1
 static int bspatch_lzma_write(struct bpak_bspatch_context *ctx,
                             uint8_t *buffer,
                             size_t length)
@@ -386,7 +386,7 @@ poll_more:
     return BPAK_OK;
 }
 
-int bpak_bspatch_init(struct bpak_bspatch_context *ctx,
+BPAK_EXPORT int bpak_bspatch_init(struct bpak_bspatch_context *ctx,
                       size_t buffer_length,
                       size_t input_length,
                       bpak_io_t read_origin,
@@ -436,7 +436,7 @@ err_free_buffers_out:
     return rc;
 }
 
-int bpak_bspatch_write(struct bpak_bspatch_context *ctx,
+BPAK_EXPORT int bpak_bspatch_write(struct bpak_bspatch_context *ctx,
                         uint8_t *buffer,
                         size_t length)
 {
@@ -449,7 +449,7 @@ int bpak_bspatch_write(struct bpak_bspatch_context *ctx,
         case BPAK_COMPRESSION_HS:
             return bspatch_hs_write(ctx, buffer, length);
         break;
-#ifdef BPAK_BUILD_LZMA
+#if BPAK_CONFIG_LZMA == 1
         case BPAK_COMPRESSION_LZMA:
             return bspatch_lzma_write(ctx, buffer, length);
         break;
@@ -461,7 +461,7 @@ int bpak_bspatch_write(struct bpak_bspatch_context *ctx,
     return BPAK_OK;
 }
 
-ssize_t bpak_bspatch_final(struct bpak_bspatch_context *ctx)
+BPAK_EXPORT ssize_t bpak_bspatch_final(struct bpak_bspatch_context *ctx)
 {
 
     if (ctx->state == BPAK_PATCH_STATE_ERROR)
@@ -472,7 +472,7 @@ ssize_t bpak_bspatch_final(struct bpak_bspatch_context *ctx)
         break;
         case BPAK_COMPRESSION_HS:
         break;
-#ifdef BPAK_BUILD_LZMA
+#if BPAK_CONFIG_LZMA == 1
         case BPAK_COMPRESSION_LZMA:
         {
             int rc = bspatch_lzma_write(ctx, NULL, 0);
@@ -489,7 +489,7 @@ ssize_t bpak_bspatch_final(struct bpak_bspatch_context *ctx)
     return ctx->output_position;
 }
 
-void bpak_bspatch_free(struct bpak_bspatch_context *ctx)
+BPAK_EXPORT void bpak_bspatch_free(struct bpak_bspatch_context *ctx)
 {
     bpak_free(ctx->patch_buffer);
     bpak_free(ctx->input_buffer);

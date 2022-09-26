@@ -115,7 +115,7 @@ static ssize_t verify_payload_read(off_t offset, uint8_t *buf, size_t size,
     return read_bytes;
 }
 
-int bpak_pkg_verify(struct bpak_package *pkg, const char *key_filename)
+BPAK_EXPORT int bpak_pkg_verify(struct bpak_package *pkg, const char *key_filename)
 {
     int rc;
     uint8_t hash_output[BPAK_HASH_MAX_LENGTH];

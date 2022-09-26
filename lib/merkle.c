@@ -14,7 +14,7 @@
 #include <mbedtls/version.h>
 #include <mbedtls/sha256.h>
 
-ssize_t bpak_merkle_compute_size(size_t input_data_length)
+BPAK_EXPORT ssize_t bpak_merkle_compute_size(size_t input_data_length)
 {
     size_t level_length = input_data_length;
     unsigned int level = 0;
@@ -39,7 +39,7 @@ ssize_t bpak_merkle_compute_size(size_t input_data_length)
     return result;
 }
 
-int bpak_merkle_init(struct bpak_merkle_context *ctx,
+BPAK_EXPORT int bpak_merkle_init(struct bpak_merkle_context *ctx,
                         size_t input_data_length,
                         const uint8_t *salt,
                         size_t salt_length,
@@ -122,12 +122,12 @@ int bpak_merkle_init(struct bpak_merkle_context *ctx,
     return BPAK_OK;
 }
 
-size_t bpak_merkle_get_size(struct bpak_merkle_context *ctx)
+BPAK_EXPORT size_t bpak_merkle_get_size(struct bpak_merkle_context *ctx)
 {
     return ctx->hash_tree_length;
 }
 
-int bpak_merkle_write_chunk(struct bpak_merkle_context *ctx, uint8_t *buffer,
+BPAK_EXPORT int bpak_merkle_write_chunk(struct bpak_merkle_context *ctx, uint8_t *buffer,
                             size_t length)
 {
     size_t data_to_process = length;
@@ -193,13 +193,13 @@ int bpak_merkle_write_chunk(struct bpak_merkle_context *ctx, uint8_t *buffer,
     return BPAK_OK;
 }
 
-int bpak_merkle_finish(struct bpak_merkle_context *ctx,
+BPAK_EXPORT int bpak_merkle_finish(struct bpak_merkle_context *ctx,
                         bpak_merkle_hash_t roothash)
 {
     off_t input_offset, output_offset;
-    size_t input_block_count;
-    size_t bytes_to_process;
-    size_t chunk_length;
+    ssize_t input_block_count;
+    ssize_t bytes_to_process;
+    ssize_t chunk_length;
     ssize_t n_read;
     ssize_t n_written;
 
@@ -281,7 +281,7 @@ int bpak_merkle_finish(struct bpak_merkle_context *ctx,
     bytes_to_process = ctx->level_length[ctx->no_of_levels - 1];
     input_offset = ctx->level_offset[ctx->no_of_levels - 1];
     while (bytes_to_process > 0) {
-        chunk_length = BPAK_MIN(sizeof(ctx->buffer), bytes_to_process);
+        chunk_length = BPAK_MIN((ssize_t)sizeof(ctx->buffer), bytes_to_process);
         n_read = ctx->rd(ctx->offset + input_offset, ctx->buffer, chunk_length, ctx->priv);
 
         if (n_read < 0)

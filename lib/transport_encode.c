@@ -88,7 +88,6 @@ err_out:
     return rc;
 }
 
-#ifdef BPAK_BUILD_BSDIFF
 struct bsdiff_private
 {
     int fd;
@@ -109,7 +108,11 @@ static ssize_t bsdiff_write_output(off_t offset,
 
     ssize_t bytes_written = write(priv->fd, buffer, length);
 
-    if (bytes_written != length) {
+    if (bytes_written < 0) {
+        return bytes_written;
+    }
+
+    if (bytes_written != (ssize_t) length) {
         bpak_printf(0, "Error: bsdiff_write_output write\n");
         return -BPAK_WRITE_ERROR;
     }
@@ -217,7 +220,6 @@ err_munmap_target:
     munmap(target_data_mmap, target_file_sz);
     return rc;
 }
-#endif //  BPAK_BUILD_BSDIFF
 
 static int transport_encode_part(struct bpak_transport_meta *tm,
                                  uint32_t part_ref_id,
@@ -295,11 +297,7 @@ static int transport_encode_part(struct bpak_transport_meta *tm,
         return rc;
     }
 
-    off_t output_offset = 0;
-    off_t origin_offset = 0;
-
     switch (alg_id) {
-#ifdef BPAK_BUILD_BSDIFF
         case BPAK_ID_BSDIFF: /* heatshrink compressor */
         case BPAK_ID_BSDIFF_NO_COMP:
         case BPAK_ID_BSDIFF_LZMA:
@@ -323,16 +321,13 @@ static int transport_encode_part(struct bpak_transport_meta *tm,
                                 bpak_part_offset(input_header, input_part),
                                 bpak_part_size(input_part),
                                 origin_fp,
-                                bpak_part_offset(origin_header, origin_part) +
-                                  origin_offset,
+                                bpak_part_offset(origin_header, origin_part),
                                 bpak_part_size(origin_part),
                                 output_fp,
-                                bpak_part_offset(output_header, output_part) +
-                                  output_offset,
+                                bpak_part_offset(output_header, output_part),
                                 compression);
         }
         break;
-#endif
         case BPAK_ID_REMOVE_DATA:
             /* No data is produced for this part */
             output_size = 0;

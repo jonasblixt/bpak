@@ -45,7 +45,7 @@
  *
  * CRC32 code derived from work by Gary S. Brown.
  */
-
+#include <bpak/bpak.h>
 #include <bpak/crc.h>
 
 /*
@@ -143,7 +143,7 @@ static const uint32_t crc32Table[256] = {
   0x2d02ef8dL
 };
 
-uint32_t bpak_crc32(uint32_t crc, const uint8_t *buf, uint32_t size)
+BPAK_EXPORT uint32_t bpak_crc32(uint32_t crc, const uint8_t *buf, uint32_t size)
 {
     const uint8_t *p = buf;
 

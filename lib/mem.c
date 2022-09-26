@@ -10,22 +10,15 @@
 #include <stdlib.h>
 #include <bpak/bpak.h>
 
-#ifdef BPAK_BUILD_MBEDTLS
-#   include <mbedtls/platform.h>
-#endif
-
 static bpak_calloc_t _calloc_func = NULL;
 static bpak_free_t _free_func = NULL;
 
-int bpak_set_calloc_free(bpak_calloc_t calloc_func, bpak_free_t free_func)
+BPAK_EXPORT int bpak_set_calloc_free(bpak_calloc_t calloc_func, bpak_free_t free_func)
 {
     if (calloc_func == NULL || free_func == NULL)
         return -BPAK_FAILED;
     _calloc_func = calloc_func;
     _free_func = free_func;
-#if (BPAK_BUILD_MBEDTLS && MBEDTLS_PLATFORM_MEMORY)
-        mbedtls_platform_set_calloc_free(bpak_calloc, bpak_free);
-#endif
     return BPAK_OK;
 }
 

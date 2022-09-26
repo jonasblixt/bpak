@@ -20,7 +20,7 @@
 #include <mbedtls/sha256.h>
 #include <mbedtls/sha512.h>
 
-int bpak_verify_compute_header_hash(struct bpak_header *header,
+BPAK_EXPORT int bpak_verify_compute_header_hash(struct bpak_header *header,
                                     uint8_t *output,
                                     size_t *size)
 {
@@ -106,7 +106,7 @@ int bpak_verify_compute_header_hash(struct bpak_header *header,
     return BPAK_OK;
 }
 
-int bpak_verify_compute_payload_hash(struct bpak_header *header,
+BPAK_EXPORT int bpak_verify_compute_payload_hash(struct bpak_header *header,
                                     bpak_io_t read_payload,
                                     off_t data_offset,
                                     void *user,
@@ -175,7 +175,7 @@ int bpak_verify_compute_payload_hash(struct bpak_header *header,
             chunk = (bytes_to_read > sizeof(chunk_buffer))?
                         sizeof(chunk_buffer):bytes_to_read;
 
-            if (read_payload(current_offset, chunk_buffer, chunk, user) != chunk) {
+            if (read_payload(current_offset, chunk_buffer, chunk, user) != (ssize_t) chunk) {
                 return -BPAK_READ_ERROR;
             }
 #if MBEDTLS_VERSION_MAJOR >= 3
@@ -208,7 +208,7 @@ int bpak_verify_compute_payload_hash(struct bpak_header *header,
     return BPAK_OK;
 }
 
-#ifdef BPAK_BUILD_MERKLE
+#if BPAK_CONFIG_MERKLE == 1
 struct merkle_verify_private
 {
     void *user;
@@ -219,7 +219,7 @@ static ssize_t merkle_verify_wr(off_t offset, uint8_t *buf, size_t size,
                                 void *user)
 {
     uint8_t chunk_buffer[BPAK_CHUNK_BUFFER_LENGTH];
-    size_t chunk_length;
+    ssize_t chunk_length;
     size_t bytes_to_process = size;
     struct merkle_verify_private *priv = (struct merkle_verify_private *) user;
     off_t current_offset = 0;
@@ -251,7 +251,7 @@ static ssize_t merkle_verify_rd(off_t offset, uint8_t *buf, size_t size,
     return priv->read_payload(offset, buf, size, priv->user);
 }
 
-int bpak_verify_merkle_tree(bpak_io_t read_payload,
+BPAK_EXPORT int bpak_verify_merkle_tree(bpak_io_t read_payload,
                             off_t data_offset,
                             size_t data_length,
                             off_t tree_offset,
@@ -286,7 +286,7 @@ int bpak_verify_merkle_tree(bpak_io_t read_payload,
     off_t current_offset = data_offset;
 
     while (bytes_to_process > 0) {
-        size_t chunk_length = BPAK_MIN(bytes_to_process, sizeof(chunk_buffer));
+        ssize_t chunk_length = BPAK_MIN(bytes_to_process, sizeof(chunk_buffer));
 
         ssize_t bytes_read = read_payload(current_offset, chunk_buffer,
                                           chunk_length, user);
@@ -320,9 +320,9 @@ int bpak_verify_merkle_tree(bpak_io_t read_payload,
 
     return BPAK_OK;
 }
-#endif  // BPAK_BUILD_MERKLE
+#endif  // BPAK_CONFIG_MERKLE
 
-int bpak_verify_payload(struct bpak_header *header,
+BPAK_EXPORT int bpak_verify_payload(struct bpak_header *header,
                         bpak_io_t read_payload,
                         off_t data_offset,
                         void *user)
@@ -346,7 +346,7 @@ int bpak_verify_payload(struct bpak_header *header,
         return -BPAK_BAD_PAYLOAD_HASH;
     }
 
-#ifdef BPAK_BUILD_MERKLE
+#if BPAK_CONFIG_MERKLE == 1
     const char *hash_tree_suffix = "-hash-tree";
     uint8_t *part_merkle_root_hash;
     uint8_t *part_merkle_salt;
@@ -406,7 +406,7 @@ int bpak_verify_payload(struct bpak_header *header,
             return rc;
         }
     }
-#endif  // BPAK_BUILD_MERKLE
+#endif  // BPAK_CONFIG_MERKLE
 
     return BPAK_OK;
 }

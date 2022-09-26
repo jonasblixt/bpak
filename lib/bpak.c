@@ -11,7 +11,7 @@
 #include <bpak/bpak.h>
 #include <bpak/id.h>
 
-int bpak_get_meta_and_header(struct bpak_header *hdr, uint32_t id,
+BPAK_EXPORT int bpak_get_meta_and_header(struct bpak_header *hdr, uint32_t id,
         uint32_t part_id_ref, void **output, void *offset,
         struct bpak_meta_header **header)
 {
@@ -42,21 +42,21 @@ int bpak_get_meta_and_header(struct bpak_header *hdr, uint32_t id,
     return -BPAK_NOT_FOUND;
 }
 
-int bpak_get_meta(struct bpak_header *hdr, uint32_t id, void **output,
+BPAK_EXPORT int bpak_get_meta(struct bpak_header *hdr, uint32_t id, void **output,
                     void *offset)
 {
     return bpak_get_meta_and_header(hdr, id, 0, output, offset,
                     (struct bpak_meta_header  **) 0);
 }
 
-int bpak_get_meta_with_ref(struct bpak_header *hdr, uint32_t id,
+BPAK_EXPORT int bpak_get_meta_with_ref(struct bpak_header *hdr, uint32_t id,
                             uint32_t part_id_ref, void **output, void *offset)
 {
     return bpak_get_meta_and_header(hdr, id, part_id_ref, output, offset,
                     (struct bpak_meta_header  **) 0);
 }
 
-int bpak_add_meta(struct bpak_header *hdr, uint32_t id, uint32_t part_ref_id,
+BPAK_EXPORT int bpak_add_meta(struct bpak_header *hdr, uint32_t id, uint32_t part_ref_id,
                     void **ptr, uint16_t size)
 {
     uint16_t new_offset = 0;
@@ -83,7 +83,7 @@ int bpak_add_meta(struct bpak_header *hdr, uint32_t id, uint32_t part_ref_id,
     return -BPAK_NO_SPACE_LEFT;
 }
 
-int bpak_get_part(struct bpak_header *hdr, uint32_t id,
+BPAK_EXPORT int bpak_get_part(struct bpak_header *hdr, uint32_t id,
                   struct bpak_part_header **part)
 {
     void *offset = *part;
@@ -103,7 +103,7 @@ int bpak_get_part(struct bpak_header *hdr, uint32_t id,
     return -BPAK_NOT_FOUND;
 }
 
-int bpak_add_part(struct bpak_header *hdr, uint32_t id,
+BPAK_EXPORT int bpak_add_part(struct bpak_header *hdr, uint32_t id,
                   struct bpak_part_header **part)
 {
     bpak_foreach_part(hdr, p) {
@@ -117,7 +117,7 @@ int bpak_add_part(struct bpak_header *hdr, uint32_t id,
     return -BPAK_NO_SPACE_LEFT;
 }
 
-int bpak_init_header(struct bpak_header *hdr)
+BPAK_EXPORT int bpak_init_header(struct bpak_header *hdr)
 {
     memset(hdr, 0, sizeof(*hdr));
     hdr->magic = BPAK_HEADER_MAGIC;
@@ -127,7 +127,7 @@ int bpak_init_header(struct bpak_header *hdr)
     return BPAK_OK;
 }
 
-const char *bpak_error_string(int code)
+BPAK_EXPORT const char *bpak_error_string(int code)
 {
     switch (code) {
         case BPAK_OK:
@@ -193,7 +193,7 @@ const char *bpak_error_string(int code)
     }
 }
 
-int bpak_valid_header(struct bpak_header *hdr)
+BPAK_EXPORT int bpak_valid_header(struct bpak_header *hdr)
 {
     if (hdr->magic != BPAK_HEADER_MAGIC)
         return -BPAK_BAD_MAGIC;
@@ -224,7 +224,7 @@ int bpak_valid_header(struct bpak_header *hdr)
     return BPAK_OK;
 }
 
-off_t bpak_part_offset(struct bpak_header *h, struct bpak_part_header *part)
+BPAK_EXPORT off_t bpak_part_offset(struct bpak_header *h, struct bpak_part_header *part)
 {
     off_t offset = sizeof(*h);
 
@@ -240,7 +240,7 @@ off_t bpak_part_offset(struct bpak_header *h, struct bpak_part_header *part)
     return offset;
 }
 
-size_t bpak_part_size(struct bpak_part_header *part)
+BPAK_EXPORT size_t bpak_part_size(struct bpak_part_header *part)
 {
     if (part->flags & BPAK_FLAG_TRANSPORT)
         return part->transport_size;
@@ -248,7 +248,7 @@ size_t bpak_part_size(struct bpak_part_header *part)
         return (part->size + part->pad_bytes);
 }
 
-size_t bpak_part_size_wo_pad(struct bpak_part_header *part)
+BPAK_EXPORT size_t bpak_part_size_wo_pad(struct bpak_part_header *part)
 {
     if (part->flags & BPAK_FLAG_TRANSPORT)
         return part->transport_size;
@@ -256,7 +256,7 @@ size_t bpak_part_size_wo_pad(struct bpak_part_header *part)
         return (part->size);
 }
 
-const char *bpak_signature_kind(uint8_t signature_kind)
+BPAK_EXPORT const char *bpak_signature_kind(uint8_t signature_kind)
 {
     switch(signature_kind) {
         case BPAK_SIGN_PRIME256v1:
@@ -272,7 +272,7 @@ const char *bpak_signature_kind(uint8_t signature_kind)
     }
 }
 
-const char *bpak_hash_kind(uint8_t hash_kind)
+BPAK_EXPORT const char *bpak_hash_kind(uint8_t hash_kind)
 {
     switch(hash_kind) {
         case BPAK_HASH_SHA256:
@@ -286,12 +286,15 @@ const char *bpak_hash_kind(uint8_t hash_kind)
     }
 }
 
-__attribute__ ((weak)) int bpak_printf(int verbosity, const char *fmt, ...)
+BPAK_EXPORT __attribute__ ((weak)) int bpak_printf(int verbosity, const char *fmt, ...)
 {
+    (void) verbosity;
+    (void) fmt;
+
     return BPAK_OK;
 }
 
-int bpak_copyz_signature(struct bpak_header *header, uint8_t *signature,
+BPAK_EXPORT int bpak_copyz_signature(struct bpak_header *header, uint8_t *signature,
                          size_t *size)
 {
     if (header->signature_sz > BPAK_SIGNATURE_MAX_BYTES)
@@ -309,19 +312,19 @@ int bpak_copyz_signature(struct bpak_header *header, uint8_t *signature,
     return BPAK_OK;
 }
 
-int bpak_set_key_id(struct bpak_header *hdr, uint32_t key_id)
+BPAK_EXPORT int bpak_set_key_id(struct bpak_header *hdr, uint32_t key_id)
 {
     hdr->key_id = key_id;
     return BPAK_OK;
 }
 
-int bpak_set_keystore_id(struct bpak_header *hdr, uint32_t keystore_id)
+BPAK_EXPORT int bpak_set_keystore_id(struct bpak_header *hdr, uint32_t keystore_id)
 {
     hdr->keystore_id = keystore_id;
     return BPAK_OK;
 }
 
-int bpak_add_transport_meta(struct bpak_header *header, uint32_t part_id,
+BPAK_EXPORT int bpak_add_transport_meta(struct bpak_header *header, uint32_t part_id,
                                 uint32_t encoder_id, uint32_t decoder_id)
 {
     int rc;
@@ -340,7 +343,7 @@ int bpak_add_transport_meta(struct bpak_header *header, uint32_t part_id,
     return BPAK_OK;
 }
 
-const char *bpak_version(void)
+BPAK_EXPORT const char *bpak_version(void)
 {
-    return PACKAGE_VERSION;
+    return BPAK_VERSION_STRING;
 }
