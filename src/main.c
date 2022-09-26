@@ -78,17 +78,9 @@ int main(int argc, char **argv)
 
         /* Check for valid action */
         if (strcmp(action, "create") == 0) {
-#ifdef BPAK_BUILD_PKG_CREATE
             rc = action_create(argc, argv);
-#else
-            rc = -BPAK_NOT_SUPPORTED;
-#endif
         } else if (strcmp(action, "add") == 0) {
-#ifdef BPAK_BUILD_PKG_CREATE
             rc = action_add(argc, argv);
-#else
-            rc = -BPAK_NOT_SUPPORTED;
-#endif
         } else if (strcmp(action, "show") == 0) {
             rc = action_show(argc, argv);
         } else if (strcmp(action, "sign") == 0) {
@@ -100,11 +92,7 @@ int main(int argc, char **argv)
         } else if (strcmp(action, "transport") == 0) {
             rc = action_transport(argc, argv);
         } else if (strcmp(action, "set") == 0) {
-#ifdef BPAK_BUILD_PKG_CREATE
             rc = action_set(argc, argv);
-#else
-            rc = -BPAK_NOT_SUPPORTED;
-#endif
         } else if (strcmp(action, "compare") == 0) {
             rc = action_compare(argc, argv);
         } else if (strcmp(action, "extract") == 0) {

@@ -156,11 +156,7 @@ int action_transport(int argc, char **argv)
     }
 
     if (encode_flag) {
-#ifdef BPAK_BUILD_TRANSPORT_ENCODE
         rc = bpak_pkg_transport_encode(&input, &output, &origin);
-#else
-        rc = -BPAK_NOT_SUPPORTED;
-#endif
     } else if(decode_flag) {
         rc = bpak_pkg_transport_decode(&input, /* Input package or 'patch' */
                                        &output,

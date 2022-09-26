@@ -15,11 +15,10 @@
 #include <getopt.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-
+#include <uuid/uuid.h>
 #include <bpak/pkg.h>
 #include <bpak/id.h>
 #include "bpak_tool.h"
-#include "uuid/uuid.h"
 
 int action_add(int argc, char **argv)
 {
@@ -240,14 +239,10 @@ int action_add(int argc, char **argv)
     } else if (part_name && strcmp(encoder, "key") == 0) {
         rc = bpak_pkg_add_key(&pkg, from_file, part_name, flags);
     } else if (strcmp(encoder, "merkle") == 0) {
-#ifdef BPAK_BUILD_MERKLE
         if (bpak_get_verbosity())
             printf("Writing filesystem...\n");
 
         rc = bpak_pkg_add_file_with_merkle_tree(&pkg, from_file, part_name, flags);
-#else
-        rc = -BPAK_NOT_SUPPORTED;
-#endif
         if (rc != BPAK_OK)
             goto err_close_pkg_out;
 

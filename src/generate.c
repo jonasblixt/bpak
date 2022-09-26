@@ -10,11 +10,10 @@
 #include <mbedtls/pk.h>
 #include <mbedtls/entropy.h>
 #include <mbedtls/ctr_drbg.h>
-
+#include <uuid/uuid.h>
 #include <bpak/id.h>
 
 #include "bpak_tool.h"
-#include "uuid/uuid.h"
 
 int action_generate(int argc, char **argv)
 {
@@ -155,8 +154,7 @@ int action_generate(int argc, char **argv)
         unsigned char key_buffer[4096];
         mbedtls_pk_init(&ctx);
 
-        printf("/* Automatically generated with %s %s */\n", PACKAGE_NAME,
-                                                             PACKAGE_VERSION);
+        printf("/* Automatically generated with bpak %s */\n",  BPAK_VERSION_STRING);
         printf("#include <bpak/bpak.h>\n");
         printf("#include <bpak/keystore.h>\n");
 
@@ -164,8 +162,7 @@ int action_generate(int argc, char **argv)
 
         char *keystore_name_copy = strdup(keystore_name);
 
-        for (int i = 0; i < strlen(keystore_name); i++)
-        {
+        for (unsigned int i = 0; i < strlen(keystore_name); i++) {
             if (keystore_name[i] == '-')
                 keystore_name_copy[i] = '_';
         }
@@ -243,7 +240,7 @@ int action_generate(int argc, char **argv)
             printf("    .data =\n");
             printf("    {\n");
             printf("            ");
-            for (int i = 0; i < p->size; i++) {
+            for (unsigned int i = 0; i < p->size; i++) {
                 printf("0x%2.2x, ", key_buffer[i] & 0xFF);
                 if ((i+1) % 8 == 0)
                     printf("\n            ");

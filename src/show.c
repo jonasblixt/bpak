@@ -170,14 +170,14 @@ int action_show(int argc, char **argv)
         hash_size = sizeof(hash_output);
         bpak_pkg_update_hash(&pkg, hash_output, &hash_size);
 
-        for (int i = 0; i < hash_size; i++)
+        for (unsigned int i = 0; i < hash_size; i++)
             printf("%c", hash_output[i]);
         goto err_pkg_close;
     } else if (text_hash_output) {
         hash_size = sizeof(hash_output);
         bpak_pkg_update_hash(&pkg, hash_output, &hash_size);
 
-        for (int i = 0; i < hash_size; i++)
+        for (unsigned int i = 0; i < hash_size; i++)
             printf("%2.2x", hash_output[i] & 0xFF);
         printf("\n");
         goto err_pkg_close;
@@ -242,6 +242,8 @@ int action_show(int argc, char **argv)
         }
     }
 
+    uint8_t payload_hash_copy[BPAK_HASH_MAX_LENGTH];
+    memcpy(payload_hash_copy, pkg.header.payload_hash, BPAK_HASH_MAX_LENGTH);
 
     char hash_str[128];
     hash_size = sizeof(hash_output);
@@ -256,6 +258,9 @@ int action_show(int argc, char **argv)
     bpak_bin2hex(pkg.header.payload_hash, hash_size, hash_str, sizeof(hash_str));
     printf("Payload hash: %s\n", hash_str);
 
+    if (memcmp(pkg.header.payload_hash, payload_hash_copy, BPAK_HASH_MAX_LENGTH) != 0) {
+        printf("Warning: Computed payload hash does not match payload hash in header\n");
+    }
     if (bpak_get_verbosity()) {
         uint32_t meta_size = 0;
         uint8_t no_of_meta_headers = 0;
