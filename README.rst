@@ -32,21 +32,18 @@ Documentation is available here: `BPAK documentation`_
 Building and installing
 -----------------------
 
-The library has no external dependencies and the tool only depends on the c
-library and the bpak library.
-
-The 'autoconf-archive' package must be installed before running autoreconf.
+The library depends to mbedtls, liblzma, uuid
 
 Build library and tool::
 
-    $ autoreconf -fi
-    $ ./configure
+    $ mkdir build && cd build
+    $ cmake ..
     $ make
     $ sudo make install
 
 Running tests::
 
-    $ ./configure --enable-code-coverage
-    $ make && make check
+    $ cmake .. -DBPAK_BUILD_TESTS=1
+    $ make && make test
 
 .. _BPAK documentation: http://bpak.readthedocs.io/en/latest
