@@ -29,7 +29,7 @@ int bpak_get_verbosity(void)
 
 void print_version(void)
 {
-    printf("BitPacker %s\n", PACKAGE_VERSION);
+    printf("BitPacker %s\n", bpak_version());
 }
 
 void print_common_usage(void)
@@ -48,7 +48,7 @@ void print_set_usage(void)
 {
     print_version();
     printf("\n");
-    printf("bpak set <filename.bpak>\n");
+    printf("bpak set [options] <filename.bpak>\n");
     printf("\n");
 
     printf("Set options:\n");
@@ -68,7 +68,7 @@ void print_extract_usage(void)
 {
     print_version();
     printf("\n");
-    printf("bpak extract <filename.bpak>        Extract parts from bpak file\n");
+    printf("bpak extract [options] <filename.bpak>        Extract parts from bpak file\n");
     printf("\n");
 
     printf("Extract options:\n");
@@ -85,7 +85,7 @@ void print_create_usage(void)
 {
     print_version();
     printf("\n");
-    printf("bpak create <filename.bpak>         Create an empty bpak file\n");
+    printf("bpak create [options] <filename.bpak>         Create an empty bpak file\n");
     printf("\n");
 
     printf("Create options:\n");
@@ -122,17 +122,14 @@ void print_transport_usage(void)
     printf("\n");
 
     printf("Add options:\n");
-    printf("    -p, --part                Which part id to operate on\n");
-    printf("    -e, --encode              Encoder algorithm to use\n");
-    printf("    -d, --decode              Decoder algorithm to use\n");
+    printf("    -p, --part <part name>    Which part id to operate on\n");
+    printf("    -e, --encode <enc. name>  Encoder algorithm to use\n");
+    printf("    -d, --decode <dec. name>  Decoder algorithm to use\n");
     printf("\n");
 
     printf("Encode/Decode options:\n");
-    printf("    -O, --origin              Source data to use during encoding/decoding\n");
-    printf("    -R, --rate-limit <n>      Rate-limit operation 0-100\n");
-    printf("    -o, --output <fn>         Write to output to <fn>\n");
-    printf("Decode options:\n");
-    printf("    -H, --output-header-last  Write output header at the end\n");
+    printf("    -O, --origin <filename>   Source data to use during encoding/decoding\n");
+    printf("    -o, --output <filename>   Write to output to <filename>\n");
     printf("\n");
 
     print_common_usage();
