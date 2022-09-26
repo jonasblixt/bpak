@@ -17,6 +17,25 @@
 #include <stddef.h>
 #include <unistd.h>
 
+#ifdef BPAK_HAVE_USER_SETTINGS
+#   include "bpak_user_settings.h"
+#endif
+
+#ifndef BPAK_CONFIG_MERKLE
+#   define BPAK_CONFIG_MERKLE 1
+#endif
+
+#ifndef BPAK_CONFIG_LZMA
+#   define BPAK_CONFIG_LZMA 1
+#endif
+
+#define BPAK_VERSION_MAJOR 0
+#define BPAK_VERSION_MINOR 7
+#define BPAK_VERSION_PATCH 0
+#define BPAK_VERSION_STRING "0.7.0"
+
+#define BPAK_EXPORT __attribute__((visibility("default")))
+
 #ifdef __cplusplus
 extern "C" {
 #endif
