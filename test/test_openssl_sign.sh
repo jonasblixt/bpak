@@ -1,3 +1,4 @@
+#!/bin/bash
 # Test: test_openssl_sign
 #
 # Description: Creates an archive with one data part that is included in the
@@ -8,10 +9,9 @@
 #
 #
 
-#!/bin/bash
 BPAK=../src/bpak
 TEST_NAME=test_openssl_sign
-TEST_SRC_DIR=$srcdir
+TEST_SRC_DIR=$1/test
 source $TEST_SRC_DIR/common.sh
 V=-vvv
 echo $TEST_NAME Begin
@@ -44,9 +44,9 @@ $BPAK add $IMG --part data2 \
 $BPAK show $IMG
 
 $BPAK show $IMG --binary-hash | openssl pkeyutl -sign -inkey ${TEST_SRC_DIR}/secp256r1-key-pair.pem \
-                    -keyform PEM > /tmp/sig.data
+                    -keyform PEM > ${TEST_NAME}.sig.data
 
-$BPAK sign $IMG --signature /tmp/sig.data
+$BPAK sign $IMG --signature ${TEST_NAME}.sig.data
 
 $BPAK show $IMG $V
 

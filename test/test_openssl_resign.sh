@@ -1,3 +1,4 @@
+#!/bin/bash
 # Test: test_openssl_resign
 #
 # Description: Creates an archive and signs it using the build in sign command.
@@ -7,10 +8,9 @@
 # Purpose: To test externally signing an archive
 #
 
-#!/bin/bash
 BPAK=../src/bpak
 TEST_NAME=test_openssl_resign
-TEST_SRC_DIR=$srcdir
+TEST_SRC_DIR=$1/test
 source $TEST_SRC_DIR/common.sh
 V=-vvv
 echo $TEST_NAME Begin

@@ -17,12 +17,8 @@ struct bspatch_priv
     ssize_t output_length;
 };
 
-static ssize_t load_file(const char *dir, const char *fn, uint8_t **buffer_out)
+static ssize_t load_file(const char *path, uint8_t **buffer_out)
 {
-    char path[256];
-
-    sprintf(path, "%s/%s", dir, fn);
-
     printf("Loading: %s\n", path);
     int fd = open(path, O_RDONLY);
 
@@ -92,16 +88,14 @@ TEST(diffpatch1)
     ssize_t patch_length;
     uint8_t *ref_data;
     ssize_t ref_length;
-    char *src_dir = getenv("srcdir");
-    printf("Source dir: %s\n", src_dir);
 
-    patch_length = load_file(src_dir, "diff1_patch.bin", &patch_data);
+    patch_length = load_file(TEST_SRC_DIR "/diff1_patch.bin", &patch_data);
     ASSERT(patch_length > 0);
 
-    priv.origin_length = load_file(src_dir, "diff1_origin.txt", &priv.origin_data);
+    priv.origin_length = load_file(TEST_SRC_DIR "/diff1_origin.txt", &priv.origin_data);
     ASSERT(priv.origin_length > 0);
 
-    ref_length = load_file(src_dir, "diff1_new.txt", &ref_data);
+    ref_length = load_file(TEST_SRC_DIR "/diff1_new.txt", &ref_data);
     ASSERT(ref_length > 0);
 
     priv.output_length = 1024*1024;
@@ -142,16 +136,14 @@ TEST(diffpatch2)
     ssize_t patch_length;
     uint8_t *ref_data;
     ssize_t ref_length;
-    char *src_dir = getenv("srcdir");
-    printf("Source dir: %s\n", src_dir);
 
-    patch_length = load_file(src_dir, "diff2_patch.bin", &patch_data);
+    patch_length = load_file(TEST_SRC_DIR "/diff2_patch.bin", &patch_data);
     ASSERT(patch_length > 0);
 
-    priv.origin_length = load_file(src_dir, "diff2_origin.bin", &priv.origin_data);
+    priv.origin_length = load_file(TEST_SRC_DIR "/diff2_origin.bin", &priv.origin_data);
     ASSERT(priv.origin_length > 0);
 
-    ref_length = load_file(src_dir, "diff2_target.bin", &ref_data);
+    ref_length = load_file(TEST_SRC_DIR "/diff2_target.bin", &ref_data);
     ASSERT(ref_length > 0);
 
     priv.output_length = 2*1024*1024;
@@ -199,16 +191,14 @@ TEST(diffpatch2_no_comp)
     ssize_t patch_length;
     uint8_t *ref_data;
     ssize_t ref_length;
-    char *src_dir = getenv("srcdir");
-    printf("Source dir: %s\n", src_dir);
 
-    patch_length = load_file(src_dir, "diff2_patch_no_comp.bin", &patch_data);
+    patch_length = load_file(TEST_SRC_DIR "/diff2_patch_no_comp.bin", &patch_data);
     ASSERT(patch_length > 0);
 
-    priv.origin_length = load_file(src_dir, "diff2_origin.bin", &priv.origin_data);
+    priv.origin_length = load_file(TEST_SRC_DIR "/diff2_origin.bin", &priv.origin_data);
     ASSERT(priv.origin_length > 0);
 
-    ref_length = load_file(src_dir, "diff2_target.bin", &ref_data);
+    ref_length = load_file(TEST_SRC_DIR "/diff2_target.bin", &ref_data);
     ASSERT(ref_length > 0);
 
     priv.output_length = 2*1024*1024;

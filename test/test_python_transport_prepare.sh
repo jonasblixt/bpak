@@ -1,6 +1,6 @@
 #!/bin/sh
 BPAK=../src/bpak
-TEST_SRC_DIR=$srcdir
+TEST_SRC_DIR=$1
 IMG_A=test_python_transport_A.bpak
 PKG_UUID_A=0888b0fa-9c48-4524-9845-06a641b61edd
 IMG_B=test_python_transport_B.bpak

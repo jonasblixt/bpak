@@ -1,7 +1,7 @@
 #!/bin/bash
 BPAK=../src/bpak
 TEST_NAME=test_python_meta
-TEST_SRC_DIR=$srcdir
+TEST_SRC_DIR=$1
 source $TEST_SRC_DIR/common.sh
 V=-vvv
 echo $TEST_NAME Begin

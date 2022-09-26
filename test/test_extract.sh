@@ -1,3 +1,4 @@
+#!/bin/bash
 # Test: test_extract
 #
 # Description: This test creates an archive with data and meta data and
@@ -7,10 +8,9 @@
 #  data from an archive
 #
 
-#!/bin/bash
 BPAK=../src/bpak
 TEST_NAME=test_extract
-TEST_SRC_DIR=$srcdir
+TEST_SRC_DIR=$1/test
 source $TEST_SRC_DIR/common.sh
 V=-vvv
 echo $TEST_NAME Begin

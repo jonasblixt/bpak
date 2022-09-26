@@ -8,7 +8,7 @@
 #!/bin/bash
 BPAK=../src/bpak
 TEST_NAME=test_transport_lzma
-TEST_SRC_DIR=$srcdir
+TEST_SRC_DIR=$1/test
 source $TEST_SRC_DIR/common.sh
 V=-vvv
 echo $TEST_NAME Begin

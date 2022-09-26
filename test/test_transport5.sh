@@ -9,7 +9,7 @@
 #!/bin/bash
 BPAK=../src/bpak
 TEST_NAME=test_transport5
-TEST_SRC_DIR=$srcdir
+TEST_SRC_DIR=$1/test
 source $TEST_SRC_DIR/common.sh
 V=-vvv
 echo $TEST_NAME Begin
@@ -29,17 +29,11 @@ $BPAK create $IMG_O -Y $V
 
 $BPAK add $IMG_O --meta bpak-package --from-string $PKG_UUID --encoder uuid $V
 
-$BPAK transport $IMG_O --add --part p0 --encoder bsdiff \
-                                        --decoder bspatch $V
-
 $BPAK transport $IMG_O --add --part p1 --encoder bsdiff \
                                         --decoder bspatch $V
 
 $BPAK transport $IMG_O --add --part p2 --encoder bsdiff \
                                         --decoder bspatch $V
-
-$BPAK add $IMG_O --part p0 \
-                 --from-file $TEST_SRC_DIR/diff2_origin.bin $V
 
 $BPAK add $IMG_O --part p1 \
                  --from-file $TEST_SRC_DIR/diff2_origin.bin $V
@@ -60,17 +54,11 @@ $BPAK create $IMG_T -Y $V
 
 $BPAK add $IMG_T --meta bpak-package --from-string $PKG_UUID --encoder uuid $V
 
-$BPAK transport $IMG_T --add --part p0 --encoder bsdiff \
-                                        --decoder bspatch $V
-
 $BPAK transport $IMG_T --add --part p1 --encoder bsdiff \
                                         --decoder bspatch $V
 
 $BPAK transport $IMG_T --add --part p2 --encoder bsdiff \
                                         --decoder bspatch $V
-
-$BPAK add $IMG_T --part p0 \
-                 --from-file $TEST_SRC_DIR/diff2_target.bin $V
 
 $BPAK add $IMG_T --part p1 \
                  --from-file $TEST_SRC_DIR/diff2_target.bin $V

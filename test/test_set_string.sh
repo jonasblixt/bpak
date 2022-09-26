@@ -1,10 +1,11 @@
-#!/bin/sh
+#!/bin/bash
 BPAK=../src/bpak
-echo Update string meta
+TEST_NAME=test_set_string
+TEST_SRC_DIR=$1/test
 set -e
 V=-vvvv
 
-IMG=set_test.bpak
+IMG=${TEST_NAME}.bpak
 PKG_UUID=0888b0fa-9c48-4524-9845-06a641b61edd
 
 # Create A package

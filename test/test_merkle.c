@@ -99,7 +99,7 @@ static void test_merkle(const char *test_name,
 {
     int rc;
     struct bpak_merkle_context ctx;
-    char *input_data = malloc(data_size);
+    uint8_t *input_data = malloc(data_size);
     size_t merkle_sz = bpak_merkle_compute_size(data_size);
     char *merkle_buf = malloc(merkle_sz);
 
@@ -213,7 +213,7 @@ TEST(merkle_unaligned_input)
     size_t data_size = 1024*1024;
     const char *test_name = "merkle_unaligned_input.bin";
     struct bpak_merkle_context ctx;
-    char *input_data = malloc(data_size);
+    uint8_t *input_data = malloc(data_size);
     size_t merkle_sz = bpak_merkle_compute_size(data_size);
     char *merkle_buf = malloc(merkle_sz);
 

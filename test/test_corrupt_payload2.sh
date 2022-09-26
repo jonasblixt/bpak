@@ -1,3 +1,4 @@
+#!/bin/bash
 # Test: test_corrupt_payload2
 #
 # Description: This test creates an archive with a data block, signs the 
@@ -6,10 +7,9 @@
 # Purpose: To ensure that the verify function detects the corrupt portion.
 #
 
-#!/bin/bash
 BPAK=../src/bpak
 TEST_NAME=test_corrupt_payload2
-TEST_SRC_DIR=$srcdir
+TEST_SRC_DIR=$1/test
 source $TEST_SRC_DIR/common.sh
 V=-vvv
 echo $TEST_NAME Begin
@@ -33,16 +33,16 @@ $BPAK add $IMG --part fs \
 $BPAK set $IMG --key-id pb-development \
                  --keystore-id pb-internal $V
 echo SIGN
-$BPAK sign $IMG --key $srcdir/secp256r1-key-pair.pem $V
+$BPAK sign $IMG --key $TEST_SRC_DIR/secp256r1-key-pair.pem $V
 echo VERIFY
-$BPAK verify $IMG --key $srcdir/secp256r1-pub-key.der $V
+$BPAK verify $IMG --key $TEST_SRC_DIR/secp256r1-pub-key.der $V
 
 # Introduce corruption in the data part, the data is located just after the header
 #  at an offset of 4KiB, write some zeros in the begining.
 dd if=/dev/zero of=$IMG bs=1 seek=4096 count=16 conv=notrunc
 set +e
 echo VERIFY
-$BPAK verify $IMG --key $srcdir/secp256r1-pub-key.der $V
+$BPAK verify $IMG --key $TEST_SRC_DIR/secp256r1-pub-key.der $V
 result_code=$?
 if [ $result_code -ne 232 ];
 then

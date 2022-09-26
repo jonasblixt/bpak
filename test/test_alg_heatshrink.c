@@ -126,15 +126,16 @@ static int compress_and_expand_and_check(uint8_t *input, uint32_t input_size, in
     }
     free(comp);
     free(decomp);
+    return 0;
 }
 
 
 TEST(heatshrink)
 {
     int rc;
-    uint8_t input[1024*64];
+    uint8_t input[1024*8];
 
-    for (uint32_t size=1; size < 64*1024; size <<= 1)
+    for (uint32_t size=1; size < sizeof(input); size <<= 1)
     {
             for (uint32_t seed=1; seed<=100; seed++)
             {

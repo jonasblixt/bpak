@@ -10,7 +10,7 @@
 #!/bin/bash
 BPAK=../src/bpak
 TEST_NAME=test_sign_dont_hash
-TEST_SRC_DIR=$srcdir
+TEST_SRC_DIR=$1/test
 source $TEST_SRC_DIR/common.sh
 V=-vvv
 echo $TEST_NAME Begin
@@ -33,8 +33,8 @@ $BPAK add $IMG --part some-data \
 $BPAK set $IMG --key-id pb-development \
                  --keystore-id pb-internal $V
 
-$BPAK sign $IMG --key $srcdir/secp256r1-key-pair.pem $V
-$BPAK verify $IMG --key $srcdir/secp256r1-pub-key.der $V
+$BPAK sign $IMG --key $TEST_SRC_DIR/secp256r1-key-pair.pem $V
+$BPAK verify $IMG --key $TEST_SRC_DIR/secp256r1-pub-key.der $V
 
 # Introduce a corruption in part 'some-data'
 
@@ -43,4 +43,4 @@ $BPAK verify $IMG --key $srcdir/secp256r1-pub-key.der $V
 dd if=/dev/zero of=$IMG bs=1 seek=4096 count=16 conv=notrunc
 
 # It should still verify OK
-$BPAK verify $IMG --key $srcdir/secp256r1-pub-key.der $V
+$BPAK verify $IMG --key $TEST_SRC_DIR/secp256r1-pub-key.der $V

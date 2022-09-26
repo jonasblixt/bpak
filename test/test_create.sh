@@ -1,3 +1,4 @@
+#!/bin/bash
 # Test: test_create
 #
 # Description: This test creates an archive with a data block that has a 
@@ -7,10 +8,9 @@
 #  and the sign/verfy steps
 #
 
-#!/bin/bash
 BPAK=../src/bpak
 TEST_NAME=test_create
-TEST_SRC_DIR=$srcdir
+TEST_SRC_DIR=$1/test
 source $TEST_SRC_DIR/common.sh
 V=-vvv
 echo $TEST_NAME Begin
@@ -36,11 +36,11 @@ $BPAK add $IMG --part fs \
 $BPAK set $IMG --key-id pb-development \
                  --keystore-id pb-internal $V
 echo SIGN
-$BPAK sign $IMG --key $srcdir/secp256r1-key-pair.pem $V
+$BPAK sign $IMG --key $TEST_SRC_DIR/secp256r1-key-pair.pem $V
 echo SHOW
 $BPAK show $IMG $V
 echo VERIFY
-$BPAK verify $IMG --key $srcdir/secp256r1-pub-key.der $V
+$BPAK verify $IMG --key $TEST_SRC_DIR/secp256r1-pub-key.der $V
 echo SHOW
 $BPAK show $IMG --part fs $V
 $BPAK show $IMG --meta bpak-package $V

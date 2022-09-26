@@ -1,3 +1,4 @@
+#!/bin/bash
 # Test: test_multiple_bsdiff
 #
 # Description: Create archives with two diff'able parts
@@ -6,10 +7,9 @@
 #   when an archive has more than one part that should be diffed/patched
 #
 
-#!/bin/bash
 BPAK=../src/bpak
 TEST_NAME=test_multiple_bsdiff
-TEST_SRC_DIR=$srcdir
+TEST_SRC_DIR=$1/test
 source $TEST_SRC_DIR/common.sh
 V=-vvv
 echo $TEST_NAME Begin
@@ -104,7 +104,7 @@ $BPAK add $IMG_B --part data \
 $BPAK set $IMG_B --key-id pb-development \
                  --keystore-id pb-internal $V
 
-$BPAK sign $IMG_B --key $srcdir/secp256r1-key-pair.pem $V
+$BPAK sign $IMG_B --key $TEST_SRC_DIR/secp256r1-key-pair.pem $V
 
 # Test Transport encoding / decoding
 echo --- Transport encoding ---

@@ -1,37 +1,37 @@
 #!/usr/bin/env python3
 import sys
 import os
-srcdir = os.environ['srcdir']
-sys.path.insert(0, "../python/.libs")
-sys.path.insert(0, srcdir + "/../python")
+import binascii
+
+srcdir = sys.argv[1] + "/test"
+sys.path.insert(0, "../python/")
 import bpak
-import bpak.utils
-from bpak.package import Package
 
 def log_callback(level, message):
     print("LOG: %i, %s"%(level, message), end='')
 
-bpak.utils.set_log_function(log_callback)
+bpak.set_log_func(log_callback)
 
 # Call prepare script
-assert os.system("%s/test_python_meta_prepare.sh"%(srcdir)) == 0
+assert os.system(f"{srcdir}/test_python_meta_prepare.sh {srcdir}") == 0
 
-p = Package("test_python_meta.bpak", "r+")
-print("Loaded package: " + str(p.id()))
-assert str(p.id()) == "0888b0fa-9c48-4524-9845-06a641b61edd"
-print("merkle-root-hash: " + p.read_hex_meta(bpak.utils.id("merkle-root-hash")))
+p = bpak.Package("test_python_meta.bpak", "r+")
+print("Loaded package: " + p.read_uuid_meta(bpak.id("bpak-package")))
+assert p.read_uuid_meta(bpak.id('bpak-package')) == "0888b0fa-9c48-4524-9845-06a641b61edd"
+merkle_root_hash = p.read_raw_meta(bpak.id('merkle-root-hash'), 0)
+print("merkle-root-hash: " + binascii.hexlify(merkle_root_hash).decode())
 
 # Test package version meta
-print("Package version: \"" + p.read_string_meta(bpak.utils.id("bpak-version")) + "\"")
-assert p.read_string_meta(bpak.utils.id("bpak-version")) == u"1.0.0"
+print("Package version: \"" + p.read_string_meta(bpak.id("bpak-version")) + "\"")
+assert p.read_string_meta(bpak.id("bpak-version")) == u"1.0.0"
 
 # Add new meta data
-p.write_string_meta(bpak.utils.id('py-test'), "Hello Python")
-print("py-test meta: \"%s\""%(p.read_string_meta(bpak.utils.id("py-test"))))
-assert p.read_string_meta(bpak.utils.id("py-test")) == u"Hello Python"
+p.write_string_meta(bpak.id('py-test'), "Hello Python")
+print("py-test meta: \"%s\""%(p.read_string_meta(bpak.id("py-test"))))
+assert p.read_string_meta(bpak.id("py-test")) == u"Hello Python"
 
 # Update meta data
-p.write_string_meta(bpak.utils.id('bpak-version'), "1.0.1")
-print("Package version: \"" + p.read_string_meta(bpak.utils.id("bpak-version")) + "\"")
-assert p.read_string_meta(bpak.utils.id("bpak-version")) == u"1.0.1"
+p.write_string_meta(bpak.id('bpak-version'), "1.0.1")
+print("Package version: \"" + p.read_string_meta(bpak.id("bpak-version")) + "\"")
+assert p.read_string_meta(bpak.id("bpak-version")) == u"1.0.1"
 

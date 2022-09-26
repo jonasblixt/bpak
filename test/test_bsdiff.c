@@ -16,7 +16,7 @@ struct bspatch_priv
     uint8_t *output_data;
     ssize_t output_length;
 };
-
+/*
 static ssize_t load_file(const char *dir, const char *fn, uint8_t **buffer_out)
 {
     char path[256];
@@ -43,7 +43,7 @@ static ssize_t load_file(const char *dir, const char *fn, uint8_t **buffer_out)
     (*buffer_out) = malloc(file_length);
 
     return read(fd, *buffer_out, file_length);
-}
+}*/
 
 ssize_t read_origin(off_t offset,
                     uint8_t *buffer,

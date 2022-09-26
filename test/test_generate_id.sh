@@ -1,4 +1,5 @@
-#!/bin/sh
+#!/bin/bash
+
 BPAK=../src/bpak
 echo Test id generator
 set -e
