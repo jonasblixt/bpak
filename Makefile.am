@@ -1,8 +1,0 @@
-
-SUBDIRS = lib python src test
-
-EXTRA_DIST = LICENSE README.rst
-
-ACLOCAL_AMFLAGS = -I m4
-
-@CODE_COVERAGE_RULES@
