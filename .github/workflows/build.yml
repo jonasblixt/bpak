@@ -10,12 +10,13 @@ jobs:
     - name: Install deps
       run: |
           sudo apt-get update
-          sudo apt-get install autoconf-archive lcov uuid-runtime python3-dev python3-semver libmbedtls-dev liblzma-dev uuid-dev
+          sudo apt-get install cmake lcov uuid-runtime python3-dev libmbedtls-dev liblzma-dev uuid-dev
     - name: Build BPAK
       run: |
-            autoreconf -fi
-            ./configure --enable-code-coverage --enable-python-library PYTHON=python3
-            make check-code-coverage || (cat test/test-suite.log && exit -1)
+            cmake -DBPAK_BUILD_TESTS=1 -DBPAK_BUILD_PYTHON_WRAPPER=1 -B build
+            make -j$(nproc) -C build
+            ctest -j$(nproc) --output-on-failure --test-dir build
+            lcov --directory build --capture --output-file coverage.info
     - name: Upload coverage reports to Codecov
       uses: codecov/codecov-action@v3
     - name: Download Coverity Build Tool
@@ -28,9 +29,9 @@ jobs:
     - name: Build with cov-build
       run: |
         export PATH=`pwd`/cov-analysis-linux64/bin:$PATH
-        make clean
+        make clean -C build
         cov-configure --template --compiler gcc --comptype gcc
-        cov-build --dir cov-int make
+        cov-build --dir cov-int make -C build
     - name: Submit the result to Coverity Scan
       run: |
         tar czvf bpak.tgz cov-int
