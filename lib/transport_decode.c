@@ -19,7 +19,6 @@
 static ssize_t merkle_generate(struct bpak_transport_decode *ctx)
 {
     int rc;
-    struct bpak_merkle_context merkle;
     struct bpak_part_header *fs_part;
     uint8_t chunk_buffer[BPAK_CHUNK_BUFFER_LENGTH];
     uint32_t fs_id = 0;
@@ -66,7 +65,7 @@ static ssize_t merkle_generate(struct bpak_transport_decode *ctx)
 
     bpak_printf(0, "Merkle tree at offset: %i\n", output_offset);
 
-    rc = bpak_merkle_init(&merkle,
+    rc = bpak_merkle_init(&ctx->decoders.merkle,
                           bpak_part_size(fs_part),
                           salt,
                           32,
@@ -103,7 +102,7 @@ static ssize_t merkle_generate(struct bpak_transport_decode *ctx)
             return -BPAK_READ_ERROR;
         }
 
-        rc = bpak_merkle_write_chunk(&merkle, chunk_buffer, chunk_length);
+        rc = bpak_merkle_write_chunk(&ctx->decoders.merkle, chunk_buffer, chunk_length);
 
         if (rc != BPAK_OK) {
             bpak_printf(0, "Error: merkle processing failed (%i)\n", rc);
@@ -115,7 +114,7 @@ static ssize_t merkle_generate(struct bpak_transport_decode *ctx)
     }
 
     bpak_merkle_hash_t roothash;
-    rc = bpak_merkle_finish(&merkle, roothash);
+    rc = bpak_merkle_finish(&ctx->decoders.merkle, roothash);
 
     if (rc != BPAK_OK) {
         bpak_printf(0, "Error: merkle processing failed (%i)\n", rc);
@@ -123,7 +122,7 @@ static ssize_t merkle_generate(struct bpak_transport_decode *ctx)
     }
 
     // TODO: Check roothash?
-    return bpak_merkle_get_size(&merkle);
+    return bpak_merkle_get_size(&ctx->decoders.merkle);
 }
 
 #endif  // BPAK_CONFIG_MERKLE
@@ -235,11 +234,6 @@ int bpak_transport_decode_start(struct bpak_transport_decode *ctx,
             else
                 return -BPAK_UNSUPPORTED_COMPRESSION;
 
-            ctx->decoder_priv = bpak_calloc(sizeof(struct bpak_bspatch_context), 1);
-
-            struct bpak_bspatch_context *bspatch = \
-                    (struct bpak_bspatch_context *) ctx->decoder_priv;
-
             /* Compute output and origin offsets */
             off_t output_offset = bpak_part_offset(ctx->patch_header, part) -
                                     sizeof(struct bpak_header) +
@@ -249,7 +243,7 @@ int bpak_transport_decode_start(struct bpak_transport_decode *ctx,
                                     sizeof(struct bpak_header) +
                                     ctx->origin_offset;
 
-            rc = bpak_bspatch_init(bspatch,
+            rc = bpak_bspatch_init(&ctx->decoders.bspatch,
                                      ctx->buffer_length,
                                      patch_input_length,
                                      ctx->read_origin,
@@ -259,9 +253,6 @@ int bpak_transport_decode_start(struct bpak_transport_decode *ctx,
                                      compression,
                                      ctx->user);
 
-            if (rc != BPAK_OK) {
-                bpak_free(bspatch);
-            }
         }
         break;
 #if BPAK_CONFIG_MERKLE == 1
@@ -293,13 +284,7 @@ int bpak_transport_decode_write_chunk(struct bpak_transport_decode *ctx,
         case BPAK_ID_BSPATCH_LZMA:
         case BPAK_ID_BSPATCH: /* id("bspatch") heatshrink decompressor*/
         {
-            struct bpak_bspatch_context *bspatch = \
-                    (struct bpak_bspatch_context *) ctx->decoder_priv;
-
-            rc = bpak_bspatch_write(bspatch, buffer, length);
-
-            if (rc != BPAK_OK)
-                bpak_free(bspatch);
+            rc = bpak_bspatch_write(&ctx->decoders.bspatch, buffer, length);
         }
         break;
         case 0: /* Copy data */
@@ -339,13 +324,8 @@ int bpak_transport_decode_finish(struct bpak_transport_decode *ctx)
         case BPAK_ID_BSPATCH_LZMA:
         case BPAK_ID_BSPATCH: /* id("bspatch") heatshrink decompressor*/
         {
-            struct bpak_bspatch_context *bspatch = \
-                    (struct bpak_bspatch_context *) ctx->decoder_priv;
-
-            output_length = bpak_bspatch_final(bspatch);
-
-            bpak_bspatch_free(bspatch);
-            bpak_free(bspatch);
+            output_length = bpak_bspatch_final(&ctx->decoders.bspatch);
+            bpak_bspatch_free(&ctx->decoders.bspatch);
         }
         break;
 #if BPAK_CONFIG_MERKLE == 1

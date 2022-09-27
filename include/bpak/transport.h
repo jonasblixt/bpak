@@ -18,6 +18,8 @@
 #include <stddef.h>
 #include <unistd.h>
 #include <bpak/bpak.h>
+#include <bpak/merkle.h>
+#include <bpak/bspatch.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -37,7 +39,12 @@ struct bpak_transport_decode
     off_t copy_offset;
     off_t output_offset;
     off_t origin_offset;
-    void *decoder_priv;
+    union {
+#if BPAK_CONFIG_MERKLE == 1
+        struct bpak_merkle_context merkle;
+#endif
+        struct bpak_bspatch_context bspatch;
+    } decoders;
     void *user;
 };
 
