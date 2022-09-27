@@ -9,7 +9,6 @@
 
 #include <string.h>
 #include <bpak/bpak.h>
-#include <bpak/id.h>
 
 BPAK_EXPORT int bpak_get_meta_and_header(struct bpak_header *hdr, uint32_t id,
         uint32_t part_id_ref, void **output, void *offset,
