@@ -32,6 +32,8 @@ if (NOT BPAK_BUILD_MINIMAL)
         verify.c
         heatshrink/heatshrink_decoder.c
         heatshrink/heatshrink_encoder.c
+        crypto.c
+        mbedtls_wrapper.c
 )
 endif()
 

@@ -111,7 +111,6 @@ int action_sign(int argc, char **argv)
             goto err_out;
     }
 
-    rc = bpak_pkg_write_header(&pkg);
 err_out:
     bpak_pkg_close(&pkg);
     return rc;

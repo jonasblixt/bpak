@@ -17,12 +17,7 @@
 #include <bpak/utils.h>
 #include <bpak/id.h>
 #include <bpak/merkle.h>
-
-#include <mbedtls/version.h>
-#include <mbedtls/platform.h>
-#include <mbedtls/pk.h>
-#include <mbedtls/entropy.h>
-#include <mbedtls/ctr_drbg.h>
+#include <bpak/crypto.h>
 
 #if BPAK_CONFIG_MERKLE == 1
 static ssize_t merkle_wr(off_t offset,
@@ -293,25 +288,16 @@ BPAK_EXPORT int bpak_pkg_add_key(struct bpak_package *pkg, const char *filename,
                      const char *part_name, uint8_t flags)
 {
     int rc;
-    unsigned char tmp[4096];
+    struct bpak_key *key = NULL;
     struct bpak_header *h = bpak_pkg_header(pkg);
     struct bpak_part_header *p = NULL;
     uint64_t new_offset = sizeof(struct bpak_header);
-    mbedtls_pk_context ctx;
-    mbedtls_pk_init(&ctx);
-    mbedtls_pk_parse_public_keyfile(&ctx, filename);
+    char chunk_buffer[512];
 
-    int len = mbedtls_pk_write_pubkey_der(&ctx, tmp, sizeof(tmp));
+    rc = bpak_crypto_load_public_key(filename, &key);
 
-    if (len < 0) {
-        bpak_printf(0, "Error: Could not load public key '%s'\n", filename);
-        rc = -BPAK_KEY_DECODE;
+    if (rc != BPAK_OK)
         return rc;
-    }
-
-    bpak_printf(1, "Loaded public key %i bytes\n", len);
-
-    mbedtls_pk_free(&ctx);
 
     /* Write header */
     bpak_foreach_part(h, p) {
@@ -322,16 +308,16 @@ BPAK_EXPORT int bpak_pkg_add_key(struct bpak_package *pkg, const char *filename,
 
     if (rc != BPAK_OK) {
         bpak_printf(0, "Error: Could not add part\n");
-        return rc;
+        goto err_free_key_out;
     }
 
     p->id = bpak_id(part_name);
     p->offset = new_offset;
     p->flags = flags;
-    p->size = len;
+    p->size = key->size;
 
-    if (len % BPAK_PART_ALIGN)
-        p->pad_bytes = BPAK_PART_ALIGN - (len % BPAK_PART_ALIGN);
+    if (key->size % BPAK_PART_ALIGN)
+        p->pad_bytes = BPAK_PART_ALIGN - (key->size % BPAK_PART_ALIGN);
     else
         p->pad_bytes = 0;
 
@@ -339,42 +325,36 @@ BPAK_EXPORT int bpak_pkg_add_key(struct bpak_package *pkg, const char *filename,
 
     if (rc != 0) {
         bpak_printf(0, "Could not seek to new pos\n");
-        return -BPAK_SEEK_ERROR;
+        rc = -BPAK_SEEK_ERROR;
+        goto err_free_key_out;
     }
 
-    char chunk_buffer[512];
-    uint64_t bytes_to_write = p->size;
-    uint64_t bytes_offset = 0;
-    uint64_t chunk_sz = sizeof(chunk_buffer);
-
-    while (bytes_to_write) {
-        chunk_sz = (bytes_to_write > sizeof(chunk_buffer)) ? \
-                            sizeof(chunk_buffer):bytes_to_write;
-
-        memcpy(chunk_buffer, &tmp[sizeof(tmp) - len + bytes_offset], chunk_sz);
-
-        if (fwrite(chunk_buffer, 1, chunk_sz, pkg->fp) != chunk_sz) {
-            rc = -BPAK_WRITE_ERROR;
-            break;
-        }
-        bytes_to_write -= chunk_sz;
-        bytes_offset += chunk_sz;
+    /* Write key data */
+    if (fwrite(key->data, 1, key->size, pkg->fp) != key->size) {
+        rc = -BPAK_WRITE_ERROR;
+        goto err_free_key_out;
     }
 
-    if (rc != BPAK_OK)
-        return rc;
-
+    /* Write zero padding */
     memset(chunk_buffer, 0, sizeof(chunk_buffer));
     if (fwrite(chunk_buffer, 1, p->pad_bytes, pkg->fp) != p->pad_bytes) {
-        return -BPAK_WRITE_ERROR;
+        rc = -BPAK_WRITE_ERROR;
+        goto err_free_key_out;
     }
 
     rc = bpak_pkg_update_hash(pkg, NULL, NULL);
 
     if (rc != BPAK_OK) {
         bpak_printf(0, "Error: Could not update payload hash\n");
-        return rc;
+        goto err_free_key_out;
     }
 
-    return bpak_pkg_write_header(pkg);
+    rc = bpak_pkg_write_header(pkg);
+
+    if (rc != BPAK_OK)
+        goto err_free_key_out;
+
+err_free_key_out:
+    free(key);
+    return rc;
 }

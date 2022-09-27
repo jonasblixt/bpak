@@ -16,7 +16,7 @@
 #include <stdbool.h>
 #include <sys/types.h>
 #include <bpak/bpak.h>
-#include <mbedtls/sha256.h>
+#include <bpak/crypto.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -36,7 +36,7 @@ typedef unsigned char bpak_merkle_hash_t[BPAK_MERKLE_HASH_BYTES];
 
 struct bpak_merkle_context
 {
-    mbedtls_sha256_context running_hash;
+    struct bpak_hash_context running_hash;
     uint8_t buffer[BPAK_MERKLE_HASH_BYTES];
     size_t level_length[BPAK_MERKLE_MAX_LEVELS];
     off_t level_offset[BPAK_MERKLE_MAX_LEVELS];

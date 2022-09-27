@@ -6,12 +6,10 @@
 #include <getopt.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <mbedtls/version.h>
-#include <mbedtls/pk.h>
-#include <mbedtls/entropy.h>
-#include <mbedtls/ctr_drbg.h>
 #include <uuid/uuid.h>
+#include <bpak/bpak.h>
 #include <bpak/id.h>
+#include <bpak/crypto.h>
 
 #include "bpak_tool.h"
 
@@ -24,6 +22,7 @@ int action_generate(int argc, char **argv)
     const char *generator = NULL;
     const char *keystore_name = NULL;
     bool decorate_keystore = false;
+    struct bpak_key *key = NULL;
 
     struct option long_options[] =
     {
@@ -148,11 +147,9 @@ int action_generate(int argc, char **argv)
             goto err_free_io_out;
         }
 
-        mbedtls_pk_context ctx;
 
         int key_index = 0;
         unsigned char key_buffer[4096];
-        mbedtls_pk_init(&ctx);
 
         printf("/* Automatically generated with bpak %s */\n",  BPAK_VERSION_STRING);
         printf("#include <bpak/bpak.h>\n");
@@ -167,8 +164,7 @@ int action_generate(int argc, char **argv)
                 keystore_name_copy[i] = '_';
         }
 
-        bpak_foreach_part(h, p)
-        {
+        bpak_foreach_part(h, p) {
             if (!p->id)
                 continue;
 
@@ -197,51 +193,36 @@ int action_generate(int argc, char **argv)
                 goto err_free_keystore_name;
             }
 
-            mbedtls_pk_free(&ctx);
-            rc = mbedtls_pk_parse_public_key(&ctx, key_buffer, p->size);
+            rc = bpak_crypto_parse_public_key(key_buffer, p->size, &key);
 
-            if (rc != 0) {
-                fprintf(stderr, "Error: Coult not parse key\n");
-                rc = -BPAK_KEY_DECODE;
+            if (rc != BPAK_OK) {
+                fprintf(stderr, "Error: Could not parse key (part: 0x%x)\n", p->id);
                 goto err_free_keystore_name;
             }
 
-            if (strcmp(mbedtls_pk_get_name(&ctx), "EC") == 0) {
-                switch (mbedtls_pk_get_bitlen(&ctx)) {
-                    case 256:
-                        printf("    .kind = BPAK_KEY_PUB_PRIME256v1,\n");
-                    break;
-                    case 384:
-                        printf("    .kind = BPAK_KEY_PUB_SECP384r1,\n");
-                    break;
-                    case 521:
-                        printf("    .kind = BPAK_KEY_PUB_SECP521r1,\n");
-                    break;
-                    default:
-                        fprintf(stderr, "Unknown bit-length (%li)\n",
-                                mbedtls_pk_get_bitlen(&ctx));
-                        rc = -BPAK_UNSUPPORTED_KEY;
-                        goto err_free_keystore_name;
-                };
-            } else if(strcmp(mbedtls_pk_get_name(&ctx), "RSA") == 0) {
-                if (mbedtls_pk_get_bitlen(&ctx) == 4096) {
-                    printf("    .kind = BPAK_KEY_PUB_RSA4096,\n");
-                } else {
-                    fprintf(stderr, "Unknown bit-length (%li)\n",
-                            mbedtls_pk_get_bitlen(&ctx));
-                    rc = -BPAK_UNSUPPORTED_KEY;
-                    goto err_free_keystore_name;
-                }
-            } else {
-                fprintf(stderr, "Error: Unknown key type (%s)\n", mbedtls_pk_get_name(&ctx));
+            switch (key->kind) {
+            case BPAK_KEY_PUB_PRIME256v1:
+                printf("    .kind = BPAK_KEY_PUB_PRIME256v1,\n");
+            break;
+            case BPAK_KEY_PUB_SECP384r1:
+                printf("    .kind = BPAK_KEY_PUB_SECP384r1,\n");
+            break;
+            case BPAK_KEY_PUB_SECP521r1:
+                printf("    .kind = BPAK_KEY_PUB_SECP521r1,\n");
+            break;
+            case BPAK_KEY_PUB_RSA4096:
+                printf("    .kind = BPAK_KEY_PUB_RSA4096,\n");
+            break;
+            default:
+                fprintf(stderr, "Key-type (%i)\n", key->kind);
                 rc = -BPAK_UNSUPPORTED_KEY;
-                goto err_free_keystore_name;
+                goto err_free_key_out;
             }
             printf("    .data =\n");
             printf("    {\n");
             printf("            ");
-            for (unsigned int i = 0; i < p->size; i++) {
-                printf("0x%2.2x, ", key_buffer[i] & 0xFF);
+            for (unsigned int i = 0; i < key->size; i++) {
+                printf("0x%2.2x, ", key->data[i] & 0xFF);
                 if ((i+1) % 8 == 0)
                     printf("\n            ");
             }
@@ -249,6 +230,8 @@ int action_generate(int argc, char **argv)
 
             printf("};\n\n");
             key_index++;
+            free(key);
+            key = NULL;
         }
 
         const char *keystore_header_decorator = \
@@ -268,9 +251,11 @@ int action_generate(int argc, char **argv)
                                                 keystore_name_copy, i);
         printf("    },\n");
         printf("};\n");
+    err_free_key_out:
+        if (key != NULL)
+            free(key);
     err_free_keystore_name:
         free(keystore_name_copy);
-        mbedtls_pk_free(&ctx);
     err_free_io_out:
         fclose(fp);
     err_free_header_out:

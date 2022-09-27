@@ -14,11 +14,7 @@
 #include <bpak/crc.h>
 #include <bpak/verify.h>
 #include <bpak/merkle.h>
-
-#include <mbedtls/version.h>
-#include <mbedtls/platform.h>
-#include <mbedtls/sha256.h>
-#include <mbedtls/sha512.h>
+#include <bpak/crypto.h>
 
 BPAK_EXPORT int bpak_verify_compute_header_hash(struct bpak_header *header,
                                     uint8_t *output,
@@ -26,83 +22,37 @@ BPAK_EXPORT int bpak_verify_compute_header_hash(struct bpak_header *header,
 {
     uint8_t signature[BPAK_SIGNATURE_MAX_BYTES];
     uint16_t signature_sz;
-    mbedtls_sha256_context sha256;
-    mbedtls_sha512_context sha512;
+    int rc;
+    struct bpak_hash_context hash_ctx;
 
     /* Compute header hash */
+    rc = bpak_hash_init(&hash_ctx, header->hash_kind);
+
+    if (rc != BPAK_OK)
+        return rc;
+
     memcpy(signature, header->signature, sizeof(signature));
     signature_sz = header->signature_sz;
 
     memset(header->signature, 0, sizeof(header->signature));
     header->signature_sz = 0;
 
-    switch (header->hash_kind) {
-        case BPAK_HASH_SHA256:
-            if (*size < 32)
-                return -BPAK_NO_SPACE_LEFT;
-            *size = 32;
-            mbedtls_sha256_init(&sha256);
-#if MBEDTLS_VERSION_MAJOR >= 3
-            mbedtls_sha256_starts(&sha256, 0);
-#else
-            mbedtls_sha256_starts_ret(&sha256, 0);
-#endif
-        break;
-        case BPAK_HASH_SHA384:
-            if (*size < 48)
-                return -BPAK_NO_SPACE_LEFT;
-            *size = 48;
-            mbedtls_sha512_init(&sha512);
 
-#if MBEDTLS_VERSION_MAJOR >= 3
-            mbedtls_sha512_starts(&sha512, 1);
-#else
-            mbedtls_sha512_starts_ret(&sha512, 1);
-#endif
-        break;
-        case BPAK_HASH_SHA512:
-            if (*size < 64)
-                return -BPAK_NO_SPACE_LEFT;
-            *size = 64;
-            mbedtls_sha512_init(&sha512);
-#if MBEDTLS_VERSION_MAJOR >= 3
-            mbedtls_sha512_starts(&sha512, 0);
-#else
-            mbedtls_sha512_starts_ret(&sha512, 0);
-#endif
-        break;
-        default:
-            return -BPAK_UNSUPPORTED_HASH_ALG;
-    }
+    rc = bpak_hash_update(&hash_ctx, (uint8_t *) header,
+                                     sizeof(*header));
 
-#if MBEDTLS_VERSION_MAJOR >= 3
-    if (header->hash_kind == BPAK_HASH_SHA256)
-        mbedtls_sha256_update(&sha256, (const unsigned char *) header,
-                                        sizeof(*header));
-    else
-        mbedtls_sha512_update(&sha512, (const unsigned char *) header,
-                                        sizeof(*header));
+    if (rc != BPAK_OK)
+        goto err_free_hash_ctx_out;
 
-    if (header->hash_kind == BPAK_HASH_SHA256)
-        mbedtls_sha256_finish(&sha256, (unsigned char *) output);
-    else
-        mbedtls_sha512_finish(&sha512, (unsigned char*) output);
-#else
-    if (header->hash_kind == BPAK_HASH_SHA256)
-        mbedtls_sha256_update_ret(&sha256, (const unsigned char *) header,
-                                        sizeof(*header));
-    else
-        mbedtls_sha512_update_ret(&sha512, (const unsigned char *) header,
-                                        sizeof(*header));
+    rc = bpak_hash_final(&hash_ctx, output, *size, size);
 
-    if (header->hash_kind == BPAK_HASH_SHA256)
-        mbedtls_sha256_finish_ret(&sha256, (unsigned char *) output);
-    else
-        mbedtls_sha512_finish_ret(&sha512, (unsigned char*) output);
-#endif
+    if (rc != BPAK_OK)
+        goto err_free_hash_ctx_out;
+
+err_free_hash_ctx_out:
+    bpak_hash_free(&hash_ctx);
     memcpy(header->signature, signature, sizeof(signature));
     header->signature_sz = signature_sz;
-
     return BPAK_OK;
 }
 
@@ -115,49 +65,13 @@ BPAK_EXPORT int bpak_verify_compute_payload_hash(struct bpak_header *header,
 {
     off_t current_offset = data_offset;
     unsigned char chunk_buffer[BPAK_CHUNK_BUFFER_LENGTH];
+    int rc;
+    struct bpak_hash_context hash_ctx;
 
-    mbedtls_sha256_context sha256;
-    mbedtls_sha512_context sha512;
+    rc = bpak_hash_init(&hash_ctx, header->hash_kind);
 
-    switch (header->hash_kind) {
-        case BPAK_HASH_SHA256:
-            if (*size < 32)
-                return -BPAK_NO_SPACE_LEFT;
-            *size = 32;
-            mbedtls_sha256_init(&sha256);
-
-#if MBEDTLS_VERSION_MAJOR >= 3
-            mbedtls_sha256_starts(&sha256, 0);
-#else
-            mbedtls_sha256_starts_ret(&sha256, 0);
-#endif
-        break;
-        case BPAK_HASH_SHA384:
-            if (*size < 48)
-                return -BPAK_NO_SPACE_LEFT;
-            *size = 48;
-            mbedtls_sha512_init(&sha512);
-#if MBEDTLS_VERSION_MAJOR >= 3
-            mbedtls_sha512_starts(&sha512, 1);
-#else
-            mbedtls_sha512_starts_ret(&sha512, 1);
-#endif
-        break;
-        case BPAK_HASH_SHA512:
-            if (*size < 64)
-                return -BPAK_NO_SPACE_LEFT;
-            *size = 64;
-
-            mbedtls_sha512_init(&sha512);
-#if MBEDTLS_VERSION_MAJOR >= 3
-            mbedtls_sha512_starts(&sha512, 0);
-#else
-            mbedtls_sha512_starts_ret(&sha512, 0);
-#endif
-        break;
-        default:
-            return -BPAK_UNSUPPORTED_HASH_ALG;
-    }
+    if (rc != BPAK_OK)
+        return rc;
 
     bpak_foreach_part(header, p) {
         size_t bytes_to_read = bpak_part_size(p);
@@ -176,36 +90,28 @@ BPAK_EXPORT int bpak_verify_compute_payload_hash(struct bpak_header *header,
                         sizeof(chunk_buffer):bytes_to_read;
 
             if (read_payload(current_offset, chunk_buffer, chunk, user) != (ssize_t) chunk) {
-                return -BPAK_READ_ERROR;
+                rc = -BPAK_READ_ERROR;
+                goto err_free_hash_ctx_out;
             }
-#if MBEDTLS_VERSION_MAJOR >= 3
-            if (header->hash_kind == BPAK_HASH_SHA256)
-                mbedtls_sha256_update(&sha256, chunk_buffer, chunk);
-            else
-                mbedtls_sha512_update(&sha512, chunk_buffer, chunk);
-#else
-            if (header->hash_kind == BPAK_HASH_SHA256)
-                mbedtls_sha256_update_ret(&sha256, chunk_buffer, chunk);
-            else
-                mbedtls_sha512_update_ret(&sha512, chunk_buffer, chunk);
-#endif
+
+            rc = bpak_hash_update(&hash_ctx, chunk_buffer, chunk);
+
+            if (rc != BPAK_OK)
+                goto err_free_hash_ctx_out;
+
             bytes_to_read -= chunk;
             current_offset += chunk;
         } while (bytes_to_read);
     }
 
-#if MBEDTLS_VERSION_MAJOR >= 3
-    if (header->hash_kind == BPAK_HASH_SHA256)
-        mbedtls_sha256_finish(&sha256, output);
-    else
-        mbedtls_sha512_finish(&sha512, output);
-#else
-    if (header->hash_kind == BPAK_HASH_SHA256)
-        mbedtls_sha256_finish_ret(&sha256, output);
-    else
-        mbedtls_sha512_finish_ret(&sha512, output);
-#endif
-    return BPAK_OK;
+    rc = bpak_hash_final(&hash_ctx, output, *size, size);
+
+    if (rc != BPAK_OK)
+        goto err_free_hash_ctx_out;
+
+err_free_hash_ctx_out:
+    bpak_hash_free(&hash_ctx);
+    return rc;
 }
 
 #if BPAK_CONFIG_MERKLE == 1

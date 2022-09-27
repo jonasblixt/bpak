@@ -29,6 +29,10 @@
 #   define BPAK_CONFIG_LZMA 1
 #endif
 
+#ifndef BPAK_CONFIG_MBEDTLS
+#   define BPAK_CONFIG_MBEDTLS 1
+#endif
+
 #define BPAK_VERSION_MAJOR 0
 #define BPAK_VERSION_MINOR 7
 #define BPAK_VERSION_PATCH 0
