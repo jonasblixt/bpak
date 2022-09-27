@@ -6,8 +6,6 @@ import shlex
 import sphinx_rtd_theme
 import alabaster
 import subprocess
-sys.path.append("../python")
-import bpak
 
 read_the_docs_build = os.environ.get('READTHEDOCS', None) == 'True'
 
@@ -63,7 +61,7 @@ author = u'Jonas Blixt'
 #
 # The name of the branch/tag on github
 import re
-with open("../configure.ac") as f:
+with open("../include/bpak/bpak.h") as f:
     r = re.compile(".+\[([0-9\.]+)\]", re.DOTALL)
     configure_ac_text = f.read()
     m = r.match(configure_ac_text)

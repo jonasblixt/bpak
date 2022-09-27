@@ -24,7 +24,6 @@ formats required to manage these components.
    user-guide
    developer-guide
    c-library-reference
-   python-library-reference
    python-examples
    license
 
