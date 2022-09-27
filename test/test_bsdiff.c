@@ -145,7 +145,7 @@ TEST(diff_patch_no_comp)
     struct bpak_bsdiff_context bsdiff;
     struct bpak_bspatch_context bspatch;
     struct bspatch_priv priv;
-
+    uint8_t decode_buffer[BPAK_CHUNK_BUFFER_LENGTH];
     /* Generate un-compressed patch */
     printf("Generating patch\n");
     patch_length = 0;
@@ -171,7 +171,8 @@ TEST(diff_patch_no_comp)
     priv.output_length = DIFF_PATCH_NO_COMP_LEN;
 
     rc = bpak_bspatch_init(&bspatch,
-                           8192,
+                           decode_buffer,
+                           BPAK_CHUNK_BUFFER_LENGTH,
                            patch_length,
                            read_origin, 0,
                            write_output, 0,

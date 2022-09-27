@@ -128,6 +128,7 @@ static ssize_t merkle_generate(struct bpak_transport_decode *ctx)
 #endif  // BPAK_CONFIG_MERKLE
 
 int bpak_transport_decode_init(struct bpak_transport_decode *ctx,
+                               uint8_t *buffer,
                                size_t buffer_length,
                                struct bpak_header *patch_header,
                                bpak_io_t write_output,
@@ -138,6 +139,7 @@ int bpak_transport_decode_init(struct bpak_transport_decode *ctx,
 {
     memset(ctx, 0, sizeof(*ctx));
 
+    ctx->buffer = buffer;
     ctx->buffer_length = buffer_length;
     ctx->patch_header = patch_header;
     ctx->write_output = write_output;
@@ -244,6 +246,7 @@ int bpak_transport_decode_start(struct bpak_transport_decode *ctx,
                                     ctx->origin_offset;
 
             rc = bpak_bspatch_init(&ctx->decoders.bspatch,
+                                     ctx->buffer,
                                      ctx->buffer_length,
                                      patch_input_length,
                                      ctx->read_origin,

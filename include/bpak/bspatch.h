@@ -15,6 +15,11 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <bpak/bpak.h>
+#include <bpak/heatshrink_decoder.h>
+
+#if BPAK_CONFIG_LZMA == 1
+#   include <lzma.h>
+#endif
 
 #define BPAK_BSPATCH_CTRL_BUFFER_LENGTH 24
 
@@ -52,8 +57,13 @@ struct bpak_bspatch_context {
     int64_t diff_count;             /*!< Current patch block: amount of diff bytes */
     int64_t extra_count;            /*!< Current patch block: extra bytes */
     int64_t adjust;                 /*!< Current patch block: Origin offset adjustment */
-    void *decompressor_priv;
     enum bpak_compression compression;
+    union {
+#if BPAK_CONFIG_LZMA == 1
+        lzma_stream lzma_stream;
+#endif
+        heatshrink_decoder hsd;
+    } decompressor;
     void *user_priv;
 };
 
@@ -61,6 +71,7 @@ struct bpak_bspatch_context {
  *  Initialize the BPAK bspatch context
  *
  *  @param[in] ctx           Pointer to the context
+ *  @param[in] buffer        Work buffer for bspatch
  *  @param[in] buffer_length Size of bspatch internal buffers in bytes
  *  @param[in] read_origin   Callback for reading origin data
  *  @param[in] write_output  Callback for writing output data
@@ -69,6 +80,7 @@ struct bpak_bspatch_context {
  *  @return BPAK_OK on success or a negative number
  */
 int bpak_bspatch_init(struct bpak_bspatch_context *ctx,
+                      uint8_t *buffer,
                       size_t buffer_length,
                       size_t input_length,
                       bpak_io_t read_origin,
