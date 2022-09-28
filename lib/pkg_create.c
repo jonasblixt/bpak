@@ -17,6 +17,7 @@
 #include <bpak/utils.h>
 #include <bpak/id.h>
 #include <bpak/merkle.h>
+#include <bpak/crc.h>
 #include <bpak/crypto.h>
 
 #if BPAK_CONFIG_MERKLE == 1
@@ -128,7 +129,6 @@ BPAK_EXPORT int bpak_pkg_add_file_with_merkle_tree(struct bpak_package *pkg,
 
     /* Add salt */
     uint8_t *m = NULL;
-    char tmp[512];
 
     rc = bpak_add_meta(h, BPAK_ID_MERKLE_SALT, bpak_id(part_name), (void **) &m,
                             sizeof(bpak_merkle_hash_t));
@@ -148,9 +148,9 @@ BPAK_EXPORT int bpak_pkg_add_file_with_merkle_tree(struct bpak_package *pkg,
     memcpy(m, hash, sizeof(bpak_merkle_hash_t));
 
     struct bpak_part_header *p = NULL;
-
-    snprintf(tmp, sizeof(tmp), "%s-hash-tree", part_name);
-    rc = bpak_add_part(h, bpak_id(tmp), &p);
+    uint32_t hash_tree_id = bpak_crc32(0, (uint8_t *) part_name, strlen(part_name));
+    hash_tree_id = bpak_crc32(hash_tree_id, (uint8_t *) "-hash-tree", 10);
+    rc = bpak_add_part(h, hash_tree_id, &p);
 
     if (rc != BPAK_OK) {
         bpak_printf(0, "Error: Could not add part\n");
@@ -199,6 +199,7 @@ BPAK_EXPORT int bpak_pkg_add_file(struct bpak_package *pkg, const char *filename
     struct bpak_part_header *p = NULL;
     struct stat statbuf;
     uint64_t new_offset = sizeof(struct bpak_header);
+    char chunk_buffer[BPAK_CHUNK_BUFFER_LENGTH];
 
     if (stat(filename, &statbuf) != 0) {
         bpak_printf(0, "Error: can't open file '%s'\n", filename);
@@ -246,8 +247,6 @@ BPAK_EXPORT int bpak_pkg_add_file(struct bpak_package *pkg, const char *filename
         return -BPAK_FILE_NOT_FOUND;
     }
 
-    char chunk_buffer[512];
-
     while (bytes_to_write) {
         size_t read_bytes = fread(chunk_buffer, 1, sizeof(chunk_buffer), in_fp);
         if (fwrite(chunk_buffer, 1, read_bytes, pkg->fp) != read_bytes) {
@@ -292,7 +291,6 @@ BPAK_EXPORT int bpak_pkg_add_key(struct bpak_package *pkg, const char *filename,
     struct bpak_header *h = bpak_pkg_header(pkg);
     struct bpak_part_header *p = NULL;
     uint64_t new_offset = sizeof(struct bpak_header);
-    char chunk_buffer[512];
 
     rc = bpak_crypto_load_public_key(filename, &key);
 
@@ -336,8 +334,8 @@ BPAK_EXPORT int bpak_pkg_add_key(struct bpak_package *pkg, const char *filename,
     }
 
     /* Write zero padding */
-    memset(chunk_buffer, 0, sizeof(chunk_buffer));
-    if (fwrite(chunk_buffer, 1, p->pad_bytes, pkg->fp) != p->pad_bytes) {
+    uint8_t zero = 0;
+    if (fwrite(&zero, 1, p->pad_bytes, pkg->fp) != p->pad_bytes) {
         rc = -BPAK_WRITE_ERROR;
         goto err_free_key_out;
     }
