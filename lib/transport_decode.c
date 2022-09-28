@@ -127,15 +127,15 @@ static ssize_t merkle_generate(struct bpak_transport_decode *ctx)
 
 #endif  // BPAK_CONFIG_MERKLE
 
-int bpak_transport_decode_init(struct bpak_transport_decode *ctx,
-                               uint8_t *buffer,
-                               size_t buffer_length,
-                               struct bpak_header *patch_header,
-                               bpak_io_t write_output,
-                               bpak_io_t read_output,
-                               off_t output_offset,
-                               bpak_io_t write_output_header,
-                               void *user)
+BPAK_EXPORT int bpak_transport_decode_init(struct bpak_transport_decode *ctx,
+                                           uint8_t *buffer,
+                                           size_t buffer_length,
+                                           struct bpak_header *patch_header,
+                                           bpak_io_t write_output,
+                                           bpak_io_t read_output,
+                                           off_t output_offset,
+                                           bpak_io_t write_output_header,
+                                           void *user)
 {
     memset(ctx, 0, sizeof(*ctx));
 
@@ -151,7 +151,7 @@ int bpak_transport_decode_init(struct bpak_transport_decode *ctx,
     return BPAK_OK;
 }
 
-int bpak_transport_decode_set_origin(struct bpak_transport_decode *ctx,
+BPAK_EXPORT int bpak_transport_decode_set_origin(struct bpak_transport_decode *ctx,
                                      struct bpak_header *origin_header,
                                      bpak_io_t read_origin,
                                      off_t origin_offset)
@@ -183,7 +183,7 @@ int bpak_transport_decode_set_origin(struct bpak_transport_decode *ctx,
     return BPAK_OK;
 }
 
-int bpak_transport_decode_start(struct bpak_transport_decode *ctx,
+BPAK_EXPORT int bpak_transport_decode_start(struct bpak_transport_decode *ctx,
                                 struct bpak_part_header *part)
 {
     int rc;
@@ -277,7 +277,7 @@ int bpak_transport_decode_start(struct bpak_transport_decode *ctx,
 }
 
 
-int bpak_transport_decode_write_chunk(struct bpak_transport_decode *ctx,
+BPAK_EXPORT int bpak_transport_decode_write_chunk(struct bpak_transport_decode *ctx,
                                       uint8_t *buffer, size_t length)
 {
     int rc;
@@ -317,7 +317,7 @@ int bpak_transport_decode_write_chunk(struct bpak_transport_decode *ctx,
     return rc;
 }
 
-int bpak_transport_decode_finish(struct bpak_transport_decode *ctx)
+BPAK_EXPORT int bpak_transport_decode_finish(struct bpak_transport_decode *ctx)
 {
     ssize_t bytes_written;
     ssize_t output_length = 0;
@@ -369,7 +369,7 @@ int bpak_transport_decode_finish(struct bpak_transport_decode *ctx)
     return BPAK_OK;
 }
 
-void bpak_transport_decode_free(struct bpak_transport_decode *ctx)
+BPAK_EXPORT void bpak_transport_decode_free(struct bpak_transport_decode *ctx)
 {
     /* Nothing to implement so far */
     (void) ctx;
