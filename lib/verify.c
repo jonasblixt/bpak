@@ -17,8 +17,7 @@
 #include <bpak/crypto.h>
 
 BPAK_EXPORT int bpak_verify_compute_header_hash(struct bpak_header *header,
-                                    uint8_t *output,
-                                    size_t *size)
+                                                uint8_t *output, size_t *size)
 {
     int rc;
     uint8_t zero = 0;
@@ -31,10 +30,9 @@ BPAK_EXPORT int bpak_verify_compute_header_hash(struct bpak_header *header,
         return rc;
 
     /* Hash everyting except the signature and signature size */
-    size_t bytes_to_hash = sizeof(*header) -
-                           sizeof(header->signature) -
+    size_t bytes_to_hash = sizeof(*header) - sizeof(header->signature) -
                            sizeof(header->signature_sz);
-    rc = bpak_hash_update(&hash_ctx, (uint8_t *) header, bytes_to_hash);
+    rc = bpak_hash_update(&hash_ctx, (uint8_t *)header, bytes_to_hash);
 
     if (rc != BPAK_OK)
         goto err_free_hash_ctx_out;
@@ -60,11 +58,9 @@ err_free_hash_ctx_out:
 }
 
 BPAK_EXPORT int bpak_verify_compute_payload_hash(struct bpak_header *header,
-                                    bpak_io_t read_payload,
-                                    off_t data_offset,
-                                    void *user,
-                                    uint8_t *output,
-                                    size_t *size)
+                                                 bpak_io_t read_payload,
+                                                 off_t data_offset, void *user,
+                                                 uint8_t *output, size_t *size)
 {
     off_t current_offset = data_offset;
     unsigned char chunk_buffer[BPAK_CHUNK_BUFFER_LENGTH];
@@ -76,7 +72,7 @@ BPAK_EXPORT int bpak_verify_compute_payload_hash(struct bpak_header *header,
     if (rc != BPAK_OK)
         return rc;
 
-    bpak_foreach_part(header, p) {
+    bpak_foreach_part (header, p) {
         size_t bytes_to_read = bpak_part_size(p);
         size_t chunk = 0;
 
@@ -89,10 +85,12 @@ BPAK_EXPORT int bpak_verify_compute_payload_hash(struct bpak_header *header,
         }
 
         do {
-            chunk = (bytes_to_read > sizeof(chunk_buffer))?
-                        sizeof(chunk_buffer):bytes_to_read;
+            chunk = (bytes_to_read > sizeof(chunk_buffer))
+                        ? sizeof(chunk_buffer)
+                        : bytes_to_read;
 
-            if (read_payload(current_offset, chunk_buffer, chunk, user) != (ssize_t) chunk) {
+            if (read_payload(current_offset, chunk_buffer, chunk, user) !=
+                (ssize_t)chunk) {
                 rc = -BPAK_READ_ERROR;
                 goto err_free_hash_ctx_out;
             }
@@ -118,8 +116,7 @@ err_free_hash_ctx_out:
 }
 
 #if BPAK_CONFIG_MERKLE == 1
-struct merkle_verify_private
-{
+struct merkle_verify_private {
     void *user;
     bpak_io_t read_payload;
 };
@@ -130,14 +127,16 @@ static ssize_t merkle_verify_wr(off_t offset, uint8_t *buf, size_t size,
     uint8_t chunk_buffer[BPAK_MERKLE_HASH_BYTES];
     ssize_t chunk_length;
     size_t bytes_to_process = size;
-    struct merkle_verify_private *priv = (struct merkle_verify_private *) user;
+    struct merkle_verify_private *priv = (struct merkle_verify_private *)user;
     off_t current_offset = 0;
 
     while (bytes_to_process) {
         chunk_length = BPAK_MIN(bytes_to_process, sizeof(chunk_buffer));
 
         ssize_t bytes_read = priv->read_payload(current_offset + offset,
-                                     chunk_buffer, chunk_length, priv->user);
+                                                chunk_buffer,
+                                                chunk_length,
+                                                priv->user);
 
         if (bytes_read < 0)
             return bytes_read;
@@ -156,17 +155,15 @@ static ssize_t merkle_verify_wr(off_t offset, uint8_t *buf, size_t size,
 static ssize_t merkle_verify_rd(off_t offset, uint8_t *buf, size_t size,
                                 void *user)
 {
-    struct merkle_verify_private *priv = (struct merkle_verify_private *) user;
+    struct merkle_verify_private *priv = (struct merkle_verify_private *)user;
     return priv->read_payload(offset, buf, size, priv->user);
 }
 
 BPAK_EXPORT int bpak_verify_merkle_tree(bpak_io_t read_payload,
-                            off_t data_offset,
-                            size_t data_length,
-                            off_t tree_offset,
-                            bpak_merkle_hash_t expected_root_hash,
-                            bpak_merkle_hash_t salt,
-                            void *user)
+                                        off_t data_offset, size_t data_length,
+                                        off_t tree_offset,
+                                        bpak_merkle_hash_t expected_root_hash,
+                                        bpak_merkle_hash_t salt, void *user)
 {
     int rc;
     struct bpak_merkle_context ctx;
@@ -197,8 +194,8 @@ BPAK_EXPORT int bpak_verify_merkle_tree(bpak_io_t read_payload,
     while (bytes_to_process > 0) {
         ssize_t chunk_length = BPAK_MIN(bytes_to_process, sizeof(chunk_buffer));
 
-        ssize_t bytes_read = read_payload(current_offset, chunk_buffer,
-                                          chunk_length, user);
+        ssize_t bytes_read =
+            read_payload(current_offset, chunk_buffer, chunk_length, user);
 
         if (bytes_read < 0)
             return bytes_read;
@@ -222,19 +219,19 @@ BPAK_EXPORT int bpak_verify_merkle_tree(bpak_io_t read_payload,
     if (rc != BPAK_OK)
         return rc;
 
-    if (memcmp(calculated_root_hash, expected_root_hash,
-            sizeof(*expected_root_hash)) != 0) {
+    if (memcmp(calculated_root_hash,
+               expected_root_hash,
+               sizeof(*expected_root_hash)) != 0) {
         return -BPAK_BAD_ROOT_HASH;
     }
 
     return BPAK_OK;
 }
-#endif  // BPAK_CONFIG_MERKLE
+#endif // BPAK_CONFIG_MERKLE
 
 BPAK_EXPORT int bpak_verify_payload(struct bpak_header *header,
-                        bpak_io_t read_payload,
-                        off_t data_offset,
-                        void *user)
+                                    bpak_io_t read_payload, off_t data_offset,
+                                    void *user)
 {
     int rc;
     uint8_t hash[BPAK_HASH_MAX_LENGTH];
@@ -261,13 +258,16 @@ BPAK_EXPORT int bpak_verify_payload(struct bpak_header *header,
     uint8_t *part_merkle_salt;
 
     /* Compute and compare merkle hash trees and root hashes */
-    bpak_foreach_part(header, p) {
+    bpak_foreach_part (header, p) {
         if (!p->id)
             continue;
 
         /* Test part to see if it has a hash tree */
-        rc = bpak_get_meta_with_ref(header, BPAK_ID_MERKLE_ROOT_HASH,
-                                p->id, (void **) &part_merkle_root_hash, NULL);
+        rc = bpak_get_meta_with_ref(header,
+                                    BPAK_ID_MERKLE_ROOT_HASH,
+                                    p->id,
+                                    (void **)&part_merkle_root_hash,
+                                    NULL);
 
         if (rc != BPAK_OK) {
             /* This part does not have a merkle tree, skip to next part */
@@ -275,8 +275,11 @@ BPAK_EXPORT int bpak_verify_payload(struct bpak_header *header,
         }
 
         /* There should also be a salt meta data for this part */
-        rc = bpak_get_meta_with_ref(header, BPAK_ID_MERKLE_SALT,
-                                    p->id, (void **) &part_merkle_salt, NULL);
+        rc = bpak_get_meta_with_ref(header,
+                                    BPAK_ID_MERKLE_SALT,
+                                    p->id,
+                                    (void **)&part_merkle_salt,
+                                    NULL);
 
         if (rc != BPAK_OK)
             return -BPAK_MISSING_META_DATA;
@@ -284,8 +287,9 @@ BPAK_EXPORT int bpak_verify_payload(struct bpak_header *header,
         /* Compute the part id for the merkle tree, this is always an
          *  extension of the data part id, suffixed with '-hash-tree'
          */
-        uint32_t merkle_tree_part_id = bpak_crc32(p->id, (uint8_t *) hash_tree_suffix,
-                                                 strlen(hash_tree_suffix));
+        uint32_t merkle_tree_part_id = bpak_crc32(p->id,
+                                                  (uint8_t *)hash_tree_suffix,
+                                                  strlen(hash_tree_suffix));
 
         struct bpak_part_header *merkle_tree_part = NULL;
 
@@ -298,9 +302,9 @@ BPAK_EXPORT int bpak_verify_payload(struct bpak_header *header,
 
         /* Compute part data and tree offsets relative input 'data_offset' */
         off_t part_data_offset = bpak_part_offset(header, p) -
-                                    sizeof(struct bpak_header) + data_offset;
+                                 sizeof(struct bpak_header) + data_offset;
         off_t part_tree_offset = bpak_part_offset(header, merkle_tree_part) -
-                                    sizeof(struct bpak_header) + data_offset;
+                                 sizeof(struct bpak_header) + data_offset;
 
         /* Verify this data/merkle tree and compare the root hash */
         rc = bpak_verify_merkle_tree(read_payload,
@@ -315,7 +319,7 @@ BPAK_EXPORT int bpak_verify_payload(struct bpak_header *header,
             return rc;
         }
     }
-#endif  // BPAK_CONFIG_MERKLE
+#endif // BPAK_CONFIG_MERKLE
 
     return BPAK_OK;
 }

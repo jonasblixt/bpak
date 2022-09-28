@@ -18,9 +18,9 @@
 #include <bpak/keystore.h>
 
 static ssize_t verify_payload_read(off_t offset, uint8_t *buf, size_t size,
-                                void *user)
+                                   void *user)
 {
-    FILE *fp = (FILE *) user;
+    FILE *fp = (FILE *)user;
 
     if (fseek(fp, offset, SEEK_SET) != 0)
         return -BPAK_SEEK_ERROR;
@@ -33,7 +33,8 @@ static ssize_t verify_payload_read(off_t offset, uint8_t *buf, size_t size,
     return read_bytes;
 }
 
-BPAK_EXPORT int bpak_pkg_verify(struct bpak_package *pkg, const char *key_filename)
+BPAK_EXPORT int bpak_pkg_verify(struct bpak_package *pkg,
+                                const char *key_filename)
 {
     int rc;
     uint8_t hash_output[BPAK_HASH_MAX_LENGTH];
@@ -53,9 +54,11 @@ BPAK_EXPORT int bpak_pkg_verify(struct bpak_package *pkg, const char *key_filena
 
     rc = bpak_crypto_verify(pkg->header.signature,
                             pkg->header.signature_sz,
-                            hash_output, hash_size,
+                            hash_output,
+                            hash_size,
                             pkg->header.hash_kind,
-                            key, &header_verified);
+                            key,
+                            &header_verified);
 
     if (rc != BPAK_OK)
         goto err_free_key_out;
@@ -64,7 +67,7 @@ BPAK_EXPORT int bpak_pkg_verify(struct bpak_package *pkg, const char *key_filena
         goto err_free_key_out;
     }
 
-    rc = bpak_verify_payload(&pkg->header, 
+    rc = bpak_verify_payload(&pkg->header,
                              verify_payload_read,
                              sizeof(struct bpak_header),
                              pkg->fp);

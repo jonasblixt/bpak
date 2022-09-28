@@ -30,47 +30,45 @@ int action_sign(int argc, char **argv)
     struct bpak_package pkg;
     int rc = 0;
 
-    struct option long_options[] =
-    {
-        {"help",        no_argument,       0,  'h' },
-        {"verbose",     no_argument,       0,  'v' },
-        {"key",         required_argument, 0,  'k' },
-        {"signature",   required_argument, 0,  'f' },
-        {0,             0,                 0,   0  }
+    struct option long_options[] = {
+        { "help", no_argument, 0, 'h' },
+        { "verbose", no_argument, 0, 'v' },
+        { "key", required_argument, 0, 'k' },
+        { "signature", required_argument, 0, 'f' },
+        { 0, 0, 0, 0 },
     };
 
-    while ((opt = getopt_long(argc, argv, "hvk:f:",
-                   long_options, &long_index )) != -1)
-    {
-        switch (opt)
-        {
-            case 'h':
-                print_sign_usage();
-                return 0;
-            case 'v':
-                bpak_inc_verbosity();
+    while (
+        (opt = getopt_long(argc, argv, "hvk:f:", long_options, &long_index)) !=
+        -1) {
+        switch (opt) {
+        case 'h':
+            print_sign_usage();
+            return 0;
+        case 'v':
+            bpak_inc_verbosity();
             break;
-            case 'k':
-                key_source = (const char *) optarg;
+        case 'k':
+            key_source = (const char *)optarg;
             break;
-            case 'f':
-                signature_file = (const char *) optarg;
+        case 'f':
+            signature_file = (const char *)optarg;
             break;
-            case '?':
-                printf("Unknown option: %c\n", optopt);
-                return -1;
+        case '?':
+            printf("Unknown option: %c\n", optopt);
+            return -1;
             break;
-            case ':':
-                printf("Missing arg for %c\n", optopt);
-                return -1;
+        case ':':
+            printf("Missing arg for %c\n", optopt);
+            return -1;
             break;
-            default:
-               return -1;
+        default:
+            return -1;
         }
     }
 
     if (optind < argc) {
-        filename = (const char *) argv[optind++];
+        filename = (const char *)argv[optind++];
     } else {
         printf("Missing filename argument\n");
         return -1;
@@ -100,7 +98,7 @@ int action_sign(int argc, char **argv)
             printf("Loaded signature %li bytes\n", size);
         }
 
-        rc = bpak_pkg_write_raw_signature(&pkg, (uint8_t *) sig, size);
+        rc = bpak_pkg_write_raw_signature(&pkg, (uint8_t *)sig, size);
 
         if (rc != BPAK_OK)
             goto err_out;
@@ -126,41 +124,38 @@ int action_verify(int argc, char **argv)
 
     int rc = 0;
 
-    struct option long_options[] =
-    {
-        {"help",        no_argument,       0,  'h' },
-        {"verbose",     no_argument,       0,  'v' },
-        {"key",         required_argument, 0,  'k' },
-        {0,             0,                 0,   0  }
-    };
+    struct option long_options[] = { { "help", no_argument, 0, 'h' },
+                                     { "verbose", no_argument, 0, 'v' },
+                                     { "key", required_argument, 0, 'k' },
+                                     { 0, 0, 0, 0 } };
 
-    while ((opt = getopt_long(argc, argv, "hvk:",
-                   long_options, &long_index )) != -1) {
+    while ((opt = getopt_long(argc, argv, "hvk:", long_options, &long_index)) !=
+           -1) {
         switch (opt) {
-            case 'h':
-                print_verify_usage();
-                return 0;
-            case 'v':
-                bpak_inc_verbosity();
+        case 'h':
+            print_verify_usage();
+            return 0;
+        case 'v':
+            bpak_inc_verbosity();
             break;
-            case 'k':
-                key_source = (const char *) optarg;
+        case 'k':
+            key_source = (const char *)optarg;
             break;
-            case '?':
-                printf("Unknown option: %c\n", optopt);
-                return -1;
+        case '?':
+            printf("Unknown option: %c\n", optopt);
+            return -1;
             break;
-            case ':':
-                printf("Missing arg for %c\n", optopt);
-                return -1;
+        case ':':
+            printf("Missing arg for %c\n", optopt);
+            return -1;
             break;
-            default:
-               return -1;
+        default:
+            return -1;
         }
     }
 
     if (optind < argc) {
-        filename = (const char *) argv[optind++];
+        filename = (const char *)argv[optind++];
     } else {
         printf("Missing filename argument\n");
         return -1;
@@ -176,8 +171,10 @@ int action_verify(int argc, char **argv)
     rc = bpak_pkg_verify(&pkg, key_source);
 
     if (rc != BPAK_OK) {
-        fprintf(stderr, "Verification failed: %i, %s\n", rc,
-                            bpak_error_string(rc));
+        fprintf(stderr,
+                "Verification failed: %i, %s\n",
+                rc,
+                bpak_error_string(rc));
     } else {
         printf("Verification OK\n");
     }

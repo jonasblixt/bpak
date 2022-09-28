@@ -21,56 +21,50 @@ int action_create(int argc, char **argv)
     uint8_t signature_kind = BPAK_SIGN_INVALID;
     int rc = 0;
 
-    struct option long_options[] =
-    {
-        {"help",      no_argument,       0,  'h' },
-        {"verbose",   no_argument,       0,  'v' },
-        {"force",     no_argument,       0,  'Y' },
-        {"hash-kind", required_argument, 0,  'H' },
+    struct option long_options[] = {
+        {"help", no_argument, 0, 'h'},
+        {"verbose", no_argument, 0, 'v'},
+        {"force", no_argument, 0, 'Y'},
+        {"hash-kind", required_argument, 0, 'H'},
         {"signature-kind", required_argument, 0, 'S'},
-        {0,           0,                 0,   0  }
-    };
+        {0, 0, 0, 0}};
 
-    while ((opt = getopt_long(argc, argv, "hvYH:S:",
-                   long_options, &long_index )) != -1)
-    {
-        switch (opt)
-        {
-            case 'h':
-                print_create_usage();
-                return 0;
+    while (
+        (opt = getopt_long(argc, argv, "hvYH:S:", long_options, &long_index)) !=
+        -1) {
+        switch (opt) {
+        case 'h':
+            print_create_usage();
+            return 0;
             break;
-            case 'v':
-                bpak_inc_verbosity();
+        case 'v':
+            bpak_inc_verbosity();
             break;
-            case 'Y':
-                force_overwrite = true;
+        case 'Y':
+            force_overwrite = true;
             break;
-            case '?':
-                printf("Unknown option: %c\n", optopt);
-                return -1;
+        case '?':
+            printf("Unknown option: %c\n", optopt);
+            return -1;
             break;
-            case 'H':
-                hash_kind_str = (const char *) optarg;
+        case 'H':
+            hash_kind_str = (const char *)optarg;
             break;
-            case 'S':
-                signature_kind_str = (const char *) optarg;
+        case 'S':
+            signature_kind_str = (const char *)optarg;
             break;
-            case ':':
-                printf("Missing arg for %c\n", optopt);
-                return -1;
+        case ':':
+            printf("Missing arg for %c\n", optopt);
+            return -1;
             break;
-             default:
-                return -1;
+        default:
+            return -1;
         }
     }
 
-    if (optind < argc)
-    {
-        filename = (const char *) argv[optind++];
-    }
-    else
-    {
+    if (optind < argc) {
+        filename = (const char *)argv[optind++];
+    } else {
         printf("Missing filename argument\n");
         return -1;
     }
@@ -106,7 +100,7 @@ int action_create(int argc, char **argv)
         signature_kind = BPAK_SIGN_RSA4096;
     } else {
         printf("Error: '%s' is not a known signature method\n",
-                            signature_kind_str);
+               signature_kind_str);
         return -BPAK_UNSUPPORTED_KEY;
     }
 
@@ -118,15 +112,15 @@ int action_create(int argc, char **argv)
         fflush(stdout);
         char response = getc(stdin);
 
-        if (response != 'Y')
-        {
-            printf ("\nAborting\n");
+        if (response != 'Y') {
+            printf("\nAborting\n");
             return -1;
         }
     }
 
     FILE *fp = NULL;
-    struct bpak_header *h = NULL;;
+    struct bpak_header *h = NULL;
+    ;
 
     h = malloc(sizeof(*h));
     if (!h)

@@ -23,6 +23,6 @@ TEST(part_alignment)
     p->offset = 0;
     p->size = 513;
 
- /*   rc = bpak_valid_header(&h);
-    ASSERT_EQ(rc, -BPAK_BAD_ALIGNMENT);*/
+    /*   rc = bpak_valid_header(&h);
+       ASSERT_EQ(rc, -BPAK_BAD_ALIGNMENT);*/
 }

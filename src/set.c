@@ -33,85 +33,81 @@ int action_set(int argc, char **argv)
     bool keystore_id_flag = false;
     int rc = 0;
 
-    struct option long_options[] =
-    {
-        {"help",        no_argument,       0,  'h' },
-        {"verbose",     no_argument,       0,  'v' },
-        {"meta",        required_argument, 0,  'm' },
-        {"from-string", required_argument, 0,  's' },
-        {"encoder",     required_argument, 0,  'e' },
-        {"key-id",      required_argument, 0,  'k' },
-        {"keystore-id", required_argument, 0,  'i' },
-        {0,             0,                 0,   0  }
+    struct option long_options[] = {
+        { "help", no_argument, 0, 'h' },
+        { "verbose", no_argument, 0, 'v' },
+        { "meta", required_argument, 0, 'm' },
+        { "from-string", required_argument, 0, 's' },
+        { "encoder", required_argument, 0, 'e' },
+        { "key-id", required_argument, 0, 'k' },
+        { "keystore-id", required_argument, 0, 'i' },
+        { 0, 0, 0, 0 },
     };
 
-    while ((opt = getopt_long(argc, argv, "hvp:m:s:e:k:i:",
-                   long_options, &long_index )) != -1)
-    {
-        switch (opt)
-        {
-            case 'h':
-                print_set_usage();
-                return 0;
-            case 'v':
-                bpak_inc_verbosity();
+    while ((opt = getopt_long(argc,
+                              argv,
+                              "hvp:m:s:e:k:i:",
+                              long_options,
+                              &long_index)) != -1) {
+        switch (opt) {
+        case 'h':
+            print_set_usage();
+            return 0;
+        case 'v':
+            bpak_inc_verbosity();
             break;
-            case 'k':
-                key_id_flag = true;
-                if (strncmp(optarg, "0x", 2) == 0) {
-                    key_id = strtoul(optarg, NULL, 16);
-                } else {
-                    key_id = bpak_id(optarg);
-                }
+        case 'k':
+            key_id_flag = true;
+            if (strncmp(optarg, "0x", 2) == 0) {
+                key_id = strtoul(optarg, NULL, 16);
+            } else {
+                key_id = bpak_id(optarg);
+            }
             break;
-            case 'i':
-                keystore_id_flag = true;
-                if (strncmp(optarg, "0x", 2) == 0) {
-                    keystore_id = strtoul(optarg, NULL, 16);
-                } else {
-                    keystore_id = bpak_id(optarg);
-                }
+        case 'i':
+            keystore_id_flag = true;
+            if (strncmp(optarg, "0x", 2) == 0) {
+                keystore_id = strtoul(optarg, NULL, 16);
+            } else {
+                keystore_id = bpak_id(optarg);
+            }
             break;
-            case 'm':
-                meta_name = (const char *) optarg;
+        case 'm':
+            meta_name = (const char *)optarg;
             break;
-            case 's':
-                from_string = (const char *) optarg;
+        case 's':
+            from_string = (const char *)optarg;
             break;
-            case 'e':
-                encoder = (const char *) optarg;
+        case 'e':
+            encoder = (const char *)optarg;
             break;
-            case '?':
-                printf("Unknown option: %c\n", optopt);
-                return -1;
+        case '?':
+            printf("Unknown option: %c\n", optopt);
+            return -1;
             break;
-            case ':':
-                printf("Missing arg for %c\n", optopt);
-                return -1;
+        case ':':
+            printf("Missing arg for %c\n", optopt);
+            return -1;
             break;
-            default:
-               return -1;
+        default:
+            return -1;
         }
     }
 
-    if (optind < argc)
-    {
-        filename = (const char *) argv[optind++];
-    }
-    else
-    {
+    if (optind < argc) {
+        filename = (const char *)argv[optind++];
+    } else {
         printf("Missing filename argument\n");
         return -1;
     }
 
-    if (!meta_name && !(key_id_flag || keystore_id_flag))
-    {
-        printf("Error: Requried argument --meta (or keystore-id and key-id) is missing\n");
+    if (!meta_name && !(key_id_flag || keystore_id_flag)) {
+        printf("Error: Requried argument --meta (or keystore-id and key-id) is "
+               "missing\n");
         return -1;
     }
 
-    if (!from_string && meta_name)
-    {
+    if (!from_string && meta_name) {
         printf("Error: Missing required option --from_string <...>\n");
         return -1;
     }
@@ -146,13 +142,16 @@ int action_set(int argc, char **argv)
         goto err_close_fp_out;
     }
 
-    if (meta_name)
-    {
+    if (meta_name) {
         void *meta = NULL;
         struct bpak_meta_header *meta_header = NULL;
 
-        rc = bpak_get_meta_and_header(h, bpak_id(meta_name), 0, &meta, NULL,
-                                        &meta_header);
+        rc = bpak_get_meta_and_header(h,
+                                      bpak_id(meta_name),
+                                      0,
+                                      &meta,
+                                      NULL,
+                                      &meta_header);
 
         if (rc != BPAK_OK || meta == NULL) {
             printf("Error: Could not find '%s'\n", meta_name);
@@ -162,7 +161,7 @@ int action_set(int argc, char **argv)
         if (!encoder) {
             if (bpak_get_verbosity() > 2) {
                 printf("Need to grow metadata field with %li bytes\n",
-                            strlen(from_string) - meta_header->size);
+                       strlen(from_string) - meta_header->size);
             }
 
             struct bpak_header *new_header = malloc(sizeof(struct bpak_header));
@@ -171,43 +170,43 @@ int action_set(int argc, char **argv)
             memset(new_header->meta, 0, sizeof(new_header->meta));
             memset(new_header->metadata, 0, sizeof(new_header->metadata));
 
-            bpak_foreach_meta(h, m)
-            {
+            bpak_foreach_meta (h, m) {
                 uint8_t *tmp_ptr = NULL;
 
                 if (!m->id)
                     break;
 
-                if (m->id == bpak_id(meta_name))
-                {
-                    if (bpak_get_verbosity() > 2)
-                    {
+                if (m->id == bpak_id(meta_name)) {
+                    if (bpak_get_verbosity() > 2) {
                         printf("Updating part %s\n", meta_name);
                     }
 
-                    rc = bpak_add_meta(new_header, m->id, m->part_id_ref,
-                                            (void **) &tmp_ptr,
-                                            strlen(from_string) + 1);
+                    rc = bpak_add_meta(new_header,
+                                       m->id,
+                                       m->part_id_ref,
+                                       (void **)&tmp_ptr,
+                                       strlen(from_string) + 1);
 
                     if (rc != BPAK_OK)
                         break;
 
-                    memcpy((void *) tmp_ptr, from_string, strlen(from_string)+1);
-                }
-                else
-                {
-                    if (bpak_get_verbosity() > 2)
-                    {
+                    memcpy((void *)tmp_ptr,
+                           from_string,
+                           strlen(from_string) + 1);
+                } else {
+                    if (bpak_get_verbosity() > 2) {
                         printf("Copying meta %x, %i\n", m->id, m->size);
                     }
-                    rc = bpak_add_meta(new_header, m->id, m->part_id_ref,
-                                            (void **) &tmp_ptr,
-                                            m->size);
+                    rc = bpak_add_meta(new_header,
+                                       m->id,
+                                       m->part_id_ref,
+                                       (void **)&tmp_ptr,
+                                       m->size);
 
                     if (rc != BPAK_OK)
                         break;
 
-                    memcpy((void *) tmp_ptr, &(h->metadata[m->offset]), m->size);
+                    memcpy((void *)tmp_ptr, &(h->metadata[m->offset]), m->size);
                 }
             }
 
@@ -221,7 +220,7 @@ int action_set(int argc, char **argv)
                 goto err_close_fp_out;
             }
 
-            long *val = (long *) meta;
+            long *val = (long *)meta;
             (*val) = strtol(from_string, NULL, 0);
         } else if (strcmp(encoder, "id") == 0) {
             if (meta_header->size != 4) {
@@ -229,7 +228,7 @@ int action_set(int argc, char **argv)
                 rc = -BPAK_SIZE_ERROR;
                 goto err_close_fp_out;
             }
-            uint32_t *val = (uint32_t *) meta;
+            uint32_t *val = (uint32_t *)meta;
             (*val) = bpak_id(from_string);
         } else {
             rc = -BPAK_FAILED;

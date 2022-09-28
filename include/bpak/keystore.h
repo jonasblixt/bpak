@@ -9,8 +9,7 @@ extern "C" {
 
 #define BPAK_KEYSTORE_UUID "5df103ef-e774-450b-95c5-1fef51ceec28"
 
-struct bpak_key
-{
+struct bpak_key {
     enum bpak_key_kind kind;
     uint16_t size;
     uint32_t id;
@@ -18,8 +17,7 @@ struct bpak_key
     uint8_t data[];
 };
 
-struct bpak_keystore
-{
+struct bpak_keystore {
     uint32_t id;
     uint8_t no_of_keys;
     bool verified;
@@ -27,10 +25,10 @@ struct bpak_keystore
 };
 
 int bpak_keystore_get(struct bpak_keystore *ks, uint32_t id,
-                        struct bpak_key **k);
+                      struct bpak_key **k);
 
 #ifdef __cplusplus
-}  // extern "C"
+} // extern "C"
 #endif
 
-#endif  // INCLUDE_BPAK_KEYSTORE_H_
+#endif // INCLUDE_BPAK_KEYSTORE_H_

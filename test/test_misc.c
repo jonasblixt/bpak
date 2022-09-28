@@ -12,6 +12,6 @@ TEST(error_codes)
         ASSERT(bpak_error_string(-i) != bpak_error_string(1));
     }
 
-    printf("%s %s\n", bpak_error_string(end+1), bpak_error_string(1));
-    ASSERT(bpak_error_string(end+1) == bpak_error_string(1));
+    printf("%s %s\n", bpak_error_string(end + 1), bpak_error_string(1));
+    ASSERT(bpak_error_string(end + 1) == bpak_error_string(1));
 }

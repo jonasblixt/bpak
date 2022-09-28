@@ -25,10 +25,8 @@
 #include <bpak/transport.h>
 
 static int transport_copy(struct bpak_header *input_hdr,
-                          struct bpak_header *output_hdr,
-                          uint32_t id,
-                          FILE *input_fp,
-                          FILE *output_fp)
+                          struct bpak_header *output_hdr, uint32_t id,
+                          FILE *input_fp, FILE *output_fp)
 {
     int rc;
     struct bpak_part_header *p = NULL;
@@ -50,9 +48,7 @@ static int transport_copy(struct bpak_header *input_hdr,
         return -BPAK_SEEK_ERROR;
     }
 
-    rc = fseek(output_fp,
-                 bpak_part_offset(output_hdr, p),
-                 SEEK_SET);
+    rc = fseek(output_fp, bpak_part_offset(output_hdr, p), SEEK_SET);
 
     if (rc != 0) {
         bpak_printf(0, "%s: Error, could not seek output stream", __func__);
@@ -64,7 +60,7 @@ static int transport_copy(struct bpak_header *input_hdr,
     uint64_t chunk = 0;
 
     while (bytes_to_copy) {
-        chunk = (bytes_to_copy > sizeof(buf))?sizeof(buf):bytes_to_copy;
+        chunk = (bytes_to_copy > sizeof(buf)) ? sizeof(buf) : bytes_to_copy;
         uint64_t read_bytes = fread(buf, 1, chunk, input_fp);
 
         if (read_bytes != chunk) {
@@ -88,18 +84,15 @@ err_out:
     return rc;
 }
 
-struct bsdiff_private
-{
+struct bsdiff_private {
     int fd;
 };
 
 /* Write's the compressed output of bsdiff */
-static ssize_t bsdiff_write_output(off_t offset,
-                                   uint8_t *buffer,
-                                   size_t length,
+static ssize_t bsdiff_write_output(off_t offset, uint8_t *buffer, size_t length,
                                    void *user_priv)
 {
-    struct bsdiff_private *priv = (struct bsdiff_private *) user_priv;
+    struct bsdiff_private *priv = (struct bsdiff_private *)user_priv;
 
     if (lseek(priv->fd, offset, SEEK_SET) == -1) {
         bpak_printf(0, "Error: bsdiff_write_output seek\n");
@@ -112,7 +105,7 @@ static ssize_t bsdiff_write_output(off_t offset,
         return bytes_written;
     }
 
-    if (bytes_written != (ssize_t) length) {
+    if (bytes_written != (ssize_t)length) {
         bpak_printf(0, "Error: bsdiff_write_output write\n");
         return -BPAK_WRITE_ERROR;
     }
@@ -120,15 +113,11 @@ static ssize_t bsdiff_write_output(off_t offset,
     return bytes_written;
 }
 
-static ssize_t transport_bsdiff(FILE *target,
-                                   off_t target_offset,
-                                   size_t target_length,
-                                   FILE *origin,
-                                   off_t origin_offset,
-                                   size_t origin_length,
-                                   FILE *output,
-                                   off_t output_offset,
-                                   enum bpak_compression compression)
+static ssize_t transport_bsdiff(FILE *target, off_t target_offset,
+                                size_t target_length, FILE *origin,
+                                off_t origin_offset, size_t origin_length,
+                                FILE *output, off_t output_offset,
+                                enum bpak_compression compression)
 {
     ssize_t rc;
     struct bsdiff_private priv;
@@ -153,12 +142,13 @@ static ssize_t transport_bsdiff(FILE *target,
     if (target_file_sz == -1)
         return -BPAK_SEEK_ERROR;
 
-    target_data_mmap = mmap(NULL, target_file_sz, PROT_READ, MAP_SHARED,
-                            target_fd, 0);
+    target_data_mmap =
+        mmap(NULL, target_file_sz, PROT_READ, MAP_SHARED, target_fd, 0);
 
-    if (((intptr_t) target_data_mmap) == -1) {
-        bpak_printf(0, "Error: Could not mmap target data (%s)\n",
-                        strerror(errno));
+    if (((intptr_t)target_data_mmap) == -1) {
+        bpak_printf(0,
+                    "Error: Could not mmap target data (%s)\n",
+                    strerror(errno));
         return -BPAK_FAILED;
     }
 
@@ -177,12 +167,13 @@ static ssize_t transport_bsdiff(FILE *target,
         goto err_munmap_target;
     }
 
-    origin_data_mmap = mmap(NULL, origin_file_sz, PROT_READ, MAP_SHARED,
-                            origin_fd, 0);
+    origin_data_mmap =
+        mmap(NULL, origin_file_sz, PROT_READ, MAP_SHARED, origin_fd, 0);
 
-    if (((intptr_t) origin_data_mmap) == -1) {
-        bpak_printf(0, "Error: Could not mmap origin data (%s)\n",
-                        strerror(errno));
+    if (((intptr_t)origin_data_mmap) == -1) {
+        bpak_printf(0,
+                    "Error: Could not mmap origin data (%s)\n",
+                    strerror(errno));
         rc = -BPAK_FAILED;
         goto err_munmap_target;
     }
@@ -190,12 +181,15 @@ static ssize_t transport_bsdiff(FILE *target,
     /* Calculate pointer to where the needed data starts */
     origin_data = origin_data_mmap + origin_offset;
 
-    rc = bpak_bsdiff_init(&bsdiff, origin_data, origin_length,
-                                target_data, target_length,
-                                bsdiff_write_output,
-                                output_offset,
-                                compression,
-                                &priv);
+    rc = bpak_bsdiff_init(&bsdiff,
+                          origin_data,
+                          origin_length,
+                          target_data,
+                          target_length,
+                          bsdiff_write_output,
+                          output_offset,
+                          compression,
+                          &priv);
 
     if (rc != BPAK_OK) {
         bpak_printf(0, "Error: bpak_bsdiff_init failed (%i)\n", rc);
@@ -209,8 +203,7 @@ static ssize_t transport_bsdiff(FILE *target,
         goto err_bsdiff_free;
     }
 
-    bpak_printf(1, "bsdiff completed, output size = %zu\n",
-                    rc);
+    bpak_printf(1, "bsdiff completed, output size = %zu\n", rc);
 
 err_bsdiff_free:
     bpak_bsdiff_free(&bsdiff);
@@ -221,11 +214,11 @@ err_munmap_target:
     return rc;
 }
 
-static int transport_encode_part(struct bpak_transport_meta *tm,
-                                 uint32_t part_ref_id,
-                                 FILE *input_fp, struct bpak_header *input_header,
-                                 FILE *output_fp, struct bpak_header *output_header,
-                                 FILE *origin_fp, struct bpak_header *origin_header)
+static int
+transport_encode_part(struct bpak_transport_meta *tm, uint32_t part_ref_id,
+                      FILE *input_fp, struct bpak_header *input_header,
+                      FILE *output_fp, struct bpak_header *output_header,
+                      FILE *origin_fp, struct bpak_header *origin_header)
 {
     int rc = 0;
     struct bpak_part_header *input_part = NULL;
@@ -252,26 +245,31 @@ static int transport_encode_part(struct bpak_transport_meta *tm,
         rc = bpak_get_part(origin_header, part_ref_id, &origin_part);
 
         if (rc != BPAK_OK) {
-            bpak_printf(0, "Error could not get part with ref %x\n", part_ref_id);
+            bpak_printf(0,
+                        "Error could not get part with ref %x\n",
+                        part_ref_id);
             return rc;
         }
     }
 
     alg_id = tm->alg_id_encode;
-    bpak_printf(2, "Encoding part 0x%x using encoder 0x%x\n", part_ref_id,
-                    alg_id);
+    bpak_printf(2,
+                "Encoding part 0x%x using encoder 0x%x\n",
+                part_ref_id,
+                alg_id);
 
     /* Already processed for transport ?*/
     if ((output_part->flags & BPAK_FLAG_TRANSPORT))
         return BPAK_OK;
 
-    bpak_printf(1, "Initializing alg, input size %li bytes\n",
+    bpak_printf(1,
+                "Initializing alg, input size %li bytes\n",
                 bpak_part_size(input_part));
 
     if (origin_header != NULL && origin_fp != NULL) {
         rc = fseek(origin_fp,
-                     bpak_part_offset(origin_header, origin_part),
-                     SEEK_SET);
+                   bpak_part_offset(origin_header, origin_part),
+                   SEEK_SET);
 
         if (rc != 0) {
             bpak_printf(0, "%s: Error, could not seek origin stream", __func__);
@@ -279,9 +277,7 @@ static int transport_encode_part(struct bpak_transport_meta *tm,
         }
     }
 
-    rc = fseek(input_fp,
-                 bpak_part_offset(input_header, input_part),
-                 SEEK_SET);
+    rc = fseek(input_fp, bpak_part_offset(input_header, input_part), SEEK_SET);
 
     if (rc != BPAK_OK) {
         bpak_printf(0, "%s: Error, could not seek input stream", __func__);
@@ -289,8 +285,8 @@ static int transport_encode_part(struct bpak_transport_meta *tm,
     }
 
     rc = fseek(output_fp,
-                 bpak_part_offset(output_header, output_part),
-                 SEEK_SET);
+               bpak_part_offset(output_header, output_part),
+               SEEK_SET);
 
     if (rc != 0) {
         bpak_printf(0, "%s: Error, could not seek output stream", __func__);
@@ -298,44 +294,43 @@ static int transport_encode_part(struct bpak_transport_meta *tm,
     }
 
     switch (alg_id) {
-        case BPAK_ID_BSDIFF: /* heatshrink compressor */
-        case BPAK_ID_BSDIFF_NO_COMP:
-        case BPAK_ID_BSDIFF_LZMA:
-        {
-            if ((origin_header == NULL) || (origin_fp == NULL)) {
-                bpak_printf(0, "Error: Need an origin stream for diff operation\n");
-                rc = -BPAK_PATCH_READ_ORIGIN_ERROR;
-                goto err_out;
-            }
-
-            enum bpak_compression compression = BPAK_COMPRESSION_NONE;
-
-            if (alg_id == BPAK_ID_BSDIFF)
-                compression = BPAK_COMPRESSION_HS;
-            else if (alg_id == BPAK_ID_BSDIFF_NO_COMP)
-                compression = BPAK_COMPRESSION_NONE;
-            else if (alg_id == BPAK_ID_BSDIFF_LZMA)
-                compression = BPAK_COMPRESSION_LZMA;
-
-            output_size = transport_bsdiff(input_fp,
-                                bpak_part_offset(input_header, input_part),
-                                bpak_part_size(input_part),
-                                origin_fp,
-                                bpak_part_offset(origin_header, origin_part),
-                                bpak_part_size(origin_part),
-                                output_fp,
-                                bpak_part_offset(output_header, output_part),
-                                compression);
-        }
-        break;
-        case BPAK_ID_REMOVE_DATA:
-            /* No data is produced for this part */
-            output_size = 0;
-        break;
-        default:
-            bpak_printf(0, "Error, unknown alg 0x%x\n", alg_id);
-            rc = -1;
+    case BPAK_ID_BSDIFF: /* heatshrink compressor */
+    case BPAK_ID_BSDIFF_NO_COMP:
+    case BPAK_ID_BSDIFF_LZMA: {
+        if ((origin_header == NULL) || (origin_fp == NULL)) {
+            bpak_printf(0, "Error: Need an origin stream for diff operation\n");
+            rc = -BPAK_PATCH_READ_ORIGIN_ERROR;
             goto err_out;
+        }
+
+        enum bpak_compression compression = BPAK_COMPRESSION_NONE;
+
+        if (alg_id == BPAK_ID_BSDIFF)
+            compression = BPAK_COMPRESSION_HS;
+        else if (alg_id == BPAK_ID_BSDIFF_NO_COMP)
+            compression = BPAK_COMPRESSION_NONE;
+        else if (alg_id == BPAK_ID_BSDIFF_LZMA)
+            compression = BPAK_COMPRESSION_LZMA;
+
+        output_size =
+            transport_bsdiff(input_fp,
+                             bpak_part_offset(input_header, input_part),
+                             bpak_part_size(input_part),
+                             origin_fp,
+                             bpak_part_offset(origin_header, origin_part),
+                             bpak_part_size(origin_part),
+                             output_fp,
+                             bpak_part_offset(output_header, output_part),
+                             compression);
+    } break;
+    case BPAK_ID_REMOVE_DATA:
+        /* No data is produced for this part */
+        output_size = 0;
+        break;
+    default:
+        bpak_printf(0, "Error, unknown alg 0x%x\n", alg_id);
+        rc = -1;
+        goto err_out;
     }
 
     if (output_size < 0) {
@@ -362,20 +357,23 @@ int bpak_transport_encode(FILE *input_fp, struct bpak_header *input_header,
     struct bpak_transport_meta *tm = NULL;
     ssize_t written;
 
-
     if ((origin_fp != NULL) && (origin_header != NULL)) {
         uint8_t *origin_package_uuid;
         uint8_t *patch_package_uuid;
 
         /* Origin and input package should have the same package-uuid */
-        rc = bpak_get_meta(origin_header, BPAK_ID_BPAK_PACKAGE,
-                                    (void **) &origin_package_uuid, NULL);
+        rc = bpak_get_meta(origin_header,
+                           BPAK_ID_BPAK_PACKAGE,
+                           (void **)&origin_package_uuid,
+                           NULL);
 
         if (rc != BPAK_OK)
             return rc;
 
-        rc = bpak_get_meta(input_header, BPAK_ID_BPAK_PACKAGE,
-                                    (void **) &patch_package_uuid, NULL);
+        rc = bpak_get_meta(input_header,
+                           BPAK_ID_BPAK_PACKAGE,
+                           (void **)&patch_package_uuid,
+                           NULL);
 
         if (rc != BPAK_OK)
             return rc;
@@ -387,20 +385,25 @@ int bpak_transport_encode(FILE *input_fp, struct bpak_header *input_header,
     /* Initialize output header by copying the input header */
     memcpy(output_header, input_header, sizeof(*input_header));
 
-    bpak_foreach_part(input_header, ph) {
+    bpak_foreach_part (input_header, ph) {
         if (ph->id == 0)
             break;
 
         if (bpak_get_meta_with_ref(input_header,
                                    BPAK_ID_BPAK_TRANSPORT,
                                    ph->id,
-                                   (void **) &tm, NULL) == BPAK_OK) {
+                                   (void **)&tm,
+                                   NULL) == BPAK_OK) {
             bpak_printf(2, "Transport encoding part: %x\n", ph->id);
 
-            rc = transport_encode_part(tm, ph->id,
-                                   input_fp, input_header,
-                                   output_fp, output_header,
-                                   origin_fp, origin_header);
+            rc = transport_encode_part(tm,
+                                       ph->id,
+                                       input_fp,
+                                       input_header,
+                                       output_fp,
+                                       output_header,
+                                       origin_fp,
+                                       origin_header);
 
             if (rc != BPAK_OK)
                 break;

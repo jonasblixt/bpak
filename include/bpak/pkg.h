@@ -23,11 +23,10 @@ extern "C" {
  * BPAK Package
  *
  */
-struct bpak_package
-{
-    FILE *fp;                             /*!< I/O Stream  for package */
-    struct bpak_header header;            /*!< BPAK Header */
-    const char *filename;                 /*!< Filename */
+struct bpak_package {
+    FILE *fp;                  /*!< I/O Stream  for package */
+    struct bpak_header header; /*!< BPAK Header */
+    const char *filename;      /*!< Filename */
 };
 
 /**
@@ -57,7 +56,8 @@ int bpak_pkg_close(struct bpak_package *pkg);
  *
  * @param[in] pkg Package pointer
  * @param[out] out Optional header output hash
- * @param[in, out] size Optional input size of \ref output buffer and result of computation size is stored here as well
+ * @param[in, out] size Optional input size of \ref output buffer and result of
+ * computation size is stored here as well
  *
  * @return BPAK_OK on success
  */
@@ -100,7 +100,7 @@ struct bpak_header *bpak_pkg_header(struct bpak_package *pkg);
  * @return BPAK_OK on success
  */
 int bpak_pkg_write_raw_signature(struct bpak_package *pkg,
-                                    const uint8_t *signature, size_t size);
+                                 const uint8_t *signature, size_t size);
 
 /**
  * Sign the package
@@ -168,7 +168,7 @@ int bpak_pkg_write_header(struct bpak_package *pkg);
  * @return BPAK_OK on success or a negative number
  */
 int bpak_pkg_add_file(struct bpak_package *pkg, const char *filename,
-                     const char *part_name, uint8_t flags);
+                      const char *part_name, uint8_t flags);
 
 /**
  * Add a file part to a package and create a separate part with a merkle
@@ -184,7 +184,8 @@ int bpak_pkg_add_file(struct bpak_package *pkg, const char *filename,
  * @return BPAK_OK on success or a negative number
  */
 int bpak_pkg_add_file_with_merkle_tree(struct bpak_package *pkg,
-            const char *filename, const char *part_name, uint8_t flags);
+                                       const char *filename,
+                                       const char *part_name, uint8_t flags);
 
 /**
  * Add a crypto key to the archive. This can add both PEM and DER encoded
@@ -201,7 +202,7 @@ int bpak_pkg_add_key(struct bpak_package *pkg, const char *filename,
                      const char *part_name, uint8_t flags);
 
 #ifdef __cplusplus
-}  // extern "C"
+} // extern "C"
 #endif
 
-#endif  // INCLUDE_BPAK_PKG_H_
+#endif // INCLUDE_BPAK_PKG_H_

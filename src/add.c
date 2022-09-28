@@ -34,89 +34,83 @@ int action_add(int argc, char **argv)
     const char *encoder = NULL;
     int rc = 0;
 
-    struct option long_options[] =
-    {
-        {"help",        no_argument,       0,  'h' },
-        {"verbose",     no_argument,       0,  'v' },
-        {"part",        required_argument, 0,  'p' },
-        {"meta",        required_argument, 0,  'm' },
-        {"from-file",   required_argument, 0,  'f' },
-        {"from-string", required_argument, 0,  's' },
-        {"encoder",     required_argument, 0,  'e' },
-        {"set-flag",    required_argument, 0,  'F' },
-        {"part-ref",    required_argument, 0,  'r' },
-        {0,             0,                 0,   0  }
+    struct option long_options[] = {
+        { "help", no_argument, 0, 'h' },
+        { "verbose", no_argument, 0, 'v' },
+        { "part", required_argument, 0, 'p' },
+        { "meta", required_argument, 0, 'm' },
+        { "from-file", required_argument, 0, 'f' },
+        { "from-string", required_argument, 0, 's' },
+        { "encoder", required_argument, 0, 'e' },
+        { "set-flag", required_argument, 0, 'F' },
+        { "part-ref", required_argument, 0, 'r' },
+        { 0, 0, 0, 0 },
     };
 
-    while ((opt = getopt_long(argc, argv, "hvp:m:f:s:e:F:r:",
-                   long_options, &long_index )) != -1)
-    {
-        switch (opt)
-        {
-            case 'h':
-                print_add_usage();
-                return 0;
-            case 'v':
-                bpak_inc_verbosity();
+    while ((opt = getopt_long(argc,
+                              argv,
+                              "hvp:m:f:s:e:F:r:",
+                              long_options,
+                              &long_index)) != -1) {
+        switch (opt) {
+        case 'h':
+            print_add_usage();
+            return 0;
+        case 'v':
+            bpak_inc_verbosity();
             break;
-            case 'p':
-                part_name = (const char *) optarg;
+        case 'p':
+            part_name = (const char *)optarg;
             break;
-            case 'm':
-                meta_name = (const char *) optarg;
+        case 'm':
+            meta_name = (const char *)optarg;
             break;
-            case 'r':
-                part_ref = (const char *) optarg;
+        case 'r':
+            part_ref = (const char *)optarg;
             break;
-            case 'f':
-                from_file = (const char *) optarg;
+        case 'f':
+            from_file = (const char *)optarg;
             break;
-            case 's':
-                from_string = (const char *) optarg;
+        case 's':
+            from_string = (const char *)optarg;
             break;
-            case 'e':
-                encoder = (const char *) optarg;
+        case 'e':
+            encoder = (const char *)optarg;
             break;
-            case 'F':
-                if (strcmp(optarg, "dont-hash") == 0)
-                    flags |= BPAK_FLAG_EXCLUDE_FROM_HASH;
-                else
-                {
-                    printf("Unknown flag '%s'\n", optarg);
-                    return -1;
-                }
-            break;
-            case '?':
-                printf("Unknown option: %c\n", optopt);
+        case 'F':
+            if (strcmp(optarg, "dont-hash") == 0)
+                flags |= BPAK_FLAG_EXCLUDE_FROM_HASH;
+            else {
+                printf("Unknown flag '%s'\n", optarg);
                 return -1;
+            }
             break;
-            case ':':
-                printf("Missing arg for %c\n", optopt);
-                return -1;
+        case '?':
+            printf("Unknown option: %c\n", optopt);
+            return -1;
             break;
-            default:
-               return -1;
+        case ':':
+            printf("Missing arg for %c\n", optopt);
+            return -1;
+            break;
+        default:
+            return -1;
         }
     }
 
-    if (optind < argc)
-    {
-        filename = (const char *) argv[optind++];
-    }
-    else
-    {
+    if (optind < argc) {
+        filename = (const char *)argv[optind++];
+    } else {
         printf("Missing filename argument\n");
         return -1;
     }
 
-    if (!part_name && !meta_name)
-    {
+    if (!part_name && !meta_name) {
         printf("Error: Requried argument --part or --meta is missing\n");
         return -1;
     }
 
-    if (!from_string && !from_file)
-    {
+    if (!from_string && !from_file) {
         printf("Error: either --from_string must be used or --from_file\n");
         return -1;
     }
@@ -156,8 +150,11 @@ int action_add(int argc, char **argv)
                     goto err_close_pkg_out;
                 }
 
-                rc = bpak_add_meta(h, bpak_id(meta_name), part_ref_id,
-                                                (void **) &meta_data, 16);
+                rc = bpak_add_meta(h,
+                                   bpak_id(meta_name),
+                                   part_ref_id,
+                                   (void **)&meta_data,
+                                   16);
 
                 if (rc != BPAK_OK) {
                     printf("Error: Could not add meta data\n");
@@ -166,14 +163,17 @@ int action_add(int argc, char **argv)
 
                 memcpy(meta_data, uu, 16);
 
-                if(bpak_get_verbosity()) {
+                if (bpak_get_verbosity()) {
                     printf("Adding %s <%s>\n", meta_name, from_string);
                 }
             } else if (strcmp(encoder, "integer") == 0) {
                 long value = strtol(from_string, NULL, 0);
 
-                rc = bpak_add_meta(h, bpak_id(meta_name), part_ref_id,
-                                        (void **) &meta_data, sizeof(value));
+                rc = bpak_add_meta(h,
+                                   bpak_id(meta_name),
+                                   part_ref_id,
+                                   (void **)&meta_data,
+                                   sizeof(value));
 
                 if (rc != BPAK_OK) {
                     printf("Error: Could not add meta data\n");
@@ -182,25 +182,26 @@ int action_add(int argc, char **argv)
 
                 memcpy(meta_data, &value, sizeof(value));
 
-                if(bpak_get_verbosity()) {
+                if (bpak_get_verbosity()) {
                     printf("Adding %s <0x%lx>\n", meta_name, value);
                 }
             } else if (strcmp(encoder, "id") == 0) {
                 uint32_t value = bpak_id(from_string);
 
-                rc = bpak_add_meta(h, bpak_id(meta_name), part_ref_id,
-                                        (void **) &meta_data, sizeof(value));
+                rc = bpak_add_meta(h,
+                                   bpak_id(meta_name),
+                                   part_ref_id,
+                                   (void **)&meta_data,
+                                   sizeof(value));
 
-                if (rc != BPAK_OK)
-                {
+                if (rc != BPAK_OK) {
                     printf("Error: Could not add meta data\n");
                     goto err_close_pkg_out;
                 }
 
                 memcpy(meta_data, &value, sizeof(value));
 
-                if(bpak_get_verbosity())
-                {
+                if (bpak_get_verbosity()) {
                     printf("Adding %s <%x>\n", meta_name, value);
                 }
             } else {
@@ -212,11 +213,13 @@ int action_add(int argc, char **argv)
             if (bpak_get_verbosity())
                 printf("Adding '%s' with id '%s'\n", from_string, meta_name);
 
-            rc = bpak_add_meta(h, bpak_id(meta_name), part_ref_id,
-                                (void **) &meta_data, strlen(from_string) + 1);
+            rc = bpak_add_meta(h,
+                               bpak_id(meta_name),
+                               part_ref_id,
+                               (void **)&meta_data,
+                               strlen(from_string) + 1);
 
-            if (rc != BPAK_OK)
-            {
+            if (rc != BPAK_OK) {
                 printf("Error: Could not add meta data\n");
                 goto err_close_pkg_out;
             }
@@ -242,7 +245,10 @@ int action_add(int argc, char **argv)
         if (bpak_get_verbosity())
             printf("Writing filesystem...\n");
 
-        rc = bpak_pkg_add_file_with_merkle_tree(&pkg, from_file, part_name, flags);
+        rc = bpak_pkg_add_file_with_merkle_tree(&pkg,
+                                                from_file,
+                                                part_name,
+                                                flags);
         if (rc != BPAK_OK)
             goto err_close_pkg_out;
 

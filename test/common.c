@@ -10,4 +10,3 @@ int bpak_printf(int verbosity, const char *fmt, ...)
     va_end(args);
     return BPAK_OK;
 }
-

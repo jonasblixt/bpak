@@ -21,28 +21,24 @@
 #include <bpak/crypto.h>
 
 #if BPAK_CONFIG_MERKLE == 1
-static ssize_t merkle_wr(off_t offset,
-                         uint8_t *buf,
-                         size_t size,
-                         void *priv)
+static ssize_t merkle_wr(off_t offset, uint8_t *buf, size_t size, void *priv)
 {
-    uint8_t *data = (uint8_t *) priv;
+    uint8_t *data = (uint8_t *)priv;
     memcpy(&data[offset], buf, size);
     return size;
 }
 
-static ssize_t merkle_rd(off_t offset,
-                         uint8_t *buf,
-                         size_t size,
-                         void *priv)
+static ssize_t merkle_rd(off_t offset, uint8_t *buf, size_t size, void *priv)
 {
-    uint8_t *data = (uint8_t *) priv + offset;
+    uint8_t *data = (uint8_t *)priv + offset;
     memcpy(buf, data, size);
     return size;
 }
 
 BPAK_EXPORT int bpak_pkg_add_file_with_merkle_tree(struct bpak_package *pkg,
-            const char *filename, const char *part_name, uint8_t flags)
+                                                   const char *filename,
+                                                   const char *part_name,
+                                                   uint8_t flags)
 {
     int rc;
     struct bpak_header *h = bpak_pkg_header(pkg);
@@ -76,9 +72,9 @@ BPAK_EXPORT int bpak_pkg_add_file_with_merkle_tree(struct bpak_package *pkg,
     bpak_merkle_hash_t salt;
     memset(salt, 0, 32);
 
-    uint32_t *salt_ptr = (uint32_t *) salt;
+    uint32_t *salt_ptr = (uint32_t *)salt;
 
-    for (unsigned int i = 0; i < sizeof(salt)/sizeof(uint32_t); i++) {
+    for (unsigned int i = 0; i < sizeof(salt) / sizeof(uint32_t); i++) {
         (*salt_ptr) = random() & 0xFFFFFFFF;
         salt_ptr++;
     }
@@ -101,7 +97,7 @@ BPAK_EXPORT int bpak_pkg_add_file_with_merkle_tree(struct bpak_package *pkg,
     }
 
     rc = BPAK_OK;
-    while(true) {
+    while (true) {
         chunk_sz = fread(block_buf, 1, sizeof(block_buf), fp);
 
         if (chunk_sz == 0)
@@ -111,7 +107,6 @@ BPAK_EXPORT int bpak_pkg_add_file_with_merkle_tree(struct bpak_package *pkg,
 
         if (rc != BPAK_OK)
             goto err_close_fp_out;
-
     }
 
     bpak_merkle_hash_t hash;
@@ -123,15 +118,18 @@ BPAK_EXPORT int bpak_pkg_add_file_with_merkle_tree(struct bpak_package *pkg,
 
     /* Write tree to bpak file */
 
-    bpak_foreach_part(h, p) {
+    bpak_foreach_part (h, p) {
         new_offset += (p->size + p->pad_bytes);
     }
 
     /* Add salt */
     uint8_t *m = NULL;
 
-    rc = bpak_add_meta(h, BPAK_ID_MERKLE_SALT, bpak_id(part_name), (void **) &m,
-                            sizeof(bpak_merkle_hash_t));
+    rc = bpak_add_meta(h,
+                       BPAK_ID_MERKLE_SALT,
+                       bpak_id(part_name),
+                       (void **)&m,
+                       sizeof(bpak_merkle_hash_t));
 
     if (rc != BPAK_OK)
         goto err_close_fp_out;
@@ -139,8 +137,11 @@ BPAK_EXPORT int bpak_pkg_add_file_with_merkle_tree(struct bpak_package *pkg,
     memcpy(m, salt, sizeof(bpak_merkle_hash_t));
 
     m = NULL;
-    rc = bpak_add_meta(h, BPAK_ID_MERKLE_ROOT_HASH, bpak_id(part_name),
-                        (void **) &m, sizeof(bpak_merkle_hash_t));
+    rc = bpak_add_meta(h,
+                       BPAK_ID_MERKLE_ROOT_HASH,
+                       bpak_id(part_name),
+                       (void **)&m,
+                       sizeof(bpak_merkle_hash_t));
 
     if (rc != BPAK_OK)
         goto err_close_fp_out;
@@ -148,8 +149,9 @@ BPAK_EXPORT int bpak_pkg_add_file_with_merkle_tree(struct bpak_package *pkg,
     memcpy(m, hash, sizeof(bpak_merkle_hash_t));
 
     struct bpak_part_header *p = NULL;
-    uint32_t hash_tree_id = bpak_crc32(0, (uint8_t *) part_name, strlen(part_name));
-    hash_tree_id = bpak_crc32(hash_tree_id, (uint8_t *) "-hash-tree", 10);
+    uint32_t hash_tree_id =
+        bpak_crc32(0, (uint8_t *)part_name, strlen(part_name));
+    hash_tree_id = bpak_crc32(hash_tree_id, (uint8_t *)"-hash-tree", 10);
     rc = bpak_add_part(h, hash_tree_id, &p);
 
     if (rc != BPAK_OK) {
@@ -160,7 +162,8 @@ BPAK_EXPORT int bpak_pkg_add_file_with_merkle_tree(struct bpak_package *pkg,
     p->offset = new_offset;
     p->flags = flags;
     p->size = merkle_sz;
-    p->pad_bytes = 0; /* Merkle tree is multiples of 4kByte, no padding needed */
+    p->pad_bytes =
+        0; /* Merkle tree is multiples of 4kByte, no padding needed */
 
     rc = fseek(pkg->fp, new_offset, SEEK_SET);
 
@@ -169,7 +172,7 @@ BPAK_EXPORT int bpak_pkg_add_file_with_merkle_tree(struct bpak_package *pkg,
         goto err_close_fp_out;
     }
 
-    if (fwrite(merkle_buf, 1, merkle_sz, pkg->fp) != (size_t) merkle_sz) {
+    if (fwrite(merkle_buf, 1, merkle_sz, pkg->fp) != (size_t)merkle_sz) {
         rc = -BPAK_WRITE_ERROR;
         goto err_close_fp_out;
     }
@@ -189,10 +192,11 @@ err_free_buf_out:
     return rc;
 }
 
-#endif  // BPAK_CONFIG_MERKLE
+#endif // BPAK_CONFIG_MERKLE
 
-BPAK_EXPORT int bpak_pkg_add_file(struct bpak_package *pkg, const char *filename,
-                     const char *part_name, uint8_t flags)
+BPAK_EXPORT int bpak_pkg_add_file(struct bpak_package *pkg,
+                                  const char *filename, const char *part_name,
+                                  uint8_t flags)
 {
     int rc;
     struct bpak_header *h = bpak_pkg_header(pkg);
@@ -210,7 +214,7 @@ BPAK_EXPORT int bpak_pkg_add_file(struct bpak_package *pkg, const char *filename
 
     bpak_printf(1, "Adding %s <%s>\n", part_name, filename);
 
-    bpak_foreach_part(h, p) {
+    bpak_foreach_part (h, p) {
         new_offset += (p->size + p->pad_bytes);
     }
 
@@ -284,7 +288,7 @@ err_close_fp:
 }
 
 BPAK_EXPORT int bpak_pkg_add_key(struct bpak_package *pkg, const char *filename,
-                     const char *part_name, uint8_t flags)
+                                 const char *part_name, uint8_t flags)
 {
     int rc;
     struct bpak_key *key = NULL;
@@ -298,7 +302,7 @@ BPAK_EXPORT int bpak_pkg_add_key(struct bpak_package *pkg, const char *filename,
         return rc;
 
     /* Write header */
-    bpak_foreach_part(h, p) {
+    bpak_foreach_part (h, p) {
         new_offset += (p->size + p->pad_bytes);
     }
 

@@ -7,7 +7,6 @@
  *
  */
 
-
 #include <stdio.h>
 #include <stdalign.h>
 #include <string.h>
@@ -17,20 +16,11 @@
 
 static int verbosity;
 
-void bpak_inc_verbosity(void)
-{
-    verbosity++;
-}
+void bpak_inc_verbosity(void) { verbosity++; }
 
-int bpak_get_verbosity(void)
-{
-    return verbosity;
-}
+int bpak_get_verbosity(void) { return verbosity; }
 
-void print_version(void)
-{
-    printf("BitPacker %s\n", bpak_version());
-}
+void print_version(void) { printf("BitPacker %s\n", bpak_version()); }
 
 void print_common_usage(void)
 {
@@ -58,7 +48,8 @@ void print_set_usage(void)
 
     printf("\nKey hint configuration:\n");
     printf("    -k, --key-id <id>               Set key id\n");
-    printf("    -i, --keystore-id <id>          Key from key-store with id <id>\n");
+    printf("    -i, --keystore-id <id>          Key from key-store with id "
+           "<id>\n");
     printf("\n");
 
     print_common_usage();
@@ -68,7 +59,8 @@ void print_extract_usage(void)
 {
     print_version();
     printf("\n");
-    printf("bpak extract [options] <filename.bpak>        Extract parts from bpak file\n");
+    printf("bpak extract [options] <filename.bpak>        Extract parts from "
+           "bpak file\n");
     printf("\n");
 
     printf("Extract options:\n");
@@ -85,18 +77,20 @@ void print_create_usage(void)
 {
     print_version();
     printf("\n");
-    printf("bpak create [options] <filename.bpak>         Create an empty bpak file\n");
+    printf("bpak create [options] <filename.bpak>         Create an empty bpak "
+           "file\n");
     printf("\n");
 
     printf("Create options:\n");
-    printf("    -Y, --force                     Overwrite existing file without asking\n");
+    printf("    -Y, --force                     Overwrite existing file "
+           "without asking\n");
     printf("    -H, --hash-kind                 Hash kind (SHA-256 default)\n");
-    printf("    -S, --signature-kind            Signature kind (prime256v1 default)\n");
+    printf("    -S, --signature-kind            Signature kind (prime256v1 "
+           "default)\n");
     printf("\n");
 
     print_common_usage();
 }
-
 
 void print_compare_usage(void)
 {
@@ -112,7 +106,8 @@ void print_transport_usage(void)
 {
     print_version();
     printf("\n");
-    printf("bpak transport <filename.bpak> (--add || --encode || --decode) [options]    Transport operations\n");
+    printf("bpak transport <filename.bpak> (--add || --encode || --decode) "
+           "[options]    Transport operations\n");
     printf("\n");
 
     printf("Transport commands:\n");
@@ -128,7 +123,8 @@ void print_transport_usage(void)
     printf("\n");
 
     printf("Encode/Decode options:\n");
-    printf("    -O, --origin <filename>   Source data to use during encoding/decoding\n");
+    printf("    -O, --origin <filename>   Source data to use during "
+           "encoding/decoding\n");
     printf("    -o, --output <filename>   Write to output to <filename>\n");
     printf("\n");
 
@@ -138,14 +134,18 @@ void print_show_usage(void)
 {
     print_version();
     printf("\n");
-    printf("bpak show <filename.bpak> [options]  Show information on a bpak file\n");
+    printf("bpak show <filename.bpak> [options]  Show information on a bpak "
+           "file\n");
     printf("\n");
 
     printf("Options:\n");
-    printf("    -m, --meta <id>                 Show information about meta with id\n");
-    printf("    -p, --part <id>                 Show information about part with id\n");
+    printf("    -m, --meta <id>                 Show information about meta "
+           "with id\n");
+    printf("    -p, --part <id>                 Show information about part "
+           "with id\n");
     printf("    -H, --hash                      Print package hash\n");
-    printf("    -B, --binary-hash               Output package hash in binary form\n");
+    printf("    -B, --binary-hash               Output package hash in binary "
+           "form\n");
     printf("\n");
 
     print_common_usage();
@@ -165,7 +165,8 @@ void print_generate_usage(void)
 
     printf("Keystore options:\n");
     printf("    -n, --name                      Output name\n");
-    printf("    -d, --decorate                  Decorate structs with section attribute\n");
+    printf("    -d, --decorate                  Decorate structs with section "
+           "attribute\n");
     printf("\n");
 
     print_common_usage();
@@ -184,12 +185,14 @@ void print_add_usage(void)
     printf("    -f, --from-file=filename        Load file\n");
     printf("    -s, --from-string=string        Load from string\n");
     printf("    -e, --encoder=encoder           Use 'encoder' to code data\n");
-    printf("    -F, --set-flag=flag             Set flag 'flag' for this part\n");
+    printf(
+        "    -F, --set-flag=flag             Set flag 'flag' for this part\n");
     printf("    -r, --part-ref=ref              Reference part\n");
     printf("\n");
 
     printf("Optional flags:\n");
-    printf("    dont-hash                       Exclude part from hashing context\n");
+    printf("    dont-hash                       Exclude part from hashing "
+           "context\n");
     printf("\n");
 
     printf("Encoders that can be used together with --from-string:\n");
@@ -214,7 +217,8 @@ void print_sign_usage(void)
     printf("\n");
 
     printf("Sign options:\n");
-    printf("    -f, --signature <filename>       Write precomputed signature\n");
+    printf(
+        "    -f, --signature <filename>       Write precomputed signature\n");
     printf("    -k, --key <key>                  Sign using key <key>\n");
 }
 
@@ -252,4 +256,3 @@ void print_usage(void)
 
     print_common_usage();
 }
-

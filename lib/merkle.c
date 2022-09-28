@@ -38,14 +38,10 @@ BPAK_EXPORT ssize_t bpak_merkle_compute_size(size_t input_data_length)
 }
 
 BPAK_EXPORT int bpak_merkle_init(struct bpak_merkle_context *ctx,
-                        size_t input_data_length,
-                        const uint8_t *salt,
-                        size_t salt_length,
-                        bpak_io_t wr,
-                        bpak_io_t rd,
-                        off_t offset,
-                        bool zero_fill_output,
-                        void *priv)
+                                 size_t input_data_length, const uint8_t *salt,
+                                 size_t salt_length, bpak_io_t wr, bpak_io_t rd,
+                                 off_t offset, bool zero_fill_output,
+                                 void *priv)
 {
     unsigned int level = 0;
     size_t level_length = 0;
@@ -93,8 +89,11 @@ BPAK_EXPORT int bpak_merkle_init(struct bpak_merkle_context *ctx,
         tree_level_offset -= ctx->level_length[i];
         ctx->level_offset[i] = tree_level_offset;
 
-        bpak_printf(2, "Level %i, length: %zu, offset: %li\n",
-                        i, ctx->level_length[i], ctx->level_offset[i]);
+        bpak_printf(2,
+                    "Level %i, length: %zu, offset: %li\n",
+                    i,
+                    ctx->level_length[i],
+                    ctx->level_offset[i]);
     }
 
     /* Zero fill output tree */
@@ -103,8 +102,8 @@ BPAK_EXPORT int bpak_merkle_init(struct bpak_merkle_context *ctx,
         size_t zero_fill_bytes = ctx->hash_tree_length;
         off_t output_offset = offset;
         while (zero_fill_bytes > 0) {
-            ssize_t n_written = ctx->wr(output_offset, ctx->buffer,
-                                        sizeof(ctx->buffer), priv);
+            ssize_t n_written =
+                ctx->wr(output_offset, ctx->buffer, sizeof(ctx->buffer), priv);
 
             if (n_written < 0)
                 return n_written;
@@ -125,8 +124,8 @@ BPAK_EXPORT size_t bpak_merkle_get_size(struct bpak_merkle_context *ctx)
     return ctx->hash_tree_length;
 }
 
-BPAK_EXPORT int bpak_merkle_write_chunk(struct bpak_merkle_context *ctx, uint8_t *buffer,
-                            size_t length)
+BPAK_EXPORT int bpak_merkle_write_chunk(struct bpak_merkle_context *ctx,
+                                        uint8_t *buffer, size_t length)
 {
     int rc;
     size_t data_to_process = length;
@@ -138,8 +137,9 @@ BPAK_EXPORT int bpak_merkle_write_chunk(struct bpak_merkle_context *ctx, uint8_t
             rc = bpak_hash_init(&ctx->running_hash, BPAK_HASH_SHA256);
             if (rc != BPAK_OK)
                 return rc;
-            rc = bpak_hash_update(&ctx->running_hash, ctx->salt,
-                                            ctx->salt_length);
+            rc = bpak_hash_update(&ctx->running_hash,
+                                  ctx->salt,
+                                  ctx->salt_length);
             if (rc != BPAK_OK)
                 goto err_free_hash_ctx_out;
         }
@@ -155,7 +155,6 @@ BPAK_EXPORT int bpak_merkle_write_chunk(struct bpak_merkle_context *ctx, uint8_t
         ctx->block_byte_counter -= chunk_length;
         data_to_process -= chunk_length;
 
-
         if (ctx->block_byte_counter == 0) {
             ctx->block_byte_counter = BPAK_MERKLE_BLOCK_SZ;
 
@@ -166,9 +165,12 @@ BPAK_EXPORT int bpak_merkle_write_chunk(struct bpak_merkle_context *ctx, uint8_t
 
             bpak_hash_free(&ctx->running_hash);
 
-            off_t output_offset = ctx->input_chunk_counter + ctx->level_offset[0];
-            ssize_t bytes_written = ctx->wr(ctx->offset + output_offset, ctx->buffer,
-                                                sizeof(ctx->buffer), ctx->priv);
+            off_t output_offset =
+                ctx->input_chunk_counter + ctx->level_offset[0];
+            ssize_t bytes_written = ctx->wr(ctx->offset + output_offset,
+                                            ctx->buffer,
+                                            sizeof(ctx->buffer),
+                                            ctx->priv);
 
             if (bytes_written < 0)
                 return bytes_written;
@@ -195,7 +197,7 @@ err_free_hash_ctx_out:
 }
 
 BPAK_EXPORT int bpak_merkle_finish(struct bpak_merkle_context *ctx,
-                        bpak_merkle_hash_t roothash)
+                                   bpak_merkle_hash_t roothash)
 {
     int rc;
     off_t input_offset, output_offset;
@@ -222,15 +224,20 @@ BPAK_EXPORT int bpak_merkle_finish(struct bpak_merkle_context *ctx,
             if (rc != BPAK_OK)
                 return rc;
 
-            rc = bpak_hash_update(&ctx->running_hash, ctx->salt, ctx->salt_length);
+            rc = bpak_hash_update(&ctx->running_hash,
+                                  ctx->salt,
+                                  ctx->salt_length);
             if (rc != BPAK_OK)
                 goto err_free_hash_ctx_out;
 
             /* Read sizof(ctx->buffer) sized chunks and update hash for block
              *  n */
-            for (unsigned int c = 0; c < BPAK_MERKLE_BLOCK_SZ; c += sizeof(ctx->buffer)) {
-                n_read = ctx->rd(ctx->offset + input_offset + c, ctx->buffer, sizeof(ctx->buffer),
-                                    ctx->priv);
+            for (unsigned int c = 0; c < BPAK_MERKLE_BLOCK_SZ;
+                 c += sizeof(ctx->buffer)) {
+                n_read = ctx->rd(ctx->offset + input_offset + c,
+                                 ctx->buffer,
+                                 sizeof(ctx->buffer),
+                                 ctx->priv);
                 if (n_read < 0) {
                     rc = n_read;
                     goto err_free_hash_ctx_out;
@@ -240,8 +247,9 @@ BPAK_EXPORT int bpak_merkle_finish(struct bpak_merkle_context *ctx,
                     goto err_free_hash_ctx_out;
                 }
 
-                rc = bpak_hash_update(&ctx->running_hash, ctx->buffer,
-                                        sizeof(ctx->buffer));
+                rc = bpak_hash_update(&ctx->running_hash,
+                                      ctx->buffer,
+                                      sizeof(ctx->buffer));
 
                 if (rc != BPAK_OK)
                     goto err_free_hash_ctx_out;
@@ -252,8 +260,10 @@ BPAK_EXPORT int bpak_merkle_finish(struct bpak_merkle_context *ctx,
             if (rc != BPAK_OK)
                 goto err_free_hash_ctx_out;
 
-            n_written = ctx->wr(ctx->offset + output_offset, ctx->buffer, sizeof(ctx->buffer),
-                                    ctx->priv);
+            n_written = ctx->wr(ctx->offset + output_offset,
+                                ctx->buffer,
+                                sizeof(ctx->buffer),
+                                ctx->priv);
 
             if (n_written < 0) {
                 rc = n_written;
@@ -267,7 +277,6 @@ BPAK_EXPORT int bpak_merkle_finish(struct bpak_merkle_context *ctx,
             output_offset += n_written;
             input_offset += BPAK_MERKLE_BLOCK_SZ;
         }
-
     }
 
     bpak_hash_free(&ctx->running_hash);
@@ -287,7 +296,10 @@ BPAK_EXPORT int bpak_merkle_finish(struct bpak_merkle_context *ctx,
     input_offset = ctx->level_offset[ctx->no_of_levels - 1];
     while (bytes_to_process > 0) {
         chunk_length = BPAK_MIN((ssize_t)sizeof(ctx->buffer), bytes_to_process);
-        n_read = ctx->rd(ctx->offset + input_offset, ctx->buffer, chunk_length, ctx->priv);
+        n_read = ctx->rd(ctx->offset + input_offset,
+                         ctx->buffer,
+                         chunk_length,
+                         ctx->priv);
 
         if (n_read < 0) {
             rc = n_read;
@@ -312,4 +324,3 @@ err_free_hash_ctx_out:
     bpak_hash_free(&ctx->running_hash);
     return rc;
 }
-

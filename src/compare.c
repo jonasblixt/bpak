@@ -28,54 +28,45 @@ int action_compare(int argc, char **argv)
     uint8_t chunk1[4096];
     uint8_t chunk2[4096];
 
-    struct option long_options[] =
-    {
-        {"help",      no_argument,       0,  'h' },
-        {"verbose",   no_argument,       0,  'v' },
-        {0,           0,                 0,   0  }
+    struct option long_options[] = {
+        { "help", no_argument, 0, 'h' },
+        { "verbose", no_argument, 0, 'v' },
+        { 0, 0, 0, 0 },
     };
 
-    while ((opt = getopt_long(argc, argv, "hv",
-                   long_options, &long_index )) != -1)
-    {
-        switch (opt)
-        {
-            case 'h':
-                print_compare_usage();
-                return 0;
+    while ((opt = getopt_long(argc, argv, "hv", long_options, &long_index)) !=
+           -1) {
+        switch (opt) {
+        case 'h':
+            print_compare_usage();
+            return 0;
             break;
-            case 'v':
-                bpak_inc_verbosity();
+        case 'v':
+            bpak_inc_verbosity();
             break;
-            case '?':
-                printf("Unknown option: %c\n", optopt);
-                return -1;
+        case '?':
+            printf("Unknown option: %c\n", optopt);
+            return -1;
             break;
-            case ':':
-                printf("Missing arg for %c\n", optopt);
-                return -1;
+        case ':':
+            printf("Missing arg for %c\n", optopt);
+            return -1;
             break;
-             default:
-                return -1;
+        default:
+            return -1;
         }
     }
 
-    if (optind < argc)
-    {
-        filename1 = (const char *) argv[optind++];
-    }
-    else
-    {
+    if (optind < argc) {
+        filename1 = (const char *)argv[optind++];
+    } else {
         printf("Missing filename argument\n");
         return -1;
     }
 
-    if (optind < argc)
-    {
-        filename2 = (const char *) argv[optind++];
-    }
-    else
-    {
+    if (optind < argc) {
+        filename2 = (const char *)argv[optind++];
+    } else {
         printf("Missing filename argument\n");
         return -1;
     }
@@ -119,7 +110,9 @@ int action_compare(int argc, char **argv)
     if (rc != BPAK_OK)
         goto err_close_fp2_out;
 
-    printf("BPAK comparison between:\n1: '%s'\n2: '%s'\n", filename1, filename2);
+    printf("BPAK comparison between:\n1: '%s'\n2: '%s'\n",
+           filename1,
+           filename2);
     printf("\n");
     printf("=   : No differance\n");
     printf("+   : Exists in file 2 but not in file 1\n");
@@ -134,15 +127,15 @@ int action_compare(int argc, char **argv)
     bool change;
     bool removed;
 
-    #define RED_CLR "\033[31;1m"
-    #define RED_YL "\033[33;1m"
-    #define RED_GR "\033[32;1m"
-    #define NO_CLR "\033[0m"
+#define RED_CLR "\033[31;1m"
+#define RED_YL  "\033[33;1m"
+#define RED_GR  "\033[32;1m"
+#define NO_CLR  "\033[0m"
 
     printf("Metadata:\n");
     printf("    ID         Size   Meta ID              Data\n");
 
-    bpak_foreach_meta(h1p, m) {
+    bpak_foreach_meta (h1p, m) {
         if (!m->id)
             continue;
 
@@ -151,48 +144,42 @@ int action_compare(int argc, char **argv)
         change = false;
         removed = false;
 
-        bpak_get_meta(h1p, m->id, (void **) &data1, data1);
+        bpak_get_meta(h1p, m->id, (void **)&data1, data1);
 
-        rc = bpak_get_meta(h2p, m->id, (void **) &data2, data2);
+        rc = bpak_get_meta(h2p, m->id, (void **)&data2, data2);
 
         /* Missing in file 2? */
         if (rc != BPAK_OK)
             removed = true;
 
-        if (!data1 || !data2)
-        {
+        if (!data1 || !data2) {
             removed = true;
-        }
-        else if (rc == BPAK_OK)
-        {
+        } else if (rc == BPAK_OK) {
             if (memcmp(data1, data2, m->size) != 0)
                 change = true;
         }
 
-        if (change)
-        {
+        if (change) {
             printf(RED_CLR);
             printf("*");
-        }
-        else if(removed)
-        {
+        } else if (removed) {
             printf(RED_YL);
             printf("-");
-        }
-        else
-        {
+        } else {
             printf("=");
         }
 
         bpak_meta_to_string(h1p, m, string_output, sizeof(string_output));
-        printf("   %8.8x   %-3u    %-20s %s\n", m->id, m->size,
-                                bpak_id_to_string(m->id), string_output);
+        printf("   %8.8x   %-3u    %-20s %s\n",
+               m->id,
+               m->size,
+               bpak_id_to_string(m->id),
+               string_output);
         printf(NO_CLR);
     }
 
     /* Check for stuff thats in file 2 but not in 1 */
-    bpak_foreach_meta(h2p, m)
-    {
+    bpak_foreach_meta (h2p, m) {
         if (!m->id)
             continue;
 
@@ -201,17 +188,19 @@ int action_compare(int argc, char **argv)
         change = false;
         removed = false;
 
-        bpak_get_meta(h2p, m->id, (void **) &data1, data1);
+        bpak_get_meta(h2p, m->id, (void **)&data1, data1);
 
-        rc = bpak_get_meta(h1p, m->id, (void **) &data2, data2);
+        rc = bpak_get_meta(h1p, m->id, (void **)&data2, data2);
 
         /* Missing in file 2? */
-        if (rc != BPAK_OK)
-        {
+        if (rc != BPAK_OK) {
             printf(RED_YL);
             bpak_meta_to_string(h2p, m, string_output, sizeof(string_output));
-            printf("+   %8.8x   %-3u    %-20s %s\n", m->id, m->size,
-                                    bpak_id_to_string(m->id), string_output);
+            printf("+   %8.8x   %-3u    %-20s %s\n",
+                   m->id,
+                   m->size,
+                   bpak_id_to_string(m->id),
+                   string_output);
             printf(NO_CLR);
         }
     }
@@ -219,27 +208,23 @@ int action_compare(int argc, char **argv)
     /* Compare parts */
 
     printf("\nParts:\n");
-    printf("    ID         Size         Z-pad  Flags          Transport Size\n");
+    printf(
+        "    ID         Size         Z-pad  Flags          Transport Size\n");
 
     char flags_str[9] = "--------";
     struct bpak_part_header *p2 = NULL;
     struct bpak_part_header *p1 = NULL;
 
-    bpak_foreach_part(h1p, p)
-    {
+    bpak_foreach_part (h1p, p) {
         change = false;
         removed = false;
 
-        if (p->id)
-        {
+        if (p->id) {
             rc = bpak_get_part(h2p, p->id, &p2);
 
-            if (rc != BPAK_OK)
-            {
+            if (rc != BPAK_OK) {
                 removed = true;
-            }
-            else
-            {
+            } else {
                 /* Check if metadata is the same */
                 if (memcmp(p2, p, sizeof(*p)) != 0)
                     change = true;
@@ -263,10 +248,10 @@ int action_compare(int argc, char **argv)
 
                 size_t data_to_compare = bpak_part_size(p);
 
-                while (data_to_compare)
-                {
-                    size_t chunk = (data_to_compare > sizeof(chunk1)) ? \
-                                   sizeof(chunk1):data_to_compare;
+                while (data_to_compare) {
+                    size_t chunk = (data_to_compare > sizeof(chunk1))
+                                       ? sizeof(chunk1)
+                                       : data_to_compare;
 
                     if (fread(chunk1, 1, chunk, fp1) != chunk) {
                         rc = -BPAK_READ_ERROR;
@@ -286,18 +271,13 @@ int action_compare(int argc, char **argv)
                 }
             }
 
-            if (change)
-            {
+            if (change) {
                 printf(RED_CLR);
                 printf("*");
-            }
-            else if(removed)
-            {
+            } else if (removed) {
                 printf(RED_YL);
                 printf("-");
-            }
-            else
-            {
+            } else {
                 printf("=");
             }
 
@@ -311,8 +291,11 @@ int action_compare(int argc, char **argv)
             else
                 flags_str[1] = '-';
 
-            printf("   %8.8x   %-12lu %-3u    %s",p->id, p->size, p->pad_bytes,
-                                                flags_str);
+            printf("   %8.8x   %-12lu %-3u    %s",
+                   p->id,
+                   p->size,
+                   p->pad_bytes,
+                   flags_str);
 
             if (p->flags & BPAK_FLAG_TRANSPORT)
                 printf("       %-12lu", p->transport_size);
@@ -325,14 +308,11 @@ int action_compare(int argc, char **argv)
     }
 
     /* Check parts for parts in 2 that are missing in 1 */
-    bpak_foreach_part(h2p, p)
-    {
-        if (p->id)
-        {
+    bpak_foreach_part (h2p, p) {
+        if (p->id) {
             rc = bpak_get_part(h1p, p->id, &p1);
 
-            if (rc != BPAK_OK)
-            {
+            if (rc != BPAK_OK) {
                 printf(RED_YL);
                 printf("-");
 
@@ -346,8 +326,11 @@ int action_compare(int argc, char **argv)
                 else
                     flags_str[1] = '-';
 
-                printf("   %8.8x   %-12lu %-3u    %s",p->id, p->size, p->pad_bytes,
-                                                    flags_str);
+                printf("   %8.8x   %-12lu %-3u    %s",
+                       p->id,
+                       p->size,
+                       p->pad_bytes,
+                       flags_str);
 
                 if (p->flags & BPAK_FLAG_TRANSPORT)
                     printf("       %-12lu", p->transport_size);

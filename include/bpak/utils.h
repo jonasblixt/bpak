@@ -34,7 +34,7 @@ int bpak_uuid_to_string(const uint8_t *data, char *buf, size_t size);
 int bpak_meta_to_string(struct bpak_header *h, struct bpak_meta_header *m,
                         char *buf, size_t size);
 #ifdef __cplusplus
-}  // extern "C"
+} // extern "C"
 #endif
 
-#endif  // INCLUDE_BPAK_UTILS_H_
+#endif // INCLUDE_BPAK_UTILS_H_

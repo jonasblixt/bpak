@@ -11,7 +11,7 @@
 #include <bpak/keystore.h>
 
 int bpak_keystore_get(struct bpak_keystore *ks, uint32_t id,
-                        struct bpak_key **k)
+                      struct bpak_key **k)
 {
     *k = NULL;
 

@@ -48,11 +48,9 @@ int bpak_verify_compute_header_hash(struct bpak_header *header,
  * @return BPAK_OK on success
  */
 int bpak_verify_compute_payload_hash(struct bpak_header *header,
-                                    bpak_io_t read_payload,
-                                    off_t data_offset,
-                                    void *user,
-                                    uint8_t *output_hash_buffer,
-                                    size_t *output_hash_buffer_length);
+                                     bpak_io_t read_payload, off_t data_offset,
+                                     void *user, uint8_t *output_hash_buffer,
+                                     size_t *output_hash_buffer_length);
 
 /**
  * Verify an existing merkle hash tree. This function will re-generate all
@@ -68,13 +66,10 @@ int bpak_verify_compute_payload_hash(struct bpak_header *header,
  *
  * @return BPAK_OK if verification is OK
  */
-int bpak_verify_merkle_tree(bpak_io_t read_payload,
-                            off_t data_offset,
-                            size_t data_length,
-                            off_t tree_offset,
+int bpak_verify_merkle_tree(bpak_io_t read_payload, off_t data_offset,
+                            size_t data_length, off_t tree_offset,
                             bpak_merkle_hash_t expected_root_hash,
-                            bpak_merkle_hash_t salt,
-                            void *user);
+                            bpak_merkle_hash_t salt, void *user);
 
 /**
  * Verify the payload data. It will compute the payload hash for parts that
@@ -88,13 +83,11 @@ int bpak_verify_merkle_tree(bpak_io_t read_payload,
  *
  * @return BPAK_OK on success
  */
-int bpak_verify_payload(struct bpak_header *header,
-                        bpak_io_t read_payload,
-                        off_t data_offset,
-                        void *user);
+int bpak_verify_payload(struct bpak_header *header, bpak_io_t read_payload,
+                        off_t data_offset, void *user);
 
 #ifdef __cplusplus
-}  // extern "C"
+} // extern "C"
 #endif
 
-#endif  // INCLUDE_BPAK_VERIFY_H
+#endif // INCLUDE_BPAK_VERIFY_H

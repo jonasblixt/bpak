@@ -20,7 +20,6 @@
 
 #include "bpak_tool.h"
 
-
 int action_transport(int argc, char **argv)
 {
     int opt;
@@ -36,85 +35,81 @@ int action_transport(int argc, char **argv)
     int rc = 0;
     uint32_t part_ref = 0;
 
-    struct option long_options[] =
-    {
-        {"help",        no_argument,       0,  'h' },
-        {"verbose",     no_argument,       0,  'v' },
-        {"add",         no_argument,       0,  'a' },
-        {"origin",      required_argument, 0,  'O' },
-        {"output",      required_argument, 0,  'o' },
-        {"encoder",     required_argument, 0,  'e' },
-        {"decoder",     required_argument, 0,  'd' },
-        {"encode",      no_argument,       0,  'E' },
-        {"decode",      no_argument,       0,  'D' },
-        {"part-ref",    required_argument, 0,  'r' },
-        {0,             0,                 0,   0  }
+    struct option long_options[] = {
+        { "help", no_argument, 0, 'h' },
+        { "verbose", no_argument, 0, 'v' },
+        { "add", no_argument, 0, 'a' },
+        { "origin", required_argument, 0, 'O' },
+        { "output", required_argument, 0, 'o' },
+        { "encoder", required_argument, 0, 'e' },
+        { "decoder", required_argument, 0, 'd' },
+        { "encode", no_argument, 0, 'E' },
+        { "decode", no_argument, 0, 'D' },
+        { "part-ref", required_argument, 0, 'r' },
+        { 0, 0, 0, 0 },
     };
 
-    while ((opt = getopt_long(argc, argv, "hvao:s:O:e:d:EGr:",
-                   long_options, &long_index )) != -1)
-    {
-        switch (opt)
-        {
-            case 'h':
-                print_transport_usage();
-                return 0;
-            case 'v':
-                bpak_inc_verbosity();
+    while ((opt = getopt_long(argc,
+                              argv,
+                              "hvao:s:O:e:d:EGr:",
+                              long_options,
+                              &long_index)) != -1) {
+        switch (opt) {
+        case 'h':
+            print_transport_usage();
+            return 0;
+        case 'v':
+            bpak_inc_verbosity();
             break;
-            case 'a':
-                add_flag = true;
+        case 'a':
+            add_flag = true;
             break;
-            case 'E':
-                encode_flag = true;
+        case 'E':
+            encode_flag = true;
             break;
-            case 'r':
-                if (strncmp(optarg, "0x", 2) == 0) {
-                    part_ref = strtoul(optarg, NULL, 16);
-                } else {
-                    part_ref = bpak_id(optarg);
-                }
+        case 'r':
+            if (strncmp(optarg, "0x", 2) == 0) {
+                part_ref = strtoul(optarg, NULL, 16);
+            } else {
+                part_ref = bpak_id(optarg);
+            }
             break;
-            case 'O':
-                origin_file = (const char *) optarg;
+        case 'O':
+            origin_file = (const char *)optarg;
             break;
-            case 'o':
-                output_file = (const char *) optarg;
+        case 'o':
+            output_file = (const char *)optarg;
             break;
-            case 'e':
-                encoder_alg = (const char *) optarg;
+        case 'e':
+            encoder_alg = (const char *)optarg;
             break;
-            case 'd':
-                decoder_alg = (const char *) optarg;
+        case 'd':
+            decoder_alg = (const char *)optarg;
             break;
-            case 'D':
-                decode_flag = true;
+        case 'D':
+            decode_flag = true;
             break;
-            case '?':
-                printf("Unknown option: %c\n", optopt);
-                return -1;
+        case '?':
+            printf("Unknown option: %c\n", optopt);
+            return -1;
             break;
-            case ':':
-                printf("Missing arg for %c\n", optopt);
-                return -1;
+        case ':':
+            printf("Missing arg for %c\n", optopt);
+            return -1;
             break;
-            default:
-               return -1;
+        default:
+            return -1;
         }
     }
 
-    if (optind < argc)
-    {
-        filename = (const char *) argv[optind++];
-    }
-    else
-    {
+    if (optind < argc) {
+        filename = (const char *)argv[optind++];
+    } else {
         printf("Missing filename argument\n");
         return -1;
     }
 
-    if (encode_flag + add_flag + decode_flag > 1)
-    {
+    if (encode_flag + add_flag + decode_flag > 1) {
         printf("Error: Only one of --add, --encode or --decode is allowed\n");
         return -1;
     }
@@ -148,8 +143,7 @@ int action_transport(int argc, char **argv)
     if (encode_flag || decode_flag) {
         rc = bpak_pkg_open(&output, output_file, "wb+");
 
-        if (rc != BPAK_OK)
-        {
+        if (rc != BPAK_OK) {
             printf("Error: Could not open output file %s\n", output_file);
             goto err_out;
         }
@@ -157,14 +151,16 @@ int action_transport(int argc, char **argv)
 
     if (encode_flag) {
         rc = bpak_pkg_transport_encode(&input, &output, &origin);
-    } else if(decode_flag) {
-        rc = bpak_pkg_transport_decode(&input, /* Input package or 'patch' */
-                                       &output,
-                                       &origin); /* Origin data to use for patch operation*/
+    } else if (decode_flag) {
+        rc = bpak_pkg_transport_decode(
+            &input, /* Input package or 'patch' */
+            &output,
+            &origin); /* Origin data to use for patch operation*/
     } else if (add_flag && encoder_alg && decoder_alg) {
-        rc = bpak_add_transport_meta(&input.header, part_ref,
-                                         bpak_id(encoder_alg),
-                                         bpak_id(decoder_alg));
+        rc = bpak_add_transport_meta(&input.header,
+                                     part_ref,
+                                     bpak_id(encoder_alg),
+                                     bpak_id(decoder_alg));
 
         if (rc != BPAK_OK) {
             fprintf(stderr, "Error: Could not add transport meta data\n");

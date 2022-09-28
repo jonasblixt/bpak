@@ -13,7 +13,8 @@
 static bpak_calloc_t _calloc_func = NULL;
 static bpak_free_t _free_func = NULL;
 
-BPAK_EXPORT int bpak_set_calloc_free(bpak_calloc_t calloc_func, bpak_free_t free_func)
+BPAK_EXPORT int bpak_set_calloc_free(bpak_calloc_t calloc_func,
+                                     bpak_free_t free_func)
 {
     if (calloc_func == NULL || free_func == NULL)
         return -BPAK_FAILED;

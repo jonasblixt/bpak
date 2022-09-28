@@ -25,8 +25,7 @@
 extern "C" {
 #endif
 
-struct bpak_transport_decode
-{
+struct bpak_transport_decode {
     uint8_t *buffer;
     size_t buffer_length;
     struct bpak_header *patch_header;
@@ -69,14 +68,11 @@ struct bpak_transport_decode
  * @return BPAK_OK on success or a negative number on failure
  */
 int bpak_transport_decode_init(struct bpak_transport_decode *ctx,
-                               uint8_t *buffer,
-                               size_t buffer_length,
+                               uint8_t *buffer, size_t buffer_length,
                                struct bpak_header *patch_header,
-                               bpak_io_t write_output,
-                               bpak_io_t read_output,
+                               bpak_io_t write_output, bpak_io_t read_output,
                                off_t output_offset,
-                               bpak_io_t write_output_header,
-                               void *user);
+                               bpak_io_t write_output_header, void *user);
 /**
  * Provide an origin stream for the decoder. The patch decoder needs
  * an origin stream to produce the target binary. However, de-compressors
@@ -163,7 +159,7 @@ int bpak_transport_encode(FILE *input_fp, struct bpak_header *input_header,
                           FILE *origin_fp, struct bpak_header *origin_header);
 
 #ifdef __cplusplus
-}  // extern "C"
+} // extern "C"
 #endif
 
-#endif  // INCLUDE_BPAK_TRANSPORT_H_
+#endif // INCLUDE_BPAK_TRANSPORT_H_

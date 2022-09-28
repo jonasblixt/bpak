@@ -23,7 +23,7 @@
 #include <bpak/transport.h>
 
 BPAK_EXPORT int bpak_pkg_open(struct bpak_package *pkg, const char *filename,
-                  const char *mode)
+                              const char *mode)
 {
     int rc;
 
@@ -81,7 +81,7 @@ BPAK_EXPORT int bpak_pkg_close(struct bpak_package *pkg)
 static ssize_t pkg_read_payload(off_t offset, uint8_t *buf, size_t length,
                                 void *user)
 {
-    FILE *fp = (FILE *) user;
+    FILE *fp = (FILE *)user;
     if (fseek(fp, offset, SEEK_SET) != 0)
         return -BPAK_SEEK_ERROR;
     size_t read_bytes = fread(buf, 1, length, fp);
@@ -92,7 +92,8 @@ static ssize_t pkg_read_payload(off_t offset, uint8_t *buf, size_t length,
     return read_bytes;
 }
 
-BPAK_EXPORT int bpak_pkg_update_hash(struct bpak_package *pkg, char *output, size_t *size)
+BPAK_EXPORT int bpak_pkg_update_hash(struct bpak_package *pkg, char *output,
+                                     size_t *size)
 {
     int rc;
 
@@ -101,7 +102,7 @@ BPAK_EXPORT int bpak_pkg_update_hash(struct bpak_package *pkg, char *output, siz
     rc = bpak_verify_compute_payload_hash(&pkg->header,
                                           pkg_read_payload,
                                           sizeof(struct bpak_header),
-                                          (void *) pkg->fp,
+                                          (void *)pkg->fp,
                                           pkg->header.payload_hash,
                                           &hash_size);
 
@@ -109,7 +110,8 @@ BPAK_EXPORT int bpak_pkg_update_hash(struct bpak_package *pkg, char *output, siz
         return rc;
 
     if ((output != NULL) && (size != NULL)) {
-        rc = bpak_verify_compute_header_hash(&pkg->header, (uint8_t *) output,
+        rc = bpak_verify_compute_header_hash(&pkg->header,
+                                             (uint8_t *)output,
                                              size);
         if (rc != BPAK_OK)
             return rc;
@@ -122,7 +124,7 @@ BPAK_EXPORT size_t bpak_pkg_installed_size(struct bpak_package *pkg)
 {
     size_t installed_size = 0;
 
-    bpak_foreach_part(&pkg->header, p) {
+    bpak_foreach_part (&pkg->header, p) {
         installed_size += p->size + p->pad_bytes;
     }
 
@@ -133,8 +135,7 @@ BPAK_EXPORT size_t bpak_pkg_size(struct bpak_package *pkg)
 {
     size_t transport_size = 0;
 
-    bpak_foreach_part(&pkg->header, p)
-    {
+    bpak_foreach_part (&pkg->header, p) {
         if (p->flags & BPAK_FLAG_TRANSPORT)
             transport_size += p->transport_size;
         else
@@ -157,7 +158,8 @@ BPAK_EXPORT int bpak_pkg_write_header(struct bpak_package *pkg)
         return -BPAK_SEEK_ERROR;
     }
 
-    size_t bytes_written = fwrite(&pkg->header, 1, sizeof(pkg->header), pkg->fp);
+    size_t bytes_written =
+        fwrite(&pkg->header, 1, sizeof(pkg->header), pkg->fp);
 
     if (bytes_written != sizeof(pkg->header)) {
         bpak_printf(0, "%s: Write failed\n", __func__);
@@ -168,7 +170,8 @@ BPAK_EXPORT int bpak_pkg_write_header(struct bpak_package *pkg)
 }
 
 BPAK_EXPORT int bpak_pkg_write_raw_signature(struct bpak_package *pkg,
-                                 const uint8_t *signature, size_t size)
+                                             const uint8_t *signature,
+                                             size_t size)
 {
     memset(pkg->header.signature, 0, sizeof(pkg->header.signature));
     memcpy(pkg->header.signature, signature, size);
@@ -176,18 +179,15 @@ BPAK_EXPORT int bpak_pkg_write_raw_signature(struct bpak_package *pkg,
     return bpak_pkg_write_header(pkg);
 }
 
-struct decode_private
-{
+struct decode_private {
     FILE *output_fp;
     FILE *origin_fp;
 };
 
-static ssize_t decode_write_output(off_t offset,
-                             uint8_t *buffer,
-                             size_t length,
-                             void *user)
+static ssize_t decode_write_output(off_t offset, uint8_t *buffer, size_t length,
+                                   void *user)
 {
-    struct decode_private *priv = (struct decode_private *) user;
+    struct decode_private *priv = (struct decode_private *)user;
 
     if (fseek(priv->output_fp, offset, SEEK_SET) != 0) {
         return -BPAK_SEEK_ERROR;
@@ -196,12 +196,10 @@ static ssize_t decode_write_output(off_t offset,
     return fwrite(buffer, 1, length, priv->output_fp);
 }
 
-static ssize_t decode_read_output(off_t offset,
-                             uint8_t *buffer,
-                             size_t length,
-                             void *user)
+static ssize_t decode_read_output(off_t offset, uint8_t *buffer, size_t length,
+                                  void *user)
 {
-    struct decode_private *priv = (struct decode_private *) user;
+    struct decode_private *priv = (struct decode_private *)user;
 
     if (fseek(priv->output_fp, offset, SEEK_SET) != 0) {
         return -BPAK_SEEK_ERROR;
@@ -210,13 +208,11 @@ static ssize_t decode_read_output(off_t offset,
     return fread(buffer, 1, length, priv->output_fp);
 }
 
-static ssize_t decode_write_output_header(off_t offset,
-                             uint8_t *buffer,
-                             size_t length,
-                             void *user)
+static ssize_t decode_write_output_header(off_t offset, uint8_t *buffer,
+                                          size_t length, void *user)
 {
-    struct decode_private *priv = (struct decode_private *) user;
-    (void) offset;
+    struct decode_private *priv = (struct decode_private *)user;
+    (void)offset;
 
     if (length != sizeof(struct bpak_header))
         return -BPAK_SIZE_ERROR;
@@ -228,12 +224,10 @@ static ssize_t decode_write_output_header(off_t offset,
     return fwrite(buffer, 1, length, priv->output_fp);
 }
 
-static ssize_t decode_read_origin(off_t offset,
-                             uint8_t *buffer,
-                             size_t length,
-                             void *user)
+static ssize_t decode_read_origin(off_t offset, uint8_t *buffer, size_t length,
+                                  void *user)
 {
-    struct decode_private *priv = (struct decode_private *) user;
+    struct decode_private *priv = (struct decode_private *)user;
 
     if (fseek(priv->origin_fp, offset, SEEK_SET) != 0) {
         return -BPAK_SEEK_ERROR;
@@ -243,8 +237,8 @@ static ssize_t decode_read_origin(off_t offset,
 }
 
 BPAK_EXPORT int bpak_pkg_transport_decode(struct bpak_package *input,
-                              struct bpak_package *output,
-                              struct bpak_package *origin)
+                                          struct bpak_package *output,
+                                          struct bpak_package *origin)
 {
     int rc;
 
@@ -273,8 +267,11 @@ BPAK_EXPORT int bpak_pkg_transport_decode(struct bpak_package *input,
                                     &decode_private);
 
     if (rc != BPAK_OK) {
-        bpak_printf(0, "%s: Error: Transport decode init failed (%i) %s", __func__,
-                rc, bpak_error_string(rc));
+        bpak_printf(0,
+                    "%s: Error: Transport decode init failed (%i) %s",
+                    __func__,
+                    rc,
+                    bpak_error_string(rc));
         goto err_out;
     }
 
@@ -287,19 +284,20 @@ BPAK_EXPORT int bpak_pkg_transport_decode(struct bpak_package *input,
                                               sizeof(struct bpak_header));
 
         if (rc != BPAK_OK) {
-            bpak_printf(0, "Error: Origin stream init failed (%i) %s\n",
-                rc, bpak_error_string(rc));
+            bpak_printf(0,
+                        "Error: Origin stream init failed (%i) %s\n",
+                        rc,
+                        bpak_error_string(rc));
             goto err_out;
         }
     }
-
 
     if (fseek(input->fp, sizeof(struct bpak_header), SEEK_SET) != 0) {
         bpak_printf(0, "%s: Error, could not seek input stream", __func__);
         return -BPAK_SEEK_ERROR;
     }
 
-    bpak_foreach_part(patch_header, part) {
+    bpak_foreach_part (patch_header, part) {
         if (part->id == 0)
             break;
 
@@ -308,7 +306,9 @@ BPAK_EXPORT int bpak_pkg_transport_decode(struct bpak_package *input,
             rc = bpak_get_part(&origin->header, part->id, &origin_part);
 
             if (rc != BPAK_OK) {
-                bpak_printf(0, "Error could not get part with ref %x\n", part->id);
+                bpak_printf(0,
+                            "Error could not get part with ref %x\n",
+                            part->id);
                 goto err_out;
             }
         }
@@ -316,8 +316,10 @@ BPAK_EXPORT int bpak_pkg_transport_decode(struct bpak_package *input,
         rc = bpak_transport_decode_start(&decode_ctx, part);
 
         if (rc != BPAK_OK) {
-            bpak_printf(0,"Error: Decoder start failed for part 0x%x (%i)\n",
-                                part->id, rc);
+            bpak_printf(0,
+                        "Error: Decoder start failed for part 0x%x (%i)\n",
+                        part->id,
+                        rc);
             goto err_out;
         }
 
@@ -325,7 +327,8 @@ BPAK_EXPORT int bpak_pkg_transport_decode(struct bpak_package *input,
         size_t bytes_to_process = bpak_part_size(part);
 
         while (bytes_to_process) {
-            size_t chunk_length = BPAK_MIN(bytes_to_process, sizeof(chunk_buffer));
+            size_t chunk_length =
+                BPAK_MIN(bytes_to_process, sizeof(chunk_buffer));
             size_t bytes_read = fread(chunk_buffer, 1, chunk_length, input->fp);
 
             if (bytes_read != chunk_length) {
@@ -333,12 +336,16 @@ BPAK_EXPORT int bpak_pkg_transport_decode(struct bpak_package *input,
                 return -BPAK_READ_ERROR;
             }
 
-            rc = bpak_transport_decode_write_chunk(&decode_ctx, chunk_buffer,
-                                                    chunk_length);
+            rc = bpak_transport_decode_write_chunk(&decode_ctx,
+                                                   chunk_buffer,
+                                                   chunk_length);
 
             if (rc != BPAK_OK) {
-                bpak_printf(0,"Error: Decoder write chunk failed for part 0x%x (%i)\n",
-                                    part->id, rc);
+                bpak_printf(
+                    0,
+                    "Error: Decoder write chunk failed for part 0x%x (%i)\n",
+                    part->id,
+                    rc);
                 goto err_out;
             }
 
@@ -348,8 +355,10 @@ BPAK_EXPORT int bpak_pkg_transport_decode(struct bpak_package *input,
         rc = bpak_transport_decode_finish(&decode_ctx);
 
         if (rc != BPAK_OK) {
-            bpak_printf(0,"Error: Decoder finish failed for part 0x%x (%i)\n",
-                                part->id, rc);
+            bpak_printf(0,
+                        "Error: Decoder finish failed for part 0x%x (%i)\n",
+                        part->id,
+                        rc);
             goto err_out;
         }
     }
@@ -360,8 +369,8 @@ err_out:
 }
 
 BPAK_EXPORT int bpak_pkg_transport_encode(struct bpak_package *input,
-                              struct bpak_package *output,
-                              struct bpak_package *origin)
+                                          struct bpak_package *output,
+                                          struct bpak_package *origin)
 {
     FILE *origin_fp = NULL;
     struct bpak_header *origin_header = NULL;
@@ -373,7 +382,10 @@ BPAK_EXPORT int bpak_pkg_transport_encode(struct bpak_package *input,
         }
     }
 
-    return bpak_transport_encode(input->fp, &input->header,
-                                 output->fp, &output->header,
-                                 origin_fp, origin_header);
+    return bpak_transport_encode(input->fp,
+                                 &input->header,
+                                 output->fp,
+                                 &output->header,
+                                 origin_fp,
+                                 origin_header);
 }

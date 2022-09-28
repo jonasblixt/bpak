@@ -14,12 +14,12 @@
 
 BPAK_EXPORT uint32_t bpak_id(const char *str)
 {
-    return bpak_crc32(0, (const uint8_t *) str, strlen(str));
+    return bpak_crc32(0, (const uint8_t *)str, strlen(str));
 }
 
 BPAK_EXPORT const char *bpak_id_to_string(uint32_t id)
 {
-    switch(id) {
+    switch (id) {
     case BPAK_ID_BPAK_PACKAGE:
         return "bpak-package";
     case BPAK_ID_BPAK_TRANSPORT:
@@ -38,4 +38,3 @@ BPAK_EXPORT const char *bpak_id_to_string(uint32_t id)
         return "";
     }
 }
-

@@ -21,8 +21,7 @@
 extern "C" {
 #endif
 
-struct bpak_bsdiff_context
-{
+struct bpak_bsdiff_context {
     int origin_fd;
     uint8_t *origin_data;
     size_t origin_length;
@@ -60,15 +59,10 @@ struct bpak_bsdiff_context
  * @return BPAK_OK on success or a negative number
  *
  **/
-int bpak_bsdiff_init(struct bpak_bsdiff_context *ctx,
-                      uint8_t *origin_data,
-                      size_t origin_length,
-                      uint8_t *new_data,
-                      size_t new_length,
-                      bpak_io_t write_output,
-                      off_t output_offset,
-                      enum bpak_compression compression,
-                      void *user_priv);
+int bpak_bsdiff_init(struct bpak_bsdiff_context *ctx, uint8_t *origin_data,
+                     size_t origin_length, uint8_t *new_data, size_t new_length,
+                     bpak_io_t write_output, off_t output_offset,
+                     enum bpak_compression compression, void *user_priv);
 
 /**
  * Perform the diff process
@@ -87,7 +81,7 @@ ssize_t bpak_bsdiff(struct bpak_bsdiff_context *ctx);
 void bpak_bsdiff_free(struct bpak_bsdiff_context *ctx);
 
 #ifdef __cplusplus
-}  // extern "C"
+} // extern "C"
 #endif
 
 #endif

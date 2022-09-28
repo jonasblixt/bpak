@@ -34,8 +34,7 @@ extern "C" {
  */
 typedef unsigned char bpak_merkle_hash_t[BPAK_MERKLE_HASH_BYTES];
 
-struct bpak_merkle_context
-{
+struct bpak_merkle_context {
     struct bpak_hash_context running_hash;
     uint8_t buffer[BPAK_MERKLE_HASH_BYTES];
     size_t level_length[BPAK_MERKLE_MAX_LEVELS];
@@ -43,15 +42,16 @@ struct bpak_merkle_context
     unsigned int no_of_levels;
     size_t input_chunk_counter;
     size_t block_byte_counter;
-    size_t input_data_length;          /*!< Total size of the input filesystem in bytes */
-    size_t hash_tree_length;           /*!< Hash tree output size */
+    size_t
+        input_data_length;   /*!< Total size of the input filesystem in bytes */
+    size_t hash_tree_length; /*!< Hash tree output size */
     size_t salt_length;
     bool finished;
-    uint8_t salt[32];                  /*!< Input salt for hashing */
-    bpak_io_t wr;                      /*!< Function to write to the hash tree */
-    bpak_io_t rd;                      /*!< Function to read from the hash tree */
+    uint8_t salt[32]; /*!< Input salt for hashing */
+    bpak_io_t wr;     /*!< Function to write to the hash tree */
+    bpak_io_t rd;     /*!< Function to read from the hash tree */
     off_t offset;
-    void *priv;                        /*!< Externalt context variable */
+    void *priv; /*!< Externalt context variable */
 };
 
 ssize_t bpak_merkle_compute_size(size_t input_data_length);
@@ -80,15 +80,10 @@ size_t bpak_merkle_get_size(struct bpak_merkle_context *ctx);
  * @return BPAK_OK on success and non zero number on error
  *
  */
-int bpak_merkle_init(struct bpak_merkle_context *ctx,
-                        size_t input_data_length,
-                        const uint8_t *salt,
-                        size_t salt_length,
-                        bpak_io_t wr,
-                        bpak_io_t rd,
-                        off_t offset,
-                        bool zero_fill_output,
-                        void *priv);
+int bpak_merkle_init(struct bpak_merkle_context *ctx, size_t input_data_length,
+                     const uint8_t *salt, size_t salt_length, bpak_io_t wr,
+                     bpak_io_t rd, off_t offset, bool zero_fill_output,
+                     void *priv);
 
 /**
  * Process input data stream. This function can also be called with no buffer
@@ -112,10 +107,10 @@ int bpak_merkle_write_chunk(struct bpak_merkle_context *ctx, uint8_t *buffer,
  * @return BPAK_OK on success
  */
 int bpak_merkle_finish(struct bpak_merkle_context *ctx,
-                        bpak_merkle_hash_t roothash);
+                       bpak_merkle_hash_t roothash);
 
 #ifdef __cplusplus
-}  // extern "C"
+} // extern "C"
 #endif
 
-#endif  // INCLUDE_BPAK_MERKLE_H_
+#endif // INCLUDE_BPAK_MERKLE_H_

@@ -28,8 +28,9 @@ static ssize_t merkle_generate(struct bpak_transport_decode *ctx)
 
     /* The part id currently begin processed is for the hash tree,
      *  Locate the filesystem that should be used */
-    bpak_foreach_part(ctx->patch_header, part) {
-        if (bpak_crc32(part->id, (uint8_t *) "-hash-tree", 10) == ctx->part->id) {
+    bpak_foreach_part (ctx->patch_header, part) {
+        if (bpak_crc32(part->id, (uint8_t *)"-hash-tree", 10) ==
+            ctx->part->id) {
             fs_id = part->id;
             break;
         }
@@ -41,12 +42,16 @@ static ssize_t merkle_generate(struct bpak_transport_decode *ctx)
     }
 
     /* Load the salt that should be used */
-    rc = bpak_get_meta_with_ref(ctx->patch_header, BPAK_ID_MERKLE_SALT, fs_id,
-                                (void **) &salt, NULL);
+    rc = bpak_get_meta_with_ref(ctx->patch_header,
+                                BPAK_ID_MERKLE_SALT,
+                                fs_id,
+                                (void **)&salt,
+                                NULL);
 
     if (rc != BPAK_OK) {
-        bpak_printf(0, "Error: Could not load merkle salt for part 0x%x\n",
-                            fs_id);
+        bpak_printf(0,
+                    "Error: Could not load merkle salt for part 0x%x\n",
+                    fs_id);
         return rc;
     }
 
@@ -60,8 +65,7 @@ static ssize_t merkle_generate(struct bpak_transport_decode *ctx)
     }
 
     off_t output_offset = bpak_part_offset(ctx->patch_header, ctx->part) -
-                            sizeof(struct bpak_header) +
-                            ctx->output_offset;
+                          sizeof(struct bpak_header) + ctx->output_offset;
 
     bpak_printf(0, "Merkle tree at offset: %i\n", output_offset);
 
@@ -85,7 +89,7 @@ static ssize_t merkle_generate(struct bpak_transport_decode *ctx)
      * to the hashtree, therefore the data should be at an offset
      * of -bpak_part_size(fs_part) */
     off_t data_offset = bpak_part_offset(ctx->patch_header, fs_part) -
-                            sizeof(struct bpak_header) + ctx->output_offset;
+                        sizeof(struct bpak_header) + ctx->output_offset;
 
     bytes_to_process = bpak_part_size(fs_part);
     while (bytes_to_process) {
@@ -96,13 +100,17 @@ static ssize_t merkle_generate(struct bpak_transport_decode *ctx)
                                         ctx->user);
 
         if (chunk_length != bytes_to_read) {
-            bpak_printf(0, "Error: Wanted to read %zu at offset %i but got %i\n",
-                            bytes_to_read, ctx->output_offset + data_offset,
-                            chunk_length);
+            bpak_printf(0,
+                        "Error: Wanted to read %zu at offset %i but got %i\n",
+                        bytes_to_read,
+                        ctx->output_offset + data_offset,
+                        chunk_length);
             return -BPAK_READ_ERROR;
         }
 
-        rc = bpak_merkle_write_chunk(&ctx->decoders.merkle, chunk_buffer, chunk_length);
+        rc = bpak_merkle_write_chunk(&ctx->decoders.merkle,
+                                     chunk_buffer,
+                                     chunk_length);
 
         if (rc != BPAK_OK) {
             bpak_printf(0, "Error: merkle processing failed (%i)\n", rc);
@@ -125,17 +133,13 @@ static ssize_t merkle_generate(struct bpak_transport_decode *ctx)
     return bpak_merkle_get_size(&ctx->decoders.merkle);
 }
 
-#endif  // BPAK_CONFIG_MERKLE
+#endif // BPAK_CONFIG_MERKLE
 
-BPAK_EXPORT int bpak_transport_decode_init(struct bpak_transport_decode *ctx,
-                                           uint8_t *buffer,
-                                           size_t buffer_length,
-                                           struct bpak_header *patch_header,
-                                           bpak_io_t write_output,
-                                           bpak_io_t read_output,
-                                           off_t output_offset,
-                                           bpak_io_t write_output_header,
-                                           void *user)
+BPAK_EXPORT int bpak_transport_decode_init(
+    struct bpak_transport_decode *ctx, uint8_t *buffer, size_t buffer_length,
+    struct bpak_header *patch_header, bpak_io_t write_output,
+    bpak_io_t read_output, off_t output_offset, bpak_io_t write_output_header,
+    void *user)
 {
     memset(ctx, 0, sizeof(*ctx));
 
@@ -151,10 +155,10 @@ BPAK_EXPORT int bpak_transport_decode_init(struct bpak_transport_decode *ctx,
     return BPAK_OK;
 }
 
-BPAK_EXPORT int bpak_transport_decode_set_origin(struct bpak_transport_decode *ctx,
-                                     struct bpak_header *origin_header,
-                                     bpak_io_t read_origin,
-                                     off_t origin_offset)
+BPAK_EXPORT int
+bpak_transport_decode_set_origin(struct bpak_transport_decode *ctx,
+                                 struct bpak_header *origin_header,
+                                 bpak_io_t read_origin, off_t origin_offset)
 {
     int rc;
     uint8_t *origin_package_uuid;
@@ -165,14 +169,18 @@ BPAK_EXPORT int bpak_transport_decode_set_origin(struct bpak_transport_decode *c
     ctx->origin_offset = origin_offset;
 
     /* Origin and input package should have the same package-uuid */
-    rc = bpak_get_meta(origin_header, BPAK_ID_BPAK_PACKAGE,
-                                (void **) &origin_package_uuid, NULL);
+    rc = bpak_get_meta(origin_header,
+                       BPAK_ID_BPAK_PACKAGE,
+                       (void **)&origin_package_uuid,
+                       NULL);
 
     if (rc != BPAK_OK)
         return rc;
 
-    rc = bpak_get_meta(ctx->patch_header, BPAK_ID_BPAK_PACKAGE,
-                                (void **) &patch_package_uuid, NULL);
+    rc = bpak_get_meta(ctx->patch_header,
+                       BPAK_ID_BPAK_PACKAGE,
+                       (void **)&patch_package_uuid,
+                       NULL);
 
     if (rc != BPAK_OK)
         return rc;
@@ -184,13 +192,14 @@ BPAK_EXPORT int bpak_transport_decode_set_origin(struct bpak_transport_decode *c
 }
 
 BPAK_EXPORT int bpak_transport_decode_start(struct bpak_transport_decode *ctx,
-                                struct bpak_part_header *part)
+                                            struct bpak_part_header *part)
 {
     int rc;
     struct bpak_transport_meta *tm = NULL;
     ssize_t bytes_written;
 
-    bytes_written = ctx->write_output_header(0, (uint8_t *) ctx->patch_header,
+    bytes_written = ctx->write_output_header(0,
+                                             (uint8_t *)ctx->patch_header,
                                              sizeof(struct bpak_header),
                                              ctx->user);
 
@@ -207,111 +216,103 @@ BPAK_EXPORT int bpak_transport_decode_start(struct bpak_transport_decode *ctx,
         if (bpak_get_meta_with_ref(ctx->patch_header,
                                    BPAK_ID_BPAK_TRANSPORT,
                                    part->id,
-                                   (void **) &tm, NULL) == BPAK_OK) {
+                                   (void **)&tm,
+                                   NULL) == BPAK_OK) {
             ctx->decoder_id = tm->alg_id_decode;
         }
     }
 
     switch (ctx->decoder_id) {
-        case BPAK_ID_BSPATCH: /* heatshrink decompressor*/
-        case BPAK_ID_BSPATCH_NO_COMP:
-        case BPAK_ID_BSPATCH_LZMA:
-        {
-            if (ctx->read_origin == NULL) {
-                /* bspach requires the origin stream */
-                return -BPAK_PATCH_READ_ORIGIN_ERROR;
-            }
-
-            size_t patch_input_length = bpak_part_size(part);
-            bpak_printf(2, "Patch input length: %zu\n", patch_input_length);
-
-            enum bpak_compression compression;
-
-            if (ctx->decoder_id == BPAK_ID_BSPATCH)
-                compression = BPAK_COMPRESSION_HS;
-            else if (ctx->decoder_id == BPAK_ID_BSPATCH_NO_COMP)
-                compression = BPAK_COMPRESSION_NONE;
-            else if (ctx->decoder_id == BPAK_ID_BSPATCH_LZMA)
-                compression = BPAK_COMPRESSION_LZMA;
-            else
-                return -BPAK_UNSUPPORTED_COMPRESSION;
-
-            /* Compute output and origin offsets */
-            off_t output_offset = bpak_part_offset(ctx->patch_header, part) -
-                                    sizeof(struct bpak_header) +
-                                    ctx->output_offset;
-
-            off_t origin_offset = bpak_part_offset(ctx->origin_header, part) -
-                                    sizeof(struct bpak_header) +
-                                    ctx->origin_offset;
-
-            rc = bpak_bspatch_init(&ctx->decoders.bspatch,
-                                     ctx->buffer,
-                                     ctx->buffer_length,
-                                     patch_input_length,
-                                     ctx->read_origin,
-                                     origin_offset,
-                                     ctx->write_output,
-                                     output_offset,
-                                     compression,
-                                     ctx->user);
-
+    case BPAK_ID_BSPATCH: /* heatshrink decompressor*/
+    case BPAK_ID_BSPATCH_NO_COMP:
+    case BPAK_ID_BSPATCH_LZMA: {
+        if (ctx->read_origin == NULL) {
+            /* bspach requires the origin stream */
+            return -BPAK_PATCH_READ_ORIGIN_ERROR;
         }
-        break;
+
+        size_t patch_input_length = bpak_part_size(part);
+        bpak_printf(2, "Patch input length: %zu\n", patch_input_length);
+
+        enum bpak_compression compression;
+
+        if (ctx->decoder_id == BPAK_ID_BSPATCH)
+            compression = BPAK_COMPRESSION_HS;
+        else if (ctx->decoder_id == BPAK_ID_BSPATCH_NO_COMP)
+            compression = BPAK_COMPRESSION_NONE;
+        else if (ctx->decoder_id == BPAK_ID_BSPATCH_LZMA)
+            compression = BPAK_COMPRESSION_LZMA;
+        else
+            return -BPAK_UNSUPPORTED_COMPRESSION;
+
+        /* Compute output and origin offsets */
+        off_t output_offset = bpak_part_offset(ctx->patch_header, part) -
+                              sizeof(struct bpak_header) + ctx->output_offset;
+
+        off_t origin_offset = bpak_part_offset(ctx->origin_header, part) -
+                              sizeof(struct bpak_header) + ctx->origin_offset;
+
+        rc = bpak_bspatch_init(&ctx->decoders.bspatch,
+                               ctx->buffer,
+                               ctx->buffer_length,
+                               patch_input_length,
+                               ctx->read_origin,
+                               origin_offset,
+                               ctx->write_output,
+                               output_offset,
+                               compression,
+                               ctx->user);
+
+    } break;
 #if BPAK_CONFIG_MERKLE == 1
-        case BPAK_ID_MERKLE_GENERATE:
-            /* Merkle trees are generated from output data
-             *  of a previous patch step, this is done in the final call */
-            rc = BPAK_OK;
+    case BPAK_ID_MERKLE_GENERATE:
+        /* Merkle trees are generated from output data
+         *  of a previous patch step, this is done in the final call */
+        rc = BPAK_OK;
         break;
 #endif
-        case 0: /* Copy data */
-            ctx->copy_offset = 0;
-            rc = BPAK_OK;
+    case 0: /* Copy data */
+        ctx->copy_offset = 0;
+        rc = BPAK_OK;
         break;
-        default:
-            return -BPAK_NOT_SUPPORTED;
+    default:
+        return -BPAK_NOT_SUPPORTED;
     }
 
     return rc;
 }
 
-
-BPAK_EXPORT int bpak_transport_decode_write_chunk(struct bpak_transport_decode *ctx,
-                                      uint8_t *buffer, size_t length)
+BPAK_EXPORT int
+bpak_transport_decode_write_chunk(struct bpak_transport_decode *ctx,
+                                  uint8_t *buffer, size_t length)
 {
     int rc;
 
     switch (ctx->decoder_id) {
-        case BPAK_ID_BSPATCH_NO_COMP:
-        case BPAK_ID_BSPATCH_LZMA:
-        case BPAK_ID_BSPATCH: /* id("bspatch") heatshrink decompressor*/
-        {
-            rc = bpak_bspatch_write(&ctx->decoders.bspatch, buffer, length);
-        }
-        break;
-        case 0: /* Copy data */
-        {
-            off_t write_offset = bpak_part_offset(ctx->patch_header, ctx->part) -
-                                    sizeof(struct bpak_header) +
-                                    ctx->output_offset +
-                                    ctx->copy_offset;
+    case BPAK_ID_BSPATCH_NO_COMP:
+    case BPAK_ID_BSPATCH_LZMA:
+    case BPAK_ID_BSPATCH: /* id("bspatch") heatshrink decompressor*/
+    {
+        rc = bpak_bspatch_write(&ctx->decoders.bspatch, buffer, length);
+    } break;
+    case 0: /* Copy data */
+    {
+        off_t write_offset = bpak_part_offset(ctx->patch_header, ctx->part) -
+                             sizeof(struct bpak_header) + ctx->output_offset +
+                             ctx->copy_offset;
 
-            ssize_t bytes_written = ctx->write_output(write_offset,
-                                                      buffer,
-                                                      length,
-                                                      ctx->user);
-            if (bytes_written < 0)
-                return bytes_written;
-            if (bytes_written != (ssize_t) length)
-                return -BPAK_WRITE_ERROR;
+        ssize_t bytes_written =
+            ctx->write_output(write_offset, buffer, length, ctx->user);
+        if (bytes_written < 0)
+            return bytes_written;
+        if (bytes_written != (ssize_t)length)
+            return -BPAK_WRITE_ERROR;
 
-            ctx->copy_offset += bytes_written;
-            rc = 0;
-        }
-        break;
-        default:
-            return -BPAK_NOT_SUPPORTED;
+        ctx->copy_offset += bytes_written;
+        rc = 0;
+    } break;
+    default:
+        return -BPAK_NOT_SUPPORTED;
     }
 
     return rc;
@@ -323,24 +324,23 @@ BPAK_EXPORT int bpak_transport_decode_finish(struct bpak_transport_decode *ctx)
     ssize_t output_length = 0;
 
     switch (ctx->decoder_id) {
-        case BPAK_ID_BSPATCH_NO_COMP:
-        case BPAK_ID_BSPATCH_LZMA:
-        case BPAK_ID_BSPATCH: /* id("bspatch") heatshrink decompressor*/
-        {
-            output_length = bpak_bspatch_final(&ctx->decoders.bspatch);
-            bpak_bspatch_free(&ctx->decoders.bspatch);
-        }
-        break;
+    case BPAK_ID_BSPATCH_NO_COMP:
+    case BPAK_ID_BSPATCH_LZMA:
+    case BPAK_ID_BSPATCH: /* id("bspatch") heatshrink decompressor*/
+    {
+        output_length = bpak_bspatch_final(&ctx->decoders.bspatch);
+        bpak_bspatch_free(&ctx->decoders.bspatch);
+    } break;
 #if BPAK_CONFIG_MERKLE == 1
-        case BPAK_ID_MERKLE_GENERATE: /* id("merkle-generate") */
-            output_length = merkle_generate(ctx);
+    case BPAK_ID_MERKLE_GENERATE: /* id("merkle-generate") */
+        output_length = merkle_generate(ctx);
         break;
 #endif
-        case 0: /* Copy data */
-            output_length = bpak_part_size(ctx->part);
+    case 0: /* Copy data */
+        output_length = bpak_part_size(ctx->part);
         break;
-        default:
-            return -BPAK_NOT_SUPPORTED;
+    default:
+        return -BPAK_NOT_SUPPORTED;
     }
 
     if (output_length < 0)
@@ -348,9 +348,12 @@ BPAK_EXPORT int bpak_transport_decode_finish(struct bpak_transport_decode *ctx)
 
     /* Check that the produced output length matches what the patch input
      * header says */
-    if (output_length != (ssize_t) (ctx->part->size + ctx->part->pad_bytes)) {
-        bpak_printf(0, "Error: Decoded part size does not match the expected size %zu != %zu\n",
-                        (ctx->part->size + ctx->part->pad_bytes), output_length);
+    if (output_length != (ssize_t)(ctx->part->size + ctx->part->pad_bytes)) {
+        bpak_printf(0,
+                    "Error: Decoded part size does not match the expected size "
+                    "%zu != %zu\n",
+                    (ctx->part->size + ctx->part->pad_bytes),
+                    output_length);
         return -BPAK_SIZE_ERROR;
     }
 
@@ -358,7 +361,8 @@ BPAK_EXPORT int bpak_transport_decode_finish(struct bpak_transport_decode *ctx)
     ctx->part->flags &= ~BPAK_FLAG_TRANSPORT;
     ctx->part->transport_size = 0;
 
-    bytes_written = ctx->write_output_header(0, (uint8_t *) ctx->patch_header,
+    bytes_written = ctx->write_output_header(0,
+                                             (uint8_t *)ctx->patch_header,
                                              sizeof(struct bpak_header),
                                              ctx->user);
 
@@ -372,5 +376,5 @@ BPAK_EXPORT int bpak_transport_decode_finish(struct bpak_transport_decode *ctx)
 BPAK_EXPORT void bpak_transport_decode_free(struct bpak_transport_decode *ctx)
 {
     /* Nothing to implement so far */
-    (void) ctx;
+    (void)ctx;
 }

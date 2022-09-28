@@ -7,7 +7,7 @@
 void test_ptr_alignment(void *p)
 {
     printf("Checking pointer %p\n", p);
-    ASSERT_EQ(((uintptr_t) p) % 8, 0); 
+    ASSERT_EQ(((uintptr_t)p) % 8, 0);
 }
 
 TEST(meta_align)
@@ -38,6 +38,4 @@ TEST(meta_align)
     rc = bpak_add_meta(&h, bpak_id("test-meta"), 0, &p, 8);
     ASSERT_EQ(rc, BPAK_OK);
     test_ptr_alignment(p);
-
-
 }

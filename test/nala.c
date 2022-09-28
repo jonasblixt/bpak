@@ -64,16 +64,16 @@ struct nala_subprocess_result_t {
  * captured subprocess' exit code, or NULL if the subprocess could not
  * be started.
  */
-struct nala_subprocess_result_t *nala_subprocess_call(nala_subprocess_entry_t entry,
-                                                      void *arg_p);
+struct nala_subprocess_result_t *
+nala_subprocess_call(nala_subprocess_entry_t entry, void *arg_p);
 
 /**
  * Call given function with given argument in a subprocess. Returns
  * captured subprocess' stdout, stderr and exit code, or NULL if the
  * subprocess could not be started.
  */
-struct nala_subprocess_result_t *nala_subprocess_call_output(nala_subprocess_entry_t entry,
-                                                             void *arg_p);
+struct nala_subprocess_result_t *
+nala_subprocess_call_output(nala_subprocess_entry_t entry, void *arg_p);
 
 /**
  * Execute given command in a subprocess. Returns captured subprocess'
@@ -86,13 +86,15 @@ struct nala_subprocess_result_t *nala_subprocess_exec(const char *command_p);
  * stdout, stderr and exit code, or NULL if the subprocess could not
  * be started.
  */
-struct nala_subprocess_result_t *nala_subprocess_exec_output(const char *command_p);
+struct nala_subprocess_result_t *
+nala_subprocess_exec_output(const char *command_p);
 
 /**
  * Returns true if the subprocess was started and exited with 0,
  * otherwise false.
  */
-bool nala_subprocess_completed_successfully(struct nala_subprocess_result_t *result_p);
+bool nala_subprocess_completed_successfully(
+    struct nala_subprocess_result_t *result_p);
 
 /**
  * Print subprocess exit code, stdout and stderr.
@@ -158,30 +160,25 @@ typedef struct NalaDiffChunk NalaDiffChunk;
 
 #endif
 
-
-struct NalaDiffMatrix
-{
+struct NalaDiffMatrix {
     size_t rows;
     size_t columns;
     int *content;
 };
 
-enum NalaDiffChunkType
-{
+enum NalaDiffChunkType {
     NALA_DIFF_CHUNK_TYPE_MATCHED,
     NALA_DIFF_CHUNK_TYPE_ADDED,
     NALA_DIFF_CHUNK_TYPE_REPLACED,
     NALA_DIFF_CHUNK_TYPE_DELETED
 };
 
-struct NalaDiff
-{
+struct NalaDiff {
     size_t size;
     NalaDiffChunk *chunks;
 };
 
-struct NalaDiffChunk
-{
+struct NalaDiffChunk {
     NalaDiffChunkType type;
     size_t original_start;
     size_t original_end;
@@ -191,26 +188,25 @@ struct NalaDiffChunk
 
 NalaDiffMatrix *nala_new_diff_matrix(size_t rows, size_t columns);
 NalaDiffMatrix *nala_new_diff_matrix_from_lengths(size_t original_length,
-                                                        size_t modified_lengths);
+                                                  size_t modified_lengths);
 void nala_diff_matrix_fill_from_strings(NalaDiffMatrix *diff_matrix,
-                                           const char *original,
-                                           const char *modified);
+                                        const char *original,
+                                        const char *modified);
 void nala_diff_matrix_fill_from_lines(NalaDiffMatrix *diff_matrix,
-                                         const char *original,
-                                         const char *modified);
+                                      const char *original,
+                                      const char *modified);
 NalaDiff nala_diff_matrix_get_diff(const NalaDiffMatrix *diff_matrix);
 
-size_t nala_diff_matrix_index(const NalaDiffMatrix *diff_matrix, size_t row, size_t column);
-int nala_diff_matrix_get(const NalaDiffMatrix *diff_matrix, size_t row, size_t column);
-void nala_diff_matrix_set(const NalaDiffMatrix *diff_matrix,
-                             size_t row,
-                             size_t column,
-                             int value);
+size_t nala_diff_matrix_index(const NalaDiffMatrix *diff_matrix, size_t row,
+                              size_t column);
+int nala_diff_matrix_get(const NalaDiffMatrix *diff_matrix, size_t row,
+                         size_t column);
+void nala_diff_matrix_set(const NalaDiffMatrix *diff_matrix, size_t row,
+                          size_t column, int value);
 
-NalaDiff nala_diff_strings_lengths(const char *original,
-                                         size_t original_length,
-                                         const char *modified,
-                                         size_t modified_length);
+NalaDiff nala_diff_strings_lengths(const char *original, size_t original_length,
+                                   const char *modified,
+                                   size_t modified_length);
 NalaDiff nala_diff_strings(const char *original, const char *modified);
 NalaDiff nala_diff_lines(const char *original, const char *modified);
 
@@ -293,26 +289,24 @@ char *nala_hf_get_hostname(char *buf_p, size_t size, const char *default_p);
 /**
  * Format given timespan in milliseconds into given buffer.
  */
-char *nala_hf_format_timespan(char *buf_p,
-                              size_t size,
+char *nala_hf_format_timespan(char *buf_p, size_t size,
                               unsigned long long timespan_ms);
 
-
-#define ANSI_COLOR_RED "\x1b[31m"
-#define ANSI_COLOR_GREEN "\x1b[32m"
-#define ANSI_COLOR_YELLOW "\x1b[33m"
-#define ANSI_COLOR_BLUE "\x1b[34m"
+#define ANSI_COLOR_RED     "\x1b[31m"
+#define ANSI_COLOR_GREEN   "\x1b[32m"
+#define ANSI_COLOR_YELLOW  "\x1b[33m"
+#define ANSI_COLOR_BLUE    "\x1b[34m"
 #define ANSI_COLOR_MAGENTA "\x1b[35m"
-#define ANSI_COLOR_CYAN "\x1b[36m"
+#define ANSI_COLOR_CYAN    "\x1b[36m"
 
-#define ANSI_BOLD "\x1b[1m"
+#define ANSI_BOLD  "\x1b[1m"
 #define ANSI_RESET "\x1b[0m"
 
 #define COLOR(color, ...) ANSI_RESET ANSI_COLOR_##color __VA_ARGS__ ANSI_RESET
 
 #define BOLD(...) ANSI_RESET ANSI_BOLD __VA_ARGS__ ANSI_RESET
 
-#define COLOR_BOLD(color, ...)                                          \
+#define COLOR_BOLD(color, ...)                                                 \
     ANSI_RESET ANSI_COLOR_##color ANSI_BOLD __VA_ARGS__ ANSI_RESET
 
 struct tests_t {
@@ -331,10 +325,7 @@ struct capture_output_t {
 
 static struct nala_test_t *current_test_p = NULL;
 
-static struct tests_t tests = {
-                               .head_p = NULL,
-                               .tail_p = NULL
-};
+static struct tests_t tests = { .head_p = NULL, .tail_p = NULL };
 
 static struct capture_output_t capture_stdout;
 static struct capture_output_t capture_stderr;
@@ -345,13 +336,9 @@ int teardown(void);
 
 void nala_assert_all_mocks_completed(void);
 
-__attribute__ ((weak)) void nala_assert_all_mocks_completed(void)
-{
-}
+__attribute__((weak)) void nala_assert_all_mocks_completed(void) {}
 
-__attribute__ ((weak)) void nala_reset_all_mocks(void)
-{
-}
+__attribute__((weak)) void nala_reset_all_mocks(void) {}
 
 static const char *get_node(void)
 {
@@ -381,13 +368,9 @@ static void color_start(FILE *file_p, const char *color_p)
     fprintf(file_p, "%s%s%s", ANSI_RESET, color_p, ANSI_BOLD);
 }
 
-static void color_reset(FILE *file_p)
-{
-    fprintf(file_p, "%s", ANSI_RESET);
-}
+static void color_reset(FILE *file_p) { fprintf(file_p, "%s", ANSI_RESET); }
 
-static void capture_output_init(struct capture_output_t *self_p,
-                                FILE *file_p)
+static void capture_output_init(struct capture_output_t *self_p, FILE *file_p)
 {
     self_p->output_pp = NULL;
     self_p->length = 0;
@@ -413,16 +396,18 @@ static void capture_output_redirect(struct capture_output_t *self_p)
     self_p->original_fd = dup(fileno(self_p->original_file_p));
 
     while ((dup2(fileno(self_p->temporary_file_p),
-                 fileno(self_p->original_file_p)) == -1)
-           && (errno == EINTR));
+                 fileno(self_p->original_file_p)) == -1) &&
+           (errno == EINTR))
+        ;
 }
 
 static void capture_output_restore(struct capture_output_t *self_p)
 {
     fflush(self_p->original_file_p);
 
-    while ((dup2(self_p->original_fd, fileno(self_p->original_file_p)) == -1)
-           && (errno == EINTR));
+    while ((dup2(self_p->original_fd, fileno(self_p->original_file_p)) == -1) &&
+           (errno == EINTR))
+        ;
 
     close(self_p->original_fd);
 }
@@ -538,7 +523,7 @@ static void print_location_context(const char *filename_p, size_t line_number)
         }
     }
 
- out1:
+out1:
 
     printf("\n");
     fclose(file_p);
@@ -580,8 +565,7 @@ static void print_test_result(struct nala_test_t *test_p)
     fflush(stdout);
 }
 
-static void print_summary(struct nala_test_t *test_p,
-                          float elapsed_time_ms)
+static void print_summary(struct nala_test_t *test_p, float elapsed_time_ms)
 {
     int total;
     int passed;
@@ -764,10 +748,8 @@ const char *nala_format(const char *format_p, ...)
 
 static const char *display_inline_diff(FILE *file_p,
                                        const NalaDiff *inline_diff,
-                                       size_t lines,
-                                       const char *string,
-                                       size_t *line_number,
-                                       bool use_original)
+                                       size_t lines, const char *string,
+                                       size_t *line_number, bool use_original)
 {
     NalaDiffChunk *inline_chunk = &inline_diff->chunks[0];
     size_t line_index = 0;
@@ -794,8 +776,8 @@ static const char *display_inline_diff(FILE *file_p,
         }
 
         while (index - line_index < line_length) {
-            size_t chunk_end =
-                use_original ? inline_chunk->original_end : inline_chunk->modified_end;
+            size_t chunk_end = use_original ? inline_chunk->original_end
+                                            : inline_chunk->modified_end;
 
             size_t start = index - line_index;
             size_t end = nala_min_size_t(chunk_end - line_index, line_length);
@@ -803,7 +785,10 @@ static const char *display_inline_diff(FILE *file_p,
             size_t characters = end - start;
 
             if (inline_chunk->type == NALA_DIFF_CHUNK_TYPE_MATCHED) {
-                fprintf(file_p, "%.*s", (int)characters, string + index - line_index);
+                fprintf(file_p,
+                        "%.*s",
+                        (int)characters,
+                        string + index - line_index);
             } else if (characters > 0) {
                 if (use_original) {
                     fprintf(file_p,
@@ -839,8 +824,7 @@ static const char *display_inline_diff(FILE *file_p,
     return string;
 }
 
-static void print_string_diff(FILE *file_p,
-                              const char *original,
+static void print_string_diff(FILE *file_p, const char *original,
                               const char *modified)
 {
     fprintf(file_p, "  Diff:\n\n");
@@ -863,7 +847,10 @@ static void print_string_diff(FILE *file_p,
                 if (original_lines < 7 || (i < 2 && chunk_index > 0) ||
                     (original_lines - i < 3 && chunk_index < diff.size - 1)) {
                     fprintf(file_p, COLOR(MAGENTA, "%8zu"), line_number);
-                    fprintf(file_p, " |  %.*s\n", (int)(original_next - original), original);
+                    fprintf(file_p,
+                            " |  %.*s\n",
+                            (int)(original_next - original),
+                            original);
                 } else if (i == 2) {
                     fprintf(file_p, "   :\n");
                 }
@@ -873,17 +860,18 @@ static void print_string_diff(FILE *file_p,
                 modified = modified_next + 1;
             }
         } else if (chunk->type == NALA_DIFF_CHUNK_TYPE_REPLACED) {
-            const char *original_end = nala_next_lines(original, original_lines);
-            const char *modified_end = nala_next_lines(modified, modified_lines);
+            const char *original_end =
+                nala_next_lines(original, original_lines);
+            const char *modified_end =
+                nala_next_lines(modified, modified_lines);
 
             size_t original_length = (size_t)(original_end - original);
             size_t modified_length = (size_t)(modified_end - modified);
 
-            NalaDiff inline_diff =
-                nala_diff_strings_lengths(original,
-                                          original_length,
-                                          modified,
-                                          modified_length);
+            NalaDiff inline_diff = nala_diff_strings_lengths(original,
+                                                             original_length,
+                                                             modified,
+                                                             modified_length);
 
             original = display_inline_diff(file_p,
                                            &inline_diff,
@@ -910,7 +898,8 @@ static void print_string_diff(FILE *file_p,
                          line_number);
 
                 fprintf(file_p, " %37s", line_prefix);
-                fprintf(file_p, COLOR(RED, " |  ") COLOR_BOLD(RED, "%.*s\n"),
+                fprintf(file_p,
+                        COLOR(RED, " |  ") COLOR_BOLD(RED, "%.*s\n"),
                         (int)(original_next - original),
                         original);
 
@@ -927,7 +916,8 @@ static void print_string_diff(FILE *file_p,
                          line_number);
 
                 fprintf(file_p, " %37s", line_prefix);
-                fprintf(file_p, COLOR(GREEN, " |  ") COLOR_BOLD(GREEN, "%.*s\n"),
+                fprintf(file_p,
+                        COLOR(GREEN, " |  ") COLOR_BOLD(GREEN, "%.*s\n"),
                         (int)(modified_next - modified),
                         modified);
 
@@ -967,8 +957,7 @@ const char *nala_format_string(const char *format_p, ...)
     return (buf_p);
 }
 
-const char *nala_format_memory(const void *left_p,
-                               const void *right_p,
+const char *nala_format_memory(const void *left_p, const void *right_p,
                                size_t size)
 {
     size_t file_size;
@@ -978,7 +967,8 @@ const char *nala_format_memory(const void *left_p,
     char *right_hexdump_p;
 
     file_p = open_memstream(&buf_p, &file_size);
-    fprintf(file_p, COLOR_BOLD(RED, "Memory mismatch. See diff for details.\n"));
+    fprintf(file_p,
+            COLOR_BOLD(RED, "Memory mismatch. See diff for details.\n"));
     left_hexdump_p = nala_hexdump(left_p, size, 16);
     right_hexdump_p = nala_hexdump(right_p, size, 16);
     print_string_diff(file_p, right_hexdump_p, left_hexdump_p);
@@ -992,14 +982,11 @@ const char *nala_format_memory(const void *left_p,
 
 bool nala_check_substring(const char *actual_p, const char *expected_p)
 {
-    return ((actual_p != NULL)
-            && (expected_p != NULL)
-            && (strstr(actual_p, expected_p) != NULL));
+    return ((actual_p != NULL) && (expected_p != NULL) &&
+            (strstr(actual_p, expected_p) != NULL));
 }
 
-void nala_test_failure(const char *file_p,
-                       int line,
-                       const char *message_p)
+void nala_test_failure(const char *file_p, int line, const char *message_p)
 {
     nala_capture_output_stop();
     capture_output_destroy(&capture_stdout);
@@ -1037,25 +1024,13 @@ void nala_register_test(struct nala_test_t *test_p)
     tests.tail_p = test_p;
 }
 
-int nala_run_tests()
-{
-    return (run_tests(tests.head_p));
-}
+int nala_run_tests() { return (run_tests(tests.head_p)); }
 
-__attribute__((weak)) int setup(void)
-{
-    return (0);
-}
+__attribute__((weak)) int setup(void) { return (0); }
 
-__attribute__((weak)) int teardown(void)
-{
-    return (0);
-}
+__attribute__((weak)) int teardown(void) { return (0); }
 
-__attribute__((weak)) int main(void)
-{
-    return (nala_run_tests());
-}
+__attribute__((weak)) int main(void) { return (nala_run_tests()); }
 /*
  * The MIT License (MIT)
  *
@@ -1091,7 +1066,6 @@ __attribute__((weak)) int main(void)
 #include <sys/types.h>
 #include <sys/wait.h>
 // #include "subprocess.h"
-
 
 static void fatal_error(const char *message_p)
 {
@@ -1153,7 +1127,8 @@ static void output_print(struct nala_subprocess_output_t *self_p,
 static void redirect_output(int *fds_p, int fileno)
 {
     close(fds_p[0]);
-    while ((dup2(fds_p[1], fileno) == -1) && (errno == EINTR));
+    while ((dup2(fds_p[1], fileno) == -1) && (errno == EINTR))
+        ;
     close(fds_p[1]);
 }
 
@@ -1190,17 +1165,16 @@ static struct nala_subprocess_result_t *result_new(void)
 
     return (result_p);
 
- out2:
+out2:
     free(result_p->stdout.buf_p);
 
- out1:
+out1:
     free(result_p);
 
     return (NULL);
 }
 
-static void call_child(nala_subprocess_entry_t entry,
-                       void *arg_p)
+static void call_child(nala_subprocess_entry_t entry, void *arg_p)
 {
     entry(arg_p);
 }
@@ -1227,19 +1201,16 @@ static struct nala_subprocess_result_t *call_parent(pid_t child_pid)
     return (result_p);
 }
 
-static void call_output_child(nala_subprocess_entry_t entry,
-                              void *arg_p,
-                              int *stdoutfds_p,
-                              int *stderrfds_p)
+static void call_output_child(nala_subprocess_entry_t entry, void *arg_p,
+                              int *stdoutfds_p, int *stderrfds_p)
 {
     redirect_output(stdoutfds_p, STDOUT_FILENO);
     redirect_output(stderrfds_p, STDERR_FILENO);
     call_child(entry, arg_p);
 }
 
-static struct nala_subprocess_result_t *call_output_parent(pid_t child_pid,
-                                                           int *stdoutfds_p,
-                                                           int *stderrfds_p)
+static struct nala_subprocess_result_t *
+call_output_parent(pid_t child_pid, int *stdoutfds_p, int *stderrfds_p)
 {
     struct nala_subprocess_result_t *result_p;
 
@@ -1272,8 +1243,8 @@ static void exec_entry(const char *command_p)
     }
 }
 
-struct nala_subprocess_result_t *nala_subprocess_call(nala_subprocess_entry_t entry,
-                                                      void *arg_p)
+struct nala_subprocess_result_t *
+nala_subprocess_call(nala_subprocess_entry_t entry, void *arg_p)
 {
     pid_t pid;
     struct nala_subprocess_result_t *result_p;
@@ -1295,8 +1266,8 @@ struct nala_subprocess_result_t *nala_subprocess_call(nala_subprocess_entry_t en
     return (result_p);
 }
 
-struct nala_subprocess_result_t *nala_subprocess_call_output(nala_subprocess_entry_t entry,
-                                                             void *arg_p)
+struct nala_subprocess_result_t *
+nala_subprocess_call_output(nala_subprocess_entry_t entry, void *arg_p)
 {
     pid_t pid;
     int stdoutfds[2];
@@ -1327,10 +1298,10 @@ struct nala_subprocess_result_t *nala_subprocess_call_output(nala_subprocess_ent
 
     return (result_p);
 
- out2:
+out2:
     close_fds(&stderrfds[0]);
 
- out1:
+out1:
     close_fds(&stdoutfds[0]);
 
     return (NULL);
@@ -1342,13 +1313,15 @@ struct nala_subprocess_result_t *nala_subprocess_exec(const char *command_p)
                                  (void *)command_p));
 }
 
-struct nala_subprocess_result_t *nala_subprocess_exec_output(const char *command_p)
+struct nala_subprocess_result_t *
+nala_subprocess_exec_output(const char *command_p)
 {
     return (nala_subprocess_call_output((nala_subprocess_entry_t)exec_entry,
                                         (void *)command_p));
 }
 
-bool nala_subprocess_completed_successfully(struct nala_subprocess_result_t *result_p)
+bool nala_subprocess_completed_successfully(
+    struct nala_subprocess_result_t *result_p)
 {
     return ((result_p != NULL) && (result_p->exit_code == 0));
 }
@@ -1495,7 +1468,6 @@ void nala_traceback_print(const char *prefix_p)
 #include <pwd.h>
 // #include "hf.h"
 
-
 #define TIME_UNITS_MAX 7
 
 static void nala_hf_null_last(char *buf_p, size_t size)
@@ -1558,34 +1530,22 @@ struct time_unit_t {
 };
 
 static struct time_unit_t time_units[TIME_UNITS_MAX] = {
-    {
-        .divider = 60 * 60 * 24 * 7 * 52 * 1000ul,
-        .unit_p = "y"
-    },
-    {
-        .divider = 60 * 60 * 24 * 7 * 1000ul,
-        .unit_p = "w"
-    },
-    {
-        .divider = 60 * 60 * 24 * 1000ul,
-        .unit_p = "d"
-    },
-    {
-        .divider = 60 * 60 * 1000ul,
-        .unit_p = "h"
-    },
+    { .divider = 60 * 60 * 24 * 7 * 52 * 1000ul, .unit_p = "y" },
+    { .divider = 60 * 60 * 24 * 7 * 1000ul, .unit_p = "w" },
+    { .divider = 60 * 60 * 24 * 1000ul, .unit_p = "d" },
+    { .divider = 60 * 60 * 1000ul, .unit_p = "h" },
     {
         .divider = 60 * 1000ul,
-        .unit_p = "m"
+        .unit_p = "m",
     },
     {
         .divider = 1000ul,
-        .unit_p = "s"
+        .unit_p = "s",
     },
     {
         .divider = 1ul,
-        .unit_p = "ms"
-    }
+        .unit_p = "ms",
+    },
 };
 
 static const char *get_delimiter(bool is_first, bool is_last)
@@ -1599,8 +1559,7 @@ static const char *get_delimiter(bool is_first, bool is_last)
     }
 }
 
-char *nala_hf_format_timespan(char *buf_p,
-                              size_t size,
+char *nala_hf_format_timespan(char *buf_p, size_t size,
                               unsigned long long timespan_ms)
 {
     int i;
@@ -1645,16 +1604,9 @@ char *nala_hf_format_timespan(char *buf_p,
 #include <sys/types.h>
 // #include "utils.h"
 
+int nala_min_int(int a, int b) { return a < b ? a : b; }
 
-int nala_min_int(int a, int b)
-{
-    return a < b ? a : b;
-}
-
-size_t nala_min_size_t(size_t a, size_t b)
-{
-    return a < b ? a : b;
-}
+size_t nala_min_size_t(size_t a, size_t b) { return a < b ? a : b; }
 
 size_t nala_count_chars(const char *string, char chr)
 {
@@ -1692,7 +1644,6 @@ const char *nala_next_lines(const char *string, size_t lines)
 }
 // #include "diff.h"
 
-
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
@@ -1712,12 +1663,12 @@ const char *nala_next_lines(const char *string, size_t lines);
 
 #endif
 
-
 /*
  * Diff matrix initialization
  */
 
-static void initialize_diff_matrix(NalaDiffMatrix *diff_matrix, size_t rows, size_t columns)
+static void initialize_diff_matrix(NalaDiffMatrix *diff_matrix, size_t rows,
+                                   size_t columns)
 {
     diff_matrix->rows = rows;
     diff_matrix->columns = columns;
@@ -1737,7 +1688,7 @@ NalaDiffMatrix *nala_new_diff_matrix(size_t rows, size_t columns)
  */
 
 NalaDiffMatrix *nala_new_diff_matrix_from_lengths(size_t original_length,
-                                                        size_t modified_length)
+                                                  size_t modified_length)
 {
     NalaDiffMatrix *diff_matrix =
         nala_new_diff_matrix(modified_length + 1, original_length + 1);
@@ -1759,10 +1710,11 @@ static void fill_different(NalaDiffMatrix *diff_matrix, size_t i, size_t j)
         diff_matrix,
         i,
         j,
-        nala_min_int(nala_diff_matrix_get(diff_matrix, i - 1, j - 1),
-                     nala_min_int(nala_diff_matrix_get(diff_matrix, i - 1, j),
-                                  nala_diff_matrix_get(diff_matrix, i, j - 1))) +
-        1);
+        nala_min_int(
+            nala_diff_matrix_get(diff_matrix, i - 1, j - 1),
+            nala_min_int(nala_diff_matrix_get(diff_matrix, i - 1, j),
+                         nala_diff_matrix_get(diff_matrix, i, j - 1))) +
+            1);
 }
 
 static void fill_equal(NalaDiffMatrix *diff_matrix, size_t i, size_t j)
@@ -1804,10 +1756,12 @@ void nala_diff_matrix_fill_from_lines(NalaDiffMatrix *diff_matrix,
 
         for (size_t j = 1; j < diff_matrix->columns; j++) {
             original_pos = nala_next_line(original_line);
-            size_t original_line_length = (size_t)(original_pos - original_line);
+            size_t original_line_length =
+                (size_t)(original_pos - original_line);
 
             if (original_line_length == modified_line_length &&
-                strncmp(original_line, modified_line, original_line_length) == 0) {
+                strncmp(original_line, modified_line, original_line_length) ==
+                    0) {
                 fill_equal(diff_matrix, i, j);
             } else {
                 fill_different(diff_matrix, i, j);
@@ -1845,7 +1799,8 @@ NalaDiff nala_diff_matrix_get_diff(const NalaDiffMatrix *diff_matrix)
 
         int current = nala_diff_matrix_get(diff_matrix, i, j);
 
-        if (i > 0 && j > 0 && current == nala_diff_matrix_get(diff_matrix, i - 1, j - 1) + 1) {
+        if (i > 0 && j > 0 &&
+            current == nala_diff_matrix_get(diff_matrix, i - 1, j - 1) + 1) {
             current_chunk->type = NALA_DIFF_CHUNK_TYPE_REPLACED;
             current_chunk->original_start = j - 1;
             current_chunk->original_end = j;
@@ -1853,21 +1808,24 @@ NalaDiff nala_diff_matrix_get_diff(const NalaDiffMatrix *diff_matrix)
             current_chunk->modified_end = i;
             i--;
             j--;
-        } else if (j > 0 && current == nala_diff_matrix_get(diff_matrix, i, j - 1) + 1) {
+        } else if (j > 0 &&
+                   current == nala_diff_matrix_get(diff_matrix, i, j - 1) + 1) {
             current_chunk->type = NALA_DIFF_CHUNK_TYPE_DELETED;
             current_chunk->original_start = j - 1;
             current_chunk->original_end = j;
             current_chunk->modified_start = i;
             current_chunk->modified_end = i;
             j--;
-        } else if (i > 0 && current == nala_diff_matrix_get(diff_matrix, i - 1, j) + 1) {
+        } else if (i > 0 &&
+                   current == nala_diff_matrix_get(diff_matrix, i - 1, j) + 1) {
             current_chunk->type = NALA_DIFF_CHUNK_TYPE_ADDED;
             current_chunk->original_start = j;
             current_chunk->original_end = j;
             current_chunk->modified_start = i - 1;
             current_chunk->modified_end = i;
             i--;
-        } else if (i > 0 && j > 0 && current == nala_diff_matrix_get(diff_matrix, i - 1, j - 1)) {
+        } else if (i > 0 && j > 0 &&
+                   current == nala_diff_matrix_get(diff_matrix, i - 1, j - 1)) {
             current_chunk->type = NALA_DIFF_CHUNK_TYPE_MATCHED;
             current_chunk->original_start = j - 1;
             current_chunk->original_end = j;
@@ -1913,32 +1871,32 @@ NalaDiff nala_diff_matrix_get_diff(const NalaDiffMatrix *diff_matrix)
     return diff;
 }
 
-size_t nala_diff_matrix_index(const NalaDiffMatrix *diff_matrix, size_t row, size_t column)
+size_t nala_diff_matrix_index(const NalaDiffMatrix *diff_matrix, size_t row,
+                              size_t column)
 {
     return row * diff_matrix->columns + column;
 }
 
-int nala_diff_matrix_get(const NalaDiffMatrix *diff_matrix, size_t row, size_t column)
+int nala_diff_matrix_get(const NalaDiffMatrix *diff_matrix, size_t row,
+                         size_t column)
 {
-    return diff_matrix->content[nala_diff_matrix_index(diff_matrix, row, column)];
+    return diff_matrix
+        ->content[nala_diff_matrix_index(diff_matrix, row, column)];
 }
 
-void nala_diff_matrix_set(const NalaDiffMatrix *diff_matrix,
-                             size_t row,
-                             size_t column,
-                             int value)
+void nala_diff_matrix_set(const NalaDiffMatrix *diff_matrix, size_t row,
+                          size_t column, int value)
 {
-    diff_matrix->content[nala_diff_matrix_index(diff_matrix, row, column)] = value;
+    diff_matrix->content[nala_diff_matrix_index(diff_matrix, row, column)] =
+        value;
 }
 
 /*
  * Higher-level wrappers
  */
 
-NalaDiff nala_diff_strings_lengths(const char *original,
-                                         size_t original_length,
-                                         const char *modified,
-                                         size_t modified_length)
+NalaDiff nala_diff_strings_lengths(const char *original, size_t original_length,
+                                   const char *modified, size_t modified_length)
 {
     NalaDiffMatrix *diff_matrix =
         nala_new_diff_matrix_from_lengths(original_length, modified_length);
@@ -1954,7 +1912,10 @@ NalaDiff nala_diff_strings_lengths(const char *original,
 
 NalaDiff nala_diff_strings(const char *original, const char *modified)
 {
-    return nala_diff_strings_lengths(original, strlen(original), modified, strlen(modified));
+    return nala_diff_strings_lengths(original,
+                                     strlen(original),
+                                     modified,
+                                     strlen(modified));
 }
 
 NalaDiff nala_diff_lines(const char *original, const char *modified)
@@ -1985,7 +1946,6 @@ void nala_free_diff_matrix(NalaDiffMatrix *diff_matrix)
 }
 // #include "hexdump.h"
 
-
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -2002,7 +1962,7 @@ char *nala_hexdump(const uint8_t *buffer, size_t size, size_t bytes_per_row)
         fprintf(stream, "%06lX  ", offset);
 
         for (size_t i = 0; i < bytes_per_row; i++) {
-            if (offset + i < size)             {
+            if (offset + i < size) {
                 fprintf(stream, "%02X ", buffer[offset + i]);
             } else {
                 fprintf(stream, "-- ");

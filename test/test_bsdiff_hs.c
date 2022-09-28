@@ -9,8 +9,7 @@
 #include <bpak/bsdiff.h>
 #include "nala.h"
 
-struct bspatch_priv
-{
+struct bspatch_priv {
     uint8_t *origin_data;
     ssize_t origin_length;
     uint8_t *output_data;
@@ -41,17 +40,16 @@ static ssize_t load_file(const char *path, uint8_t **buffer_out)
     return read(fd, *buffer_out, file_length);
 }
 
-ssize_t read_origin(off_t offset,
-                    uint8_t *buffer,
-                    size_t length,
+ssize_t read_origin(off_t offset, uint8_t *buffer, size_t length,
                     void *user_priv)
 {
-    struct bspatch_priv *priv = (struct bspatch_priv *) user_priv;
+    struct bspatch_priv *priv = (struct bspatch_priv *)user_priv;
 
     printf("Read origin %li %zu\n", offset, length);
 
-    ssize_t bytes_to_read = ((offset + length) > priv->origin_length)?
-                            (priv->origin_length - offset):length;
+    ssize_t bytes_to_read = ((offset + length) > priv->origin_length)
+                                ? (priv->origin_length - offset)
+                                : length;
 
     if (bytes_to_read > 0) {
         memcpy(buffer, &priv->origin_data[offset], bytes_to_read);
@@ -60,17 +58,16 @@ ssize_t read_origin(off_t offset,
     return bytes_to_read;
 }
 
-ssize_t write_output(off_t offset,
-                    uint8_t *buffer,
-                    size_t length,
-                    void *user_priv)
+ssize_t write_output(off_t offset, uint8_t *buffer, size_t length,
+                     void *user_priv)
 {
 
-    struct bspatch_priv *priv = (struct bspatch_priv *) user_priv;
+    struct bspatch_priv *priv = (struct bspatch_priv *)user_priv;
 
     printf("Write output %li %zu\n", offset, length);
-    ssize_t bytes_to_write = ((offset + length) > priv->output_length)?
-                              (priv->output_length - offset): length;
+    ssize_t bytes_to_write = ((offset + length) > priv->output_length)
+                                 ? (priv->output_length - offset)
+                                 : length;
 
     if (bytes_to_write > 0) {
         memcpy(&priv->output_data[offset], buffer, bytes_to_write);
@@ -93,13 +90,14 @@ TEST(diffpatch1)
     patch_length = load_file(TEST_SRC_DIR "/diff1_patch.bin", &patch_data);
     ASSERT(patch_length > 0);
 
-    priv.origin_length = load_file(TEST_SRC_DIR "/diff1_origin.txt", &priv.origin_data);
+    priv.origin_length =
+        load_file(TEST_SRC_DIR "/diff1_origin.txt", &priv.origin_data);
     ASSERT(priv.origin_length > 0);
 
     ref_length = load_file(TEST_SRC_DIR "/diff1_new.txt", &ref_data);
     ASSERT(ref_length > 0);
 
-    priv.output_length = 1024*1024;
+    priv.output_length = 1024 * 1024;
     priv.output_data = malloc(priv.output_length);
     ASSERT(priv.output_data != NULL);
 
@@ -107,8 +105,10 @@ TEST(diffpatch1)
                            decode_buffer,
                            BPAK_CHUNK_BUFFER_LENGTH,
                            patch_length, // patch length
-                           read_origin, 0,
-                           write_output, 0,
+                           read_origin,
+                           0,
+                           write_output,
+                           0,
                            BPAK_COMPRESSION_HS,
                            &priv);
     ASSERT_EQ(rc, 0);
@@ -143,13 +143,14 @@ TEST(diffpatch2)
     patch_length = load_file(TEST_SRC_DIR "/diff2_patch.bin", &patch_data);
     ASSERT(patch_length > 0);
 
-    priv.origin_length = load_file(TEST_SRC_DIR "/diff2_origin.bin", &priv.origin_data);
+    priv.origin_length =
+        load_file(TEST_SRC_DIR "/diff2_origin.bin", &priv.origin_data);
     ASSERT(priv.origin_length > 0);
 
     ref_length = load_file(TEST_SRC_DIR "/diff2_target.bin", &ref_data);
     ASSERT(ref_length > 0);
 
-    priv.output_length = 2*1024*1024;
+    priv.output_length = 2 * 1024 * 1024;
     priv.output_data = malloc(priv.output_length);
     ASSERT(priv.output_data != NULL);
 
@@ -157,8 +158,10 @@ TEST(diffpatch2)
                            decode_buffer,
                            BPAK_CHUNK_BUFFER_LENGTH,
                            patch_length, // patch length
-                           read_origin, 0,
-                           write_output, 0,
+                           read_origin,
+                           0,
+                           write_output,
+                           0,
                            BPAK_COMPRESSION_HS,
                            &priv);
     ASSERT_EQ(rc, 0);
@@ -170,7 +173,7 @@ TEST(diffpatch2)
     ASSERT(output_length > 0);
     printf("Patch output length: %li\n", output_length);
 
-    ///ASSERT_MEMORY(ref_data, priv.output_data, ref_length);
+    /// ASSERT_MEMORY(ref_data, priv.output_data, ref_length);
 
     for (size_t l = 0; l < ref_length; l++) {
         if (ref_data[l] != priv.output_data[l]) {
@@ -197,16 +200,18 @@ TEST(diffpatch2_no_comp)
     ssize_t ref_length;
     uint8_t decode_buffer[BPAK_CHUNK_BUFFER_LENGTH];
 
-    patch_length = load_file(TEST_SRC_DIR "/diff2_patch_no_comp.bin", &patch_data);
+    patch_length =
+        load_file(TEST_SRC_DIR "/diff2_patch_no_comp.bin", &patch_data);
     ASSERT(patch_length > 0);
 
-    priv.origin_length = load_file(TEST_SRC_DIR "/diff2_origin.bin", &priv.origin_data);
+    priv.origin_length =
+        load_file(TEST_SRC_DIR "/diff2_origin.bin", &priv.origin_data);
     ASSERT(priv.origin_length > 0);
 
     ref_length = load_file(TEST_SRC_DIR "/diff2_target.bin", &ref_data);
     ASSERT(ref_length > 0);
 
-    priv.output_length = 2*1024*1024;
+    priv.output_length = 2 * 1024 * 1024;
     priv.output_data = malloc(priv.output_length);
     ASSERT(priv.output_data != NULL);
 
@@ -214,8 +219,10 @@ TEST(diffpatch2_no_comp)
                            decode_buffer,
                            BPAK_CHUNK_BUFFER_LENGTH,
                            patch_length,
-                           read_origin, 0,
-                           write_output, 0,
+                           read_origin,
+                           0,
+                           write_output,
+                           0,
                            BPAK_COMPRESSION_NONE,
                            &priv);
     ASSERT_EQ(rc, 0);
@@ -227,7 +234,7 @@ TEST(diffpatch2_no_comp)
     ASSERT(output_length > 0);
     printf("Patch output length: %li\n", output_length);
 
-    ///ASSERT_MEMORY(ref_data, priv.output_data, ref_length);
+    /// ASSERT_MEMORY(ref_data, priv.output_data, ref_length);
 
     for (size_t l = 0; l < ref_length; l++) {
         if (ref_data[l] != priv.output_data[l]) {
@@ -243,14 +250,13 @@ TEST(diffpatch2_no_comp)
     free(priv.output_data);
 }
 
-
 static uint8_t *create_origin_data(size_t length)
 {
     uint8_t *output = malloc(length);
     ASSERT(output != NULL);
 
     for (unsigned int i = 0; i < length; i++)
-        output[i] = 33 + i%200;
+        output[i] = 33 + i % 200;
 
     return output;
 }
@@ -272,26 +278,24 @@ static uint8_t *create_new_data(size_t length, uint8_t *origin_data)
 
 static size_t patch_length;
 
-static ssize_t write_patch_output(off_t offset,
-                                  uint8_t *buffer,
-                                  size_t length,
+static ssize_t write_patch_output(off_t offset, uint8_t *buffer, size_t length,
                                   void *user_priv)
 {
-    uint8_t *buf = (uint8_t *) user_priv;
+    uint8_t *buf = (uint8_t *)user_priv;
     printf("patch write: %li, %zu\n", offset, length);
     memcpy(&buf[offset], buffer, length);
     patch_length += length;
     return length;
 }
 
-#define DIFF_PATCH_NO_COMP_LEN (64*1024)
+#define DIFF_PATCH_NO_COMP_LEN (64 * 1024)
 
 TEST(diff_patch_hs_in_memory)
 {
     int rc;
     uint8_t *origin_data = create_origin_data(DIFF_PATCH_NO_COMP_LEN);
     uint8_t *new_data = create_new_data(DIFF_PATCH_NO_COMP_LEN, origin_data);
-    uint8_t patch_buffer[32*1024]; // Hold the generated patch data
+    uint8_t patch_buffer[32 * 1024];        // Hold the generated patch data
     uint8_t output[DIFF_PATCH_NO_COMP_LEN]; // Result from applying the patch
     struct bpak_bsdiff_context bsdiff;
     struct bpak_bspatch_context bspatch;
@@ -302,11 +306,15 @@ TEST(diff_patch_hs_in_memory)
     printf("Generating patch\n");
     patch_length = 0;
 
-    rc = bpak_bsdiff_init(&bsdiff, origin_data, DIFF_PATCH_NO_COMP_LEN,
-                                new_data, DIFF_PATCH_NO_COMP_LEN,
-                                write_patch_output, 0,
-                                BPAK_COMPRESSION_HS,
-                                (void *) patch_buffer);
+    rc = bpak_bsdiff_init(&bsdiff,
+                          origin_data,
+                          DIFF_PATCH_NO_COMP_LEN,
+                          new_data,
+                          DIFF_PATCH_NO_COMP_LEN,
+                          write_patch_output,
+                          0,
+                          BPAK_COMPRESSION_HS,
+                          (void *)patch_buffer);
     ASSERT(rc == 0);
 
     rc = bpak_bsdiff(&bsdiff);
@@ -327,8 +335,10 @@ TEST(diff_patch_hs_in_memory)
                            decode_buffer,
                            BPAK_CHUNK_BUFFER_LENGTH,
                            patch_length,
-                           read_origin, 0,
-                           write_output, 0,
+                           read_origin,
+                           0,
+                           write_output,
+                           0,
                            BPAK_COMPRESSION_HS,
                            &priv);
     ASSERT_EQ(rc, 0);
@@ -352,7 +362,7 @@ TEST(diff_patch_lzma_in_memory)
     int rc;
     uint8_t *origin_data = create_origin_data(DIFF_PATCH_NO_COMP_LEN);
     uint8_t *new_data = create_new_data(DIFF_PATCH_NO_COMP_LEN, origin_data);
-    uint8_t patch_buffer[32*1024]; // Hold the generated patch data
+    uint8_t patch_buffer[32 * 1024];        // Hold the generated patch data
     uint8_t output[DIFF_PATCH_NO_COMP_LEN]; // Result from applying the patch
     struct bpak_bsdiff_context bsdiff;
     struct bpak_bspatch_context bspatch;
@@ -363,11 +373,15 @@ TEST(diff_patch_lzma_in_memory)
     printf("Generating patch\n");
     patch_length = 0;
 
-    rc = bpak_bsdiff_init(&bsdiff, origin_data, DIFF_PATCH_NO_COMP_LEN,
-                                new_data, DIFF_PATCH_NO_COMP_LEN,
-                                write_patch_output, 0,
-                                BPAK_COMPRESSION_LZMA,
-                                (void *) patch_buffer);
+    rc = bpak_bsdiff_init(&bsdiff,
+                          origin_data,
+                          DIFF_PATCH_NO_COMP_LEN,
+                          new_data,
+                          DIFF_PATCH_NO_COMP_LEN,
+                          write_patch_output,
+                          0,
+                          BPAK_COMPRESSION_LZMA,
+                          (void *)patch_buffer);
     ASSERT(rc == 0);
 
     rc = bpak_bsdiff(&bsdiff);
@@ -388,8 +402,10 @@ TEST(diff_patch_lzma_in_memory)
                            decode_buffer,
                            BPAK_CHUNK_BUFFER_LENGTH,
                            patch_length,
-                           read_origin, 0,
-                           write_output, 0,
+                           read_origin,
+                           0,
+                           write_output,
+                           0,
                            BPAK_COMPRESSION_LZMA,
                            &priv);
     ASSERT_EQ(rc, 0);

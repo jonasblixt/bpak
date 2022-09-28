@@ -22,7 +22,6 @@
 
 #include "bpak_tool.h"
 
-
 int action_extract(int argc, char **argv)
 {
     int opt;
@@ -35,67 +34,67 @@ int action_extract(int argc, char **argv)
     uint32_t part_id_ref = 0;
     FILE *fp = NULL;
 
-    struct option long_options[] =
-    {
-        {"help",        no_argument,       0,  'h' },
-        {"verbose",     no_argument,       0,  'v' },
-        {"meta",        required_argument, 0,  'm' },
-        {"part",        required_argument, 0,  'p' },
-        {"output",      required_argument, 0,  'o' },
-        {"part-ref",    required_argument, 0,  'r' },
-        {0,             0,                 0,   0  }
+    struct option long_options[] = {
+        { "help", no_argument, 0, 'h' },
+        { "verbose", no_argument, 0, 'v' },
+        { "meta", required_argument, 0, 'm' },
+        { "part", required_argument, 0, 'p' },
+        { "output", required_argument, 0, 'o' },
+        { "part-ref", required_argument, 0, 'r' },
+        { 0, 0, 0, 0 },
     };
 
-    while ((opt = getopt_long(argc, argv, "hvm:p:o:r:",
-                   long_options, &long_index )) != -1)
-    {
-        switch (opt)
-        {
-            case 'h':
-                print_extract_usage();
-                return 0;
-            case 'v':
-                bpak_inc_verbosity();
+    while ((opt = getopt_long(argc,
+                              argv,
+                              "hvm:p:o:r:",
+                              long_options,
+                              &long_index)) != -1) {
+        switch (opt) {
+        case 'h':
+            print_extract_usage();
+            return 0;
+        case 'v':
+            bpak_inc_verbosity();
             break;
-            case 'r':
-                if (strncmp(optarg, "0x", 2) == 0) {
-                    part_id_ref = strtoul(optarg, NULL, 16);
-                } else {
-                    part_id_ref = bpak_id(optarg);
-                }
+        case 'r':
+            if (strncmp(optarg, "0x", 2) == 0) {
+                part_id_ref = strtoul(optarg, NULL, 16);
+            } else {
+                part_id_ref = bpak_id(optarg);
+            }
             break;
-            case 'p':
-                if (strncmp(optarg, "0x", 2) == 0) {
-                    part_id = strtoul(optarg, NULL, 16);
-                } else {
-                    part_id = bpak_id(optarg);
-                }
+        case 'p':
+            if (strncmp(optarg, "0x", 2) == 0) {
+                part_id = strtoul(optarg, NULL, 16);
+            } else {
+                part_id = bpak_id(optarg);
+            }
             break;
-            case 'm':
-                if (strncmp(optarg, "0x", 2) == 0) {
-                    meta_id = strtoul(optarg, NULL, 16);
-                } else {
-                    meta_id = bpak_id(optarg);
-                }
+        case 'm':
+            if (strncmp(optarg, "0x", 2) == 0) {
+                meta_id = strtoul(optarg, NULL, 16);
+            } else {
+                meta_id = bpak_id(optarg);
+            }
             break;
-            case 'o':
-                output_filename = (const char *) optarg;
+        case 'o':
+            output_filename = (const char *)optarg;
             break;
-            case '?':
-                fprintf(stderr, "Unknown option: %c\n", optopt);
-                return -1;
+        case '?':
+            fprintf(stderr, "Unknown option: %c\n", optopt);
+            return -1;
             break;
-            case ':':
-                fprintf(stderr, "Missing arg for %c\n", optopt);
-                return -1;
+        case ':':
+            fprintf(stderr, "Missing arg for %c\n", optopt);
+            return -1;
             break;
-            default:
-               return -1;
+        default:
+            return -1;
         }
     }
 
     if (optind < argc) {
-        filename = (const char *) argv[optind++];
+        filename = (const char *)argv[optind++];
     } else {
         fprintf(stderr, "Missing filename argument\n");
         return -1;
@@ -122,8 +121,12 @@ int action_extract(int argc, char **argv)
         struct bpak_meta_header *meta_header = NULL;
         void *data_ptr = NULL;
 
-        rc = bpak_get_meta_and_header(h, meta_id, part_id_ref, &data_ptr,
-                                        NULL, &meta_header);
+        rc = bpak_get_meta_and_header(h,
+                                      meta_id,
+                                      part_id_ref,
+                                      &data_ptr,
+                                      NULL,
+                                      &meta_header);
 
         if (rc != BPAK_OK) {
             fprintf(stderr, "Error: Could not find metadata %x\n", meta_id);
@@ -134,7 +137,9 @@ int action_extract(int argc, char **argv)
             fp = fopen(output_filename, "w+");
 
             if (fp == NULL) {
-                fprintf(stderr, "Error: Could not create '%s'\n", output_filename);
+                fprintf(stderr,
+                        "Error: Could not create '%s'\n",
+                        output_filename);
                 rc = -BPAK_FAILED;
                 goto err_close_pkg_out;
             }
@@ -174,8 +179,9 @@ int action_extract(int argc, char **argv)
             fp = fopen(output_filename, "w+");
 
             if (fp == NULL) {
-                fprintf(stderr, "Error: Could not create '%s'\n",
-                                output_filename);
+                fprintf(stderr,
+                        "Error: Could not create '%s'\n",
+                        output_filename);
                 rc = -BPAK_FAILED;
                 goto err_close_pkg_out;
             }

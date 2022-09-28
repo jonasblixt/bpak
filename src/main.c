@@ -27,51 +27,46 @@ int main(int argc, char **argv)
     int long_index = 0;
     const char *action = NULL;
 
-    struct option long_options[] =
-    {
-        {"help",      no_argument,       0,  'h' },
-        {"version",   no_argument,       0,  'V' },
-        {0,           0,                 0,   0  }
+    struct option long_options[] = {
+        { "help", no_argument, 0, 'h' },
+        { "version", no_argument, 0, 'V' },
+        { 0, 0, 0, 0 },
     };
 
-    if (argc < 2)
-    {
+    if (argc < 2) {
         print_usage();
         return 0;
     }
 
     srand(time(NULL));
 
-    while ((opt = getopt_long(2, argv, "hV",
-                   long_options, &long_index )) != -1)
-    {
-        switch (opt)
-        {
-            case 'h':
-                print_usage();
-                return 0;
+    while ((opt = getopt_long(2, argv, "hV", long_options, &long_index)) !=
+           -1) {
+        switch (opt) {
+        case 'h':
+            print_usage();
+            return 0;
             break;
-            case 'V':
-                print_version();
-                return 0;
+        case 'V':
+            print_version();
+            return 0;
             break;
-            case '?':
-                printf("Unknown option: %c\n", optopt);
-                return -1;
+        case '?':
+            printf("Unknown option: %c\n", optopt);
+            return -1;
             break;
-            case ':':
-                printf("Missing arg for %c\n", optopt);
-                return -1;
+        case ':':
+            printf("Missing arg for %c\n", optopt);
+            return -1;
             break;
-             default:
-                print_usage();
-                exit(EXIT_FAILURE);
+        default:
+            print_usage();
+            exit(EXIT_FAILURE);
         }
     }
 
-    if (optind < argc)
-    {
-        action = (const char *) argv[optind++];
+    if (optind < argc) {
+        action = (const char *)argv[optind++];
         optind = 1;
         argv++;
         argc--;
@@ -98,12 +93,10 @@ int main(int argc, char **argv)
         } else if (strcmp(action, "extract") == 0) {
             rc = action_extract(argc, argv);
         } else {
-            printf ("Unknown action '%s'\n", action);
+            printf("Unknown action '%s'\n", action);
             return -1;
         }
-    }
-    else
-    {
+    } else {
         printf("Unknown action and/or filename\n");
         return -1;
     }

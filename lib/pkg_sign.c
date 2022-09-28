@@ -17,14 +17,15 @@
 #include <bpak/crypto.h>
 #include <bpak/keystore.h>
 
-BPAK_EXPORT int bpak_pkg_sign(struct bpak_package *pkg, const char *key_filename)
+BPAK_EXPORT int bpak_pkg_sign(struct bpak_package *pkg,
+                              const char *key_filename)
 {
     int rc;
     struct bpak_key *sign_key = NULL;
     uint8_t hash_output[BPAK_HASH_MAX_LENGTH];
     size_t hash_size = sizeof(hash_output);
 
-    rc = bpak_pkg_update_hash(pkg, (char *) hash_output, &hash_size);
+    rc = bpak_pkg_update_hash(pkg, (char *)hash_output, &hash_size);
 
     if (rc != BPAK_OK)
         return rc;
@@ -49,7 +50,7 @@ BPAK_EXPORT int bpak_pkg_sign(struct bpak_package *pkg, const char *key_filename
     if (rc != BPAK_OK)
         goto err_free_key_out;
 
-    pkg->header.signature_sz = (uint16_t) signature_length;
+    pkg->header.signature_sz = (uint16_t)signature_length;
 
     rc = bpak_pkg_write_header(pkg);
 
