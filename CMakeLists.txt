@@ -21,7 +21,7 @@ enable_language(C)
 enable_testing()
 set(CMAKE_C_STANDARD 99)
 
-add_compile_options(-Wall -Werror -fstack-usage)
+add_compile_options(-Wall -Werror)
 include_directories(include/)
 
 option(BPAK_BUILD_MINIMAL "Build a minial version of the library" OFF)
@@ -41,7 +41,7 @@ endif()
 
 if (BPAK_BUILD_TESTS)
     add_subdirectory("test")
-    add_compile_options(-g -fprofile-arcs -ftest-coverage)
+    add_compile_options(-g -fprofile-arcs -ftest-coverage -fstack-usage)
     link_libraries(gcov)
 endif()
 
