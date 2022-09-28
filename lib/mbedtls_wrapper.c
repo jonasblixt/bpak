@@ -420,6 +420,7 @@ int bpak_mbed_parse_public_key(const uint8_t *buffer,
 {
     int rc = BPAK_OK;
     struct bpak_key *key = NULL;
+    uint8_t key_buffer[512];
     enum bpak_key_kind kind;
     mbedtls_pk_context ctx;
     mbedtls_pk_init(&ctx);
@@ -458,21 +459,22 @@ int bpak_mbed_parse_public_key(const uint8_t *buffer,
         goto err_free_ctx_out;
     }
 
-    key = bpak_calloc(1, sizeof(struct bpak_key) + 1024);
+    int len = mbedtls_pk_write_pubkey_der(&ctx, key_buffer, sizeof(key_buffer));
+
+    if (len < 0) {
+        rc = -BPAK_KEY_DECODE;
+        (*output) = NULL;
+        goto err_free_ctx_out;
+    }
+
+    key = bpak_calloc(1, sizeof(struct bpak_key) + len);
 
     if (key == NULL) {
         rc = -BPAK_FAILED;
         goto err_free_ctx_out;
     }
 
-    int len = mbedtls_pk_write_pubkey_der(&ctx, key->data, 1024);
-
-    if (len < 0) {
-        rc = -BPAK_KEY_DECODE;
-        free(key);
-        (*output) = NULL;
-        goto err_free_ctx_out;
-    }
+    memcpy(key->data, &key_buffer[sizeof(key_buffer) - len], len);
 
     key->size = (uint16_t) len;
     key->kind = kind;
