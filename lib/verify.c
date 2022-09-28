@@ -20,9 +20,8 @@ BPAK_EXPORT int bpak_verify_compute_header_hash(struct bpak_header *header,
                                     uint8_t *output,
                                     size_t *size)
 {
-    uint8_t signature[BPAK_SIGNATURE_MAX_BYTES];
-    uint16_t signature_sz;
     int rc;
+    uint8_t zero = 0;
     struct bpak_hash_context hash_ctx;
 
     /* Compute header hash */
@@ -31,18 +30,24 @@ BPAK_EXPORT int bpak_verify_compute_header_hash(struct bpak_header *header,
     if (rc != BPAK_OK)
         return rc;
 
-    memcpy(signature, header->signature, sizeof(signature));
-    signature_sz = header->signature_sz;
-
-    memset(header->signature, 0, sizeof(header->signature));
-    header->signature_sz = 0;
-
-
-    rc = bpak_hash_update(&hash_ctx, (uint8_t *) header,
-                                     sizeof(*header));
+    /* Hash everyting except the signature and signature size */
+    size_t bytes_to_hash = sizeof(*header) -
+                           sizeof(header->signature) -
+                           sizeof(header->signature_sz);
+    rc = bpak_hash_update(&hash_ctx, (uint8_t *) header, bytes_to_hash);
 
     if (rc != BPAK_OK)
         goto err_free_hash_ctx_out;
+
+    /* Additional update to hash zeroes for signature/signature_sz */
+    bytes_to_hash = sizeof(header->signature) + sizeof(header->signature_sz);
+
+    for (size_t i = 0; i < bytes_to_hash; i++) {
+        rc = bpak_hash_update(&hash_ctx, &zero, 1);
+
+        if (rc != BPAK_OK)
+            goto err_free_hash_ctx_out;
+    }
 
     rc = bpak_hash_final(&hash_ctx, output, *size, size);
 
@@ -51,8 +56,6 @@ BPAK_EXPORT int bpak_verify_compute_header_hash(struct bpak_header *header,
 
 err_free_hash_ctx_out:
     bpak_hash_free(&hash_ctx);
-    memcpy(header->signature, signature, sizeof(signature));
-    header->signature_sz = signature_sz;
     return BPAK_OK;
 }
 
