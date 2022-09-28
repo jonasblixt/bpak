@@ -169,24 +169,11 @@ int bpak_mbed_verify(const uint8_t *signature,
                        bool *verified)
 {
     int rc;
-    const char *pers = "mbedtls_pk_sign";
     mbedtls_pk_context ctx;
-    mbedtls_entropy_context entropy;
-    mbedtls_ctr_drbg_context ctr_drbg;
 
     (*verified) = false;
 
-    mbedtls_entropy_init(&entropy);
-    mbedtls_ctr_drbg_init(&ctr_drbg);
     mbedtls_pk_init(&ctx);
-
-    rc = mbedtls_ctr_drbg_seed(&ctr_drbg, mbedtls_entropy_func, &entropy,
-                               (const unsigned char *) pers,
-                               strlen(pers));
-
-    if (rc != 0) {
-        return -BPAK_FAILED;
-    }
 
     rc = mbedtls_pk_parse_public_key(&ctx, key->data, key->size);
 
@@ -208,8 +195,6 @@ int bpak_mbed_verify(const uint8_t *signature,
 
 
     mbedtls_pk_free(&ctx);
-    mbedtls_ctr_drbg_free(&ctr_drbg);
-    mbedtls_entropy_free(&entropy);
     return BPAK_OK;
 }
 
