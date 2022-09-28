@@ -52,7 +52,7 @@ int bpak_mbed_hash_update(struct bpak_hash_context *ctx,
 {
 #if MBEDTLS_VERSION_MAJOR >= 3
     if (ctx->kind == BPAK_HASH_SHA256)
-        mbedtls_sha256_update(&ctx->backednd.mbed_sha256,
+        mbedtls_sha256_update(&ctx->backend.mbed_sha256,
                               (const unsigned char *) buffer, length);
     else
         mbedtls_sha512_update(&ctx->backend.mbed_sha512,
