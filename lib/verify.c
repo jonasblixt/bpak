@@ -124,7 +124,7 @@ struct merkle_verify_private
 static ssize_t merkle_verify_wr(off_t offset, uint8_t *buf, size_t size,
                                 void *user)
 {
-    uint8_t chunk_buffer[BPAK_CHUNK_BUFFER_LENGTH];
+    uint8_t chunk_buffer[BPAK_MERKLE_HASH_BYTES];
     ssize_t chunk_length;
     size_t bytes_to_process = size;
     struct merkle_verify_private *priv = (struct merkle_verify_private *) user;
