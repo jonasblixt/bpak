@@ -35,8 +35,8 @@
 
 #define BPAK_VERSION_MAJOR 0
 #define BPAK_VERSION_MINOR 8
-#define BPAK_VERSION_PATCH 0
-#define BPAK_VERSION_STRING "0.8.0"
+#define BPAK_VERSION_PATCH 1
+#define BPAK_VERSION_STRING "0.8.1"
 
 #define BPAK_EXPORT __attribute__((visibility("default")))
 
