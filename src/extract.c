@@ -82,11 +82,11 @@ int action_extract(int argc, char **argv)
                 output_filename = (const char *) optarg;
             break;
             case '?':
-                printf("Unknown option: %c\n", optopt);
+                fprintf(stderr, "Unknown option: %c\n", optopt);
                 return -1;
             break;
             case ':':
-                printf("Missing arg for %c\n", optopt);
+                fprintf(stderr, "Missing arg for %c\n", optopt);
                 return -1;
             break;
             default:
@@ -94,13 +94,10 @@ int action_extract(int argc, char **argv)
         }
     }
 
-    if (optind < argc)
-    {
+    if (optind < argc) {
         filename = (const char *) argv[optind++];
-    }
-    else
-    {
-        printf("Missing filename argument\n");
+    } else {
+        fprintf(stderr, "Missing filename argument\n");
         return -1;
     }
 
@@ -109,14 +106,14 @@ int action_extract(int argc, char **argv)
     rc = bpak_pkg_open(&pkg, filename, "r+");
 
     if (rc != BPAK_OK) {
-        printf("Error: Could not open package\n");
+        fprintf(stderr, "Error: Could not open package\n");
         return rc;
     }
 
     struct bpak_header *h = bpak_pkg_header(&pkg);
 
     if (!((meta_id > 0) ^ (part_id > 0))) {
-        printf("Error: Select either --part or --meta\n");
+        fprintf(stderr, "Error: Select either --part or --meta\n");
         rc = -BPAK_FAILED;
         goto err_close_pkg_out;
     }
@@ -128,8 +125,7 @@ int action_extract(int argc, char **argv)
         rc = bpak_get_meta_and_header(h, meta_id, part_id_ref, &data_ptr,
                                         NULL, &meta_header);
 
-        if (rc != BPAK_OK)
-        {
+        if (rc != BPAK_OK) {
             fprintf(stderr, "Error: Could not find metadata %x\n", meta_id);
             goto err_close_pkg_out;
         }
@@ -137,29 +133,21 @@ int action_extract(int argc, char **argv)
         if (output_filename != NULL) {
             fp = fopen(output_filename, "w+");
 
-            if (fp == NULL)
-            {
-                fprintf(stderr, "Error: Could not create '%s'\n",
-                                output_filename);
+            if (fp == NULL) {
+                fprintf(stderr, "Error: Could not create '%s'\n", output_filename);
                 rc = -BPAK_FAILED;
                 goto err_close_pkg_out;
             }
-
-            ssize_t written = fwrite(data_ptr, meta_header->size, 1, fp);
-
-            if (written != 1)
-            {
-                fprintf(stderr, "Error: write error\n");
-                rc = -BPAK_WRITE_ERROR;
-                goto err_close_fp_out;
-            }
         } else {
-            /* Write to STDOUT */
-            if (write(1, data_ptr, meta_header->size) != meta_header->size) {
-                fprintf(stderr, "Error: write failed\n");
-                rc = -1;
-                goto err_close_fp_out;
-            }
+            fp = stdout;
+        }
+
+        ssize_t written = fwrite(data_ptr, 1, meta_header->size, fp);
+
+        if (written != meta_header->size) {
+            fprintf(stderr, "Error: write error\n");
+            rc = -BPAK_WRITE_ERROR;
+            goto err_close_fp_out;
         }
     }
 
@@ -191,57 +179,35 @@ int action_extract(int argc, char **argv)
                 rc = -BPAK_FAILED;
                 goto err_close_pkg_out;
             }
-
-            char copy_buffer[1024];
-            size_t bytes_to_copy = bpak_part_size(part) - part->pad_bytes;
-            size_t chunk = 0;
-
-            while (bytes_to_copy) {
-                if (bytes_to_copy > sizeof(copy_buffer)) {
-                    chunk = sizeof(copy_buffer);
-                } else {
-                    chunk = bytes_to_copy;
-                }
-
-                chunk = fread(copy_buffer, 1, chunk, pkg.fp);
-                if (fwrite(copy_buffer, 1, chunk, fp) != chunk) {
-                    rc = -BPAK_WRITE_ERROR;
-                    goto err_close_pkg_out;
-                }
-
-                bytes_to_copy -= chunk;
-            }
         } else {
-            /* Print to STDOUT */
-
-            char copy_buffer[1024];
-            size_t bytes_to_copy = bpak_part_size(part) - part->pad_bytes;
-            ssize_t chunk = 0;
-
-            while (bytes_to_copy)
-            {
-                if (bytes_to_copy > sizeof(copy_buffer)) {
-                    chunk = sizeof(copy_buffer);
-                } else {
-                    chunk = bytes_to_copy;
-                }
-
-                chunk = fread(copy_buffer, 1, chunk, pkg.fp);
-
-                if (write(1, copy_buffer, chunk) != chunk) {
-                    fprintf(stderr, "Error: write failed\n");
-                    rc = -1;
-                    goto err_close_fp_out;
-                }
-                bytes_to_copy -= chunk;
-            }
+            fp = stdout;
         }
 
+        char copy_buffer[BPAK_CHUNK_BUFFER_LENGTH];
+        size_t bytes_to_copy = bpak_part_size(part) - part->pad_bytes;
+        size_t chunk = 0;
+
+        while (bytes_to_copy) {
+            if (bytes_to_copy > sizeof(copy_buffer)) {
+                chunk = sizeof(copy_buffer);
+            } else {
+                chunk = bytes_to_copy;
+            }
+
+            chunk = fread(copy_buffer, 1, chunk, pkg.fp);
+            if (fwrite(copy_buffer, 1, chunk, fp) != chunk) {
+                rc = -BPAK_WRITE_ERROR;
+                goto err_close_pkg_out;
+            }
+
+            bytes_to_copy -= chunk;
+        }
     }
 
 err_close_fp_out:
-    if (fp)
+    if ((fp != stdout) && (fp != NULL)) {
         fclose(fp);
+    }
 err_close_pkg_out:
     bpak_pkg_close(&pkg);
     return rc;
