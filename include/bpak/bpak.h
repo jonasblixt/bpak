@@ -16,27 +16,13 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <unistd.h>
+#include <bpak/version.h>
 
 #ifdef BPAK_HAVE_USER_SETTINGS
 #include "bpak_user_settings.h"
+#else
+#include <bpak/build_config.h>
 #endif
-
-#ifndef BPAK_CONFIG_MERKLE
-#define BPAK_CONFIG_MERKLE 1
-#endif
-
-#ifndef BPAK_CONFIG_LZMA
-#define BPAK_CONFIG_LZMA 1
-#endif
-
-#ifndef BPAK_CONFIG_MBEDTLS
-#define BPAK_CONFIG_MBEDTLS 1
-#endif
-
-#define BPAK_VERSION_MAJOR  0
-#define BPAK_VERSION_MINOR  8
-#define BPAK_VERSION_PATCH  1
-#define BPAK_VERSION_STRING "0.8.1"
 
 #define BPAK_EXPORT __attribute__((visibility("default")))
 

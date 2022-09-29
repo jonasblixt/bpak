@@ -17,7 +17,10 @@ add_executable(${PROJECT_NAME}-tool ${TOOL_SRC_FILES})
 set_target_properties(${PROJECT_NAME}-tool
     PROPERTIES OUTPUT_NAME ${PROJECT_NAME})
 
-target_compile_options(${PROJECT_NAME}-tool PRIVATE -Wextra -pedantic)
+target_compile_options(${PROJECT_NAME}-tool PRIVATE
+    -Wextra -pedantic
+    -I${${PROJECT_NAME}_BINARY_DIR}/lib/
+)
 
 target_link_libraries(${PROJECT_NAME}-tool
     ${UUID_LIBRARY}

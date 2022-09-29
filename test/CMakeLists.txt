@@ -2,6 +2,7 @@
 add_compile_options(
         -fsanitize=address
         -DTEST_SRC_DIR="${CMAKE_SOURCE_DIR}/test"
+        -I${${PROJECT_NAME}_BINARY_DIR}/lib/
 )
 add_link_options(-fsanitize=address)
 include_directories(${CMAKE_SOURCE_DIR}/lib)

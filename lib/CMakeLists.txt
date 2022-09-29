@@ -16,6 +16,10 @@ set(LIB_SRC_FILES
 # Every .h -file in include/bpak/ is a public header
 file(GLOB_RECURSE LIB_PUBLIC_HEADERS "${CMAKE_SOURCE_DIR}/include/bpak/*.h")
 
+set(LIB_PUBLIC_HEADERS
+    ${LIB_PUBLIC_HEADERS}
+    ${${PROJECT_NAME}_BINARY_DIR}/lib/bpak/build_config.h
+)
 if (NOT BPAK_BUILD_MINIMAL)
     set(LIB_SRC_FILES
         ${LIB_SRC_FILES}
@@ -56,7 +60,13 @@ set_target_properties(${PROJECT_NAME} PROPERTIES VERSION ${PROJECT_VERSION})
 set_target_properties(${PROJECT_NAME} PROPERTIES SOVERSION ${PROJECT_VERSION_MAJOR})
 set_target_properties(${PROJECT_NAME}-static PROPERTIES OUTPUT_NAME ${PROJECT_NAME})
 
-target_compile_options(${PROJECT_NAME} PRIVATE -Wextra -pedantic)
+set(LIB_CFLAGS
+    -Wextra -pedantic
+    -I${${PROJECT_NAME}_BINARY_DIR}/lib/
+)
+
+target_compile_options(${PROJECT_NAME} PRIVATE ${LIB_CFLAGS})
+target_compile_options(${PROJECT_NAME}-static PRIVATE ${LIB_CFLAGS})
 
 if (NOT BPAK_BUILD_MINIMAL)
     target_link_libraries(${PROJECT_NAME}

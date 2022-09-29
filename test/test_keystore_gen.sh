@@ -41,4 +41,4 @@ $BPAK sign $IMG --key $TEST_SRC_DIR/secp256r1-key-pair.pem $V
 $BPAK show $IMG
 
 $BPAK generate keystore $IMG --name test > test_keystore.c
-cc -c test_keystore.c -I $TEST_SRC_DIR/../include
+cc -c test_keystore.c -I $TEST_SRC_DIR/../include -I../lib

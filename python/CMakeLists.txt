@@ -25,7 +25,10 @@ set_target_properties(${PROJECT_NAME}-python-wrapper
 set_target_properties(${PROJECT_NAME}-python-wrapper
     PROPERTIES SOVERSION ${PROJECT_VERSION_MAJOR})
 
-target_compile_options(${PROJECT_NAME}-python-wrapper PRIVATE -Wextra -pedantic)
+target_compile_options(${PROJECT_NAME}-python-wrapper PRIVATE
+    -Wextra -pedantic
+    -I${${PROJECT_NAME}_BINARY_DIR}/lib/
+)
 
 set_target_properties(${PROJECT_NAME}-python-wrapper PROPERTIES PREFIX "")
 set_target_properties(${PROJECT_NAME}-python-wrapper

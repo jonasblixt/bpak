@@ -1,15 +1,15 @@
 cmake_minimum_required(VERSION 3.10)
 
 # Extract version info from bpak.h
-file(READ "include/bpak/bpak.h" ver)
+file(READ "include/bpak/version.h" ver)
 
-string(REGEX MATCH ".+BPAK_VERSION_MAJOR ([0-9]*)" _ ${ver})
+string(REGEX MATCH ".+BPAK_VERSION_MAJOR\ +([0-9]*)" _ ${ver})
 set(ver_major ${CMAKE_MATCH_1})
 
-string(REGEX MATCH ".+BPAK_VERSION_MINOR ([0-9]*)" _ ${ver})
+string(REGEX MATCH ".+BPAK_VERSION_MINOR\ +([0-9]*)" _ ${ver})
 set(ver_minor ${CMAKE_MATCH_1})
 
-string(REGEX MATCH ".+BPAK_VERSION_PATCH ([0-9]*)" _ ${ver})
+string(REGEX MATCH ".+BPAK_VERSION_PATCH\ +([0-9]*)" _ ${ver})
 set(ver_patch ${CMAKE_MATCH_1})
 
 project(bpak VERSION ${ver_major}.${ver_minor}.${ver_patch}
@@ -33,10 +33,16 @@ option(BPAK_BUILD_TESTS "Build test cases" OFF)
 #   Select between a pre-defined set of options
 
 if (NOT BPAK_BUILD_MINIMAL)
-    find_library(MBEDTLS_LIBRARY mbedtls)
+    set(BPAK_CONFIG_MERKLE 1)
+    set(BPAK_CONFIG_LZMA 1)
+    set(BPAK_CONFIG_MBEDTLS 1)
     find_library(MBEDCRYPTO_LIBRARY mbedcrypto)
     find_library(UUID_LIBRARY uuid)
     find_library(LZMA_LIBRARY lzma)
+else()
+    set(BPAK_CONFIG_MBEDTLS 0)
+    set(BPAK_CONFIG_LZMA 0)
+    set(BPAK_CONFIG_MERKLE 0)
 endif()
 
 if (BPAK_BUILD_TESTS)
