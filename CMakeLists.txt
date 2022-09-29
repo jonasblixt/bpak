@@ -32,12 +32,13 @@ option(BPAK_BUILD_TESTS "Build test cases" OFF)
 # TODO: Choice option for BPAK_CRYPTO_BACKEND
 #   Select between a pre-defined set of options
 
+find_library(UUID_LIBRARY uuid)
+
 if (NOT BPAK_BUILD_MINIMAL)
     set(BPAK_CONFIG_MERKLE 1)
     set(BPAK_CONFIG_LZMA 1)
     set(BPAK_CONFIG_MBEDTLS 1)
     find_library(MBEDCRYPTO_LIBRARY mbedcrypto)
-    find_library(UUID_LIBRARY uuid)
     find_library(LZMA_LIBRARY lzma)
 else()
     set(BPAK_CONFIG_MBEDTLS 0)

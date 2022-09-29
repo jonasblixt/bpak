@@ -2,7 +2,8 @@ include(GNUInstallDirs)
 
 # @ONLY "Restrict variable replacement to references of the form @VAR@"
 configure_file(${PROJECT_NAME}.pc.in ${PROJECT_NAME}.pc @ONLY)
-
+configure_file(build_config.h.in
+        ${${PROJECT_NAME}_BINARY_DIR}/lib/bpak/build_config.h @ONLY)
 
 set(LIB_SRC_FILES
     bpak.c
@@ -68,13 +69,17 @@ set(LIB_CFLAGS
 target_compile_options(${PROJECT_NAME} PRIVATE ${LIB_CFLAGS})
 target_compile_options(${PROJECT_NAME}-static PRIVATE ${LIB_CFLAGS})
 
+set(LIB_LIBS ${UUID_LIBRARY})
+
 if (NOT BPAK_BUILD_MINIMAL)
-    target_link_libraries(${PROJECT_NAME}
+    set(LIB_LIBS
+        ${LIB_LIBS}
         ${LZMA_LIBRARY}
         ${MBEDCRYPTO_LIBRARY}
-        ${UUID_LIBRARY}
     )
 endif()
+
+target_link_libraries(${PROJECT_NAME} ${LIB_LIBS})
 
 install(
     FILES ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}.pc

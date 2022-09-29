@@ -45,7 +45,6 @@ jobs:
           https://scan.coverity.com/builds?project=jonasblixt%2Fbpak
       env:
         TOKEN: ${{ secrets.COVERITY_SCAN_TOKEN }}
-
   build-windows:
     runs-on: windows-latest
     name: windows-build
@@ -58,17 +57,10 @@ jobs:
       with:
         fetch-depth: 0
     - name: 'Setup MSYS2'
+      uses: msys2/setup-msys2@v2
       with:
-        msystem: mingw64
-        update: true
-        install: >-
-          git
-          make
-        pacboy: >-
-          toolchain:p
-          cmake:p
-          ninja:p
+        install: gcc make cmake libutil-linux-devel libutil-linux
     - name: 'Build'
       run: |
-        cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Release -DBPAK_BUILD_MINIMAL=1
-        cmake --build build
+        cmake -B build -DCMAKE_BUILD_TYPE=Release -DBPAK_BUILD_MINIMAL=1
+        make -C build VERBOSE=1
