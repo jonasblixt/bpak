@@ -45,11 +45,11 @@ int action_compare(int argc, char **argv)
             bpak_inc_verbosity();
             break;
         case '?':
-            printf("Unknown option: %c\n", optopt);
+            fprintf(stderr, "Unknown option: %c\n", optopt);
             return -1;
             break;
         case ':':
-            printf("Missing arg for %c\n", optopt);
+            fprintf(stderr, "Missing arg for %c\n", optopt);
             return -1;
             break;
         default:
@@ -60,14 +60,14 @@ int action_compare(int argc, char **argv)
     if (optind < argc) {
         filename1 = (const char *)argv[optind++];
     } else {
-        printf("Missing filename argument\n");
+        fprintf(stderr, "Missing filename argument\n");
         return -1;
     }
 
     if (optind < argc) {
         filename2 = (const char *)argv[optind++];
     } else {
-        printf("Missing filename argument\n");
+        fprintf(stderr, "Missing filename argument\n");
         return -1;
     }
 
@@ -89,13 +89,13 @@ int action_compare(int argc, char **argv)
     }
 
     if (fread(&h1, 1, sizeof(h1), fp1) != sizeof(h1)) {
-        printf("Could not read first header\n");
+        fprintf(stderr, "Could not read first header\n");
         rc = -BPAK_READ_ERROR;
         goto err_close_fp2_out;
     }
 
     if (fread(&h2, 1, sizeof(h2), fp2) != sizeof(h2)) {
-        printf("Could not read second header\n");
+        fprintf(stderr, "Could not read second header\n");
         rc = -BPAK_READ_ERROR;
         goto err_close_fp2_out;
     }
@@ -233,7 +233,7 @@ int action_compare(int argc, char **argv)
                 rc = fseek(fp1, bpak_part_offset(h1p, p), SEEK_SET);
 
                 if (rc != 0) {
-                    printf("Error: Seek failed\n");
+                    fprintf(stderr, "Error: Seek failed\n");
                     rc = -BPAK_SEEK_ERROR;
                     break;
                 }
@@ -241,7 +241,7 @@ int action_compare(int argc, char **argv)
                 rc = fseek(fp2, bpak_part_offset(h2p, p2), SEEK_SET);
 
                 if (rc != 0) {
-                    printf("Error: Seek failed\n");
+                    fprintf(stderr, "Error: Seek failed\n");
                     rc = -BPAK_SEEK_ERROR;
                     break;
                 }

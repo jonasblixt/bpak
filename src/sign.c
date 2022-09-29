@@ -55,11 +55,11 @@ int action_sign(int argc, char **argv)
             signature_file = (const char *)optarg;
             break;
         case '?':
-            printf("Unknown option: %c\n", optopt);
+            fprintf(stderr, "Unknown option: %c\n", optopt);
             return -1;
             break;
         case ':':
-            printf("Missing arg for %c\n", optopt);
+            fprintf(stderr, "Missing arg for %c\n", optopt);
             return -1;
             break;
         default:
@@ -70,14 +70,14 @@ int action_sign(int argc, char **argv)
     if (optind < argc) {
         filename = (const char *)argv[optind++];
     } else {
-        printf("Missing filename argument\n");
+        fprintf(stderr, "Missing filename argument\n");
         return -1;
     }
 
     rc = bpak_pkg_open(&pkg, filename, "r+");
 
     if (rc != BPAK_OK) {
-        printf("Error: Could not open package\n");
+        fprintf(stderr, "Error: Could not open package\n");
         return rc;
     }
 
@@ -142,11 +142,11 @@ int action_verify(int argc, char **argv)
             key_source = (const char *)optarg;
             break;
         case '?':
-            printf("Unknown option: %c\n", optopt);
+            fprintf(stderr, "Unknown option: %c\n", optopt);
             return -1;
             break;
         case ':':
-            printf("Missing arg for %c\n", optopt);
+            fprintf(stderr, "Missing arg for %c\n", optopt);
             return -1;
             break;
         default:
@@ -157,14 +157,14 @@ int action_verify(int argc, char **argv)
     if (optind < argc) {
         filename = (const char *)argv[optind++];
     } else {
-        printf("Missing filename argument\n");
+        fprintf(stderr, "Missing filename argument\n");
         return -1;
     }
 
     rc = bpak_pkg_open(&pkg, filename, "r+");
 
     if (rc != BPAK_OK) {
-        printf("Error: Could not open package\n");
+        fprintf(stderr, "Error: Could not open package\n");
         return rc;
     }
 

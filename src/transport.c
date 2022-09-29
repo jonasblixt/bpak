@@ -90,11 +90,11 @@ int action_transport(int argc, char **argv)
             decode_flag = true;
             break;
         case '?':
-            printf("Unknown option: %c\n", optopt);
+            fprintf(stderr, "Unknown option: %c\n", optopt);
             return -1;
             break;
         case ':':
-            printf("Missing arg for %c\n", optopt);
+            fprintf(stderr, "Missing arg for %c\n", optopt);
             return -1;
             break;
         default:
@@ -105,12 +105,13 @@ int action_transport(int argc, char **argv)
     if (optind < argc) {
         filename = (const char *)argv[optind++];
     } else {
-        printf("Missing filename argument\n");
+        fprintf(stderr, "Missing filename argument\n");
         return -1;
     }
 
     if (encode_flag + add_flag + decode_flag > 1) {
-        printf("Error: Only one of --add, --encode or --decode is allowed\n");
+        fprintf(stderr,
+                "Error: Only one of --add, --encode or --decode is allowed\n");
         return -1;
     }
 
@@ -121,7 +122,7 @@ int action_transport(int argc, char **argv)
     rc = bpak_pkg_open(&input, filename, "rb+");
 
     if (rc != BPAK_OK) {
-        printf("Error: Could not open package %s\n", filename);
+        fprintf(stderr, "Error: Could not open package %s\n", filename);
         return rc;
     }
 
@@ -129,13 +130,13 @@ int action_transport(int argc, char **argv)
         rc = bpak_pkg_open(&origin, origin_file, "rb+");
 
         if (rc != BPAK_OK) {
-            printf("Error: Could not open package %s\n", origin_file);
+            fprintf(stderr, "Error: Could not open package %s\n", origin_file);
             return rc;
         }
     }
 
     if ((encode_flag || decode_flag) && !output_file) {
-        printf("Error: No output file specified\n");
+        fprintf(stderr, "Error: No output file specified\n");
         rc = -1;
         goto err_out;
     }
@@ -144,7 +145,9 @@ int action_transport(int argc, char **argv)
         rc = bpak_pkg_open(&output, output_file, "wb+");
 
         if (rc != BPAK_OK) {
-            printf("Error: Could not open output file %s\n", output_file);
+            fprintf(stderr,
+                    "Error: Could not open output file %s\n",
+                    output_file);
             goto err_out;
         }
     }
@@ -170,11 +173,11 @@ int action_transport(int argc, char **argv)
         rc = bpak_pkg_write_header(&input);
     } else {
         rc = -BPAK_FAILED;
-        printf("Error: Unknown command");
+        fprintf(stderr, "Error: Unknown command");
     }
 
     if (rc != BPAK_OK) {
-        printf("Error: Transport encoding/decoding failed\n");
+        fprintf(stderr, "Error: Transport encoding/decoding failed\n");
     }
 
 err_out:

@@ -82,11 +82,11 @@ int action_show(int argc, char **argv)
             binary_hash_output = true;
             break;
         case '?':
-            printf("Unknown option: %c\n", optopt);
+            fprintf(stderr, "Unknown option: %c\n", optopt);
             return -1;
             break;
         case ':':
-            printf("Missing arg for %c\n", optopt);
+            fprintf(stderr, "Missing arg for %c\n", optopt);
             return -1;
             break;
         default:
@@ -97,7 +97,7 @@ int action_show(int argc, char **argv)
     if (optind < argc) {
         filename = (const char *)argv[optind++];
     } else {
-        printf("Missing filename argument\n");
+        fprintf(stderr, "Missing filename argument\n");
         return -1;
     }
 
@@ -157,7 +157,7 @@ int action_show(int argc, char **argv)
         }
 
         if (rc != BPAK_OK) {
-            printf("Error: Could not find part '%s'\n", part_name);
+            fprintf(stderr, "Error: Could not find part '%s'\n", part_name);
             goto err_pkg_close;
         }
     }

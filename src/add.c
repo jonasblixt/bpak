@@ -81,16 +81,16 @@ int action_add(int argc, char **argv)
             if (strcmp(optarg, "dont-hash") == 0)
                 flags |= BPAK_FLAG_EXCLUDE_FROM_HASH;
             else {
-                printf("Unknown flag '%s'\n", optarg);
+                fprintf(stderr, "Unknown flag '%s'\n", optarg);
                 return -1;
             }
             break;
         case '?':
-            printf("Unknown option: %c\n", optopt);
+            fprintf(stderr, "Unknown option: %c\n", optopt);
             return -1;
             break;
         case ':':
-            printf("Missing arg for %c\n", optopt);
+            fprintf(stderr, "Missing arg for %c\n", optopt);
             return -1;
             break;
         default:
@@ -101,17 +101,19 @@ int action_add(int argc, char **argv)
     if (optind < argc) {
         filename = (const char *)argv[optind++];
     } else {
-        printf("Missing filename argument\n");
+        fprintf(stderr, "Missing filename argument\n");
         return -1;
     }
 
     if (!part_name && !meta_name) {
-        printf("Error: Requried argument --part or --meta is missing\n");
+        fprintf(stderr,
+                "Error: Requried argument --part or --meta is missing\n");
         return -1;
     }
 
     if (!from_string && !from_file) {
-        printf("Error: either --from_string must be used or --from_file\n");
+        fprintf(stderr,
+                "Error: either --from_string must be used or --from_file\n");
         return -1;
     }
 
@@ -120,7 +122,7 @@ int action_add(int argc, char **argv)
     rc = bpak_pkg_open(&pkg, filename, "r+");
 
     if (rc != BPAK_OK) {
-        printf("Error: Could not open package\n");
+        fprintf(stderr, "Error: Could not open package\n");
         return rc;
     }
 
@@ -134,7 +136,7 @@ int action_add(int argc, char **argv)
             part_ref_id = bpak_id(part_ref);
 
         if (!from_string) {
-            printf("Error: No input supplied with --from-string\n");
+            fprintf(stderr, "Error: No input supplied with --from-string\n");
             rc = -BPAK_FAILED;
             goto err_close_pkg_out;
         }
@@ -146,7 +148,7 @@ int action_add(int argc, char **argv)
 
                 if (rc != 0) {
                     rc = -BPAK_FAILED;
-                    printf("Error: Could not convert UUID string\n");
+                    fprintf(stderr, "Error: Could not convert UUID string\n");
                     goto err_close_pkg_out;
                 }
 
@@ -157,7 +159,7 @@ int action_add(int argc, char **argv)
                                    16);
 
                 if (rc != BPAK_OK) {
-                    printf("Error: Could not add meta data\n");
+                    fprintf(stderr, "Error: Could not add meta data\n");
                     goto err_close_pkg_out;
                 }
 
@@ -176,7 +178,7 @@ int action_add(int argc, char **argv)
                                    sizeof(value));
 
                 if (rc != BPAK_OK) {
-                    printf("Error: Could not add meta data\n");
+                    fprintf(stderr, "Error: Could not add meta data\n");
                     goto err_close_pkg_out;
                 }
 
@@ -195,17 +197,17 @@ int action_add(int argc, char **argv)
                                    sizeof(value));
 
                 if (rc != BPAK_OK) {
-                    printf("Error: Could not add meta data\n");
+                    fprintf(stderr, "Error: Could not add meta data\n");
                     goto err_close_pkg_out;
                 }
 
                 memcpy(meta_data, &value, sizeof(value));
 
                 if (bpak_get_verbosity()) {
-                    printf("Adding %s <%x>\n", meta_name, value);
+                    fprintf(stderr, "Adding %s <%x>\n", meta_name, value);
                 }
             } else {
-                printf("Error: Unknown encoder\n");
+                fprintf(stderr, "Error: Unknown encoder\n");
                 rc = -BPAK_NOT_SUPPORTED;
                 goto err_close_pkg_out;
             }
@@ -220,7 +222,7 @@ int action_add(int argc, char **argv)
                                strlen(from_string) + 1);
 
             if (rc != BPAK_OK) {
-                printf("Error: Could not add meta data\n");
+                fprintf(stderr, "Error: Could not add meta data\n");
                 goto err_close_pkg_out;
             }
 
@@ -253,7 +255,7 @@ int action_add(int argc, char **argv)
             goto err_close_pkg_out;
 
     } else {
-        printf("Error: Unknown command\n");
+        fprintf(stderr, "Error: Unknown command\n");
         rc = -BPAK_FAILED;
     }
 

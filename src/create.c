@@ -22,12 +22,13 @@ int action_create(int argc, char **argv)
     int rc = 0;
 
     struct option long_options[] = {
-        {"help", no_argument, 0, 'h'},
-        {"verbose", no_argument, 0, 'v'},
-        {"force", no_argument, 0, 'Y'},
-        {"hash-kind", required_argument, 0, 'H'},
-        {"signature-kind", required_argument, 0, 'S'},
-        {0, 0, 0, 0}};
+        { "help", no_argument, 0, 'h' },
+        { "verbose", no_argument, 0, 'v' },
+        { "force", no_argument, 0, 'Y' },
+        { "hash-kind", required_argument, 0, 'H' },
+        { "signature-kind", required_argument, 0, 'S' },
+        { 0, 0, 0, 0 }
+    };
 
     while (
         (opt = getopt_long(argc, argv, "hvYH:S:", long_options, &long_index)) !=
@@ -44,7 +45,7 @@ int action_create(int argc, char **argv)
             force_overwrite = true;
             break;
         case '?':
-            printf("Unknown option: %c\n", optopt);
+            fprintf(stderr, "Unknown option: %c\n", optopt);
             return -1;
             break;
         case 'H':
@@ -54,7 +55,7 @@ int action_create(int argc, char **argv)
             signature_kind_str = (const char *)optarg;
             break;
         case ':':
-            printf("Missing arg for %c\n", optopt);
+            fprintf(stderr, "Missing arg for %c\n", optopt);
             return -1;
             break;
         default:
@@ -65,7 +66,7 @@ int action_create(int argc, char **argv)
     if (optind < argc) {
         filename = (const char *)argv[optind++];
     } else {
-        printf("Missing filename argument\n");
+        fprintf(stderr, "Missing filename argument\n");
         return -1;
     }
 
@@ -81,7 +82,9 @@ int action_create(int argc, char **argv)
     } else if (strcmp(hash_kind_str, "sha512") == 0) {
         hash_kind = BPAK_HASH_SHA512;
     } else {
-        printf("Error: '%s' is not a known hash method\n", hash_kind_str);
+        fprintf(stderr,
+                "Error: '%s' is not a known hash method\n",
+                hash_kind_str);
         return -BPAK_UNSUPPORTED_HASH_ALG;
     }
 
@@ -99,8 +102,9 @@ int action_create(int argc, char **argv)
     } else if (strcmp(signature_kind_str, "rsa4096") == 0) {
         signature_kind = BPAK_SIGN_RSA4096;
     } else {
-        printf("Error: '%s' is not a known signature method\n",
-               signature_kind_str);
+        fprintf(stderr,
+                "Error: '%s' is not a known signature method\n",
+                signature_kind_str);
         return -BPAK_UNSUPPORTED_KEY;
     }
 

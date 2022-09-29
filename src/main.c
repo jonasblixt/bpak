@@ -15,7 +15,10 @@ int bpak_printf(int verbosity, const char *fmt, ...)
 
     va_list args;
     va_start(args, fmt);
-    vprintf(fmt, args);
+    if (verbosity == 0)
+        vfprintf(stderr, fmt, args);
+    else
+        vprintf(fmt, args);
     va_end(args);
     return BPAK_OK;
 }
@@ -52,11 +55,11 @@ int main(int argc, char **argv)
             return 0;
             break;
         case '?':
-            printf("Unknown option: %c\n", optopt);
+            fprintf(stderr, "Unknown option: %c\n", optopt);
             return -1;
             break;
         case ':':
-            printf("Missing arg for %c\n", optopt);
+            fprintf(stderr, "Missing arg for %c\n", optopt);
             return -1;
             break;
         default:
@@ -93,11 +96,11 @@ int main(int argc, char **argv)
         } else if (strcmp(action, "extract") == 0) {
             rc = action_extract(argc, argv);
         } else {
-            printf("Unknown action '%s'\n", action);
+            fprintf(stderr, "Unknown action '%s'\n", action);
             return -1;
         }
     } else {
-        printf("Unknown action and/or filename\n");
+        fprintf(stderr, "Unknown action and/or filename\n");
         return -1;
     }
 

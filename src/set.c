@@ -82,11 +82,11 @@ int action_set(int argc, char **argv)
             encoder = (const char *)optarg;
             break;
         case '?':
-            printf("Unknown option: %c\n", optopt);
+            fprintf(stderr, "Unknown option: %c\n", optopt);
             return -1;
             break;
         case ':':
-            printf("Missing arg for %c\n", optopt);
+            fprintf(stderr, "Missing arg for %c\n", optopt);
             return -1;
             break;
         default:
@@ -97,18 +97,20 @@ int action_set(int argc, char **argv)
     if (optind < argc) {
         filename = (const char *)argv[optind++];
     } else {
-        printf("Missing filename argument\n");
+        fprintf(stderr, "Missing filename argument\n");
         return -1;
     }
 
     if (!meta_name && !(key_id_flag || keystore_id_flag)) {
-        printf("Error: Requried argument --meta (or keystore-id and key-id) is "
-               "missing\n");
+        fprintf(
+            stderr,
+            "Error: Requried argument --meta (or keystore-id and key-id) is "
+            "missing\n");
         return -1;
     }
 
     if (!from_string && meta_name) {
-        printf("Error: Missing required option --from_string <...>\n");
+        fprintf(stderr, "Error: Missing required option --from_string <...>\n");
         return -1;
     }
 
@@ -131,14 +133,14 @@ int action_set(int argc, char **argv)
 
     if (read_bytes != sizeof(*h)) {
         rc = -BPAK_READ_ERROR;
-        printf("Error: Could not read header %li\n", read_bytes);
+        fprintf(stderr, "Error: Could not read header %li\n", read_bytes);
         goto err_close_fp_out;
     }
 
     rc = bpak_valid_header(h);
 
     if (rc != BPAK_OK) {
-        printf("Error: Invalid header. Not a BPAK file?\n");
+        fprintf(stderr, "Error: Invalid header. Not a BPAK file?\n");
         goto err_close_fp_out;
     }
 
@@ -154,7 +156,7 @@ int action_set(int argc, char **argv)
                                       &meta_header);
 
         if (rc != BPAK_OK || meta == NULL) {
-            printf("Error: Could not find '%s'\n", meta_name);
+            fprintf(stderr, "Error: Could not find '%s'\n", meta_name);
             goto err_close_fp_out;
         }
 
@@ -215,7 +217,7 @@ int action_set(int argc, char **argv)
 
         } else if (strcmp(encoder, "integer") == 0) {
             if (meta_header->size != 8) {
-                printf("Incorrect meta data length\n");
+                fprintf(stderr, "Incorrect meta data length\n");
                 rc = -BPAK_SIZE_ERROR;
                 goto err_close_fp_out;
             }
@@ -224,7 +226,7 @@ int action_set(int argc, char **argv)
             (*val) = strtol(from_string, NULL, 0);
         } else if (strcmp(encoder, "id") == 0) {
             if (meta_header->size != 4) {
-                printf("Incorrect meta data length\n");
+                fprintf(stderr, "Incorrect meta data length\n");
                 rc = -BPAK_SIZE_ERROR;
                 goto err_close_fp_out;
             }
@@ -232,7 +234,7 @@ int action_set(int argc, char **argv)
             (*val) = bpak_id(from_string);
         } else {
             rc = -BPAK_FAILED;
-            printf("Error: Unknown encoder\n");
+            fprintf(stderr, "Error: Unknown encoder\n");
         }
     } else if (key_id_flag || keystore_id_flag) {
 
@@ -253,7 +255,7 @@ int action_set(int argc, char **argv)
         }
     } else {
         rc = -BPAK_FAILED;
-        printf("Error: Don't know what to do\n");
+        fprintf(stderr, "Error: Don't know what to do\n");
     }
 
     if (fseek(fp, 0, SEEK_SET) != 0) {
