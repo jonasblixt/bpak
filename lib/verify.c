@@ -294,7 +294,8 @@ BPAK_EXPORT int bpak_verify_payload(struct bpak_header *header,
         struct bpak_part_header *merkle_tree_part = NULL;
 
         /* Get the hash tree meta data header */
-        rc = bpak_get_part(header, merkle_tree_part_id, &merkle_tree_part);
+        rc =
+            bpak_get_part(header, merkle_tree_part_id, &merkle_tree_part, NULL);
 
         if (rc != BPAK_OK) {
             return rc;

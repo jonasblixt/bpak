@@ -303,7 +303,7 @@ BPAK_EXPORT int bpak_pkg_transport_decode(struct bpak_package *input,
 
         /* Compute origin and output offsets */
         if (origin != NULL) {
-            rc = bpak_get_part(&origin->header, part->id, &origin_part);
+            rc = bpak_get_part(&origin->header, part->id, &origin_part, NULL);
 
             if (rc != BPAK_OK) {
                 bpak_printf(0,

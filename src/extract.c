@@ -158,7 +158,7 @@ int action_extract(int argc, char **argv)
 
     if (part_id) {
         struct bpak_part_header *part = NULL;
-        rc = bpak_get_part(h, part_id, &part);
+        rc = bpak_get_part(h, part_id, &part, NULL);
 
         if (rc != BPAK_OK) {
             fprintf(stderr, "Error: No such part\n");

@@ -363,7 +363,8 @@ int bpak_add_meta(struct bpak_header *hdr, uint32_t id, uint32_t part_ref_id,
  **/
 
 int bpak_get_part(struct bpak_header *hdr, uint32_t id,
-                  struct bpak_part_header **part);
+                  struct bpak_part_header **part,
+                  struct bpak_part_header *offset);
 
 /**
  * Add new part with 'id'. *ptr is assigned to a pointer within

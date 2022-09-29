@@ -32,7 +32,7 @@ static int transport_copy(struct bpak_header *input_hdr,
     struct bpak_part_header *p = NULL;
     uint64_t part_offset = 0;
 
-    rc = bpak_get_part(input_hdr, id, &p);
+    rc = bpak_get_part(input_hdr, id, &p, NULL);
 
     if (rc != BPAK_OK) {
         bpak_printf(0, "Error could not get part with ref %x\n", id);
@@ -227,14 +227,14 @@ transport_encode_part(struct bpak_transport_meta *tm, uint32_t part_ref_id,
     uint32_t alg_id = 0;
     ssize_t output_size = -1;
 
-    rc = bpak_get_part(input_header, part_ref_id, &input_part);
+    rc = bpak_get_part(input_header, part_ref_id, &input_part, NULL);
 
     if (rc != BPAK_OK) {
         bpak_printf(0, "Error could not get part with ref %x\n", part_ref_id);
         return rc;
     }
 
-    rc = bpak_get_part(output_header, part_ref_id, &output_part);
+    rc = bpak_get_part(output_header, part_ref_id, &output_part, NULL);
 
     if (rc != BPAK_OK) {
         bpak_printf(0, "Error could not get part with ref %x\n", part_ref_id);
@@ -242,7 +242,7 @@ transport_encode_part(struct bpak_transport_meta *tm, uint32_t part_ref_id,
     }
 
     if (origin_header != NULL) {
-        rc = bpak_get_part(origin_header, part_ref_id, &origin_part);
+        rc = bpak_get_part(origin_header, part_ref_id, &origin_part, NULL);
 
         if (rc != BPAK_OK) {
             bpak_printf(0,

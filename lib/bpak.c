@@ -93,14 +93,13 @@ BPAK_EXPORT int bpak_add_meta(struct bpak_header *hdr, uint32_t id,
 }
 
 BPAK_EXPORT int bpak_get_part(struct bpak_header *hdr, uint32_t id,
-                              struct bpak_part_header **part)
+                              struct bpak_part_header **part,
+                              struct bpak_part_header *offset)
 {
-    void *offset = *part;
-
     bpak_foreach_part (hdr, p) {
         if (p->id == id) {
             if (offset) {
-                if (((void *)p) <= offset)
+                if (p <= offset)
                     continue;
             }
 
