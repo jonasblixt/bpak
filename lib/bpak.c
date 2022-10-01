@@ -196,6 +196,8 @@ BPAK_EXPORT const char *bpak_error_string(int code)
         return "Unsupported compression method";
     case -BPAK_KEY_NOT_FOUND:
         return "Key not found";
+    case -BPAK_KEYSTORE_ID_MISMATCH:
+        return "Keystore id mismatch";
     default:
         return "Unknown";
     }

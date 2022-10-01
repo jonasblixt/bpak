@@ -225,11 +225,12 @@ void print_verify_usage(void)
 {
     print_version();
     printf("\n");
-    printf("bpak verify <filename.bpak> <options>  Verify a bpak file\n");
+    printf("bpak verify [options] <filename.bpak>   Verify a bpak file\n");
     printf("\n");
 
     printf("Verify options:\n");
     printf("    -k, --key <key>                  Verify using key <key>\n");
+    printf("    -K, --keystore <keystore.bpak>   Verify using keystore\n");
 }
 
 void print_usage(void)

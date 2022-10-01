@@ -15,6 +15,7 @@
 
 #include <bpak/bpak.h>
 #include <bpak/pkg.h>
+#include <bpak/crypto.h>
 
 #include "bpak_tool.h"
 
@@ -120,16 +121,21 @@ int action_verify(int argc, char **argv)
     int long_index = 0;
     const char *filename = NULL;
     const char *key_source = NULL;
+    const char *keystore_path = NULL;
     struct bpak_package pkg;
+    struct bpak_key *key = NULL;
 
     int rc = 0;
 
-    struct option long_options[] = { { "help", no_argument, 0, 'h' },
-                                     { "verbose", no_argument, 0, 'v' },
-                                     { "key", required_argument, 0, 'k' },
-                                     { 0, 0, 0, 0 } };
+    struct option long_options[] = {
+                { "help", no_argument, 0, 'h' },
+                { "verbose", no_argument, 0, 'v' },
+                { "key", required_argument, 0, 'k' },
+                { "keystore", required_argument, 0, 'K' },
+                { 0, 0, 0, 0 },
+    };
 
-    while ((opt = getopt_long(argc, argv, "hvk:", long_options, &long_index)) !=
+    while ((opt = getopt_long(argc, argv, "hvk:K:", long_options, &long_index)) !=
            -1) {
         switch (opt) {
         case 'h':
@@ -140,6 +146,9 @@ int action_verify(int argc, char **argv)
             break;
         case 'k':
             key_source = (const char *)optarg;
+            break;
+        case 'K':
+            keystore_path = (const char *)optarg;
             break;
         case '?':
             fprintf(stderr, "Unknown option: %c\n", optopt);
@@ -168,7 +177,30 @@ int action_verify(int argc, char **argv)
         return rc;
     }
 
-    rc = bpak_pkg_verify(&pkg, key_source);
+    if (key_source != NULL) {
+        rc = bpak_crypto_load_public_key(key_source, &key);
+
+        if (rc != BPAK_OK) {
+            goto err_close_pkg_out;
+        }
+    } else if (keystore_path != NULL) {
+        rc = bpak_keystore_load_key(keystore_path,
+                                    pkg.header.keystore_id,
+                                    pkg.header.key_id,
+                                    NULL,
+                                    NULL,
+                                    &key);
+
+        if (rc != BPAK_OK) {
+            goto err_close_pkg_out;
+        }
+    } else {
+        fprintf(stderr, "Either a key file or a keystore must be used to perform verification\n");
+        rc = -1;
+        goto err_close_pkg_out;
+    }
+
+    rc = bpak_pkg_verify(&pkg, key);
 
     if (rc != BPAK_OK) {
         fprintf(stderr,
@@ -179,6 +211,8 @@ int action_verify(int argc, char **argv)
         printf("Verification OK\n");
     }
 
+    free(key);
+err_close_pkg_out:
     bpak_pkg_close(&pkg);
     return rc;
 }

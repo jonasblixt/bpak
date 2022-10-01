@@ -14,6 +14,7 @@
 
 #include <stdio.h>
 #include <bpak/bpak.h>
+#include <bpak/key.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -116,11 +117,11 @@ int bpak_pkg_sign(struct bpak_package *pkg, const char *key_filename);
  * Verify the package
  *
  * @param[in] pkg Package pointer
- * @param[in] key_filename Full path of key to be used for verify operation
+ * @param[in] key Verification key
  *
  * @return BPAK_OK on success
  */
-int bpak_pkg_verify(struct bpak_package *pkg, const char *key_filename);
+int bpak_pkg_verify(struct bpak_package *pkg, struct bpak_key *key);
 
 /**
  * Compute sha256 hash of part data

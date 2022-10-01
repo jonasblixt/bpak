@@ -7,7 +7,7 @@
 # Purpose: Test that the c code generator produces meningful output
 #
 BPAK=../src/bpak
-TEST_NAME=test_keysytore_gen
+TEST_NAME=test_keystore_gen
 TEST_SRC_DIR=$1/test
 V=-vvv
 set -e
@@ -19,7 +19,7 @@ echo Creating package A
 $BPAK create $IMG -Y
 
 $BPAK add $IMG --meta bpak-package --from-string $PKG_UUID --encoder uuid -v
-$BPAK add $IMG --meta keystore-provider-id --from-string test --encoder id
+$BPAK add $IMG --meta keystore-provider-id --from-string pb-internal --encoder id
 
 echo Adding first key
 $BPAK add $IMG --part pb-development \

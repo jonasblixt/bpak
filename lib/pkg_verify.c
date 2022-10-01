@@ -34,23 +34,17 @@ static ssize_t verify_payload_read(off_t offset, uint8_t *buf, size_t size,
 }
 
 BPAK_EXPORT int bpak_pkg_verify(struct bpak_package *pkg,
-                                const char *key_filename)
+                                struct bpak_key *key)
 {
     int rc;
     uint8_t hash_output[BPAK_HASH_MAX_LENGTH];
     size_t hash_size = sizeof(hash_output);
-    struct bpak_key *key = NULL;
     bool header_verified = false;
 
     rc = bpak_verify_compute_header_hash(&pkg->header, hash_output, &hash_size);
 
     if (rc != BPAK_OK)
         return rc;
-
-    rc = bpak_crypto_load_public_key(key_filename, &key);
-
-    if (rc != BPAK_OK)
-        goto err_out;
 
     rc = bpak_crypto_verify(pkg->header.signature,
                             pkg->header.signature_sz,
@@ -61,10 +55,10 @@ BPAK_EXPORT int bpak_pkg_verify(struct bpak_package *pkg,
                             &header_verified);
 
     if (rc != BPAK_OK)
-        goto err_free_key_out;
+        goto err_out;
     if (header_verified == false) {
         rc = -BPAK_VERIFY_FAIL;
-        goto err_free_key_out;
+        goto err_out;
     }
 
     rc = bpak_verify_payload(&pkg->header,
@@ -74,11 +68,9 @@ BPAK_EXPORT int bpak_pkg_verify(struct bpak_package *pkg,
 
     if (rc != BPAK_OK) {
         bpak_printf(0, "Error: payload verification failed\n");
-        goto err_free_key_out;
+        goto err_out;
     }
 
-err_free_key_out:
-    bpak_free(key);
 err_out:
     return rc;
 }

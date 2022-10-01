@@ -8,6 +8,7 @@
 #include <bpak/utils.h>
 #include <bpak/id.h>
 #include "uuid.h"
+#include <bpak/crypto.h>
 
 typedef struct {
     PyObject_HEAD struct bpak_package pkg;
@@ -499,6 +500,7 @@ static PyObject *package_verify(BPAKPackage *self, PyObject *args,
 {
     int rc;
     char *verify_key_path;
+    struct bpak_key *key = NULL;
     static char *kwlist[] = {"verify_key_path", NULL};
 
     rc = PyArg_ParseTupleAndKeywords(args, kwds, "s", kwlist, &verify_key_path);
@@ -508,7 +510,16 @@ static PyObject *package_verify(BPAKPackage *self, PyObject *args,
         Py_RETURN_FALSE;
     }
 
-    rc = bpak_pkg_verify(&self->pkg, verify_key_path);
+    rc = bpak_crypto_load_public_key(verify_key_path, &key);
+
+    if (rc != BPAK_OK) {
+        PyErr_SetString(BPAKPackageError, "Could not load key");
+        Py_RETURN_FALSE;
+    }
+
+    rc = bpak_pkg_verify(&self->pkg, key);
+
+    free(key);
 
     if (rc != BPAK_OK) {
         PyErr_SetString(BPAKPackageError, "Verification failed");

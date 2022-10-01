@@ -19,7 +19,26 @@ struct bpak_keystore {
 
 int bpak_keystore_get(struct bpak_keystore *ks, uint32_t id,
                       struct bpak_key **k);
-
+/**
+ * Load key from a keystore archive
+ *
+ *  `filename`     Path to a bpak keystore archive
+ *  `keystore_id`  The keystore archive should have a matching
+ *                          'keystore-provider-id' meta data.
+ *  `key_id`       Key within the keystore to extract
+ *  `check_header` Optional callback to verify other meta data in the
+ *                      keystore header.
+ *  `user`         Optional context pointer passed to 'check_header'
+ *  `output`       Key output
+ *
+ * Returns BPAK_OK on success or a negative number.
+ */
+int bpak_keystore_load_key(const char *filename,
+                           uint32_t keystore_id,
+                           uint32_t key_id,
+                           bpak_check_header_t check_header,
+                           void *user,
+                           struct bpak_key **output);
 #ifdef __cplusplus
 } // extern "C"
 #endif
