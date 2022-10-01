@@ -15,6 +15,7 @@
 #include <bpak/verify.h>
 #include <bpak/merkle.h>
 #include <bpak/crypto.h>
+#include <bpak/utils.h>
 
 BPAK_EXPORT int bpak_verify_compute_header_hash(struct bpak_header *header,
                                                 uint8_t *output, size_t *size)
@@ -253,7 +254,6 @@ BPAK_EXPORT int bpak_verify_payload(struct bpak_header *header,
     }
 
 #if BPAK_CONFIG_MERKLE == 1
-    const char *hash_tree_suffix = "-hash-tree";
     uint8_t *part_merkle_root_hash;
     uint8_t *part_merkle_salt;
 
@@ -287,9 +287,7 @@ BPAK_EXPORT int bpak_verify_payload(struct bpak_header *header,
         /* Compute the part id for the merkle tree, this is always an
          *  extension of the data part id, suffixed with '-hash-tree'
          */
-        uint32_t merkle_tree_part_id = bpak_crc32(p->id,
-                                                  (uint8_t *)hash_tree_suffix,
-                                                  strlen(hash_tree_suffix));
+        uint32_t merkle_tree_part_id = bpak_part_id_to_hash_tree_id(p->id);
 
         struct bpak_part_header *merkle_tree_part = NULL;
 

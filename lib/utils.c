@@ -105,3 +105,25 @@ BPAK_EXPORT int bpak_meta_to_string(struct bpak_header *h,
 
     return BPAK_OK;
 }
+
+BPAK_EXPORT uint32_t bpak_part_name_to_hash_tree_id(const char *part_name)
+{
+    return bpak_part_id_to_hash_tree_id(bpak_id(part_name));
+}
+
+BPAK_EXPORT uint32_t bpak_part_id_to_hash_tree_id(uint32_t part_id)
+{
+    return bpak_crc32(part_id, (uint8_t *)"-hash-tree", 10);
+}
+
+BPAK_EXPORT uint32_t bpak_hash_tree_id_to_part_id(struct bpak_header *header,
+                                                  uint32_t part_id)
+{
+    bpak_foreach_part (header, part) {
+        if (bpak_crc32(part->id, (uint8_t *)"-hash-tree", 10) == part_id) {
+            return part->id;
+        }
+    }
+
+    return 0;
+}

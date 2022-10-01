@@ -150,9 +150,9 @@ BPAK_EXPORT int bpak_pkg_add_file_with_merkle_tree(struct bpak_package *pkg,
     memcpy(m, hash, sizeof(bpak_merkle_hash_t));
 
     struct bpak_part_header *p = NULL;
-    uint32_t hash_tree_id =
-        bpak_crc32(0, (uint8_t *)part_name, strlen(part_name));
-    hash_tree_id = bpak_crc32(hash_tree_id, (uint8_t *)"-hash-tree", 10);
+
+    uint32_t hash_tree_id = bpak_part_name_to_hash_tree_id(part_name);
+
     rc = bpak_add_part(h, hash_tree_id, &p);
 
     if (rc != BPAK_OK) {

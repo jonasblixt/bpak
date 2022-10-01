@@ -14,6 +14,7 @@
 #include <bpak/bspatch.h>
 #include <bpak/merkle.h>
 #include <bpak/id.h>
+#include <bpak/utils.h>
 
 #if BPAK_CONFIG_MERKLE == 1
 static ssize_t merkle_generate(struct bpak_transport_decode *ctx)
@@ -28,13 +29,7 @@ static ssize_t merkle_generate(struct bpak_transport_decode *ctx)
 
     /* The part id currently begin processed is for the hash tree,
      *  Locate the filesystem that should be used */
-    bpak_foreach_part (ctx->patch_header, part) {
-        if (bpak_crc32(part->id, (uint8_t *)"-hash-tree", 10) ==
-            ctx->part->id) {
-            fs_id = part->id;
-            break;
-        }
-    }
+    fs_id = bpak_hash_tree_id_to_part_id(ctx->patch_header, ctx->part->id);
 
     if (!fs_id) {
         bpak_printf(0, "Error: could not find hash tree\n");
