@@ -304,22 +304,26 @@ int bpak_mbed_load_public_key(const char *filename, struct bpak_key **output)
             break;
         default:
             rc = -BPAK_UNSUPPORTED_KEY;
-            goto err_free_ctx;
+            goto err_free_key_out;
         };
     } else if (strcmp(mbedtls_pk_get_name(&ctx), "RSA") == 0) {
         if (mbedtls_pk_get_bitlen(&ctx) == 4096) {
             key->kind = BPAK_KEY_PUB_RSA4096;
         } else {
             rc = -BPAK_UNSUPPORTED_KEY;
-            goto err_free_ctx;
+            goto err_free_key_out;
         }
     } else {
         rc = -BPAK_UNSUPPORTED_KEY;
-        goto err_free_ctx;
+        goto err_free_key_out;
     }
 
     memcpy(key->data, &tmp[sizeof(tmp) - len], len);
     (*output) = key;
+    return BPAK_OK;
+
+err_free_key_out:
+    bpak_free(key);
 err_free_ctx:
     mbedtls_pk_free(&ctx);
     return rc;
