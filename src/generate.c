@@ -126,16 +126,6 @@ int action_generate(int argc, char **argv)
             goto err_free_io_out;
         }
 
-        uuid_t keystore_uuid;
-
-        uuid_parse(BPAK_KEYSTORE_UUID, keystore_uuid);
-
-        if (uuid_compare(keystore_uuid, package_id) != 0) {
-            fprintf(stderr, "Error: This is not a keystore file\n");
-            rc = -BPAK_PACKAGE_UUID_MISMATCH;
-            goto err_free_io_out;
-        }
-
         uint32_t *keystore_provider_id = NULL;
 
         rc = bpak_get_meta(h,

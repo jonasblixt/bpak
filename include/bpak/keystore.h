@@ -8,7 +8,7 @@
 extern "C" {
 #endif
 
-#define BPAK_KEYSTORE_UUID "5df103ef-e774-450b-95c5-1fef51ceec28"
+typedef int (*bpak_check_header_t)(struct bpak_header *header, void *user);
 
 struct bpak_keystore {
     uint32_t id;
