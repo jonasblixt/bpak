@@ -184,12 +184,12 @@ int action_verify(int argc, char **argv)
             goto err_close_pkg_out;
         }
     } else if (keystore_path != NULL) {
-        rc = bpak_keystore_load_key(keystore_path,
-                                    pkg.header.keystore_id,
-                                    pkg.header.key_id,
-                                    NULL,
-                                    NULL,
-                                    &key);
+        rc = bpak_keystore_load_key_from_file(keystore_path,
+                                              pkg.header.keystore_id,
+                                              pkg.header.key_id,
+                                              NULL,
+                                              NULL,
+                                              &key);
 
         if (rc != BPAK_OK) {
             goto err_close_pkg_out;

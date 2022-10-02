@@ -6,8 +6,9 @@ extern "C" {
 #endif
 
 #define BPAK_DECLARE_STATIC_KEY(__name, __size) \
-    uint8_t __name##_static_key_data[sizeof(struct bpak_key) + __size]; \
-    struct bpak_key *__name = (struct bpak_key *) __name##_static_key_data;
+    uint8_t __##__name##_data[sizeof(struct bpak_key) + __size]; \
+    struct bpak_key *__name = (struct bpak_key *) __##__name##_data; \
+    __name->size = __size;
 
 struct bpak_key {
     enum bpak_key_kind kind;

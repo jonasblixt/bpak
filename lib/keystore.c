@@ -31,12 +31,12 @@ BPAK_EXPORT int bpak_keystore_get(struct bpak_keystore *ks, uint32_t id,
     return -BPAK_KEY_NOT_FOUND;
 }
 
-BPAK_EXPORT int bpak_keystore_load_key(const char *filename,
-                                       uint32_t keystore_id,
-                                       uint32_t key_id,
-                                       bpak_check_header_t check_header,
-                                       void *user,
-                                       struct bpak_key **output)
+BPAK_EXPORT int bpak_keystore_load_key_from_file(const char *filename,
+                                                 uint32_t keystore_id,
+                                                 uint32_t key_id,
+                                                 bpak_check_header_t check_header,
+                                                 void *user,
+                                                 struct bpak_key **output)
 {
     int rc;
     uint8_t key_buffer[512];
@@ -97,4 +97,3 @@ err_close_pkg_out:
     bpak_pkg_close(&pkg);
     return rc;
 }
-

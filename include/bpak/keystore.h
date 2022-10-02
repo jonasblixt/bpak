@@ -31,14 +31,17 @@ int bpak_keystore_get(struct bpak_keystore *ks, uint32_t id,
  *  `user`         Optional context pointer passed to 'check_header'
  *  `output`       Key output
  *
+ * NOTE: bpak_keystore_load_from_file allocates a key struct and
+ *  the user must free this memory.
+ *
  * Returns BPAK_OK on success or a negative number.
  */
-int bpak_keystore_load_key(const char *filename,
-                           uint32_t keystore_id,
-                           uint32_t key_id,
-                           bpak_check_header_t check_header,
-                           void *user,
-                           struct bpak_key **output);
+int bpak_keystore_load_key_from_file(const char *filename,
+                                     uint32_t keystore_id,
+                                     uint32_t key_id,
+                                     bpak_check_header_t check_header,
+                                     void *user,
+                                     struct bpak_key **output);
 #ifdef __cplusplus
 } // extern "C"
 #endif
