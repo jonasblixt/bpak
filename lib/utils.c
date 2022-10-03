@@ -9,12 +9,13 @@
 
 #include <stdio.h>
 #include <string.h>
-#include <uuid/uuid.h>
 #include <bpak/bpak.h>
 #include <bpak/utils.h>
 #include <bpak/crc.h>
 #include <bpak/pkg.h>
 #include <bpak/id.h>
+
+#include "uuid.h"
 
 BPAK_EXPORT int bpak_bin2hex(uint8_t *data, size_t data_sz, char *buf,
                              size_t buf_sz)

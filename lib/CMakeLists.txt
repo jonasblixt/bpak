@@ -12,6 +12,8 @@ set(LIB_SRC_FILES
     keystore.c
     mem.c
     utils.c
+    ${${PROJECT_NAME}_SOURCE_DIR}/ext/uuid/unpack.c
+    ${${PROJECT_NAME}_SOURCE_DIR}/ext/uuid/unparse.c
 )
 
 # Every .h -file in include/bpak/ is a public header
@@ -63,13 +65,14 @@ set_target_properties(${PROJECT_NAME}-static PROPERTIES OUTPUT_NAME ${PROJECT_NA
 
 set(LIB_CFLAGS
     -Wextra -pedantic
+    -I${${PROJECT_NAME}_SOURCE_DIR}/ext/uuid
     -I${${PROJECT_NAME}_BINARY_DIR}/lib/
 )
 
 target_compile_options(${PROJECT_NAME} PRIVATE ${LIB_CFLAGS})
 target_compile_options(${PROJECT_NAME}-static PRIVATE ${LIB_CFLAGS})
 
-set(LIB_LIBS ${UUID_LIBRARY})
+set(LIB_LIBS)
 
 if (NOT BPAK_BUILD_MINIMAL)
     set(LIB_LIBS

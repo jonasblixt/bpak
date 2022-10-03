@@ -6,11 +6,11 @@
 #include <getopt.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <uuid/uuid.h>
 #include <bpak/bpak.h>
 #include <bpak/id.h>
 #include <bpak/crypto.h>
 
+#include "uuid.h"
 #include "bpak_tool.h"
 
 int action_generate(int argc, char **argv)
