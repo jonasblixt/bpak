@@ -7,7 +7,7 @@
 #include <bpak/pkg.h>
 #include <bpak/utils.h>
 #include <bpak/id.h>
-#include <uuid/uuid.h>
+#include "uuid.h"
 
 typedef struct {
     PyObject_HEAD struct bpak_package pkg;
