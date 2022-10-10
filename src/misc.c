@@ -134,18 +134,17 @@ void print_show_usage(void)
 {
     print_version();
     printf("\n");
-    printf("bpak show <filename.bpak> [options]  Show information on a bpak "
-           "file\n");
+    printf("bpak show [options] <filename.bpak>  Show information on a bpak file\n");
     printf("\n");
 
     printf("Options:\n");
-    printf("    -m, --meta <id>                 Show information about meta "
-           "with id\n");
-    printf("    -p, --part <id>                 Show information about part "
-           "with id\n");
+    printf("    -m, --meta <id>                 Show information about meta with id\n");
+    printf("    -p, --part <id>                 Show information about part with id\n");
     printf("    -H, --hash                      Print package hash\n");
-    printf("    -B, --binary-hash               Output package hash in binary "
-           "form\n");
+    printf("    -B, --binary-hash               Output package hash in binary form\n");
+    printf("    -P, --part-hash <name or id>    Display a sha256 hash of a part\n");
+    printf("\n");
+    printf("Note: If no options are supplied an overview of the package will be displayed\n");
     printf("\n");
 
     print_common_usage();

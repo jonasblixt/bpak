@@ -26,6 +26,7 @@ int action_show(int argc, char **argv)
     int long_index = 0;
     const char *filename = NULL;
     const char *part_name = NULL;
+    const char *part_hash_name = NULL;
     const char *meta_name = NULL;
     bool text_hash_output = false;
     bool binary_hash_output = false;
@@ -33,22 +34,24 @@ int action_show(int argc, char **argv)
     size_t hash_size = sizeof(hash_output);
     char string_output[128];
     uint32_t part_id = 0;
+    uint32_t part_hash_id = 0;
     uint32_t meta_id = 0;
+    char hash_str[128];
 
     struct option long_options[] = {
         { "help", no_argument, 0, 'h' },
         { "verbose", no_argument, 0, 'v' },
         { "meta", required_argument, 0, 'm' },
         { "part", required_argument, 0, 'p' },
+        { "part-hash", required_argument, 0, 'P' },
         { "hash", no_argument, 0, 'H' },
         { "binary-hash", no_argument, 0, 'B' },
         { 0, 0, 0, 0 },
     };
 
-    while (
-        (opt =
-             getopt_long(argc, argv, "hvm:p:HB", long_options, &long_index)) !=
-        -1) {
+    while ( (opt = getopt_long(argc, argv,
+                               "hvm:p:P:HB",
+                               long_options, &long_index)) != -1) {
         switch (opt) {
         case 'h':
             print_show_usage();
@@ -64,6 +67,15 @@ int action_show(int argc, char **argv)
                 part_id = strtoul(optarg, NULL, 16);
             } else {
                 part_id = bpak_id(optarg);
+            }
+            break;
+        case 'P':
+            part_hash_name = (const char *)optarg;
+
+            if (strncmp(optarg, "0x", 2) == 0) {
+                part_hash_id = strtoul(optarg, NULL, 16);
+            } else {
+                part_hash_id = bpak_id(optarg);
             }
             break;
         case 'm':
@@ -158,8 +170,25 @@ int action_show(int argc, char **argv)
 
         if (rc != BPAK_OK) {
             fprintf(stderr, "Error: Could not find part '%s'\n", part_name);
-            goto err_pkg_close;
         }
+
+        goto err_pkg_close;
+    }
+
+    if (part_hash_name) {
+        rc = bpak_pkg_part_sha256(&pkg, (uint8_t *) hash_output, hash_size, part_hash_id);
+
+        if (rc != 0)
+            goto err_pkg_close;
+
+        bpak_bin2hex((uint8_t *) hash_output,
+                     32,
+                     hash_str,
+                     sizeof(hash_str));
+
+        printf("%s\n", hash_str);
+        rc = 0;
+        goto err_pkg_close;
     }
 
     if (binary_hash_output) {
@@ -242,7 +271,6 @@ int action_show(int argc, char **argv)
     uint8_t payload_hash_copy[BPAK_HASH_MAX_LENGTH];
     memcpy(payload_hash_copy, pkg.header.payload_hash, BPAK_HASH_MAX_LENGTH);
 
-    char hash_str[128];
     hash_size = sizeof(hash_output);
     rc = bpak_pkg_update_hash(&pkg, hash_output, &hash_size);
     if (rc != BPAK_OK) {

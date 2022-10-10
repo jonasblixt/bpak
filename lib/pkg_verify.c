@@ -82,3 +82,60 @@ err_free_key_out:
 err_out:
     return rc;
 }
+
+BPAK_EXPORT int bpak_pkg_part_sha256(struct bpak_package *pkg,
+                                     uint8_t *hash_buffer,
+                                     size_t hash_buffer_length,
+                                     uint32_t part_id)
+{
+    int rc;
+    struct bpak_part_header *part;
+    struct bpak_hash_context hash;
+    uint8_t chunk[BPAK_CHUNK_BUFFER_LENGTH];
+    off_t offset;
+    size_t part_size;
+    size_t bytes_to_hash;
+    size_t chunk_len;
+
+    rc = bpak_get_part(&pkg->header, part_id, &part, NULL);
+
+    if (rc != BPAK_OK)
+        return rc;
+
+    offset = bpak_part_offset(&pkg->header, part);
+
+    rc = bpak_hash_init(&hash, BPAK_HASH_SHA256);
+
+    if (rc != BPAK_OK)
+        return rc;
+
+    if (fseek(pkg->fp, offset, SEEK_SET) != 0) {
+        rc = -BPAK_SEEK_ERROR;
+        goto err_free_hash_ctx_out;
+    }
+
+    part_size = bpak_part_size_wo_pad(part);
+    bytes_to_hash = part_size;
+
+    while (bytes_to_hash > 0) {
+        chunk_len = (bytes_to_hash > sizeof(chunk))?sizeof(chunk):bytes_to_hash;
+
+        if (fread(chunk, 1, chunk_len, pkg->fp) != chunk_len) {
+            rc = -BPAK_READ_ERROR;
+            goto err_free_hash_ctx_out;
+        }
+
+        rc = bpak_hash_update(&hash, chunk, chunk_len);
+
+        if (rc != BPAK_OK)
+            goto err_free_hash_ctx_out;
+
+        bytes_to_hash -= chunk_len;
+    }
+
+    rc = bpak_hash_final(&hash, hash_buffer, hash_buffer_length, NULL);
+
+err_free_hash_ctx_out:
+    bpak_hash_free(&hash);
+    return rc;
+}

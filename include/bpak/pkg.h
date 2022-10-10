@@ -123,6 +123,21 @@ int bpak_pkg_sign(struct bpak_package *pkg, const char *key_filename);
 int bpak_pkg_verify(struct bpak_package *pkg, const char *key_filename);
 
 /**
+ * Compute sha256 hash of part data
+ *
+ * @param[in] pkg Package pointer
+ * @param[out] hash_buffer Output buffer
+ * @param[in] hash_buffer_length length of hash buffer
+ * @param[in] part_id Id of part to be hashed
+ *
+ * @return BPAK_OK on success
+ */
+int bpak_pkg_part_sha256(struct bpak_package *pkg,
+                         uint8_t *hash_buffer,
+                         size_t hash_buffer_length,
+                         uint32_t part_id);
+
+/**
  * Transport encode package
  *
  * @param[in] input BPAK Package input stream
