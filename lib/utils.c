@@ -9,6 +9,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <inttypes.h>
 #include <bpak/bpak.h>
 #include <bpak/utils.h>
 #include <bpak/crc.h>
@@ -64,10 +65,10 @@ BPAK_EXPORT int bpak_meta_to_string(struct bpak_header *h,
 
     if (m->id == BPAK_ID_BPAK_KEY_ID) {
         bpak_get_meta(h, m->id, (void **)&id_ptr, NULL);
-        snprintf(buf, size, "%x", *id_ptr);
+        snprintf(buf, size, "%" PRIx32, *id_ptr);
     } else if (m->id == BPAK_ID_BPAK_KEY_STORE) {
         bpak_get_meta(h, m->id, (void **)&id_ptr, NULL);
-        snprintf(buf, size, "%x", *id_ptr);
+        snprintf(buf, size, "%" PRIx32, *id_ptr);
     } else if (m->id == BPAK_ID_BPAK_PACKAGE) {
         bpak_get_meta(h, m->id, (void **)&byte_ptr, NULL);
         bpak_uuid_to_string(byte_ptr, buf, size);
@@ -77,7 +78,7 @@ BPAK_EXPORT int bpak_meta_to_string(struct bpak_header *h,
 
         snprintf(buf,
                  size,
-                 "Encode: %8.8x, Decode: %8.8x",
+                 "Encode: %8.8" PRIx32 ", Decode: %8.8" PRIx32,
                  transport_meta->alg_id_encode,
                  transport_meta->alg_id_decode);
     } else if (m->id == BPAK_ID_MERKLE_SALT) {
@@ -87,7 +88,7 @@ BPAK_EXPORT int bpak_meta_to_string(struct bpak_header *h,
         bpak_get_meta(h, m->id, (void **)&byte_ptr, NULL);
         bpak_bin2hex(byte_ptr, 32, buf, size);
     } else if (m->id == BPAK_ID_PB_LOAD_ADDR) {
-        uint64_t *entry_addr = (uint64_t *)&(h->metadata[m->offset]);
+        uintptr_t *entry_addr = (uintptr_t *)&(h->metadata[m->offset]);
         snprintf(buf, size, "Entry: %p", (void *)*entry_addr);
     } else if (m->id == BPAK_ID_BPAK_VERSION) {
         bpak_get_meta(h, m->id, (void **)&byte_ptr, NULL);
@@ -98,7 +99,7 @@ BPAK_EXPORT int bpak_meta_to_string(struct bpak_header *h,
         memcpy(buf, byte_ptr, m->size);
     } else if (m->id == BPAK_ID_KEYSTORE_PROVIDER_ID) {
         bpak_get_meta(h, m->id, (void **)&id_ptr, NULL);
-        snprintf(buf, size, "0x%x", *id_ptr);
+        snprintf(buf, size, "0x%" PRIx32, *id_ptr);
     } else {
         if (size)
             *buf = 0;
