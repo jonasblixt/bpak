@@ -3,7 +3,7 @@
 
 #define BPAK_VERSION_MAJOR  0
 #define BPAK_VERSION_MINOR  8
-#define BPAK_VERSION_PATCH  5
-#define BPAK_VERSION_STRING "0.8.5"
+#define BPAK_VERSION_PATCH  6
+#define BPAK_VERSION_STRING "0.8.6"
 
 #endif
