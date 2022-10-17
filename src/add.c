@@ -26,6 +26,8 @@ int action_add(int argc, char **argv)
     int opt;
     int long_index = 0;
     uint32_t flags = 0;
+    char metadata_input[BPAK_METADATA_BYTES] = { 0 };
+    size_t metadata_input_length = 0;
     const char *filename = NULL;
     const char *part_name = NULL;
     const char *meta_name = NULL;
@@ -136,8 +138,33 @@ int action_add(int argc, char **argv)
         if (part_ref)
             part_ref_id = bpak_id(part_ref);
 
-        if (!from_string) {
-            fprintf(stderr, "Error: No input supplied with --from-string\n");
+        if (from_string) {
+            metadata_input_length = strlen(from_string) + 1;
+            if (metadata_input_length > sizeof(metadata_input)) {
+                rc = -BPAK_NO_SPACE_LEFT;
+                goto err_close_pkg_out;
+            }
+            strncpy(metadata_input, from_string, metadata_input_length);
+        } else if (from_file) {
+            FILE *meta_in_fp = fopen(from_file, "r");
+            if (meta_in_fp == NULL) {
+                fprintf(stderr, "Error: Could not open '%s'\n", from_file);
+                rc = -BPAK_FAILED;
+                goto err_close_pkg_out;
+            }
+
+            metadata_input_length = fread(metadata_input, 1,
+                                    sizeof(metadata_input), meta_in_fp);
+
+            fclose(meta_in_fp);
+
+            if (metadata_input_length == 0) {
+                fprintf(stderr, "Error: Read zero bytes\n");
+                rc = -BPAK_FAILED;
+                goto err_close_pkg_out;
+            }
+        } else {
+            fprintf(stderr, "Error: No input supplied with --from-string or --from-file\n");
             rc = -BPAK_FAILED;
             goto err_close_pkg_out;
         }
@@ -145,7 +172,8 @@ int action_add(int argc, char **argv)
         if (encoder) {
             if (strcmp(encoder, "uuid") == 0) {
                 uuid_t uu;
-                rc = uuid_parse(from_string, uu);
+
+                rc = uuid_parse(metadata_input, uu);
 
                 if (rc != 0) {
                     rc = -BPAK_FAILED;
@@ -170,7 +198,7 @@ int action_add(int argc, char **argv)
                     printf("Adding %s <%s>\n", meta_name, from_string);
                 }
             } else if (strcmp(encoder, "integer") == 0) {
-                long value = strtol(from_string, NULL, 0);
+                long value = strtol(metadata_input, NULL, 0);
 
                 rc = bpak_add_meta(h,
                                    bpak_id(meta_name),
@@ -189,7 +217,7 @@ int action_add(int argc, char **argv)
                     printf("Adding %s <0x%lx>\n", meta_name, value);
                 }
             } else if (strcmp(encoder, "id") == 0) {
-                uint32_t value = bpak_id(from_string);
+                uint32_t value = bpak_id(metadata_input);
 
                 rc = bpak_add_meta(h,
                                    bpak_id(meta_name),
@@ -214,20 +242,20 @@ int action_add(int argc, char **argv)
             }
         } else {
             if (bpak_get_verbosity())
-                printf("Adding '%s' with id '%s'\n", from_string, meta_name);
+                printf("Adding metadata with id '%s'\n", meta_name);
 
             rc = bpak_add_meta(h,
                                bpak_id(meta_name),
                                part_ref_id,
                                (void **)&meta_data,
-                               strlen(from_string) + 1);
+                               metadata_input_length);
 
             if (rc != BPAK_OK) {
                 fprintf(stderr, "Error: Could not add meta data\n");
                 goto err_close_pkg_out;
             }
 
-            memcpy(meta_data, from_string, strlen(from_string));
+            memcpy(meta_data, metadata_input, metadata_input_length);
         }
 
         if (bpak_get_verbosity() > 2)
