@@ -41,6 +41,7 @@ if (NOT BPAK_BUILD_MINIMAL)
         heatshrink/heatshrink_encoder.c
         crypto.c
         mbedtls_wrapper.c
+        keystore_load_from_file.c
 )
 endif()
 
