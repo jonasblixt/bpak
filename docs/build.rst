@@ -4,45 +4,37 @@
 Building and installing
 -----------------------
 
-The library has no external dependencies and the tool only depends on the c
-library and the bpak library.
-
-The 'autoconf-archive' package must be installed before running autoreconf.
+The library depends on mbedtls and liblzma
 
 Build library and tool::
 
-    $ autoreconf -fi
-    $ ./configure
+    $ cmake
     $ make
     $ sudo make install
 
 Optionally build with python support::
 
-    $ ./configure --enable-python-library
+    $ cmake -DBPAK_BUILD_PYTHON_WRAPPER=1
 
 Running tests::
 
-    $ ./configure --enable-code-coverage
-    $ make && make check
+    $ cmake -DBPAK_BUILD_TESTS=1
+    $ make && make test
 
 
-configure options
------------------
+cmake configure options
+-----------------------
 
 ===========================  ====================================================
 Option                       Description
 ===========================  ====================================================
---disable-lzma               Disable support for lzma compression
---disable-tool               Disable the cli
---disable-bsdiff             Disable support for bspatch
---disable-bspatch            Disable support for bspatch
---disable-merkle             Disable the merkle tree generator
---disable-pkg-create         Disable support for creating packages
---disable-transport-encode   Disables the encoding portion of the transport layer
---disable-pkg-sign           Disable support for singing packages
+BPAK_BUILD_MINIMAL           Build a minimal version of the library
+BPAK_BUILD_PYTHON_WRAPPER    Build the python wrapper
+BPAK_BUILD_TESTS             Build tests
 ===========================  ====================================================
 
-The default setting is that everything is enabled
+The default setting is that everything is enabled except the python wrapper and
+the tests.
 
 
 Build settings
