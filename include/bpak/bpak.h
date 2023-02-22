@@ -268,7 +268,7 @@ struct bpak_header {
          __var++)
 
 /**
- * Retrive pointer to metadata with id 'id'. If *offset equals NULL
+ * Retrieve pointer to metadata with id 'id'. If *offset equals NULL
  *  the function will search from the beginning of the header array.
  *
  * @param[in] hdr BPAK Header
@@ -335,7 +335,7 @@ int bpak_add_meta(struct bpak_header *hdr, uint32_t id, uint32_t part_ref_id,
                   void **ptr, uint16_t size);
 
 /**
- * Retrive pointer to part with id 'id'.
+ * Retrieve pointer to part with id 'id'.
  *
  * part pointer is assigned to the location of the part header within
  *  the hdr->parts array.
