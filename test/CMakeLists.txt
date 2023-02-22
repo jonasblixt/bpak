@@ -55,11 +55,8 @@ set(TEST_SCRIPTS
     test_transport5.sh
     test_transport6.sh
     test_transport_lzma.sh
-    test_python_transport.py
-    test_python_create_package.py
-    test_python_meta.py
-    test_python_lib.py
 )
+
 
 foreach(test_script IN LISTS TEST_SCRIPTS)
     add_test(NAME ${test_script}
@@ -67,3 +64,18 @@ foreach(test_script IN LISTS TEST_SCRIPTS)
       WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/test")
 endforeach()
 
+
+set(TEST_SCRIPT_PYTHON
+    test_python_transport.py
+    test_python_create_package.py
+    test_python_meta.py
+    test_python_lib.py
+)
+
+if (BPAK_BUILD_PYTHON_WRAPPER)
+    foreach(test_script IN LISTS TEST_SCRIPT_PYTHON)
+        add_test(NAME ${test_script}
+        COMMAND "${CMAKE_CURRENT_LIST_DIR}/${test_script}" "${CMAKE_SOURCE_DIR}"
+        WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/test")
+    endforeach()
+endif()
