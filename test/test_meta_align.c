@@ -19,23 +19,23 @@ TEST(meta_align)
     rc = bpak_init_header(&h);
     ASSERT_EQ(rc, BPAK_OK);
 
-    rc = bpak_add_meta(&h, bpak_id("test-meta"), 0, &p, 8);
+    rc = bpak_add_meta(&h, bpak_id("test-meta1"), 0, &p, 8);
     ASSERT_EQ(rc, BPAK_OK);
     test_ptr_alignment(p);
 
-    rc = bpak_add_meta(&h, bpak_id("test-meta"), 0, &p, 4);
+    rc = bpak_add_meta(&h, bpak_id("test-meta2"), 0, &p, 4);
     ASSERT_EQ(rc, BPAK_OK);
     test_ptr_alignment(p);
 
-    rc = bpak_add_meta(&h, bpak_id("test-meta"), 0, &p, 2);
+    rc = bpak_add_meta(&h, bpak_id("test-meta3"), 0, &p, 2);
     ASSERT_EQ(rc, BPAK_OK);
     test_ptr_alignment(p);
 
-    rc = bpak_add_meta(&h, bpak_id("test-meta"), 0, &p, 1);
+    rc = bpak_add_meta(&h, bpak_id("test-meta4"), 0, &p, 1);
     ASSERT_EQ(rc, BPAK_OK);
     test_ptr_alignment(p);
 
-    rc = bpak_add_meta(&h, bpak_id("test-meta"), 0, &p, 8);
+    rc = bpak_add_meta(&h, bpak_id("test-meta5"), 0, &p, 8);
     ASSERT_EQ(rc, BPAK_OK);
     test_ptr_alignment(p);
 }

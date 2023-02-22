@@ -42,7 +42,7 @@ TEST(too_many_part_header)
     struct bpak_part_header *p = NULL;
 
     for (int i = 0; i < BPAK_MAX_PARTS; i++) {
-        rc = bpak_add_part(&h, bpak_id("test-part"), &p);
+        rc = bpak_add_part(&h, bpak_id("test-part") + 1 + i, &p);
         ASSERT_EQ(rc, BPAK_OK);
     }
 
@@ -80,15 +80,15 @@ TEST(iterate_part_header)
     rc = bpak_add_part(&h, bpak_id("test-part"), &p1);
     ASSERT_EQ(rc, BPAK_OK);
 
-    rc = bpak_add_part(&h, bpak_id("test-part"), &p2);
+    rc = bpak_add_part(&h, bpak_id("test-part") + 1, &p2);
     ASSERT_EQ(rc, BPAK_OK);
 
-    rc = bpak_add_part(&h, bpak_id("test-part"), &p3);
+    rc = bpak_add_part(&h, bpak_id("test-part") + 2, &p3);
     ASSERT_EQ(rc, BPAK_OK);
 
     struct bpak_part_header *out = NULL;
 
-    rc = bpak_get_part(&h, bpak_id("test-part"), &out, p2);
+    rc = bpak_get_part(&h, bpak_id("test-part") + 2, &out, p2);
     ASSERT_EQ(rc, BPAK_OK);
     ASSERT_EQ(out, p3);
 }

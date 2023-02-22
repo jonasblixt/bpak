@@ -54,7 +54,7 @@ TEST(add_meta)
 
     rc = bpak_add_meta(&h,
                        bpak_id("test-meta"),
-                       0,
+                       0x1,
                        (void **)&test2,
                        sizeof(test2));
     ASSERT_EQ(rc, BPAK_OK);
@@ -91,7 +91,7 @@ TEST(iterate_meta)
         v = NULL;
         rc = bpak_add_meta(&h,
                            bpak_id("test-meta"),
-                           0,
+                           i + 1,
                            (void **)&v,
                            sizeof(uint32_t));
         ASSERT_EQ(rc, BPAK_OK);
@@ -122,7 +122,7 @@ TEST(too_many_meta_headers)
         v = NULL;
         rc = bpak_add_meta(&h,
                            bpak_id("test-meta"),
-                           0,
+                           i,
                            (void **)&v,
                            sizeof(uint32_t));
         ASSERT_EQ(rc, BPAK_OK);
@@ -141,7 +141,7 @@ TEST(too_many_meta_headers)
     v = NULL;
     rc = bpak_add_meta(&h,
                        bpak_id("test-meta"),
-                       0,
+                       0x30,
                        (void **)&v,
                        sizeof(uint32_t));
     ASSERT_EQ(rc, -BPAK_NO_SPACE_LEFT);
@@ -165,7 +165,7 @@ TEST(too_much_metadata)
 
     /* metadata byte array is now full */
 
-    rc = bpak_add_meta(&h, bpak_id("test-meta"), 0, (void **)&v, 1);
+    rc = bpak_add_meta(&h, bpak_id("test-meta"), 0x1, (void **)&v, 1);
     ASSERT_EQ(rc, -BPAK_NO_SPACE_LEFT);
 
     /* Fill header array and meta data */
@@ -175,11 +175,11 @@ TEST(too_much_metadata)
     v = NULL;
     for (int i = 0; i < 30; i++) {
         printf("%i\n", i);
-        rc = bpak_add_meta(&h, bpak_id("test-meta"), 0, (void **)&v, 64);
+        rc = bpak_add_meta(&h, bpak_id("test-meta"), i, (void **)&v, 64);
         printf("v %p\n", v);
         ASSERT_EQ(rc, BPAK_OK);
     }
 
-    rc = bpak_add_meta(&h, bpak_id("test-meta"), 0, (void **)&v, 1);
+    rc = bpak_add_meta(&h, bpak_id("test-meta"), 0x100, (void **)&v, 1);
     ASSERT_EQ(rc, -BPAK_NO_SPACE_LEFT);
 }

@@ -81,6 +81,8 @@ BPAK_EXPORT int bpak_add_meta(struct bpak_header *hdr, uint32_t id,
 
             (*ptr) = (void *)&hdr->metadata[m->offset];
             return BPAK_OK;
+        } else if (m->id == id && m->part_id_ref == part_ref_id) {
+            return -BPAK_EXISTS;
         }
 
         new_offset += m->size;
@@ -119,6 +121,8 @@ BPAK_EXPORT int bpak_add_part(struct bpak_header *hdr, uint32_t id,
             p->id = id;
             (*part) = p;
             return BPAK_OK;
+        } else if (p->id == id) {
+            return -BPAK_EXISTS;
         }
     }
 
@@ -198,6 +202,8 @@ BPAK_EXPORT const char *bpak_error_string(int code)
         return "Key not found";
     case -BPAK_KEYSTORE_ID_MISMATCH:
         return "Keystore id mismatch";
+    case -BPAK_EXISTS:
+        return "Object exists";
     default:
         return "Unknown";
     }

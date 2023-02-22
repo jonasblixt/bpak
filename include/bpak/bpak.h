@@ -122,6 +122,7 @@ enum bpak_errors {
     BPAK_UNSUPPORTED_COMPRESSION,
     BPAK_KEY_NOT_FOUND,
     BPAK_KEYSTORE_ID_MISMATCH,
+    BPAK_EXISTS,
 };
 
 /*! \public
@@ -328,8 +329,10 @@ int bpak_get_meta_and_header(struct bpak_header *hdr, uint32_t id,
  * @param[out] ptr Output pointer to allocated metadata
  * @param[in] size Size in bytes of new metadata
  *
- * @return BPAK_OK on success or -BPAK_NO_SPACE if the metadata array is full
- *
+ * @return BPAK_OK on success,
+ *         -BPAK_NO_SPACE if the metadata array is full or
+ *         -BPAK_EXISTS if a metadata with the same 'id' and 'part_ref_id'
+ *         already exists
  **/
 int bpak_add_meta(struct bpak_header *hdr, uint32_t id, uint32_t part_ref_id,
                   void **ptr, uint16_t size);
@@ -361,7 +364,9 @@ int bpak_get_part(struct bpak_header *hdr, uint32_t id,
  * @param[in] id ID of new part
  * @param[out] part Output pointer to new part
  *
- * @return BPAK_OK on success or -BPAK_NO_SPACE if the array is full
+ * @return BPAK_OK on success,
+ *         -BPAK_NO_SPACE if the array is full
+ *         -BPAK_EXISTS if a part with the same 'id' already exists
  *
  **/
 
