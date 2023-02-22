@@ -92,3 +92,62 @@ TEST(iterate_part_header)
     ASSERT_EQ(rc, BPAK_OK);
     ASSERT_EQ(out, p3);
 }
+
+TEST(delete_part)
+{
+    struct bpak_header h;
+    int rc;
+
+    rc = bpak_init_header(&h);
+
+    ASSERT_EQ(rc, BPAK_OK);
+    ASSERT_EQ(bpak_valid_header(&h), BPAK_OK);
+
+    struct bpak_part_header *p1 = NULL;
+    struct bpak_part_header *p2 = NULL;
+    struct bpak_part_header *p3 = NULL;
+
+    rc = bpak_add_part(&h, bpak_id("test-part"), &p1);
+    ASSERT_EQ(rc, BPAK_OK);
+
+    rc = bpak_add_part(&h, bpak_id("test-part") + 1, &p2);
+    ASSERT_EQ(rc, BPAK_OK);
+
+    rc = bpak_add_part(&h, bpak_id("test-part") + 2, &p3);
+    ASSERT_EQ(rc, BPAK_OK);
+
+    bpak_del_part(&h, p2);
+
+    struct bpak_part_header *out = NULL;
+    rc = bpak_get_part(&h, bpak_id("test-part"), &out, NULL);
+    ASSERT_EQ(rc, BPAK_OK);
+    ASSERT_EQ(out, p1);
+
+    rc = bpak_get_part(&h, bpak_id("test-part") + 1, &out, NULL);
+    ASSERT_EQ(rc, -BPAK_NOT_FOUND);
+
+    rc = bpak_get_part(&h, bpak_id("test-part") + 2, &out, NULL);
+    ASSERT_EQ(rc, BPAK_OK);
+    ASSERT_LT(out, p3);
+}
+
+TEST(delete_last_part)
+{
+    struct bpak_header h;
+    int rc;
+
+    rc = bpak_init_header(&h);
+
+    ASSERT_EQ(rc, BPAK_OK);
+    ASSERT_EQ(bpak_valid_header(&h), BPAK_OK);
+
+    struct bpak_part_header *p = NULL;
+
+    for (int i = 0; i < BPAK_MAX_PARTS; i++) {
+        rc = bpak_add_part(&h, bpak_id("test-part") + 1 + i, &p);
+        ASSERT_EQ(rc, BPAK_OK);
+    }
+
+    bpak_del_part(&h, p);
+    ASSERT_EQ(p->id, 0);
+}

@@ -338,6 +338,16 @@ int bpak_add_meta(struct bpak_header *hdr, uint32_t id, uint32_t part_ref_id,
                   void **ptr, uint16_t size);
 
 /**
+ * Remove metadata pointed to by 'meta'.
+ *
+ * @param[in] hdr BPAK Header
+ * @param[in] meta Pointer to metadata header. Assumed to be within hdr->meta array
+ *
+ **/
+void bpak_del_meta(struct bpak_header *hdr,
+                   struct bpak_meta_header *meta);
+
+/**
  * Retrieve pointer to part with id 'id'.
  *
  * part pointer is assigned to the location of the part header within
@@ -372,6 +382,16 @@ int bpak_get_part(struct bpak_header *hdr, uint32_t id,
 
 int bpak_add_part(struct bpak_header *hdr, uint32_t id,
                   struct bpak_part_header **part);
+
+/**
+ * Remove part pointed to by 'part'.
+ *
+ * @param[in] hdr BPAK Header
+ * @param[in] part Pointer to part header. Assumed to be within hdr->parts array
+ *
+ **/
+void bpak_del_part(struct bpak_header *hdr,
+                   struct bpak_part_header *part);
 
 /**
  * Check magic numbers in the header and check that all parts have the correct

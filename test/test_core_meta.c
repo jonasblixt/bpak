@@ -183,3 +183,63 @@ TEST(too_much_metadata)
     rc = bpak_add_meta(&h, bpak_id("test-meta"), 0x100, (void **)&v, 1);
     ASSERT_EQ(rc, -BPAK_NO_SPACE_LEFT);
 }
+
+TEST(delete_meta)
+{
+    struct bpak_header h;
+    uint32_t *test = NULL;
+    int rc;
+
+    rc = bpak_init_header(&h);
+    ASSERT_EQ(rc, BPAK_OK);
+
+    rc = bpak_add_meta(&h,
+                       bpak_id("test-meta"),
+                       0x1,
+                       (void **)&test,
+                       sizeof(test));
+    ASSERT_EQ(rc, BPAK_OK);
+
+    *test = 0x11223344;
+
+    uint32_t *out = NULL;
+
+    rc = bpak_get_meta(&h, bpak_id("test-meta"), (void **)&out, NULL);
+    ASSERT_EQ(rc, BPAK_OK);
+    ASSERT_EQ(*out, 0x11223344);
+
+    /* Add additional meta data with the same id */
+    uint32_t *test2 = NULL;
+
+    rc = bpak_add_meta(&h,
+                       bpak_id("test-meta"),
+                       0x2,
+                       (void **)&test2,
+                       sizeof(test2));
+    ASSERT_EQ(rc, BPAK_OK);
+    *test2 = 0x55667788;
+
+    uint32_t *out2 = NULL;
+
+    /* Begin search after the second meta */
+    rc = bpak_get_meta(&h, bpak_id("test-meta"), (void **)&out2, test);
+    ASSERT_EQ(rc, BPAK_OK);
+    ASSERT_EQ(*out2, 0x55667788);
+
+    /* Delete the first part */
+    struct bpak_meta_header *header;
+
+    rc = bpak_get_meta_and_header(&h, bpak_id("test-meta"), 0x1, (void **)&out, NULL, &header);
+    ASSERT_EQ(rc, BPAK_OK);
+    ASSERT_EQ(*out, 0x11223344);
+
+    bpak_del_meta(&h, header);
+
+    /* Verify it is gone, and that second meta can still be read */
+    rc = bpak_get_meta_and_header(&h, bpak_id("test-meta"), 0x1, (void **)&out, NULL, &header);
+    ASSERT_EQ(rc, -BPAK_NOT_FOUND);
+
+    rc = bpak_get_meta_and_header(&h, bpak_id("test-meta"), 0x2, (void **)&out, NULL, &header);
+    ASSERT_EQ(rc, BPAK_OK);
+    ASSERT_EQ(*out, 0x55667788);
+}

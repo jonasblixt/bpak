@@ -94,6 +94,36 @@ BPAK_EXPORT int bpak_add_meta(struct bpak_header *hdr, uint32_t id,
     return -BPAK_NO_SPACE_LEFT;
 }
 
+BPAK_EXPORT void bpak_del_meta(struct bpak_header *hdr,
+                               struct bpak_meta_header *meta)
+{
+    struct bpak_meta_header *next_meta = meta + 1;
+    uint16_t offset_adjust = meta->size;
+
+    if (offset_adjust % BPAK_META_ALIGN)
+        offset_adjust += BPAK_META_ALIGN - (offset_adjust % BPAK_META_ALIGN);
+
+    while(meta != &(hdr->meta[BPAK_MAX_META - 1])) {
+        if (next_meta->id != 0) {
+            memmove(&(hdr->metadata[next_meta->offset - offset_adjust]),
+                    &(hdr->metadata[next_meta->offset]),
+                    next_meta->size);
+            memset(&(hdr->metadata[next_meta->offset]), 0, next_meta->size);
+
+            next_meta->offset -= offset_adjust;
+        }
+
+        memcpy(meta, next_meta, sizeof(*meta));
+
+        if (!meta->id)
+            break;
+
+        meta = next_meta++;
+    }
+
+    memset(next_meta, 0, sizeof(*next_meta));
+}
+
 BPAK_EXPORT int bpak_get_part(struct bpak_header *hdr, uint32_t id,
                               struct bpak_part_header **part,
                               struct bpak_part_header *offset)
@@ -127,6 +157,21 @@ BPAK_EXPORT int bpak_add_part(struct bpak_header *hdr, uint32_t id,
     }
 
     return -BPAK_NO_SPACE_LEFT;
+}
+
+BPAK_EXPORT void bpak_del_part(struct bpak_header *hdr,
+                               struct bpak_part_header *part)
+{
+    while(part != &(hdr->parts[BPAK_MAX_PARTS - 1])) {
+        memcpy(part, part + 1, sizeof(*part));
+
+        if (!part->id)
+            break;
+
+        part++;
+    }
+
+    memset(part, 0, sizeof(*part));
 }
 
 BPAK_EXPORT int bpak_init_header(struct bpak_header *hdr)
