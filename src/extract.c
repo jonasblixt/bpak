@@ -57,25 +57,13 @@ int action_extract(int argc, char **argv)
             bpak_inc_verbosity();
             break;
         case 'r':
-            if (strncmp(optarg, "0x", 2) == 0) {
-                part_id_ref = strtoul(optarg, NULL, 16);
-            } else {
-                part_id_ref = bpak_id(optarg);
-            }
+            part_id_ref = bpak_get_id_for_name_or_ref(optarg);
             break;
         case 'p':
-            if (strncmp(optarg, "0x", 2) == 0) {
-                part_id = strtoul(optarg, NULL, 16);
-            } else {
-                part_id = bpak_id(optarg);
-            }
+            part_id = bpak_get_id_for_name_or_ref(optarg);
             break;
         case 'm':
-            if (strncmp(optarg, "0x", 2) == 0) {
-                meta_id = strtoul(optarg, NULL, 16);
-            } else {
-                meta_id = bpak_id(optarg);
-            }
+            meta_id = bpak_get_id_for_name_or_ref(optarg);
             break;
         case 'o':
             output_filename = (const char *)optarg;

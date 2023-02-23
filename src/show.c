@@ -62,30 +62,15 @@ int action_show(int argc, char **argv)
             break;
         case 'p':
             part_name = (const char *)optarg;
-
-            if (strncmp(optarg, "0x", 2) == 0) {
-                part_id = strtoul(optarg, NULL, 16);
-            } else {
-                part_id = bpak_id(optarg);
-            }
+            part_id = bpak_get_id_for_name_or_ref(optarg);
             break;
         case 'P':
             part_hash_name = (const char *)optarg;
-
-            if (strncmp(optarg, "0x", 2) == 0) {
-                part_hash_id = strtoul(optarg, NULL, 16);
-            } else {
-                part_hash_id = bpak_id(optarg);
-            }
+            part_hash_id = bpak_get_id_for_name_or_ref(optarg);
             break;
         case 'm':
             meta_name = (const char *)optarg;
-
-            if (strncmp(optarg, "0x", 2) == 0) {
-                meta_id = strtoul(optarg, NULL, 16);
-            } else {
-                meta_id = bpak_id(optarg);
-            }
+            meta_id = bpak_get_id_for_name_or_ref(optarg);
             break;
         case 'H':
             text_hash_output = true;

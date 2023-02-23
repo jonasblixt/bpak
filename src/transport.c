@@ -68,11 +68,7 @@ int action_transport(int argc, char **argv)
             encode_flag = true;
             break;
         case 'r':
-            if (strncmp(optarg, "0x", 2) == 0) {
-                part_ref = strtoul(optarg, NULL, 16);
-            } else {
-                part_ref = bpak_id(optarg);
-            }
+            part_ref = bpak_get_id_for_name_or_ref(optarg);
             break;
         case 'O':
             origin_file = (const char *)optarg;

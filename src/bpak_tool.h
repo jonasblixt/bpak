@@ -2,6 +2,7 @@
 #define SRC_BPAK_TOOL_H_
 
 #include <bpak/bpak.h>
+#include <bpak/id.h>
 #include <bpak/merkle.h>
 #include <bpak/utils.h>
 #include <bpak/keystore.h>
@@ -34,5 +35,7 @@ void print_extract_usage(void);
 
 int bpak_get_verbosity(void);
 void bpak_inc_verbosity(void);
+
+uint32_t bpak_get_id_for_name_or_ref(char *arg);
 
 #endif
