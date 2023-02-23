@@ -217,6 +217,18 @@ int bpak_pkg_add_file_with_merkle_tree(struct bpak_package *pkg,
 int bpak_pkg_add_key(struct bpak_package *pkg, const char *filename,
                      const char *part_name, uint8_t flags);
 
+/**
+ * Extract a part from the archive to a file
+ *
+ * @param[in] pkg Pointer to a bpak package
+ * @param[in] part_id ID of part to be extracted
+ * @param[in] filename Full path to the file that the part should be extracted to
+ *
+ * @return BPAK_OK on success or a negative number
+ */
+int bpak_pkg_extract_file(struct bpak_package *pkg, bpak_id_t part_id,
+                          const char *filename);
+
 #ifdef __cplusplus
 } // extern "C"
 #endif

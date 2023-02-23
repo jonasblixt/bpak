@@ -88,6 +88,11 @@ int action_extract(int argc, char **argv)
         return -1;
     }
 
+    if (!((meta_id > 0) ^ (part_id > 0))) {
+        fprintf(stderr, "Error: Select either --part or --meta\n");
+        return -BPAK_FAILED;
+    }
+
     struct bpak_package pkg;
 
     rc = bpak_pkg_open(&pkg, filename, "r+");
@@ -98,12 +103,6 @@ int action_extract(int argc, char **argv)
     }
 
     struct bpak_header *h = bpak_pkg_header(&pkg);
-
-    if (!((meta_id > 0) ^ (part_id > 0))) {
-        fprintf(stderr, "Error: Select either --part or --meta\n");
-        rc = -BPAK_FAILED;
-        goto err_close_pkg_out;
-    }
 
     if (meta_id) {
         struct bpak_meta_header *meta_header = NULL;
@@ -145,57 +144,7 @@ int action_extract(int argc, char **argv)
     }
 
     if (part_id) {
-        struct bpak_part_header *part = NULL;
-        rc = bpak_get_part(h, part_id, &part, NULL);
-
-        if (rc != BPAK_OK) {
-            fprintf(stderr, "Error: No such part\n");
-            goto err_close_pkg_out;
-        }
-
-        uint64_t p_offset = 0;
-
-        p_offset = bpak_part_offset(h, part);
-
-        if (fseek(pkg.fp, p_offset, SEEK_SET) != 0) {
-            fprintf(stderr, "Error: Could not seek in stream\n");
-            rc = -BPAK_SEEK_ERROR;
-            goto err_close_pkg_out;
-        }
-
-        if (output_filename) {
-            fp = fopen(output_filename, "w+");
-
-            if (fp == NULL) {
-                fprintf(stderr,
-                        "Error: Could not create '%s'\n",
-                        output_filename);
-                rc = -BPAK_FAILED;
-                goto err_close_pkg_out;
-            }
-        } else {
-            fp = stdout;
-        }
-
-        char copy_buffer[BPAK_CHUNK_BUFFER_LENGTH];
-        size_t bytes_to_copy = bpak_part_size(part) - part->pad_bytes;
-        size_t chunk = 0;
-
-        while (bytes_to_copy) {
-            if (bytes_to_copy > sizeof(copy_buffer)) {
-                chunk = sizeof(copy_buffer);
-            } else {
-                chunk = bytes_to_copy;
-            }
-
-            chunk = fread(copy_buffer, 1, chunk, pkg.fp);
-            if (fwrite(copy_buffer, 1, chunk, fp) != chunk) {
-                rc = -BPAK_WRITE_ERROR;
-                goto err_close_pkg_out;
-            }
-
-            bytes_to_copy -= chunk;
-        }
+        rc = bpak_pkg_extract_file(&pkg, part_id, output_filename);
     }
 
 err_close_fp_out:

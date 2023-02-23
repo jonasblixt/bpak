@@ -389,3 +389,73 @@ BPAK_EXPORT int bpak_pkg_transport_encode(struct bpak_package *input,
                                  origin_fp,
                                  origin_header);
 }
+
+BPAK_EXPORT int bpak_pkg_extract_file(struct bpak_package *pkg,
+                                      bpak_id_t part_id,
+                                      const char *filename)
+{
+    int rc = BPAK_OK;
+    uint64_t p_offset = 0;
+    struct bpak_header *h = bpak_pkg_header(pkg);
+    struct bpak_part_header *part = NULL;
+    FILE* fp;
+
+    rc = bpak_get_part(h, part_id, &part, NULL);
+    if (rc != BPAK_OK) {
+        bpak_printf(0, "%s: Error: No such part!\n", __func__);
+        return rc;
+    }
+
+    p_offset = bpak_part_offset(h, part);
+
+    if (fseek(pkg->fp, p_offset, SEEK_SET) != 0) {
+        return -BPAK_SEEK_ERROR;
+    }
+
+    if (filename != NULL) {
+        fp = fopen(filename, "w+b");
+
+        if (fp == NULL) {
+            bpak_printf(0, "%s: Error: Could not create '%s'\n",
+                        __func__, filename);
+            return -BPAK_WRITE_ERROR;
+        }
+    } else {
+        fp = stdout;
+    }
+
+    char copy_buffer[BPAK_CHUNK_BUFFER_LENGTH];
+    size_t bytes_to_copy = bpak_part_size(part) - part->pad_bytes;
+    size_t chunk_to_write = 0;
+    size_t chunk_read = 0;
+
+    while (bytes_to_copy) {
+        if (bytes_to_copy > sizeof(copy_buffer)) {
+            chunk_to_write = sizeof(copy_buffer);
+        } else {
+            chunk_to_write = bytes_to_copy;
+        }
+
+        chunk_read = fread(copy_buffer, 1, chunk_to_write, pkg->fp);
+        if (chunk_read != chunk_to_write) {
+            rc = -BPAK_READ_ERROR;
+            goto err_close_fp_out;
+        }
+
+
+        if (fwrite(copy_buffer, 1, chunk_read, fp) != chunk_read) {
+            rc = -BPAK_WRITE_ERROR;
+            goto err_close_fp_out;
+        }
+
+        bytes_to_copy -= chunk_to_write;
+    }
+
+err_close_fp_out:
+    if ((fp != stdout) && (fp != NULL)) {
+        fclose(fp);
+    }
+
+    return rc;
+}
+
