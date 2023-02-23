@@ -29,9 +29,9 @@ int action_extract(int argc, char **argv)
     int long_index = 0;
     const char *filename = NULL;
     const char *output_filename = NULL;
-    uint32_t meta_id = 0;
-    uint32_t part_id = 0;
-    uint32_t part_id_ref = 0;
+    bpak_id_t meta_id = 0;
+    bpak_id_t part_id = 0;
+    bpak_id_t part_id_ref = 0;
     FILE *fp = NULL;
 
     struct option long_options[] = {

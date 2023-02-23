@@ -33,9 +33,9 @@ int action_show(int argc, char **argv)
     char hash_output[64];
     size_t hash_size = sizeof(hash_output);
     char string_output[128];
-    uint32_t part_id = 0;
-    uint32_t part_hash_id = 0;
-    uint32_t meta_id = 0;
+    bpak_id_t part_id = 0;
+    bpak_id_t part_hash_id = 0;
+    bpak_id_t meta_id = 0;
     char hash_str[128];
 
     struct option long_options[] = {

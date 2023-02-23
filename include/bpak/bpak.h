@@ -171,6 +171,13 @@ enum bpak_key_kind {
 /* Bits 2 - 7 are reserved */
 
 /**
+ * Numerical ID representing different types of objects
+ *
+ * Size: 4 bytes
+ */
+typedef uint32_t bpak_id_t;
+
+/**
  * Transport mode meta data
  *
  * Size: 32 bytes
@@ -194,7 +201,7 @@ typedef void (*bpak_free_t)(void *);
  * Size:32 byte
  **/
 struct bpak_part_header {
-    uint32_t id;             /*!< Part identifier */
+    bpak_id_t id;            /*!< Part identifier */
     uint64_t size;           /*!< Data block size*/
     uint64_t offset;         /*!< Offset in data stream */
     uint64_t transport_size; /*!< Should be populated when part data is
@@ -211,11 +218,11 @@ struct bpak_part_header {
  * Size: 16 byte
  **/
 struct bpak_meta_header {
-    uint32_t id;          /*!< Metadata identifier */
-    uint16_t size;        /*!< Size of metadata */
-    uint16_t offset;      /*!< Offset in 'metadata' byte array */
-    uint32_t part_id_ref; /*!< Optional reference to a part id */
-    uint8_t pad[4];       /*!< Pad to 16 bytes */
+    bpak_id_t id;          /*!< Metadata identifier */
+    uint16_t size;         /*!< Size of metadata */
+    uint16_t offset;       /*!< Offset in 'metadata' byte array */
+    bpak_id_t part_id_ref; /*!< Optional reference to a part id */
+    uint8_t pad[4];        /*!< Pad to 16 bytes */
 } __attribute__((packed));
 
 /**
@@ -281,7 +288,7 @@ struct bpak_header {
  * @return BPAK_OK on success -BPAK_NOT_FOUND if the metadata is missing
  *
  **/
-int bpak_get_meta(struct bpak_header *hdr, uint32_t id, void **output,
+int bpak_get_meta(struct bpak_header *hdr, bpak_id_t id, void **output,
                   void *offset);
 
 /**
@@ -298,8 +305,8 @@ int bpak_get_meta(struct bpak_header *hdr, uint32_t id, void **output,
  * @return BPAK_OK on success -BPAK_NOT_FOUND if the metadata is missing
  *
  * */
-int bpak_get_meta_with_ref(struct bpak_header *hdr, uint32_t id,
-                           uint32_t part_id_ref, void **output, void *offset);
+int bpak_get_meta_with_ref(struct bpak_header *hdr, bpak_id_t id,
+                           bpak_id_t part_id_ref, void **output, void *offset);
 
 /**
  * Get pointer to both the metadata header and the actual data
@@ -315,8 +322,8 @@ int bpak_get_meta_with_ref(struct bpak_header *hdr, uint32_t id,
  * @return BPAK_OK on success -BPAK_NOT_FOUND if the metadata is missing
  *
  * */
-int bpak_get_meta_and_header(struct bpak_header *hdr, uint32_t id,
-                             uint32_t part_id_ref, void **output, void *offset,
+int bpak_get_meta_and_header(struct bpak_header *hdr, bpak_id_t id,
+                             bpak_id_t part_id_ref, void **output, void *offset,
                              struct bpak_meta_header **header);
 
 /**
@@ -334,7 +341,7 @@ int bpak_get_meta_and_header(struct bpak_header *hdr, uint32_t id,
  *         -BPAK_EXISTS if a metadata with the same 'id' and 'part_ref_id'
  *         already exists
  **/
-int bpak_add_meta(struct bpak_header *hdr, uint32_t id, uint32_t part_ref_id,
+int bpak_add_meta(struct bpak_header *hdr, bpak_id_t id, bpak_id_t part_ref_id,
                   void **ptr, uint16_t size);
 
 /**
@@ -362,7 +369,7 @@ void bpak_del_meta(struct bpak_header *hdr,
  *
  **/
 
-int bpak_get_part(struct bpak_header *hdr, uint32_t id,
+int bpak_get_part(struct bpak_header *hdr, bpak_id_t id,
                   struct bpak_part_header **part,
                   struct bpak_part_header *offset);
 
@@ -380,7 +387,7 @@ int bpak_get_part(struct bpak_header *hdr, uint32_t id,
  *
  **/
 
-int bpak_add_part(struct bpak_header *hdr, uint32_t id,
+int bpak_add_part(struct bpak_header *hdr, bpak_id_t id,
                   struct bpak_part_header **part);
 
 /**
@@ -529,9 +536,8 @@ int bpak_set_keystore_id(struct bpak_header *hdr, uint32_t keystore_id);
  *
  * @return BPAK_OK on success
  */
-int bpak_add_transport_meta(struct bpak_header *header, uint32_t part_id,
+int bpak_add_transport_meta(struct bpak_header *header, bpak_id_t part_id,
                             uint32_t encoder_id, uint32_t decoder_id);
-
 /**
  * Library version
  *

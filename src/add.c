@@ -133,7 +133,7 @@ int action_add(int argc, char **argv)
 
     if (meta_name) {
         unsigned char *meta_data = NULL;
-        uint32_t part_ref_id = 0;
+        bpak_id_t part_ref_id = 0;
 
         if (part_ref)
             part_ref_id = bpak_id(part_ref);
@@ -217,7 +217,7 @@ int action_add(int argc, char **argv)
                     printf("Adding %s <0x%lx>\n", meta_name, value);
                 }
             } else if (strcmp(encoder, "id") == 0) {
-                uint32_t value = bpak_id(metadata_input);
+                bpak_id_t value = bpak_id(metadata_input);
 
                 rc = bpak_add_meta(h,
                                    bpak_id(meta_name),

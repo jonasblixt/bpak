@@ -10,8 +10,8 @@
 #include <string.h>
 #include <bpak/bpak.h>
 
-BPAK_EXPORT int bpak_get_meta_and_header(struct bpak_header *hdr, uint32_t id,
-                                         uint32_t part_id_ref, void **output,
+BPAK_EXPORT int bpak_get_meta_and_header(struct bpak_header *hdr, bpak_id_t id,
+                                         bpak_id_t part_id_ref, void **output,
                                          void *offset,
                                          struct bpak_meta_header **header)
 {
@@ -42,7 +42,7 @@ BPAK_EXPORT int bpak_get_meta_and_header(struct bpak_header *hdr, uint32_t id,
     return -BPAK_NOT_FOUND;
 }
 
-BPAK_EXPORT int bpak_get_meta(struct bpak_header *hdr, uint32_t id,
+BPAK_EXPORT int bpak_get_meta(struct bpak_header *hdr, bpak_id_t id,
                               void **output, void *offset)
 {
     return bpak_get_meta_and_header(hdr,
@@ -53,8 +53,8 @@ BPAK_EXPORT int bpak_get_meta(struct bpak_header *hdr, uint32_t id,
                                     (struct bpak_meta_header **)0);
 }
 
-BPAK_EXPORT int bpak_get_meta_with_ref(struct bpak_header *hdr, uint32_t id,
-                                       uint32_t part_id_ref, void **output,
+BPAK_EXPORT int bpak_get_meta_with_ref(struct bpak_header *hdr, bpak_id_t id,
+                                       bpak_id_t part_id_ref, void **output,
                                        void *offset)
 {
     return bpak_get_meta_and_header(hdr,
@@ -65,8 +65,8 @@ BPAK_EXPORT int bpak_get_meta_with_ref(struct bpak_header *hdr, uint32_t id,
                                     (struct bpak_meta_header **)0);
 }
 
-BPAK_EXPORT int bpak_add_meta(struct bpak_header *hdr, uint32_t id,
-                              uint32_t part_ref_id, void **ptr, uint16_t size)
+BPAK_EXPORT int bpak_add_meta(struct bpak_header *hdr, bpak_id_t id,
+                              bpak_id_t part_ref_id, void **ptr, uint16_t size)
 {
     uint16_t new_offset = 0;
 
@@ -124,7 +124,7 @@ BPAK_EXPORT void bpak_del_meta(struct bpak_header *hdr,
     memset(next_meta, 0, sizeof(*next_meta));
 }
 
-BPAK_EXPORT int bpak_get_part(struct bpak_header *hdr, uint32_t id,
+BPAK_EXPORT int bpak_get_part(struct bpak_header *hdr, bpak_id_t id,
                               struct bpak_part_header **part,
                               struct bpak_part_header *offset)
 {
@@ -143,7 +143,7 @@ BPAK_EXPORT int bpak_get_part(struct bpak_header *hdr, uint32_t id,
     return -BPAK_NOT_FOUND;
 }
 
-BPAK_EXPORT int bpak_add_part(struct bpak_header *hdr, uint32_t id,
+BPAK_EXPORT int bpak_add_part(struct bpak_header *hdr, bpak_id_t id,
                               struct bpak_part_header **part)
 {
     bpak_foreach_part (hdr, p) {
@@ -388,7 +388,7 @@ BPAK_EXPORT int bpak_set_keystore_id(struct bpak_header *hdr,
 }
 
 BPAK_EXPORT int bpak_add_transport_meta(struct bpak_header *header,
-                                        uint32_t part_id, uint32_t encoder_id,
+                                        bpak_id_t part_id, uint32_t encoder_id,
                                         uint32_t decoder_id)
 {
     int rc;

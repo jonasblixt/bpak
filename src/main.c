@@ -24,7 +24,7 @@ int bpak_printf(int verbosity, const char *fmt, ...)
     return BPAK_OK;
 }
 
-uint32_t bpak_get_id_for_name_or_ref(char *arg)
+bpak_id_t bpak_get_id_for_name_or_ref(char *arg)
 {
     uint32_t id;
     char *endptr = NULL;

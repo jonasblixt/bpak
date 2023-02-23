@@ -13,6 +13,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include <bpak/bpak.h>
 
 /* Meta data ID's */
 #define BPAK_ID_BPAK_TRANSPORT       (0x2d44bbfb)
@@ -46,7 +47,7 @@ extern "C" {
  *
  * @return BPAK ID of \ref str
  */
-uint32_t bpak_id(const char *str);
+bpak_id_t bpak_id(const char *str);
 
 /**
  * Return string representaion of known id's
@@ -55,7 +56,7 @@ uint32_t bpak_id(const char *str);
  *
  * @return Textual representation of BPAK ID
  **/
-const char *bpak_id_to_string(uint32_t id);
+const char *bpak_id_to_string(bpak_id_t id);
 
 #ifdef __cplusplus
 } // extern "C"

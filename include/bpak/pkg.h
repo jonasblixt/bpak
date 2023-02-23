@@ -136,7 +136,7 @@ int bpak_pkg_verify(struct bpak_package *pkg, struct bpak_key *key);
 int bpak_pkg_part_sha256(struct bpak_package *pkg,
                          uint8_t *hash_buffer,
                          size_t hash_buffer_length,
-                         uint32_t part_id);
+                         bpak_id_t part_id);
 
 /**
  * Transport encode package

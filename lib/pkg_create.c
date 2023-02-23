@@ -151,7 +151,7 @@ BPAK_EXPORT int bpak_pkg_add_file_with_merkle_tree(struct bpak_package *pkg,
 
     struct bpak_part_header *p = NULL;
 
-    uint32_t hash_tree_id = bpak_part_name_to_hash_tree_id(part_name);
+    bpak_id_t hash_tree_id = bpak_part_name_to_hash_tree_id(part_name);
 
     rc = bpak_add_part(h, hash_tree_id, &p);
 

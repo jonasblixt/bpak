@@ -36,6 +36,6 @@ void print_extract_usage(void);
 int bpak_get_verbosity(void);
 void bpak_inc_verbosity(void);
 
-uint32_t bpak_get_id_for_name_or_ref(char *arg);
+bpak_id_t bpak_get_id_for_name_or_ref(char *arg);
 
 #endif
