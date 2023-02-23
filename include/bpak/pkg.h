@@ -26,8 +26,8 @@ extern "C" {
  */
 struct bpak_package {
     FILE *fp;                  /*!< I/O Stream  for package */
-    struct bpak_header header; /*!< BPAK Header */
     const char *filename;      /*!< Filename */
+    struct bpak_header header; /*!< BPAK Header */
 };
 
 /**
