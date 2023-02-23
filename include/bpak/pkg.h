@@ -229,6 +229,28 @@ int bpak_pkg_add_key(struct bpak_package *pkg, const char *filename,
 int bpak_pkg_extract_file(struct bpak_package *pkg, bpak_id_t part_id,
                           const char *filename);
 
+/**
+ * Delete a part from the archive
+ *
+ * @param[in] pkg Pointer to a bpak package
+ * @param[in] part_id ID of part to be deleted
+ * @param[in] remove_meta If true any metadata associated with part_id will also be removed
+ *
+ * @return BPAK_OK on success or a negative number
+ */
+int bpak_pkg_delete_part(struct bpak_package *pkg, bpak_id_t part_id,
+                         bool remove_meta);
+
+/**
+ * Delete all parts from the archive
+ *
+ * @param[in] pkg Pointer to a bpak package
+ * @param[in] remove_meta If true any metadata associated with part_id will also be removed
+ *
+ * @return BPAK_OK on success or a negative number
+ */
+int bpak_pkg_delete_all_parts(struct bpak_package *pkg, bool remove_meta);
+
 #ifdef __cplusplus
 } // extern "C"
 #endif

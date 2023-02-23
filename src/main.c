@@ -113,6 +113,8 @@ int main(int argc, char **argv)
             rc = action_compare(argc, argv);
         } else if (strcmp(action, "extract") == 0) {
             rc = action_extract(argc, argv);
+        } else if (strcmp(action, "delete") == 0) {
+            rc = action_delete(argc, argv);
         } else {
             fprintf(stderr, "Unknown action '%s'\n", action);
             return -1;
