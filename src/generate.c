@@ -191,7 +191,7 @@ int action_generate(int argc, char **argv)
             if (p->size > sizeof(key_buffer)) {
                 fprintf(stderr, "Key data can't fit in buffer");
                 rc = -BPAK_BUFFER_TOO_SMALL;
-                goto err_free_keytore_name;
+                goto err_free_keystore_name;
             }
 
             read_bytes = fread(key_buffer, 1, p->size, fp);
