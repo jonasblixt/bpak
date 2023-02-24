@@ -253,27 +253,27 @@ struct bpak_header {
  * Helper macro to return the smaller of two values
  */
 
-#define BPAK_MIN(__a, __b) (((__a) > (__b)) ? (__b) : (__a))
+#define BPAK_MIN(_a, _b) (((_a) > (_b)) ? (_b) : (_a))
 
 /**
  * \def bpak_foreach_part
  *
  * Helper macro to iterate over all parts in a package
  */
-#define bpak_foreach_part(__hdr, __var)                                        \
-    for (struct bpak_part_header *__var = (__hdr)->parts;                      \
-         __var != &((__hdr)->parts[BPAK_MAX_PARTS]);                           \
-         __var++)
+#define bpak_foreach_part(_hdr, _var)                                        \
+    for (struct bpak_part_header *_var = (_hdr)->parts;                      \
+         _var != &((_hdr)->parts[BPAK_MAX_PARTS]);                           \
+         _var++)
 
 /**
  * \def bpak_foreach_meta
  *
  * Helper macro to iterate over all metadata in a package
  */
-#define bpak_foreach_meta(__hdr, __var)                                        \
-    for (struct bpak_meta_header *__var = (__hdr)->meta;                       \
-         __var != &((__hdr)->meta[BPAK_MAX_META]);                             \
-         __var++)
+#define bpak_foreach_meta(_hdr, _var)                                        \
+    for (struct bpak_meta_header *_var = (_hdr)->meta;                       \
+         _var != &((_hdr)->meta[BPAK_MAX_META]);                             \
+         _var++)
 
 /**
  * Retrieve pointer to metadata with id 'id'. If *offset equals NULL
