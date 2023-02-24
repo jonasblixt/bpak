@@ -55,8 +55,8 @@ set(TEST_SCRIPTS
     test_transport5.sh
     test_transport6.sh
     test_transport_lzma.sh
+    test_delete.sh
 )
-
 
 foreach(test_script IN LISTS TEST_SCRIPTS)
     add_test(NAME ${test_script}
