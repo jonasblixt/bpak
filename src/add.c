@@ -147,7 +147,7 @@ int action_add(int argc, char **argv)
                 goto err_close_pkg_out;
             }
             strncpy(metadata_input, from_string, metadata_input_length);
-        } else if (from_file) {
+        } else { /* File */
             FILE *meta_in_fp = fopen(from_file, "r");
             if (meta_in_fp == NULL) {
                 fprintf(stderr, "Error: Could not open '%s'\n", from_file);
@@ -165,10 +165,6 @@ int action_add(int argc, char **argv)
                 rc = -BPAK_FAILED;
                 goto err_close_pkg_out;
             }
-        } else {
-            fprintf(stderr, "Error: No input supplied with --from-string or --from-file\n");
-            rc = -BPAK_FAILED;
-            goto err_close_pkg_out;
         }
 
         if (encoder) {

@@ -543,6 +543,14 @@ BPAK_EXPORT int bpak_pkg_delete_part(struct bpak_package *pkg,
 
     p_offset = ftell(pkg->fp);
 
+    if ((long) p_offset == -1) {
+        if (rc != 0) {
+            bpak_printf(0, "%s: Error: Couldn't read file: %d\n",
+                        __func__, errno);
+            return -BPAK_READ_ERROR;
+        }
+    }
+
     rc = bpak_pkg_update_hash(pkg, NULL, NULL);
     if (rc != BPAK_OK) {
         bpak_printf(0, "%s: Error: Could not update payload hash\n", __func__);

@@ -96,11 +96,8 @@ int action_delete(int argc, char **argv)
 
     if (delete_all) {
         rc = bpak_pkg_delete_all_parts(&pkg, !keep_metadata);
-    } else if (part_id > 0) {
-        rc = bpak_pkg_delete_part(&pkg, part_id, !keep_metadata);
     } else {
-        fprintf(stderr, "Error: Unknown command\n");
-        rc = -BPAK_FAILED;
+        rc = bpak_pkg_delete_part(&pkg, part_id, !keep_metadata);
     }
 
     bpak_pkg_close(&pkg);

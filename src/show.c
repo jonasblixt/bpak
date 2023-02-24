@@ -178,7 +178,10 @@ int action_show(int argc, char **argv)
 
     if (binary_hash_output) {
         hash_size = sizeof(hash_output);
-        bpak_pkg_update_hash(&pkg, hash_output, &hash_size);
+        rc = bpak_pkg_update_hash(&pkg, hash_output, &hash_size);
+
+        if (rc != BPAK_OK)
+            goto err_pkg_close;
 
         for (unsigned int i = 0; i < hash_size; i++)
             printf("%c", hash_output[i]);

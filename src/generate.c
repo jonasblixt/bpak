@@ -114,6 +114,11 @@ int action_generate(int argc, char **argv)
             goto err_free_io_out;
         }
 
+        rc = bpak_valid_header(h);
+
+        if (rc != BPAK_OK)
+            goto err_free_io_out;
+
         struct bpak_meta_header *meta = NULL;
         unsigned char *package_id = NULL;
 
