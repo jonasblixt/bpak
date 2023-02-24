@@ -26,7 +26,7 @@ include_directories(include/)
 
 option(BPAK_BUILD_MINIMAL "Build a minial version of the library" OFF)
 option(BPAK_BUILD_TOOL "Build the bpak tool" ON)
-option(BPAK_BUILD_PYTHON_WRAPPER "Build the python wrapper" OFF)
+option(BPAK_BUILD_PYTHON_WRAPPER "Build the python wrapper" ON)
 option(BPAK_BUILD_TESTS "Build test cases" OFF)
 
 # TODO: Choice option for BPAK_CRYPTO_BACKEND
