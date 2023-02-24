@@ -25,8 +25,9 @@ BPAK_EXPORT int bpak_keystore_load_key_from_file(const char *filename,
     uint8_t key_buffer[512];
     struct bpak_package pkg;
     struct bpak_part_header *key_part = NULL;
+    struct bpak_meta_header *meta = NULL;
     size_t key_length;
-    uint32_t *keystore_provider_id = NULL;
+    bpak_id_t *keystore_provider_id = NULL;
 
     rc = bpak_pkg_open(&pkg, filename, "rb");
 
@@ -41,18 +42,19 @@ BPAK_EXPORT int bpak_keystore_load_key_from_file(const char *filename,
             goto err_close_pkg_out;
     }
 
-    rc = bpak_get_meta(&pkg.header, BPAK_ID_KEYSTORE_PROVIDER_ID,
-                                    (void **) &keystore_provider_id, NULL);
+    rc = bpak_get_meta(&pkg.header, BPAK_ID_KEYSTORE_PROVIDER_ID, 0, &meta);
 
     if (rc != BPAK_OK)
         goto err_close_pkg_out;
+
+    keystore_provider_id = bpak_get_meta_ptr(&pkg.header, meta, bpak_id_t);
 
     if (*keystore_provider_id != keystore_id) {
         rc = -BPAK_KEYSTORE_ID_MISMATCH;
         goto err_close_pkg_out;
     }
 
-    rc = bpak_get_part(&pkg.header, key_id, &key_part, NULL);
+    rc = bpak_get_part(&pkg.header, key_id, &key_part);
 
     if (rc != BPAK_OK)
         goto err_close_pkg_out;

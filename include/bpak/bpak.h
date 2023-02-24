@@ -122,6 +122,7 @@ enum bpak_errors {
     BPAK_UNSUPPORTED_COMPRESSION,
     BPAK_KEY_NOT_FOUND,
     BPAK_KEYSTORE_ID_MISMATCH,
+    BPAK_EXISTS,
 };
 
 /*! \public
@@ -170,6 +171,13 @@ enum bpak_key_kind {
 /* Bits 2 - 7 are reserved */
 
 /**
+ * Numerical ID representing different types of objects
+ *
+ * Size: 4 bytes
+ */
+typedef uint32_t bpak_id_t;
+
+/**
  * Transport mode meta data
  *
  * Size: 32 bytes
@@ -193,7 +201,7 @@ typedef void (*bpak_free_t)(void *);
  * Size:32 byte
  **/
 struct bpak_part_header {
-    uint32_t id;             /*!< Part identifier */
+    bpak_id_t id;            /*!< Part identifier */
     uint64_t size;           /*!< Data block size*/
     uint64_t offset;         /*!< Offset in data stream */
     uint64_t transport_size; /*!< Should be populated when part data is
@@ -210,11 +218,11 @@ struct bpak_part_header {
  * Size: 16 byte
  **/
 struct bpak_meta_header {
-    uint32_t id;          /*!< Metadata identifier */
-    uint16_t size;        /*!< Size of metadata */
-    uint16_t offset;      /*!< Offset in 'metadata' byte array */
-    uint32_t part_id_ref; /*!< Optional reference to a part id */
-    uint8_t pad[4];       /*!< Pad to 16 bytes */
+    bpak_id_t id;          /*!< Metadata identifier */
+    uint16_t size;         /*!< Size of metadata */
+    uint16_t offset;       /*!< Offset in 'metadata' byte array */
+    bpak_id_t part_id_ref; /*!< Optional reference to a part id */
+    uint8_t pad[4];        /*!< Pad to 16 bytes */
 } __attribute__((packed));
 
 /**
@@ -245,113 +253,110 @@ struct bpak_header {
  * Helper macro to return the smaller of two values
  */
 
-#define BPAK_MIN(__a, __b) (((__a) > (__b)) ? (__b) : (__a))
+#define BPAK_MIN(_a, _b) (((_a) > (_b)) ? (_b) : (_a))
 
 /**
  * \def bpak_foreach_part
  *
  * Helper macro to iterate over all parts in a package
  */
-#define bpak_foreach_part(__hdr, __var)                                        \
-    for (struct bpak_part_header *__var = (__hdr)->parts;                      \
-         __var != &((__hdr)->parts[BPAK_MAX_PARTS]);                           \
-         __var++)
+#define bpak_foreach_part(_hdr, _var)                                        \
+    for (struct bpak_part_header *_var = (_hdr)->parts;                      \
+         _var != &((_hdr)->parts[BPAK_MAX_PARTS]);                           \
+         _var++)
 
 /**
  * \def bpak_foreach_meta
  *
  * Helper macro to iterate over all metadata in a package
  */
-#define bpak_foreach_meta(__hdr, __var)                                        \
-    for (struct bpak_meta_header *__var = (__hdr)->meta;                       \
-         __var != &((__hdr)->meta[BPAK_MAX_META]);                             \
-         __var++)
+#define bpak_foreach_meta(_hdr, _var)                                        \
+    for (struct bpak_meta_header *_var = (_hdr)->meta;                       \
+         _var != &((_hdr)->meta[BPAK_MAX_META]);                             \
+         _var++)
 
 /**
- * Retrive pointer to metadata with id 'id'. If *offset equals NULL
- *  the function will search from the beginning of the header array.
+ * \def bpak_meta_get_ptr
+ *
+ * Helper macro to get the metadata pointer from a metadata header with a specific type
+ */
+#define bpak_get_meta_ptr(_hdr, __meta, _T)                                   \
+    ((_T*)&(_hdr)->metadata[(__meta)->offset])
+
+
+/**
+ * Get pointer to metadata header with 'id' and a part reference id 'part_id_ref'.
  *
  * @param[in] hdr BPAK Header
  * @param[in] id Meta data identifier
- * @param[out] output Pointer is assigned to the location of the metadata within
- *  the hdr->metadata byte array.
- * @param[in] offset Optional offset within the meta data array
+ * @param[in] part_id_ref Part reference identifier, or 0 for no reference
+ * @param[out] meta Pointer to the metadata header
  *
  * @return BPAK_OK on success -BPAK_NOT_FOUND if the metadata is missing
  *
  **/
-int bpak_get_meta(struct bpak_header *hdr, uint32_t id, void **output,
-                  void *offset);
+int bpak_get_meta(struct bpak_header *hdr, bpak_id_t id, bpak_id_t part_id_ref,
+                  struct bpak_meta_header **meta);
+
 
 /**
- * Get pointer to meta data with 'id' and a part reference id 'part_id_ref'.
- * Similar to \ref bpak_get_meta but with the added part_id_ref parameter
+ * Get pointer to metadata header with 'id' and any part reference id
  *
  * @param[in] hdr BPAK Header
  * @param[in] id Meta data identifier
- * @param[in] part_id_ref Part reference identifier
- * @param[out] output Pointer is assigned to the location of the metadata within
- *  the hdr->metadata byte array.
- * @param[in] offset Optional offset within the meta data array
+ * @param[out] meta Pointer to the metadata header
  *
  * @return BPAK_OK on success -BPAK_NOT_FOUND if the metadata is missing
  *
- * */
-int bpak_get_meta_with_ref(struct bpak_header *hdr, uint32_t id,
-                           uint32_t part_id_ref, void **output, void *offset);
+ **/
+int bpak_get_meta_anyref(struct bpak_header *hdr, bpak_id_t id,
+                         struct bpak_meta_header **meta);
+
 
 /**
- * Get pointer to both the metadata header and the actual data
- *
- * @param[in] hdr BPAK Header
- * @param[in] id Meta data identifier
- * @param[in] part_id_ref Part reference identifier
- * @param[out] output Pointer is assigned to the location of the metadata within
- *  the hdr->metadata byte array.
- * @param[in] offset Optional offset within the meta data array
- * @param[out] header Pointer to the metadata header
- *
- * @return BPAK_OK on success -BPAK_NOT_FOUND if the metadata is missing
- *
- * */
-int bpak_get_meta_and_header(struct bpak_header *hdr, uint32_t id,
-                             uint32_t part_id_ref, void **output, void *offset,
-                             struct bpak_meta_header **header);
-
-/**
- * Add new metadata with id 'id' of size 'size'. *ptr is assigned
- * to a pointer within the hdr->metadata byte array.
+ * Add new metadata with id 'id' of size 'size'. *meta is assigned
+ * to a pointer within the hdr->meta header array.
  *
  * @param[in] hdr BPAK Header
  * @param[in] id ID of new metadata
  * @param[in] part_ref_id Optional part reference to use for new metadata
- * @param[out] ptr Output pointer to allocated metadata
  * @param[in] size Size in bytes of new metadata
+ * @param[out] meta Pointer to the metadata header
  *
- * @return BPAK_OK on success or -BPAK_NO_SPACE if the metadata array is full
- *
+ * @return BPAK_OK on success,
+ *         -BPAK_NO_SPACE if the metadata array is full or
+ *         -BPAK_EXISTS if a metadata with the same 'id' and 'part_ref_id'
+ *         already exists
  **/
-int bpak_add_meta(struct bpak_header *hdr, uint32_t id, uint32_t part_ref_id,
-                  void **ptr, uint16_t size);
+int bpak_add_meta(struct bpak_header *hdr, bpak_id_t id, bpak_id_t part_ref_id,
+                  uint16_t size, struct bpak_meta_header **meta);
 
 /**
- * Retrive pointer to part with id 'id'.
+ * Remove metadata pointed to by 'meta'.
+ *
+ * @param[in] hdr BPAK Header
+ * @param[in] meta Pointer to metadata header. Assumed to be within hdr->meta array
+ *
+ **/
+void bpak_del_meta(struct bpak_header *hdr,
+                   struct bpak_meta_header *meta);
+
+/**
+ * Retrieve pointer to part with id 'id'.
  *
  * part pointer is assigned to the location of the part header within
  *  the hdr->parts array.
  *
  * @param[in] hdr BPAK Header
  * @param[in] id ID of part
- * @param[out] part Output pointer to part
  *
  * @return BPAK_OK on success, -BPAK_FAILED if part_id already exists,
  *         -BPAK_NOT_FOUND if the part is missing
  *
  **/
 
-int bpak_get_part(struct bpak_header *hdr, uint32_t id,
-                  struct bpak_part_header **part,
-                  struct bpak_part_header *offset);
+int bpak_get_part(struct bpak_header *hdr, bpak_id_t id,
+                  struct bpak_part_header **part);
 
 /**
  * Add new part with 'id'. *ptr is assigned to a pointer within
@@ -361,12 +366,24 @@ int bpak_get_part(struct bpak_header *hdr, uint32_t id,
  * @param[in] id ID of new part
  * @param[out] part Output pointer to new part
  *
- * @return BPAK_OK on success or -BPAK_NO_SPACE if the array is full
+ * @return BPAK_OK on success,
+ *         -BPAK_NO_SPACE if the array is full
+ *         -BPAK_EXISTS if a part with the same 'id' already exists
  *
  **/
 
-int bpak_add_part(struct bpak_header *hdr, uint32_t id,
+int bpak_add_part(struct bpak_header *hdr, bpak_id_t id,
                   struct bpak_part_header **part);
+
+/**
+ * Remove part pointed to by 'part'.
+ *
+ * @param[in] hdr BPAK Header
+ * @param[in] part Pointer to part header. Assumed to be within hdr->parts array
+ *
+ **/
+void bpak_del_part(struct bpak_header *hdr,
+                   struct bpak_part_header *part);
 
 /**
  * Check magic numbers in the header and check that all parts have the correct
@@ -504,9 +521,8 @@ int bpak_set_keystore_id(struct bpak_header *hdr, uint32_t keystore_id);
  *
  * @return BPAK_OK on success
  */
-int bpak_add_transport_meta(struct bpak_header *header, uint32_t part_id,
+int bpak_add_transport_meta(struct bpak_header *header, bpak_id_t part_id,
                             uint32_t encoder_id, uint32_t decoder_id);
-
 /**
  * Library version
  *

@@ -89,7 +89,7 @@ BPAK_EXPORT int bpak_pkg_part_sha256(struct bpak_package *pkg,
     size_t bytes_to_hash;
     size_t chunk_len;
 
-    rc = bpak_get_part(&pkg->header, part_id, &part, NULL);
+    rc = bpak_get_part(&pkg->header, part_id, &part);
 
     if (rc != BPAK_OK)
         return rc;

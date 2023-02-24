@@ -219,6 +219,9 @@ void print_sign_usage(void)
     printf(
         "    -f, --signature <filename>       Write precomputed signature\n");
     printf("    -k, --key <key>                  Sign using key <key>\n");
+    printf("\n");
+
+    print_common_usage();
 }
 
 void print_verify_usage(void)
@@ -231,6 +234,24 @@ void print_verify_usage(void)
     printf("Verify options:\n");
     printf("    -k, --key <key>                  Verify using key <key>\n");
     printf("    -K, --keystore <keystore.bpak>   Verify using keystore\n");
+    printf("\n");
+
+    print_common_usage();
+}
+
+void print_delete_usage(void)
+{
+    print_version();
+    printf("\n");
+    printf("bpak delete <filename.bpak> <options>  Remove part from file\n");
+    printf("\n");
+
+    printf("Delete options:\n");
+    printf("    -p, --part=id                   Remove part with id 'id'\n");
+    printf("    -a, --all                       Remove all parts from file\n");
+    printf("\n");
+
+    print_common_usage();
 }
 
 void print_usage(void)
@@ -243,7 +264,8 @@ void print_usage(void)
     printf("Actions:\n");
 
     printf("    create                          Create empty bpak file\n");
-    printf("    add                             Add part to file\n");
+    printf("    add                             Add data to file\n");
+    printf("    delete                          Remove parts\n");
     printf("    transport                       Transport operations\n");
     printf("    sign                            Sign\n");
     printf("    verify                          Verify signature\n");

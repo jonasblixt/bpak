@@ -21,6 +21,7 @@ static ssize_t merkle_generate(struct bpak_transport_decode *ctx)
 {
     int rc;
     struct bpak_part_header *fs_part;
+    struct bpak_meta_header *meta;
     uint8_t chunk_buffer[BPAK_CHUNK_BUFFER_LENGTH];
     uint32_t fs_id = 0;
     uint8_t *salt = NULL;
@@ -37,11 +38,10 @@ static ssize_t merkle_generate(struct bpak_transport_decode *ctx)
     }
 
     /* Load the salt that should be used */
-    rc = bpak_get_meta_with_ref(ctx->patch_header,
-                                BPAK_ID_MERKLE_SALT,
-                                fs_id,
-                                (void **)&salt,
-                                NULL);
+    rc = bpak_get_meta(ctx->patch_header,
+                       BPAK_ID_MERKLE_SALT,
+                       fs_id,
+                       &meta);
 
     if (rc != BPAK_OK) {
         bpak_printf(0,
@@ -49,10 +49,11 @@ static ssize_t merkle_generate(struct bpak_transport_decode *ctx)
                     fs_id);
         return rc;
     }
+    salt = bpak_get_meta_ptr(ctx->patch_header, meta, uint8_t);
 
     /* Get filesystem header */
     fs_part = NULL;
-    rc = bpak_get_part(ctx->patch_header, fs_id, &fs_part, NULL);
+    rc = bpak_get_part(ctx->patch_header, fs_id, &fs_part);
 
     if (rc != BPAK_OK) {
         bpak_printf(0, "Error: Could not read filesystem header\n");
@@ -156,6 +157,7 @@ bpak_transport_decode_set_origin(struct bpak_transport_decode *ctx,
                                  bpak_io_t read_origin, off_t origin_offset)
 {
     int rc;
+    struct bpak_meta_header *meta;
     uint8_t *origin_package_uuid;
     uint8_t *patch_package_uuid;
 
@@ -166,19 +168,23 @@ bpak_transport_decode_set_origin(struct bpak_transport_decode *ctx,
     /* Origin and input package should have the same package-uuid */
     rc = bpak_get_meta(origin_header,
                        BPAK_ID_BPAK_PACKAGE,
-                       (void **)&origin_package_uuid,
-                       NULL);
+                       0,
+                       &meta);
 
     if (rc != BPAK_OK)
         return rc;
+
+    origin_package_uuid = bpak_get_meta_ptr(origin_header, meta, uint8_t);
 
     rc = bpak_get_meta(ctx->patch_header,
                        BPAK_ID_BPAK_PACKAGE,
-                       (void **)&patch_package_uuid,
-                       NULL);
+                       0,
+                       &meta);
 
     if (rc != BPAK_OK)
         return rc;
+
+    patch_package_uuid = bpak_get_meta_ptr(origin_header, meta, uint8_t);
 
     if (memcmp(origin_package_uuid, patch_package_uuid, 16) != 0)
         return -BPAK_PACKAGE_UUID_MISMATCH;
@@ -190,7 +196,7 @@ BPAK_EXPORT int bpak_transport_decode_start(struct bpak_transport_decode *ctx,
                                             struct bpak_part_header *part)
 {
     int rc;
-    struct bpak_transport_meta *tm = NULL;
+    struct bpak_meta_header *meta = NULL;
     ssize_t bytes_written;
 
     bytes_written = ctx->write_output_header(0,
@@ -208,12 +214,13 @@ BPAK_EXPORT int bpak_transport_decode_start(struct bpak_transport_decode *ctx,
 
     /* Check if there is any transport meta data for this part in the header */
     if (part->flags & BPAK_FLAG_TRANSPORT) {
-        if (bpak_get_meta_with_ref(ctx->patch_header,
-                                   BPAK_ID_BPAK_TRANSPORT,
-                                   part->id,
-                                   (void **)&tm,
-                                   NULL) == BPAK_OK) {
-            ctx->decoder_id = tm->alg_id_decode;
+        if (bpak_get_meta(ctx->patch_header,
+                          BPAK_ID_BPAK_TRANSPORT,
+                          part->id,
+                          &meta) == BPAK_OK) {
+            ctx->decoder_id =
+                bpak_get_meta_ptr(ctx->patch_header, meta,
+                                  struct bpak_transport_meta)->alg_id_decode;
         }
     }
 

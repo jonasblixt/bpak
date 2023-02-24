@@ -33,9 +33,9 @@ int action_show(int argc, char **argv)
     char hash_output[64];
     size_t hash_size = sizeof(hash_output);
     char string_output[128];
-    uint32_t part_id = 0;
-    uint32_t part_hash_id = 0;
-    uint32_t meta_id = 0;
+    bpak_id_t part_id = 0;
+    bpak_id_t part_hash_id = 0;
+    bpak_id_t meta_id = 0;
     char hash_str[128];
 
     struct option long_options[] = {
@@ -62,30 +62,15 @@ int action_show(int argc, char **argv)
             break;
         case 'p':
             part_name = (const char *)optarg;
-
-            if (strncmp(optarg, "0x", 2) == 0) {
-                part_id = strtoul(optarg, NULL, 16);
-            } else {
-                part_id = bpak_id(optarg);
-            }
+            part_id = bpak_get_id_for_name_or_ref(optarg);
             break;
         case 'P':
             part_hash_name = (const char *)optarg;
-
-            if (strncmp(optarg, "0x", 2) == 0) {
-                part_hash_id = strtoul(optarg, NULL, 16);
-            } else {
-                part_hash_id = bpak_id(optarg);
-            }
+            part_hash_id = bpak_get_id_for_name_or_ref(optarg);
             break;
         case 'm':
             meta_name = (const char *)optarg;
-
-            if (strncmp(optarg, "0x", 2) == 0) {
-                meta_id = strtoul(optarg, NULL, 16);
-            } else {
-                meta_id = bpak_id(optarg);
-            }
+            meta_id = bpak_get_id_for_name_or_ref(optarg);
             break;
         case 'H':
             text_hash_output = true;

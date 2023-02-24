@@ -13,6 +13,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include <bpak/bpak.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -33,10 +34,10 @@ int bpak_bin2hex(uint8_t *data, size_t data_sz, char *buf, size_t buf_sz);
 int bpak_uuid_to_string(const uint8_t *data, char *buf, size_t size);
 int bpak_meta_to_string(struct bpak_header *h, struct bpak_meta_header *m,
                         char *buf, size_t size);
-uint32_t bpak_part_name_to_hash_tree_id(const char *part_name);
-uint32_t bpak_part_id_to_hash_tree_id(uint32_t part_id);
-uint32_t bpak_hash_tree_id_to_part_id(struct bpak_header *header,
-                                                  uint32_t part_id);
+bpak_id_t bpak_part_name_to_hash_tree_id(const char *part_name);
+bpak_id_t bpak_part_id_to_hash_tree_id(bpak_id_t part_id);
+bpak_id_t bpak_hash_tree_id_to_part_id(struct bpak_header *header,
+                                                  bpak_id_t part_id);
 #ifdef __cplusplus
 } // extern "C"
 #endif

@@ -303,7 +303,7 @@ BPAK_EXPORT int bpak_pkg_transport_decode(struct bpak_package *input,
 
         /* Compute origin and output offsets */
         if (origin != NULL) {
-            rc = bpak_get_part(&origin->header, part->id, &origin_part, NULL);
+            rc = bpak_get_part(&origin->header, part->id, &origin_part);
 
             if (rc != BPAK_OK) {
                 bpak_printf(0,
@@ -388,4 +388,222 @@ BPAK_EXPORT int bpak_pkg_transport_encode(struct bpak_package *input,
                                  &output->header,
                                  origin_fp,
                                  origin_header);
+}
+
+BPAK_EXPORT int bpak_pkg_extract_file(struct bpak_package *pkg,
+                                      bpak_id_t part_id,
+                                      const char *filename)
+{
+    int rc = BPAK_OK;
+    uint64_t p_offset = 0;
+    struct bpak_header *h = bpak_pkg_header(pkg);
+    struct bpak_part_header *part = NULL;
+    FILE* fp;
+
+    rc = bpak_get_part(h, part_id, &part);
+    if (rc != BPAK_OK) {
+        bpak_printf(0, "%s: Error: No such part!\n", __func__);
+        return rc;
+    }
+
+    p_offset = bpak_part_offset(h, part);
+
+    if (fseek(pkg->fp, p_offset, SEEK_SET) != 0) {
+        return -BPAK_SEEK_ERROR;
+    }
+
+    if (filename != NULL) {
+        fp = fopen(filename, "w+b");
+
+        if (fp == NULL) {
+            bpak_printf(0, "%s: Error: Could not create '%s'\n",
+                        __func__, filename);
+            return -BPAK_WRITE_ERROR;
+        }
+    } else {
+        fp = stdout;
+    }
+
+    char copy_buffer[BPAK_CHUNK_BUFFER_LENGTH];
+    size_t bytes_to_copy = bpak_part_size(part) - part->pad_bytes;
+    size_t chunk_to_write = 0;
+    size_t chunk_read = 0;
+
+    while (bytes_to_copy) {
+        if (bytes_to_copy > sizeof(copy_buffer)) {
+            chunk_to_write = sizeof(copy_buffer);
+        } else {
+            chunk_to_write = bytes_to_copy;
+        }
+
+        chunk_read = fread(copy_buffer, 1, chunk_to_write, pkg->fp);
+        if (chunk_read != chunk_to_write) {
+            rc = -BPAK_READ_ERROR;
+            goto err_close_fp_out;
+        }
+
+
+        if (fwrite(copy_buffer, 1, chunk_read, fp) != chunk_read) {
+            rc = -BPAK_WRITE_ERROR;
+            goto err_close_fp_out;
+        }
+
+        bytes_to_copy -= chunk_to_write;
+    }
+
+err_close_fp_out:
+    if ((fp != stdout) && (fp != NULL)) {
+        fclose(fp);
+    }
+
+    return rc;
+}
+
+BPAK_EXPORT int bpak_pkg_delete_part(struct bpak_package *pkg,
+                                     bpak_id_t part_id, bool remove_meta)
+{
+    int rc = BPAK_OK;
+    uint64_t p_offset;
+    size_t p_size;
+    struct bpak_header *h = bpak_pkg_header(pkg);
+    struct bpak_part_header *part = NULL;
+
+    bpak_printf(1, "Deleting 0x%08x\n", part_id);
+
+    rc = bpak_get_part(h, part_id, &part);
+    if (rc != BPAK_OK) {
+        bpak_printf(0, "%s: Error: No such part!\n", __func__);
+        return rc;
+    }
+
+    p_offset = bpak_part_offset(h, part);
+    p_size = bpak_part_size(part);
+
+    bpak_del_part(h, part);
+    uint64_t bytes_to_process = 0;
+
+    /* Part now points to what previously was the part after the one we remove */
+    for (; part != &(h->parts[BPAK_MAX_PARTS]); part++) {
+        if (!part->id)
+            break;
+
+        part->offset -= p_size;
+        bytes_to_process += bpak_part_size(part);
+    }
+
+    /* Remove any meta-data that points to the part */
+    if (remove_meta) {
+        bpak_foreach_meta(h, meta) {
+            if (meta->part_id_ref == part_id) {
+                bpak_del_meta(h, meta);
+                /* Need to step back as "meta" now points to one beyond the removed element */
+                meta--;
+            }
+        }
+    }
+
+    /* Move the actual data, range [p_offset+p_size  end) to [p_offset  end-p_size)
+     * and then truncate the file
+     */
+    uint64_t write_offset = p_offset;
+    uint64_t read_offset = p_offset + p_size;
+    char copy_buffer[BPAK_CHUNK_BUFFER_LENGTH];
+
+    while (bytes_to_process > 0) {
+        if (fseek(pkg->fp, read_offset, SEEK_SET) != 0) {
+            bpak_printf(0, "%s: Error: Couldn't read file: %s\n",
+                        __func__, strerror(errno));
+            return -BPAK_READ_ERROR;
+        }
+
+        size_t chunk_length =
+            BPAK_MIN(bytes_to_process, sizeof(copy_buffer));
+        size_t chunk_read = fread(copy_buffer, 1, BPAK_CHUNK_BUFFER_LENGTH, pkg->fp);
+
+        if (chunk_read != chunk_length) {
+            rc = ferror(pkg->fp);
+            if (rc != 0) {
+                bpak_printf(0, "%s: Error: Couldn't read file: %d\n",
+                            __func__, rc);
+                return -BPAK_READ_ERROR;
+            }
+        }
+
+        if (fseek(pkg->fp, write_offset, SEEK_SET) != 0 ||
+            fwrite(copy_buffer, 1, chunk_read, pkg->fp) != chunk_read) {
+            bpak_printf(0, "%s: Error: Couldn't write file: %s\n",
+                        __func__, strerror(errno));
+            return -BPAK_WRITE_ERROR;
+        }
+
+        bytes_to_process -= chunk_read;
+        read_offset += chunk_read;
+        write_offset += chunk_read;
+    }
+
+    p_offset = ftell(pkg->fp);
+
+    rc = bpak_pkg_update_hash(pkg, NULL, NULL);
+    if (rc != BPAK_OK) {
+        bpak_printf(0, "%s: Error: Could not update payload hash\n", __func__);
+        return rc;
+    }
+
+    rc = bpak_pkg_write_header(pkg);
+    if (rc != BPAK_OK) {
+        bpak_printf(0, "%s: Error: Could not write header\n", __func__);
+        return rc;
+    }
+
+    fflush(pkg->fp);
+
+    if (ftruncate(fileno(pkg->fp), p_offset) != 0) {
+        bpak_printf(0, "%s: Error: Couldn't truncate file: %s\n",
+                    __func__, strerror(errno));
+        return -BPAK_WRITE_ERROR;
+    }
+
+    return BPAK_OK;
+}
+
+BPAK_EXPORT int bpak_pkg_delete_all_parts(struct bpak_package *pkg, bool remove_meta)
+{
+    struct bpak_header *h = bpak_pkg_header(pkg);
+    int rc;
+
+    /* Clear out all parts data */
+    memset(h->parts, 0, sizeof(h->parts));
+
+    /* Remove any meta-data that points to any part */
+    if (remove_meta) {
+        bpak_foreach_meta(h, meta) {
+            if (meta->part_id_ref != 0) {
+                bpak_del_meta(h, meta);
+                /* Need to step back as "meta" now points to one beyond the removed element */
+                meta--;
+            }
+        }
+    }
+
+    rc = bpak_pkg_update_hash(pkg, NULL, NULL);
+    if (rc != BPAK_OK) {
+        bpak_printf(0, "%s: Error: Could not update payload hash\n", __func__);
+        return rc;
+    }
+
+    rc = bpak_pkg_write_header(pkg);
+    if (rc != BPAK_OK) {
+        bpak_printf(0, "%s: Error: Could not write header\n", __func__);
+        return rc;
+    }
+
+    fflush(pkg->fp);
+
+    if (ftruncate(fileno(pkg->fp), sizeof(struct bpak_header)) != 0) {
+        bpak_printf(0, "%s: Error: Couldn't truncate file: %s\n",
+                    __func__, strerror(errno));
+        return -BPAK_WRITE_ERROR;
+    }
+
+    return BPAK_OK;
 }

@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <getopt.h>
 #include <stdbool.h>
+#include <errno.h>
 
 #include "bpak_tool.h"
 
@@ -21,6 +22,23 @@ int bpak_printf(int verbosity, const char *fmt, ...)
         vprintf(fmt, args);
     va_end(args);
     return BPAK_OK;
+}
+
+bpak_id_t bpak_get_id_for_name_or_ref(char *arg)
+{
+    uint32_t id;
+    char *endptr = NULL;
+
+    if (strncmp(arg, "0x", 2) == 0) {
+        errno = 0;
+
+        id = strtoul(arg, &endptr, 16);
+        if (endptr != arg && errno == 0) {
+            return id;
+        }
+    }
+
+    return bpak_id(arg);
 }
 
 int main(int argc, char **argv)
@@ -95,6 +113,8 @@ int main(int argc, char **argv)
             rc = action_compare(argc, argv);
         } else if (strcmp(action, "extract") == 0) {
             rc = action_extract(argc, argv);
+        } else if (strcmp(action, "delete") == 0) {
+            rc = action_delete(argc, argv);
         } else {
             fprintf(stderr, "Unknown action '%s'\n", action);
             return -1;

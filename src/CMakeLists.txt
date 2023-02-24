@@ -3,6 +3,7 @@ SET(TOOL_SRC_FILES
     add.c
     compare.c
     create.c
+    delete.c
     extract.c
     generate.c
     main.c

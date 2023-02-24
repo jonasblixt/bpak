@@ -26,8 +26,8 @@ extern "C" {
  */
 struct bpak_package {
     FILE *fp;                  /*!< I/O Stream  for package */
-    struct bpak_header header; /*!< BPAK Header */
     const char *filename;      /*!< Filename */
+    struct bpak_header header; /*!< BPAK Header */
 };
 
 /**
@@ -136,7 +136,7 @@ int bpak_pkg_verify(struct bpak_package *pkg, struct bpak_key *key);
 int bpak_pkg_part_sha256(struct bpak_package *pkg,
                          uint8_t *hash_buffer,
                          size_t hash_buffer_length,
-                         uint32_t part_id);
+                         bpak_id_t part_id);
 
 /**
  * Transport encode package
@@ -216,6 +216,40 @@ int bpak_pkg_add_file_with_merkle_tree(struct bpak_package *pkg,
  */
 int bpak_pkg_add_key(struct bpak_package *pkg, const char *filename,
                      const char *part_name, uint8_t flags);
+
+/**
+ * Extract a part from the archive to a file
+ *
+ * @param[in] pkg Pointer to a bpak package
+ * @param[in] part_id ID of part to be extracted
+ * @param[in] filename Full path to the file that the part should be extracted to
+ *
+ * @return BPAK_OK on success or a negative number
+ */
+int bpak_pkg_extract_file(struct bpak_package *pkg, bpak_id_t part_id,
+                          const char *filename);
+
+/**
+ * Delete a part from the archive
+ *
+ * @param[in] pkg Pointer to a bpak package
+ * @param[in] part_id ID of part to be deleted
+ * @param[in] remove_meta If true any metadata associated with part_id will also be removed
+ *
+ * @return BPAK_OK on success or a negative number
+ */
+int bpak_pkg_delete_part(struct bpak_package *pkg, bpak_id_t part_id,
+                         bool remove_meta);
+
+/**
+ * Delete all parts from the archive
+ *
+ * @param[in] pkg Pointer to a bpak package
+ * @param[in] remove_meta If true any metadata associated with part_id will also be removed
+ *
+ * @return BPAK_OK on success or a negative number
+ */
+int bpak_pkg_delete_all_parts(struct bpak_package *pkg, bool remove_meta);
 
 #ifdef __cplusplus
 } // extern "C"
