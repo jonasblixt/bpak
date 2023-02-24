@@ -254,6 +254,7 @@ BPAK_EXPORT int bpak_verify_payload(struct bpak_header *header,
     }
 
 #if BPAK_CONFIG_MERKLE == 1
+    struct bpak_meta_header *meta;
     uint8_t *part_merkle_root_hash;
     uint8_t *part_merkle_salt;
 
@@ -263,26 +264,26 @@ BPAK_EXPORT int bpak_verify_payload(struct bpak_header *header,
             continue;
 
         /* Test part to see if it has a hash tree */
-        rc = bpak_get_meta_with_ref(header,
-                                    BPAK_ID_MERKLE_ROOT_HASH,
-                                    p->id,
-                                    (void **)&part_merkle_root_hash,
-                                    NULL);
+        rc = bpak_get_meta(header,
+                           BPAK_ID_MERKLE_ROOT_HASH,
+                           p->id,
+                           &meta);
 
         if (rc != BPAK_OK) {
             /* This part does not have a merkle tree, skip to next part */
             continue;
         }
+        part_merkle_root_hash = bpak_get_meta_ptr(header, meta, uint8_t);
 
         /* There should also be a salt meta data for this part */
-        rc = bpak_get_meta_with_ref(header,
-                                    BPAK_ID_MERKLE_SALT,
-                                    p->id,
-                                    (void **)&part_merkle_salt,
-                                    NULL);
+        rc = bpak_get_meta(header,
+                           BPAK_ID_MERKLE_SALT,
+                           p->id,
+                           &meta);
 
         if (rc != BPAK_OK)
             return -BPAK_MISSING_META_DATA;
+        part_merkle_salt = bpak_get_meta_ptr(header, meta, uint8_t);
 
         /* Compute the part id for the merkle tree, this is always an
          *  extension of the data part id, suffixed with '-hash-tree'

@@ -354,6 +354,7 @@ int bpak_transport_encode(FILE *input_fp, struct bpak_header *input_header,
                           FILE *origin_fp, struct bpak_header *origin_header)
 {
     int rc = BPAK_OK;
+    struct bpak_meta_header *meta = NULL;
     struct bpak_transport_meta *tm = NULL;
     ssize_t written;
 
@@ -364,16 +365,20 @@ int bpak_transport_encode(FILE *input_fp, struct bpak_header *input_header,
         /* Origin and input package should have the same package-uuid */
         rc = bpak_get_meta(origin_header,
                            BPAK_ID_BPAK_PACKAGE,
-                           (void **)&origin_package_uuid,
-                           NULL);
+                           0,
+                           &meta);
+
+        origin_package_uuid = bpak_get_meta_ptr(origin_header, meta, uint8_t);
 
         if (rc != BPAK_OK)
             return rc;
 
         rc = bpak_get_meta(input_header,
                            BPAK_ID_BPAK_PACKAGE,
-                           (void **)&patch_package_uuid,
-                           NULL);
+                           0,
+                           &meta);
+
+        patch_package_uuid = bpak_get_meta_ptr(input_header, meta, uint8_t);
 
         if (rc != BPAK_OK)
             return rc;
@@ -389,11 +394,11 @@ int bpak_transport_encode(FILE *input_fp, struct bpak_header *input_header,
         if (ph->id == 0)
             break;
 
-        if (bpak_get_meta_with_ref(input_header,
-                                   BPAK_ID_BPAK_TRANSPORT,
-                                   ph->id,
-                                   (void **)&tm,
-                                   NULL) == BPAK_OK) {
+        if (bpak_get_meta(input_header,
+                          BPAK_ID_BPAK_TRANSPORT,
+                          ph->id,
+                          &meta) == BPAK_OK) {
+            tm = bpak_get_meta_ptr(input_header, meta, struct bpak_transport_meta);
             bpak_printf(2, "Transport encoding part: %x\n", ph->id);
 
             rc = transport_encode_part(tm,

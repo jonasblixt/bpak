@@ -4,6 +4,38 @@
 #include <bpak/id.h>
 #include "nala.h"
 
+static int add_meta_uint32_t(struct bpak_header *header, bpak_id_t id,
+    bpak_id_t part_ref, uint32_t value)
+{
+    struct bpak_meta_header *meta;
+    int rc;
+
+    rc = bpak_add_meta(header, id, part_ref, sizeof(uint32_t), &meta);
+    if (rc != BPAK_OK) {
+        return rc;
+    }
+
+    *bpak_get_meta_ptr(header, meta, uint32_t) = value;
+
+    return rc;
+}
+
+static int get_meta_uint32_t(struct bpak_header *header, bpak_id_t id,
+    bpak_id_t part_ref, uint32_t *value)
+{
+    struct bpak_meta_header *meta;
+    int rc;
+
+    rc = bpak_get_meta(header, id, part_ref, &meta);
+    if (rc != BPAK_OK) {
+        return rc;
+    }
+
+    *value = *bpak_get_meta_ptr(header, meta, uint32_t);
+
+    return rc;
+}
+
 TEST(header)
 {
     struct bpak_header h;
@@ -21,137 +53,78 @@ TEST(header)
 TEST(add_meta)
 {
     struct bpak_header h;
-    uint32_t *test = NULL;
     int rc;
 
     rc = bpak_init_header(&h);
     ASSERT_EQ(rc, BPAK_OK);
 
-    rc = bpak_add_meta(&h,
-                       bpak_id("test-meta"),
-                       0,
-                       (void **)&test,
-                       sizeof(test));
+    rc = add_meta_uint32_t(&h,
+                           bpak_id("test-meta"),
+                           0,
+                           0x11223344);
     ASSERT_EQ(rc, BPAK_OK);
 
-    *test = 0x11223344;
+    uint32_t out = 0;
 
-    uint32_t *out = NULL;
-
-    rc = bpak_get_meta(&h, bpak_id("test-meta"), (void **)&out, NULL);
+    rc = get_meta_uint32_t(&h, bpak_id("test-meta"), 0, &out);
     ASSERT_EQ(rc, BPAK_OK);
-    ASSERT_EQ(*out, 0x11223344);
-
-    /* Try to get non-existing 'test-meta' after the first one */
-    uint32_t *out2 = NULL;
-
-    /* Begin search after the first meta*/
-    rc = bpak_get_meta(&h, bpak_id("test-meta"), (void **)&out2, test);
-    ASSERT_EQ(rc, -BPAK_NOT_FOUND);
+    ASSERT_EQ(out, 0x11223344);
 
     /* Add additional meta data with the same id */
-    uint32_t *test2 = NULL;
-
-    rc = bpak_add_meta(&h,
-                       bpak_id("test-meta"),
-                       0x1,
-                       (void **)&test2,
-                       sizeof(test2));
-    ASSERT_EQ(rc, BPAK_OK);
-    *test2 = 0x55667788;
-
-    uint32_t *out3 = NULL;
-
-    /* Begin search after the first meta*/
-    rc = bpak_get_meta(&h, bpak_id("test-meta"), (void **)&out3, test);
-    ASSERT_EQ(rc, BPAK_OK);
-    ASSERT_EQ(*out3, 0x55667788);
-}
-
-TEST(iterate_meta)
-{
-    struct bpak_header h;
-    int rc;
-    uint32_t *v = NULL;
-
-    rc = bpak_init_header(&h);
-    ASSERT_EQ(rc, BPAK_OK);
-
-    /* Data not populated yet */
-    uint32_t *out = NULL;
-    int c = 0;
-
-    while (bpak_get_meta(&h, bpak_id("test-meta"), (void **)&out, out) ==
-           BPAK_OK) {
-        ASSERT_EQ(*out, 0x11223300 + c);
-        c++;
-    }
-
-    for (int i = 0; i < 8; i++) {
-        v = NULL;
-        rc = bpak_add_meta(&h,
+    rc = add_meta_uint32_t(&h,
                            bpak_id("test-meta"),
-                           i + 1,
-                           (void **)&v,
-                           sizeof(uint32_t));
-        ASSERT_EQ(rc, BPAK_OK);
+                           1,
+                           0x55667788);
+    ASSERT_EQ(rc, BPAK_OK);
 
-        (*v) = 0x11223300 + i;
-        printf("v %p\n", v);
-    }
-
-    while (bpak_get_meta(&h, bpak_id("test-meta"), (void **)&out, out) ==
-           BPAK_OK) {
-        printf("out %p\n", out);
-        ASSERT_EQ(*out, 0x11223300 + c);
-        c++;
-    }
+    /* Begin search after the first meta */
+    rc = get_meta_uint32_t(&h, bpak_id("test-meta"), 0x1, &out);
+    ASSERT_EQ(rc, BPAK_OK);
+    ASSERT_EQ(out, 0x55667788);
 }
 
 TEST(too_many_meta_headers)
 {
     struct bpak_header h;
     int rc;
-    uint32_t *v = NULL;
 
     rc = bpak_init_header(&h);
     ASSERT_EQ(rc, BPAK_OK);
 
     /* Fill all meta data headers*/
     for (int i = 0; i < BPAK_MAX_META; i++) {
-        v = NULL;
-        rc = bpak_add_meta(&h,
-                           bpak_id("test-meta"),
-                           i,
-                           (void **)&v,
-                           sizeof(uint32_t));
+        rc = add_meta_uint32_t(&h,
+                               bpak_id("test-meta"),
+                               i,
+                               0x11223300 + i);
         ASSERT_EQ(rc, BPAK_OK);
-        ASSERT(v != NULL);
-        (*v) = 0x11223300 + i;
     }
 
-    uint32_t *out = NULL;
+    uint32_t out = 0;
     int c = 0;
-    while (bpak_get_meta(&h, bpak_id("test-meta"), (void **)&out, out) ==
-           BPAK_OK) {
-        ASSERT_EQ(*out, 0x11223300 + c);
+
+    bpak_foreach_meta(&h, m) {
+        if (!m->id)
+            break;
+
+        out = *bpak_get_meta_ptr(&h, m, uint32_t);
+        ASSERT_EQ(out, 0x11223300 + c);
         c++;
     }
 
-    v = NULL;
-    rc = bpak_add_meta(&h,
-                       bpak_id("test-meta"),
-                       0x30,
-                       (void **)&v,
-                       sizeof(uint32_t));
+
+    rc = add_meta_uint32_t(&h,
+                           bpak_id("test-meta"),
+                           0x30,
+                           0x00);
     ASSERT_EQ(rc, -BPAK_NO_SPACE_LEFT);
 }
 
 TEST(too_much_metadata)
 {
     struct bpak_header h;
+    struct bpak_meta_header *meta;
     int rc;
-    uint32_t *v = NULL;
 
     rc = bpak_init_header(&h);
     ASSERT_EQ(rc, BPAK_OK);
@@ -159,87 +132,79 @@ TEST(too_much_metadata)
     rc = bpak_add_meta(&h,
                        bpak_id("test-meta"),
                        0,
-                       (void **)&v,
-                       BPAK_METADATA_BYTES);
+                       BPAK_METADATA_BYTES,
+                       &meta);
     ASSERT_EQ(rc, BPAK_OK);
 
     /* metadata byte array is now full */
-
-    rc = bpak_add_meta(&h, bpak_id("test-meta"), 0x1, (void **)&v, 1);
+    rc = bpak_add_meta(&h, bpak_id("test-meta"), 0x1, 1, &meta);
     ASSERT_EQ(rc, -BPAK_NO_SPACE_LEFT);
 
     /* Fill header array and meta data */
     rc = bpak_init_header(&h);
     ASSERT_EQ(rc, BPAK_OK);
 
-    v = NULL;
     for (int i = 0; i < 30; i++) {
-        printf("%i\n", i);
-        rc = bpak_add_meta(&h, bpak_id("test-meta"), i, (void **)&v, 64);
-        printf("v %p\n", v);
+        // printf("%i\n", i);
+        rc = bpak_add_meta(&h, bpak_id("test-meta"), i, 64, &meta);
+        // printf("meta %p\n", meta);
         ASSERT_EQ(rc, BPAK_OK);
     }
 
-    rc = bpak_add_meta(&h, bpak_id("test-meta"), 0x100, (void **)&v, 1);
+    rc = bpak_add_meta(&h, bpak_id("test-meta"), 0x100, 1, &meta);
     ASSERT_EQ(rc, -BPAK_NO_SPACE_LEFT);
 }
 
 TEST(delete_meta)
 {
     struct bpak_header h;
-    uint32_t *test = NULL;
     int rc;
 
     rc = bpak_init_header(&h);
     ASSERT_EQ(rc, BPAK_OK);
 
-    rc = bpak_add_meta(&h,
-                       bpak_id("test-meta"),
-                       0x1,
-                       (void **)&test,
-                       sizeof(test));
+    rc = add_meta_uint32_t(&h,
+                           bpak_id("test-meta"),
+                           0x1,
+                           0x11223344);
     ASSERT_EQ(rc, BPAK_OK);
 
-    *test = 0x11223344;
+    uint32_t out = 0;
 
-    uint32_t *out = NULL;
-
-    rc = bpak_get_meta(&h, bpak_id("test-meta"), (void **)&out, NULL);
+    rc = get_meta_uint32_t(&h, bpak_id("test-meta"), 0x1, &out);
     ASSERT_EQ(rc, BPAK_OK);
-    ASSERT_EQ(*out, 0x11223344);
+    ASSERT_EQ(out, 0x11223344);
 
     /* Add additional meta data with the same id */
-    uint32_t *test2 = NULL;
-
-    rc = bpak_add_meta(&h,
-                       bpak_id("test-meta"),
-                       0x2,
-                       (void **)&test2,
-                       sizeof(test2));
+    rc = add_meta_uint32_t(&h,
+                           bpak_id("test-meta"),
+                           0x2,
+                           0x55667788);
     ASSERT_EQ(rc, BPAK_OK);
-    *test2 = 0x55667788;
 
-    uint32_t *out2 = NULL;
+    uint32_t out2 = 0;
 
     /* Begin search after the second meta */
-    rc = bpak_get_meta(&h, bpak_id("test-meta"), (void **)&out2, test);
+    rc = get_meta_uint32_t(&h, bpak_id("test-meta"), 0x2, &out2);
     ASSERT_EQ(rc, BPAK_OK);
-    ASSERT_EQ(*out2, 0x55667788);
+    ASSERT_EQ(out2, 0x55667788);
 
     /* Delete the first part */
-    struct bpak_meta_header *header;
+    struct bpak_meta_header *meta;
 
-    rc = bpak_get_meta_and_header(&h, bpak_id("test-meta"), 0x1, (void **)&out, NULL, &header);
+    rc = bpak_get_meta(&h, bpak_id("test-meta"), 0x1, &meta);
     ASSERT_EQ(rc, BPAK_OK);
-    ASSERT_EQ(*out, 0x11223344);
+    out = *bpak_get_meta_ptr(&h, meta, uint32_t);
+    ASSERT_EQ(out, 0x11223344);
 
-    bpak_del_meta(&h, header);
+    bpak_del_meta(&h, meta);
 
     /* Verify it is gone, and that second meta can still be read */
-    rc = bpak_get_meta_and_header(&h, bpak_id("test-meta"), 0x1, (void **)&out, NULL, &header);
+    rc = bpak_get_meta(&h, bpak_id("test-meta"), 0x1, &meta);
     ASSERT_EQ(rc, -BPAK_NOT_FOUND);
 
-    rc = bpak_get_meta_and_header(&h, bpak_id("test-meta"), 0x2, (void **)&out, NULL, &header);
+    rc = bpak_get_meta(&h, bpak_id("test-meta"), 0x2, &meta);
     ASSERT_EQ(rc, BPAK_OK);
-    ASSERT_EQ(*out, 0x55667788);
+    out = *bpak_get_meta_ptr(&h, meta, uint32_t);
+    ASSERT_EQ(out, 0x55667788);
 }

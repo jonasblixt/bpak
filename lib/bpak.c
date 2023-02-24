@@ -10,63 +10,47 @@
 #include <string.h>
 #include <bpak/bpak.h>
 
-BPAK_EXPORT int bpak_get_meta_and_header(struct bpak_header *hdr, bpak_id_t id,
-                                         bpak_id_t part_id_ref, void **output,
-                                         void *offset,
-                                         struct bpak_meta_header **header)
+/* BPAK_META_ALIGN is a power-of-2 */
+#define BPAK_META_ALIGN_SIZE(_x) \
+    (((_x) + ((BPAK_META_ALIGN) - 1)) & ~((BPAK_META_ALIGN) - 1))
+
+static int bpak_get_meta_int(struct bpak_header *hdr, bpak_id_t id,
+                             bpak_id_t part_id_ref, bool match_partref,
+                             struct bpak_meta_header **meta)
 {
     bpak_foreach_meta (hdr, m) {
         if (m->id == id) {
-            if (part_id_ref != 0) {
+            if (match_partref) {
                 if (m->part_id_ref != part_id_ref)
                     continue;
             }
 
-            void *tmp = (void *)&hdr->metadata[m->offset];
-
-            if (offset) {
-                if (tmp <= offset)
-                    continue;
-            }
-
-            (*output) = tmp;
-
-            if (header)
-                (*header) = m;
+            *meta = m;
 
             return BPAK_OK;
         }
     }
 
-    (*output) = NULL;
+    *meta = NULL;
     return -BPAK_NOT_FOUND;
 }
 
 BPAK_EXPORT int bpak_get_meta(struct bpak_header *hdr, bpak_id_t id,
-                              void **output, void *offset)
+                             bpak_id_t part_id_ref,
+                             struct bpak_meta_header **meta)
 {
-    return bpak_get_meta_and_header(hdr,
-                                    id,
-                                    0,
-                                    output,
-                                    offset,
-                                    (struct bpak_meta_header **)0);
+    return bpak_get_meta_int(hdr, id, part_id_ref, true, meta);
 }
 
-BPAK_EXPORT int bpak_get_meta_with_ref(struct bpak_header *hdr, bpak_id_t id,
-                                       bpak_id_t part_id_ref, void **output,
-                                       void *offset)
+BPAK_EXPORT int bpak_get_meta_anyref(struct bpak_header *hdr, bpak_id_t id,
+                                     struct bpak_meta_header **meta)
 {
-    return bpak_get_meta_and_header(hdr,
-                                    id,
-                                    part_id_ref,
-                                    output,
-                                    offset,
-                                    (struct bpak_meta_header **)0);
+    return bpak_get_meta_int(hdr, id, 0, false, meta);
 }
 
 BPAK_EXPORT int bpak_add_meta(struct bpak_header *hdr, bpak_id_t id,
-                              bpak_id_t part_ref_id, void **ptr, uint16_t size)
+                              bpak_id_t part_ref_id, uint16_t size,
+                              struct bpak_meta_header **meta)
 {
     uint16_t new_offset = 0;
 
@@ -79,7 +63,7 @@ BPAK_EXPORT int bpak_add_meta(struct bpak_header *hdr, bpak_id_t id,
             if ((m->offset + m->size) > BPAK_METADATA_BYTES)
                 return -BPAK_NO_SPACE_LEFT;
 
-            (*ptr) = (void *)&hdr->metadata[m->offset];
+            *meta = m;
             return BPAK_OK;
         } else if (m->id == id && m->part_id_ref == part_ref_id) {
             return -BPAK_EXISTS;
@@ -87,8 +71,7 @@ BPAK_EXPORT int bpak_add_meta(struct bpak_header *hdr, bpak_id_t id,
 
         new_offset += m->size;
 
-        if (m->size % BPAK_META_ALIGN)
-            new_offset += BPAK_META_ALIGN - (m->size % BPAK_META_ALIGN);
+        new_offset = BPAK_META_ALIGN_SIZE(new_offset);
     }
 
     return -BPAK_NO_SPACE_LEFT;
@@ -100,8 +83,7 @@ BPAK_EXPORT void bpak_del_meta(struct bpak_header *hdr,
     struct bpak_meta_header *next_meta = meta + 1;
     uint16_t offset_adjust = meta->size;
 
-    if (offset_adjust % BPAK_META_ALIGN)
-        offset_adjust += BPAK_META_ALIGN - (offset_adjust % BPAK_META_ALIGN);
+    offset_adjust = BPAK_META_ALIGN_SIZE(offset_adjust);
 
     while(meta != &(hdr->meta[BPAK_MAX_META - 1])) {
         if (next_meta->id != 0) {
@@ -386,20 +368,23 @@ BPAK_EXPORT int bpak_add_transport_meta(struct bpak_header *header,
                                         uint32_t decoder_id)
 {
     int rc;
-    struct bpak_transport_meta *meta = NULL;
+    struct bpak_transport_meta *transport_meta = NULL;
+    struct bpak_meta_header *meta = NULL;
 
     /* id("bpak-transport") = 0x2d44bbfb */
     rc = bpak_add_meta(header,
                        0x2d44bbfb,
                        part_id,
-                       (void **)&meta,
-                       sizeof(*meta));
+                       sizeof(*meta),
+                       &meta);
 
     if (rc != BPAK_OK)
         return rc;
 
-    meta->alg_id_encode = encoder_id;
-    meta->alg_id_decode = decoder_id;
+    transport_meta = bpak_get_meta_ptr(header, meta, struct bpak_transport_meta);
+
+    transport_meta->alg_id_encode = encoder_id;
+    transport_meta->alg_id_decode = decoder_id;
 
     return BPAK_OK;
 }

@@ -108,17 +108,17 @@ int action_extract(int argc, char **argv)
         struct bpak_meta_header *meta_header = NULL;
         void *data_ptr = NULL;
 
-        rc = bpak_get_meta_and_header(h,
-                                      meta_id,
-                                      part_id_ref,
-                                      &data_ptr,
-                                      NULL,
-                                      &meta_header);
+        rc = bpak_get_meta(h,
+                           meta_id,
+                           part_id_ref,
+                           &meta_header);
 
         if (rc != BPAK_OK) {
             fprintf(stderr, "Error: Could not find metadata %x\n", meta_id);
             goto err_close_pkg_out;
         }
+
+        data_ptr = bpak_get_meta_ptr(h, meta_header, void);
 
         if (output_filename != NULL) {
             fp = fopen(output_filename, "w+");

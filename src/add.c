@@ -13,6 +13,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <getopt.h>
+#include <errno.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <bpak/pkg.h>
@@ -132,6 +133,7 @@ int action_add(int argc, char **argv)
     struct bpak_header *h = bpak_pkg_header(&pkg);
 
     if (meta_name) {
+        struct bpak_meta_header *meta = NULL;
         unsigned char *meta_data = NULL;
         bpak_id_t part_ref_id = 0;
 
@@ -184,33 +186,45 @@ int action_add(int argc, char **argv)
                 rc = bpak_add_meta(h,
                                    bpak_id(meta_name),
                                    part_ref_id,
-                                   (void **)&meta_data,
-                                   16);
+                                   16,
+                                   &meta);
 
                 if (rc != BPAK_OK) {
                     fprintf(stderr, "Error: Could not add meta data\n");
                     goto err_close_pkg_out;
                 }
 
+                meta_data = bpak_get_meta_ptr(h, meta, unsigned char);
                 memcpy(meta_data, uu, 16);
 
                 if (bpak_get_verbosity()) {
                     printf("Adding %s <%s>\n", meta_name, from_string);
                 }
             } else if (strcmp(encoder, "integer") == 0) {
-                long value = strtol(metadata_input, NULL, 0);
+                char *endptr = NULL;
+
+                errno = 0;
+                uint64_t value = strtol(metadata_input, &endptr, 0);
+
+                if (endptr == metadata_input ||
+                    errno != 0) {
+                    rc = -BPAK_FAILED;
+                    fprintf(stderr, "Error: Could not parse input as a number");
+                    goto err_close_pkg_out;
+                }
 
                 rc = bpak_add_meta(h,
                                    bpak_id(meta_name),
                                    part_ref_id,
-                                   (void **)&meta_data,
-                                   sizeof(value));
+                                   sizeof(value),
+                                   &meta);
 
                 if (rc != BPAK_OK) {
                     fprintf(stderr, "Error: Could not add meta data\n");
                     goto err_close_pkg_out;
                 }
 
+                meta_data = bpak_get_meta_ptr(h, meta, unsigned char);
                 memcpy(meta_data, &value, sizeof(value));
 
                 if (bpak_get_verbosity()) {
@@ -222,14 +236,15 @@ int action_add(int argc, char **argv)
                 rc = bpak_add_meta(h,
                                    bpak_id(meta_name),
                                    part_ref_id,
-                                   (void **)&meta_data,
-                                   sizeof(value));
+                                   sizeof(value),
+                                   &meta);
 
                 if (rc != BPAK_OK) {
                     fprintf(stderr, "Error: Could not add meta data\n");
                     goto err_close_pkg_out;
                 }
 
+                meta_data = bpak_get_meta_ptr(h, meta, unsigned char);
                 memcpy(meta_data, &value, sizeof(value));
 
                 if (bpak_get_verbosity()) {
@@ -247,14 +262,15 @@ int action_add(int argc, char **argv)
             rc = bpak_add_meta(h,
                                bpak_id(meta_name),
                                part_ref_id,
-                               (void **)&meta_data,
-                               metadata_input_length);
+                               metadata_input_length,
+                               &meta);
 
             if (rc != BPAK_OK) {
                 fprintf(stderr, "Error: Could not add meta data\n");
                 goto err_close_pkg_out;
             }
 
+            meta_data = bpak_get_meta_ptr(h, meta, unsigned char);
             memcpy(meta_data, metadata_input, metadata_input_length);
         }
 

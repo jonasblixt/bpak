@@ -13,6 +13,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <getopt.h>
+#include <errno.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <bpak/id.h>
@@ -137,15 +138,12 @@ int action_set(int argc, char **argv)
     }
 
     if (meta_name) {
-        void *meta = NULL;
-        struct bpak_meta_header *meta_header = NULL;
+        struct bpak_meta_header *meta = NULL;
 
-        rc = bpak_get_meta_and_header(h,
-                                      bpak_id(meta_name),
-                                      0,
-                                      &meta,
-                                      NULL,
-                                      &meta_header);
+        rc = bpak_get_meta(h,
+                           bpak_id(meta_name),
+                           0,
+                           &meta);
 
         if (rc != BPAK_OK || meta == NULL) {
             fprintf(stderr, "Error: Could not find '%s'\n", meta_name);
@@ -153,77 +151,79 @@ int action_set(int argc, char **argv)
         }
 
         if (!encoder) {
-            if (bpak_get_verbosity() > 2) {
-                printf("Need to grow metadata field with %li bytes\n",
-                       strlen(from_string) - meta_header->size);
-            }
+            size_t len = strlen(from_string);
 
-            struct bpak_header *new_header = malloc(sizeof(struct bpak_header));
-
-            memcpy(new_header, h, sizeof(*h));
-            memset(new_header->meta, 0, sizeof(new_header->meta));
-            memset(new_header->metadata, 0, sizeof(new_header->metadata));
-
-            bpak_foreach_meta (h, m) {
-                uint8_t *tmp_ptr = NULL;
-
-                if (!m->id)
-                    break;
-
-                if (m->id == bpak_id(meta_name)) {
-                    if (bpak_get_verbosity() > 2) {
-                        printf("Updating part %s\n", meta_name);
-                    }
-
-                    rc = bpak_add_meta(new_header,
-                                       m->id,
-                                       m->part_id_ref,
-                                       (void **)&tmp_ptr,
-                                       strlen(from_string) + 1);
-
-                    if (rc != BPAK_OK)
-                        break;
-
-                    memcpy((void *)tmp_ptr,
-                           from_string,
-                           strlen(from_string) + 1);
-                } else {
-                    if (bpak_get_verbosity() > 2) {
-                        printf("Copying meta %x, %i\n", m->id, m->size);
-                    }
-                    rc = bpak_add_meta(new_header,
-                                       m->id,
-                                       m->part_id_ref,
-                                       (void **)&tmp_ptr,
-                                       m->size);
-
-                    if (rc != BPAK_OK)
-                        break;
-
-                    memcpy((void *)tmp_ptr, &(h->metadata[m->offset]), m->size);
+            if (len + 1 > meta->size) {
+                if (bpak_get_verbosity() > 2) {
+                   printf("Need to grow metadata field. Remove and re-add");
                 }
+
+                struct bpak_header *tmp_header = malloc(sizeof(struct bpak_header));
+                memcpy(tmp_header, h, sizeof(struct bpak_header));
+
+                struct bpak_meta_header *meta_tmp = NULL;
+
+                rc = bpak_get_meta(tmp_header, meta->id, meta->part_id_ref, &meta_tmp);
+                if (rc != BPAK_OK) {
+                    /* There is no error case where this should happen except for
+                     * internal bugs
+                     */
+                    fprintf(stderr, "FATAL ERROR");
+                    goto err_close_fp_out;
+                }
+
+                bpak_del_meta(tmp_header, meta_tmp);
+
+                rc = bpak_add_meta(tmp_header,
+                                   meta->id,
+                                   meta->part_id_ref,
+                                   len + 1,
+                                   &meta_tmp);
+                if (rc != BPAK_OK) {
+                    fprintf(stderr, "Failed to allocate space for updated meta %s\n",
+                            meta_name);
+                    free(tmp_header);
+                    goto err_close_fp_out;
+                }
+
+                meta = meta_tmp;
+                free(h);
+                h = tmp_header;
             }
 
-            free(h);
-            h = new_header;
+            uint8_t *meta_data = bpak_get_meta_ptr(h, meta, uint8_t);
+
+            memcpy(meta_data, from_string, len + 1);
+            memset(meta_data + len + 1, 0, meta->size - len - 1);
 
         } else if (strcmp(encoder, "integer") == 0) {
-            if (meta_header->size != 8) {
+            if (meta->size != sizeof(uint64_t)) {
                 fprintf(stderr, "Incorrect meta data length\n");
                 rc = -BPAK_SIZE_ERROR;
                 goto err_close_fp_out;
             }
 
-            long *val = (long *)meta;
-            (*val) = strtol(from_string, NULL, 0);
+            char *endptr = NULL;
+
+            errno = 0;
+            uint64_t value = strtol(from_string, &endptr, 0);
+
+            if (endptr == from_string ||
+                errno != 0) {
+                rc = -BPAK_FAILED;
+                fprintf(stderr, "Error: Could not parse input as a number");
+                goto err_close_fp_out;
+            }
+
+            *bpak_get_meta_ptr(h, meta, uint64_t) = value;
         } else if (strcmp(encoder, "id") == 0) {
-            if (meta_header->size != 4) {
+            if (meta->size != sizeof(bpak_id_t)) {
                 fprintf(stderr, "Incorrect meta data length\n");
                 rc = -BPAK_SIZE_ERROR;
                 goto err_close_fp_out;
             }
-            uint32_t *val = (uint32_t *)meta;
-            (*val) = bpak_id(from_string);
+
+            *bpak_get_meta_ptr(h, meta, bpak_id_t) = bpak_id(from_string);
         } else {
             rc = -BPAK_FAILED;
             fprintf(stderr, "Error: Unknown encoder\n");

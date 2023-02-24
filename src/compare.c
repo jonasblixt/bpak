@@ -122,6 +122,7 @@ int action_compare(int argc, char **argv)
     char string_output[64];
     struct bpak_header *h1p = &h1;
     struct bpak_header *h2p = &h2;
+    struct bpak_meta_header *meta = NULL;
     char *data1 = NULL;
     char *data2 = NULL;
     bool change;
@@ -144,13 +145,15 @@ int action_compare(int argc, char **argv)
         change = false;
         removed = false;
 
-        bpak_get_meta(h1p, m->id, (void **)&data1, data1);
+        data1 = bpak_get_meta_ptr(h1p, m, char);
 
-        rc = bpak_get_meta(h2p, m->id, (void **)&data2, data2);
+        rc = bpak_get_meta(h2p, m->id, m->part_id_ref, &meta);
 
         /* Missing in file 2? */
         if (rc != BPAK_OK)
             removed = true;
+
+        data2 = bpak_get_meta_ptr(h2p, meta, char);
 
         if (!data1 || !data2) {
             removed = true;
@@ -188,11 +191,11 @@ int action_compare(int argc, char **argv)
         change = false;
         removed = false;
 
-        bpak_get_meta(h2p, m->id, (void **)&data1, data1);
+        data1 = bpak_get_meta_ptr(h2p, m, char);
 
-        rc = bpak_get_meta(h1p, m->id, (void **)&data2, data2);
+        rc = bpak_get_meta(h1p, m->id, m->part_id_ref, &meta);
 
-        /* Missing in file 2? */
+        /* Missing in file 1? */
         if (rc != BPAK_OK) {
             printf(RED_YL);
             bpak_meta_to_string(h2p, m, string_output, sizeof(string_output));

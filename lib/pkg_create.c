@@ -124,29 +124,31 @@ BPAK_EXPORT int bpak_pkg_add_file_with_merkle_tree(struct bpak_package *pkg,
     }
 
     /* Add salt */
+    struct bpak_meta_header *meta = NULL;
     uint8_t *m = NULL;
 
     rc = bpak_add_meta(h,
                        BPAK_ID_MERKLE_SALT,
                        bpak_id(part_name),
-                       (void **)&m,
-                       sizeof(bpak_merkle_hash_t));
+                       sizeof(bpak_merkle_hash_t),
+                       &meta);
 
     if (rc != BPAK_OK)
         goto err_close_fp_out;
 
+    m = bpak_get_meta_ptr(h, meta, uint8_t);
     memcpy(m, salt, sizeof(bpak_merkle_hash_t));
 
-    m = NULL;
     rc = bpak_add_meta(h,
                        BPAK_ID_MERKLE_ROOT_HASH,
                        bpak_id(part_name),
-                       (void **)&m,
-                       sizeof(bpak_merkle_hash_t));
+                       sizeof(bpak_merkle_hash_t),
+                       &meta);
 
     if (rc != BPAK_OK)
         goto err_close_fp_out;
 
+    m = bpak_get_meta_ptr(h, meta, uint8_t);
     memcpy(m, hash, sizeof(bpak_merkle_hash_t));
 
     struct bpak_part_header *p = NULL;

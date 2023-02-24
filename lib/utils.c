@@ -60,21 +60,21 @@ BPAK_EXPORT int bpak_meta_to_string(struct bpak_header *h,
                                     struct bpak_meta_header *m, char *buf,
                                     size_t size)
 {
-    uint32_t *id_ptr = NULL;
+    bpak_id_t *id_ptr = NULL;
     uint8_t *byte_ptr = NULL;
 
     if (m->id == BPAK_ID_BPAK_KEY_ID) {
-        bpak_get_meta(h, m->id, (void **)&id_ptr, NULL);
+        id_ptr = bpak_get_meta_ptr(h, m, bpak_id_t);
         snprintf(buf, size, "%" PRIx32, *id_ptr);
     } else if (m->id == BPAK_ID_BPAK_KEY_STORE) {
-        bpak_get_meta(h, m->id, (void **)&id_ptr, NULL);
+        id_ptr = bpak_get_meta_ptr(h, m, bpak_id_t);
         snprintf(buf, size, "%" PRIx32, *id_ptr);
     } else if (m->id == BPAK_ID_BPAK_PACKAGE) {
-        bpak_get_meta(h, m->id, (void **)&byte_ptr, NULL);
+        byte_ptr = bpak_get_meta_ptr(h, m, uint8_t);
         bpak_uuid_to_string(byte_ptr, buf, size);
     } else if (m->id == BPAK_ID_BPAK_TRANSPORT) {
         struct bpak_transport_meta *transport_meta =
-            (struct bpak_transport_meta *)&(h->metadata[m->offset]);
+            bpak_get_meta_ptr(h, m, struct bpak_transport_meta);
 
         snprintf(buf,
                  size,
@@ -82,23 +82,23 @@ BPAK_EXPORT int bpak_meta_to_string(struct bpak_header *h,
                  transport_meta->alg_id_encode,
                  transport_meta->alg_id_decode);
     } else if (m->id == BPAK_ID_MERKLE_SALT) {
-        bpak_get_meta(h, m->id, (void **)&byte_ptr, NULL);
+        byte_ptr = bpak_get_meta_ptr(h, m, uint8_t);
         bpak_bin2hex(byte_ptr, 32, buf, size);
     } else if (m->id == BPAK_ID_MERKLE_ROOT_HASH) {
-        bpak_get_meta(h, m->id, (void **)&byte_ptr, NULL);
+        byte_ptr = bpak_get_meta_ptr(h, m, uint8_t);
         bpak_bin2hex(byte_ptr, 32, buf, size);
     } else if (m->id == BPAK_ID_PB_LOAD_ADDR) {
-        uintptr_t *entry_addr = (uintptr_t *)&(h->metadata[m->offset]);
-        snprintf(buf, size, "Entry: %p", (void *)*entry_addr);
+        uint64_t *entry_addr = bpak_get_meta_ptr(h, m, uint64_t);
+        snprintf(buf, size, "Entry: 0x%08" PRIX64, *entry_addr);
     } else if (m->id == BPAK_ID_BPAK_VERSION) {
-        bpak_get_meta(h, m->id, (void **)&byte_ptr, NULL);
+        byte_ptr = bpak_get_meta_ptr(h, m, uint8_t);
 
         if (m->size > size)
             return -BPAK_SIZE_ERROR;
 
         memcpy(buf, byte_ptr, m->size);
     } else if (m->id == BPAK_ID_KEYSTORE_PROVIDER_ID) {
-        bpak_get_meta(h, m->id, (void **)&id_ptr, NULL);
+        id_ptr = bpak_get_meta_ptr(h, m, bpak_id_t);
         snprintf(buf, size, "0x%" PRIx32, *id_ptr);
     } else {
         if (size)

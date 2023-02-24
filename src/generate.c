@@ -114,30 +114,36 @@ int action_generate(int argc, char **argv)
             goto err_free_io_out;
         }
 
+        struct bpak_meta_header *meta = NULL;
         unsigned char *package_id = NULL;
 
         rc = bpak_get_meta(h,
                            bpak_id("bpak-package"),
-                           (void **)&package_id,
-                           NULL);
+                           0,
+                           &meta);
 
         if (rc != BPAK_OK) {
             fprintf(stderr, "Error: Could not read bpak-package-id\n");
             goto err_free_io_out;
         }
 
+        package_id = bpak_get_meta_ptr(h, meta, unsigned char);
+        (void)package_id;
+
         uint32_t *keystore_provider_id = NULL;
 
         rc = bpak_get_meta(h,
                            bpak_id("keystore-provider-id"),
-                           (void **)&keystore_provider_id,
-                           NULL);
+                           0,
+                           &meta);
 
         if (rc != BPAK_OK) {
             fprintf(stderr,
                     "Error: Could not read keystore-provider-id meta\n");
             goto err_free_io_out;
         }
+
+        keystore_provider_id = bpak_get_meta_ptr(h, meta, uint32_t);
 
         int key_index = 0;
         unsigned char key_buffer[4096];
