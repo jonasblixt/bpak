@@ -52,7 +52,7 @@ BPAK_EXPORT int bpak_keystore_load_key_from_file(const char *filename,
         goto err_close_pkg_out;
     }
 
-    rc = bpak_get_part(&pkg.header, key_id, &key_part, NULL);
+    rc = bpak_get_part(&pkg.header, key_id, &key_part);
 
     if (rc != BPAK_OK)
         goto err_close_pkg_out;

@@ -220,7 +220,7 @@ int action_compare(int argc, char **argv)
         removed = false;
 
         if (p->id) {
-            rc = bpak_get_part(h2p, p->id, &p2, NULL);
+            rc = bpak_get_part(h2p, p->id, &p2);
 
             if (rc != BPAK_OK) {
                 removed = true;
@@ -310,7 +310,7 @@ int action_compare(int argc, char **argv)
     /* Check parts for parts in 2 that are missing in 1 */
     bpak_foreach_part (h2p, p) {
         if (p->id) {
-            rc = bpak_get_part(h1p, p->id, &p1, NULL);
+            rc = bpak_get_part(h1p, p->id, &p1);
 
             if (rc != BPAK_OK) {
                 printf(RED_YL);

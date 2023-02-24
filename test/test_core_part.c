@@ -24,7 +24,7 @@ TEST(part_header)
     /* Try to retrive the same part */
     struct bpak_part_header *out = NULL;
 
-    rc = bpak_get_part(&h, bpak_id("test-part"), &out, NULL);
+    rc = bpak_get_part(&h, bpak_id("test-part"), &out);
     ASSERT_EQ(rc, BPAK_OK);
     ASSERT(out == p);
 }
@@ -88,7 +88,7 @@ TEST(iterate_part_header)
 
     struct bpak_part_header *out = NULL;
 
-    rc = bpak_get_part(&h, bpak_id("test-part") + 2, &out, p2);
+    rc = bpak_get_part(&h, bpak_id("test-part") + 2, &out);
     ASSERT_EQ(rc, BPAK_OK);
     ASSERT_EQ(out, p3);
 }
@@ -119,14 +119,14 @@ TEST(delete_part)
     bpak_del_part(&h, p2);
 
     struct bpak_part_header *out = NULL;
-    rc = bpak_get_part(&h, bpak_id("test-part"), &out, NULL);
+    rc = bpak_get_part(&h, bpak_id("test-part"), &out);
     ASSERT_EQ(rc, BPAK_OK);
     ASSERT_EQ(out, p1);
 
-    rc = bpak_get_part(&h, bpak_id("test-part") + 1, &out, NULL);
+    rc = bpak_get_part(&h, bpak_id("test-part") + 1, &out);
     ASSERT_EQ(rc, -BPAK_NOT_FOUND);
 
-    rc = bpak_get_part(&h, bpak_id("test-part") + 2, &out, NULL);
+    rc = bpak_get_part(&h, bpak_id("test-part") + 2, &out);
     ASSERT_EQ(rc, BPAK_OK);
     ASSERT_LT(out, p3);
 }

@@ -362,7 +362,6 @@ void bpak_del_meta(struct bpak_header *hdr,
  *
  * @param[in] hdr BPAK Header
  * @param[in] id ID of part
- * @param[out] part Output pointer to part
  *
  * @return BPAK_OK on success, -BPAK_FAILED if part_id already exists,
  *         -BPAK_NOT_FOUND if the part is missing
@@ -370,8 +369,7 @@ void bpak_del_meta(struct bpak_header *hdr,
  **/
 
 int bpak_get_part(struct bpak_header *hdr, bpak_id_t id,
-                  struct bpak_part_header **part,
-                  struct bpak_part_header *offset);
+                  struct bpak_part_header **part);
 
 /**
  * Add new part with 'id'. *ptr is assigned to a pointer within

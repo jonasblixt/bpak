@@ -52,7 +52,7 @@ static ssize_t merkle_generate(struct bpak_transport_decode *ctx)
 
     /* Get filesystem header */
     fs_part = NULL;
-    rc = bpak_get_part(ctx->patch_header, fs_id, &fs_part, NULL);
+    rc = bpak_get_part(ctx->patch_header, fs_id, &fs_part);
 
     if (rc != BPAK_OK) {
         bpak_printf(0, "Error: Could not read filesystem header\n");

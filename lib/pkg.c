@@ -303,7 +303,7 @@ BPAK_EXPORT int bpak_pkg_transport_decode(struct bpak_package *input,
 
         /* Compute origin and output offsets */
         if (origin != NULL) {
-            rc = bpak_get_part(&origin->header, part->id, &origin_part, NULL);
+            rc = bpak_get_part(&origin->header, part->id, &origin_part);
 
             if (rc != BPAK_OK) {
                 bpak_printf(0,
@@ -400,7 +400,7 @@ BPAK_EXPORT int bpak_pkg_extract_file(struct bpak_package *pkg,
     struct bpak_part_header *part = NULL;
     FILE* fp;
 
-    rc = bpak_get_part(h, part_id, &part, NULL);
+    rc = bpak_get_part(h, part_id, &part);
     if (rc != BPAK_OK) {
         bpak_printf(0, "%s: Error: No such part!\n", __func__);
         return rc;
@@ -470,7 +470,7 @@ BPAK_EXPORT int bpak_pkg_delete_part(struct bpak_package *pkg,
 
     bpak_printf(1, "Deleting 0x%08x\n", part_id);
 
-    rc = bpak_get_part(h, part_id, &part, NULL);
+    rc = bpak_get_part(h, part_id, &part);
     if (rc != BPAK_OK) {
         bpak_printf(0, "%s: Error: No such part!\n", __func__);
         return rc;

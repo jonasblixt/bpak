@@ -125,16 +125,10 @@ BPAK_EXPORT void bpak_del_meta(struct bpak_header *hdr,
 }
 
 BPAK_EXPORT int bpak_get_part(struct bpak_header *hdr, bpak_id_t id,
-                              struct bpak_part_header **part,
-                              struct bpak_part_header *offset)
+                              struct bpak_part_header **part)
 {
     bpak_foreach_part (hdr, p) {
         if (p->id == id) {
-            if (offset) {
-                if (p <= offset)
-                    continue;
-            }
-
             (*part) = p;
             return BPAK_OK;
         }
