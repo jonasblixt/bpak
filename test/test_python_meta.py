@@ -18,7 +18,7 @@ assert os.system(f"{srcdir}/test_python_meta_prepare.sh {srcdir}") == 0
 p = bpak.Package("test_python_meta.bpak", "r+")
 print("Loaded package: " + p.read_uuid_meta(bpak.id("bpak-package")))
 assert p.read_uuid_meta(bpak.id('bpak-package')) == "0888b0fa-9c48-4524-9845-06a641b61edd"
-merkle_root_hash = p.read_raw_meta(bpak.id('merkle-root-hash'), 0)
+merkle_root_hash = p.read_raw_meta(bpak.id('merkle-root-hash'), bpak.id('fs'))
 print("merkle-root-hash: " + binascii.hexlify(merkle_root_hash).decode())
 
 # Test package version meta

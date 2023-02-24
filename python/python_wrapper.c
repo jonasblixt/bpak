@@ -277,17 +277,17 @@ static PyObject *package_read_raw_meta(PyObject *self, PyObject *args,
         return NULL;
     }
 
-    rc = bpak_get_meta_and_header(h,
-                                  (uint32_t)meta_id,
-                                  (uint32_t)part_ref_id,
-                                  (void **)&meta_ptr,
-                                  NULL,
-                                  &meta_header);
+    rc = bpak_get_meta(h,
+                      (bpak_id_t)meta_id,
+                      (bpak_id_t)part_ref_id,
+                      &meta_header);
 
     if (rc != BPAK_OK) {
         PyErr_SetString(BPAKPackageError, "Error reading meta data");
         return NULL;
     }
+
+    meta_ptr = bpak_get_meta_ptr(h, meta_header, char);
 
     return Py_BuildValue("y#", meta_ptr, meta_header->size);
 }
@@ -301,26 +301,27 @@ static PyObject *_write_raw_meta(struct bpak_package *pkg, uint32_t meta_id,
     void *meta = NULL;
     struct bpak_meta_header *meta_header = NULL;
 
-    rc = bpak_get_meta_and_header(h,
-                                  meta_id,
-                                  part_ref_id,
-                                  &meta,
-                                  NULL,
-                                  &meta_header);
+    rc = bpak_get_meta(h, meta_id, part_ref_id, &meta_header);
+
+    if (rc == BPAK_OK) {
+        meta = bpak_get_meta_ptr(h, meta_header, void);
+    }
 
     if (rc != BPAK_OK || meta == NULL) {
         /* Create new meta data */
 
         rc = bpak_add_meta(h,
-                           (uint32_t)meta_id,
-                           (uint32_t)part_ref_id,
-                           (void **)&meta,
-                           length);
+                           (bpak_id_t)meta_id,
+                           (bpak_id_t)part_ref_id,
+                           length,
+                           &meta_header);
 
         if (rc != BPAK_OK) {
             PyErr_SetString(BPAKPackageError, "Could not add meta data");
             return NULL;
         }
+
+        meta = bpak_get_meta_ptr(h, meta_header, void);
 
         memcpy(meta, buffer, length);
 
@@ -424,17 +425,17 @@ static PyObject *package_read_string_meta(PyObject *self, PyObject *args)
         return NULL;
     }
 
-    rc = bpak_get_meta_and_header(h,
-                                  (uint32_t)meta_id,
-                                  (uint32_t)part_ref_id,
-                                  (void **)&meta_ptr,
-                                  NULL,
-                                  &meta_header);
+    rc = bpak_get_meta(h,
+                      (bpak_id_t)meta_id,
+                      (bpak_id_t)part_ref_id,
+                      &meta_header);
 
     if (rc != BPAK_OK) {
         PyErr_SetString(BPAKPackageError, "Error reading meta data");
         return NULL;
     }
+
+    meta_ptr = bpak_get_meta_ptr(h, meta_header, char);
 
     return Py_BuildValue("s", meta_ptr);
 }
@@ -457,17 +458,18 @@ static PyObject *package_read_uuid_meta(PyObject *self, PyObject *args)
         return NULL;
     }
 
-    rc = bpak_get_meta_and_header(h,
-                                  (uint32_t)meta_id,
-                                  (uint32_t)part_ref_id,
-                                  (void **)&meta_ptr,
-                                  NULL,
-                                  &meta_header);
+    rc = bpak_get_meta(h,
+                      (bpak_id_t)meta_id,
+                      (bpak_id_t)part_ref_id,
+                      &meta_header);
 
     if (rc != BPAK_OK) {
         PyErr_SetString(BPAKPackageError, "Error reading meta data");
         return NULL;
     }
+
+    meta_ptr = bpak_get_meta_ptr(h, meta_header, char);
+
     uuid_t raw_uuid;
     memcpy(raw_uuid, meta_ptr, 16);
     uuid_unparse(raw_uuid, result_uuid);
