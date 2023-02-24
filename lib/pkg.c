@@ -541,14 +541,6 @@ BPAK_EXPORT int bpak_pkg_delete_part(struct bpak_package *pkg,
         write_offset += chunk_read;
     }
 
-    p_offset = ftell(pkg->fp);
-
-    if ((long) p_offset == -1) {
-        bpak_printf(0, "%s: Error: Couldn't read file: %d\n",
-                    __func__, errno);
-        return -BPAK_READ_ERROR;
-    }
-
     rc = bpak_pkg_update_hash(pkg, NULL, NULL);
     if (rc != BPAK_OK) {
         bpak_printf(0, "%s: Error: Could not update payload hash\n", __func__);
@@ -563,7 +555,16 @@ BPAK_EXPORT int bpak_pkg_delete_part(struct bpak_package *pkg,
 
     fflush(pkg->fp);
 
-    if (ftruncate(fileno(pkg->fp), p_offset) != 0) {
+    size_t new_size = sizeof(struct bpak_header);
+
+    bpak_foreach_part(h, p) {
+        if (p->id == 0)
+            break;
+
+        new_size += bpak_part_size(p);
+    }
+
+    if (ftruncate(fileno(pkg->fp), new_size) != 0) {
         bpak_printf(0, "%s: Error: Couldn't truncate file: %s\n",
                     __func__, strerror(errno));
         return -BPAK_WRITE_ERROR;

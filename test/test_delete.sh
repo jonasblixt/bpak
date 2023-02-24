@@ -22,6 +22,7 @@ $BPAK --version
 IMG1=${TEST_NAME}1.bpak
 IMG2=${TEST_NAME}2.bpak
 IMG1c=${TEST_NAME}1copy.bpak
+IMG4=${TEST_NAME}4.bpak
 
 create_data ${TEST_NAME}_data1.bin 134
 create_data ${TEST_NAME}_data2.bin 76
@@ -91,3 +92,15 @@ then
     echo "Hash comparison failed $img1_hash != $img2_hash"
     exit 1
 fi
+
+# Test case 4, Remove all parts one by one from the end
+
+$BPAK create $IMG4 -Y $V
+
+$BPAK add $IMG4 --part test1 --from-file ${TEST_NAME}_data1.bin $V
+$BPAK add $IMG4 --part test2 --from-file ${TEST_NAME}_data2.bin $V
+
+$BPAK delete $IMG4 --part test2 $V
+$BPAK delete $IMG4 --part test1 $V
+$BPAK show $IMG4
+
