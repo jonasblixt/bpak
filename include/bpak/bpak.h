@@ -203,7 +203,7 @@ typedef void (*bpak_free_t)(void *);
 struct bpak_part_header {
     bpak_id_t id;            /*!< Part identifier */
     uint64_t size;           /*!< Data block size*/
-    uint64_t offset;         /*!< Offset in data stream */
+    uint64_t offset;         /*!< Offset in data decoded stream */
     uint64_t transport_size; /*!< Should be populated when part data is
                                 prepared for transport. With the encoded
                                 size */
