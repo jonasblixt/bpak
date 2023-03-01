@@ -5,12 +5,13 @@ srcdir = sys.argv[1] + "/test"
 sys.path.insert(0, "../python/")
 import bpak
 
-p = bpak.Package("py_create_package.bpak", "w")
-p.set_hash_kind(bpak.BPAK_HASH_SHA256)
-p.set_signature_kind(bpak.BPAK_SIGN_PRIME256v1)
-p.set_key_id(bpak.id('test-key-id'))
-p.set_keystore_id(bpak.id('test-keystore-id'))
-p.write_string_meta(bpak.id('bpak-version'), "1.0.1")
-print("Package version: \"" + p.read_string_meta(bpak.id("bpak-version")) + "\"")
 
-p.close()
+with bpak.Package("py_create_package.bpak", "w") as p:
+    p.hash_kind = bpak.HASH_SHA256
+    p.signature_kind = bpak.SIGN_PRIME256v1
+    p.key_id = bpak.id('test-key-id')
+    p.keystore_id = bpak.id('test-keystore-id')
+
+    p.add_meta(bpak.id('bpak-version'), data="1.0.1")
+
+    print(f"Package version: \"{p.get_meta(bpak.id('bpak-version')).as_string()}\"")

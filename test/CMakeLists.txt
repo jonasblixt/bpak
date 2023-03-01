@@ -66,10 +66,10 @@ endforeach()
 
 
 set(TEST_SCRIPT_PYTHON
-    test_python_transport.py
+    test_python_lib.py
     test_python_create_package.py
     test_python_meta.py
-    test_python_lib.py
+    test_python_transport.py
 )
 
 if (BPAK_BUILD_PYTHON_WRAPPER)
