@@ -146,7 +146,7 @@ int action_add(int argc, char **argv)
                 rc = -BPAK_NO_SPACE_LEFT;
                 goto err_close_pkg_out;
             }
-            strncpy(metadata_input, from_string, metadata_input_length);
+            strcpy(metadata_input, from_string);
         } else { /* File */
             FILE *meta_in_fp = fopen(from_file, "r");
             if (meta_in_fp == NULL) {
