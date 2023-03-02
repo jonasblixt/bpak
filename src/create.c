@@ -122,41 +122,32 @@ int action_create(int argc, char **argv)
         }
     }
 
-    FILE *fp = NULL;
-    struct bpak_header *h = NULL;
-    ;
+    struct bpak_package pkg;
 
-    h = malloc(sizeof(*h));
-    if (!h)
-        return -BPAK_FAILED;
+    rc = bpak_pkg_open(&pkg, filename, "wb");
 
-    memset(h, 0, sizeof(*h));
-
-    rc = bpak_init_header(h);
-
-    if (rc != BPAK_OK)
-        goto err_free_header_out;
-
-    h->hash_kind = hash_kind;
-    h->signature_kind = signature_kind;
-
-    fp = fopen(filename, "wb");
-
-    if (fp == NULL) {
-        rc = -BPAK_FILE_NOT_FOUND;
-        goto err_free_header_out;
+    if (rc != 0) {
+        fprintf(stderr, "Could not open file (%i)\n", rc);
+        return rc;
     }
 
-    size_t written = fwrite(h, 1, sizeof(*h), fp);
+    bpak_init_header(&pkg.header);
+    pkg.header.hash_kind = hash_kind;
+    pkg.header.signature_kind = signature_kind;
 
-    if (written != sizeof(*h)) {
-        rc = -BPAK_WRITE_ERROR;
-        goto err_close_io_out;
+    rc = bpak_pkg_update_hash(&pkg, NULL, NULL);
+    if (rc != BPAK_OK) {
+        bpak_printf(0, "%s: Error: Could not update payload hash\n", __func__);
+        goto err_close_pkg_out;
     }
 
-err_close_io_out:
-    fclose(fp);
-err_free_header_out:
-    free(h);
+    rc = bpak_pkg_write_header(&pkg);
+    if (rc != BPAK_OK) {
+        bpak_printf(0, "%s: Error: Could not write header\n", __func__);
+        goto err_close_pkg_out;
+    }
+
+err_close_pkg_out:
+    bpak_pkg_close(&pkg);
     return rc;
 }
