@@ -56,6 +56,7 @@ set(TEST_SCRIPTS
     test_transport6.sh
     test_transport_lzma.sh
     test_delete.sh
+    test_add_meta.sh
 )
 
 foreach(test_script IN LISTS TEST_SCRIPTS)
