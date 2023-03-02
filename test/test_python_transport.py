@@ -13,12 +13,12 @@ print(f"srcdir: {srcdir}")
 # Call prepare script
 assert os.system(f"{srcdir}/test_python_transport_prepare.sh {srcdir}") == 0
 
-from_pkg = bpak.Package("test_python_transport_A.bpak", "rb+")
-print("From pkg: " + str(from_pkg))
+with bpak.Package("test_python_transport_A.bpak", "rb+") as origin_pkg, \
+     bpak.Package("test_python_transport_B.bpak", "rb+") as target_pkg, \
+     bpak.Package("test_python_transport_patch.bpak", "wb+") as patch_pkg:
 
-to_pkg = bpak.Package("test_python_transport_B.bpak", "rb+")
-print("To pkg: " + str(to_pkg))
+    print("Origin pkg: " + str(origin_pkg))
+    print("Target pkg: " + str(target_pkg))
+    print("Patch pkg: " + str(patch_pkg))
 
-patch_pkg = bpak.Package("test_python_transport_patch.bpak", "wb+")
-
-to_pkg.transport_encode(from_pkg, patch_pkg)
+    bpak.transport_encode(target_pkg, patch_pkg, origin_pkg)

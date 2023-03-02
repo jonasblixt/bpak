@@ -7,13 +7,9 @@ find_package(Python 3.6 REQUIRED
 add_library(
     ${PROJECT_NAME}-python-wrapper SHARED
     python_wrapper.c
-    ${${PROJECT_NAME}_SOURCE_DIR}/ext/uuid/unpack.c
-    ${${PROJECT_NAME}_SOURCE_DIR}/ext/uuid/unparse.c
-    ${${PROJECT_NAME}_SOURCE_DIR}/ext/uuid/clear.c
-    ${${PROJECT_NAME}_SOURCE_DIR}/ext/uuid/compare.c
-    ${${PROJECT_NAME}_SOURCE_DIR}/ext/uuid/pack.c
-    ${${PROJECT_NAME}_SOURCE_DIR}/ext/uuid/parse.c
-    ${${PROJECT_NAME}_SOURCE_DIR}/ext/uuid/isnull.c
+    package.c
+    meta.c
+    part.c
 )
 
 target_include_directories(${PROJECT_NAME}-python-wrapper PRIVATE
@@ -33,7 +29,6 @@ set_target_properties(${PROJECT_NAME}-python-wrapper
 
 target_compile_options(${PROJECT_NAME}-python-wrapper PRIVATE
     -Wextra -pedantic
-    -I${${PROJECT_NAME}_SOURCE_DIR}/ext/uuid
     -I${${PROJECT_NAME}_BINARY_DIR}/lib/
 )
 
