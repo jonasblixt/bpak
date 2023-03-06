@@ -21,6 +21,8 @@ enable_language(C)
 enable_testing()
 set(CMAKE_C_STANDARD 99)
 
+find_package(PkgConfig REQUIRED)
+
 add_compile_options(-Wall -Werror)
 include_directories(include/)
 

@@ -1,8 +1,6 @@
 include(GNUInstallDirs)
 
-find_package(Python 3.6 REQUIRED
-    COMPONENTS Interpreter Development
-)
+pkg_check_modules(PYTHON REQUIRED python3)
 
 add_library(
     ${PROJECT_NAME}-python-wrapper SHARED
@@ -14,11 +12,10 @@ add_library(
 
 target_include_directories(${PROJECT_NAME}-python-wrapper PRIVATE
     ${CMAKE_SOURCE_DIR}/include
-    ${Python_INCLUDE_DIRS}
 )
 
 target_link_libraries(${PROJECT_NAME}-python-wrapper
-    ${Python_LIBRARIES}
+    ${PYTHON_LDFLAGS}
     ${PROJECT_NAME}
 )
 
@@ -30,6 +27,7 @@ set_target_properties(${PROJECT_NAME}-python-wrapper
 target_compile_options(${PROJECT_NAME}-python-wrapper PRIVATE
     -Wextra -pedantic
     -I${${PROJECT_NAME}_BINARY_DIR}/lib/
+    ${PYTHON_CFLAGS}
 )
 
 set_target_properties(${PROJECT_NAME}-python-wrapper PROPERTIES PREFIX "")
