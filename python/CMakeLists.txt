@@ -1,6 +1,6 @@
 include(GNUInstallDirs)
 
-find_package(Python 3.6 REQUIRED
+find_package(Python 3.6
     COMPONENTS Interpreter Development
 )
 
@@ -35,7 +35,3 @@ target_compile_options(${PROJECT_NAME}-python-wrapper PRIVATE
 set_target_properties(${PROJECT_NAME}-python-wrapper PROPERTIES PREFIX "")
 set_target_properties(${PROJECT_NAME}-python-wrapper
     PROPERTIES OUTPUT_NAME ${PROJECT_NAME})
-
-install(TARGETS ${PROJECT_NAME}-python-wrapper
-    LIBRARY DESTINATION ${Python_SITELIB}
-)

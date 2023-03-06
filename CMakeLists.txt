@@ -21,12 +21,13 @@ enable_language(C)
 enable_testing()
 set(CMAKE_C_STANDARD 99)
 
+find_package(PkgConfig REQUIRED)
+
 add_compile_options(-Wall -Werror)
 include_directories(include/)
 
 option(BPAK_BUILD_MINIMAL "Build a minial version of the library" OFF)
 option(BPAK_BUILD_TOOL "Build the bpak tool" ON)
-option(BPAK_BUILD_PYTHON_WRAPPER "Build the python wrapper" ON)
 option(BPAK_BUILD_TESTS "Build test cases" OFF)
 
 # TODO: Choice option for BPAK_CRYPTO_BACKEND
@@ -45,6 +46,7 @@ else()
 endif()
 
 if (BPAK_BUILD_TESTS)
+    add_subdirectory("python")
     add_subdirectory("test")
     add_compile_options(-g -fprofile-arcs -ftest-coverage -fstack-usage)
     link_libraries(gcov)
@@ -54,8 +56,4 @@ add_subdirectory("lib")
 
 if ((NOT BPAK_BUILD_MINIMAL) AND BPAK_BUILD_TOOL)
     add_subdirectory("src")
-endif()
-
-if ((NOT BPAK_BUILD_MINIMAL) AND BPAK_BUILD_PYTHON_WRAPPER)
-    add_subdirectory("python")
 endif()
