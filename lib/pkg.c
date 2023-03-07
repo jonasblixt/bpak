@@ -46,8 +46,29 @@ BPAK_EXPORT int bpak_pkg_open(struct bpak_package *pkg, const char *filename,
 
     size_t read_bytes = fread(&pkg->header, 1, sizeof(pkg->header), pkg->fp);
 
+    /* Initialize and write BPAK header when new files are created */
     if (read_bytes != sizeof(pkg->header)) {
-        goto skip_header;
+        rc = bpak_init_header(&pkg->header);
+        if (rc != BPAK_OK) {
+            goto err_close_io;
+        }
+
+        rc = bpak_pkg_update_hash(pkg, NULL, NULL);
+        if (rc != BPAK_OK) {
+            goto err_close_io;
+        }
+
+        size_t written_bytes = fwrite(&pkg->header, 1, sizeof(pkg->header), pkg->fp);
+        if (written_bytes != sizeof(pkg->header)) {
+            bpak_printf(0, "Could not write header to empty file %s\n", filename);
+            rc = -BPAK_WRITE_ERROR;
+            goto err_close_io;
+        }
+
+        if (fseek(pkg->fp, 0, SEEK_SET) != 0) {
+            rc = -BPAK_SEEK_ERROR;
+            goto err_close_io;
+        }
     }
 
     rc = bpak_valid_header(&pkg->header);
@@ -56,7 +77,6 @@ BPAK_EXPORT int bpak_pkg_open(struct bpak_package *pkg, const char *filename,
         goto err_close_io;
     }
 
-skip_header:
     if (fseek(pkg->fp, 0, SEEK_SET) != 0) {
         rc = -BPAK_SEEK_ERROR;
         goto err_close_io;
