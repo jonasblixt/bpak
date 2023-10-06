@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <getopt.h>
+#include <inttypes.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <bpak/bpak.h>
@@ -181,7 +182,7 @@ int action_generate(int argc, char **argv)
 
             printf("{\n");
             printf("    .id = 0x%x,\n", p->id);
-            printf("    .size = %li,\n", p->size);
+            printf("    .size = %"PRIu64",\n", p->size);
 
             if (fseek(fp, p->offset, SEEK_SET) != 0) {
                 rc = -BPAK_SEEK_ERROR;

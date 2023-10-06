@@ -218,7 +218,7 @@ BPAK_EXPORT int bpak_merkle_finish(struct bpak_merkle_context *ctx,
         input_offset = ctx->level_offset[i - 1];
         output_offset = ctx->level_offset[i];
 
-        for (unsigned int n = 0; n < input_block_count; n++) {
+        for (int n = 0; n < input_block_count; n++) {
             bpak_printf(2, "Computing block %i on level %i\n", n, i);
             rc = bpak_hash_init(&ctx->running_hash, BPAK_HASH_SHA256);
             if (rc != BPAK_OK)

@@ -123,7 +123,7 @@ process_more:
 
         ctx->origin_position += nread;
 
-        for (unsigned int i = 0; i < data_to_process; i++) {
+        for (int i = 0; i < data_to_process; i++) {
             ctx->patch_buffer[i] += pp[i];
         }
 

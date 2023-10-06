@@ -14,6 +14,7 @@
 #include <unistd.h>
 #include <getopt.h>
 #include <errno.h>
+#include <inttypes.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <bpak/pkg.h>
@@ -224,7 +225,7 @@ int action_add(int argc, char **argv)
                 memcpy(meta_data, &value, sizeof(value));
 
                 if (bpak_get_verbosity()) {
-                    printf("Adding %s <0x%lx>\n", meta_name, value);
+                    printf("Adding %s <0x%"PRIx64">\n", meta_name, value);
                 }
             } else if (strcmp(encoder, "id") == 0) {
                 bpak_id_t value = bpak_id(metadata_input);

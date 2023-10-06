@@ -13,6 +13,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <getopt.h>
+#include <inttypes.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <bpak/pkg.h>
@@ -147,7 +148,7 @@ int action_show(int argc, char **argv)
 
         bpak_foreach_part (h, p) {
             if (p->id == part_id) {
-                printf("Found 0x%x, %li bytes\n", p->id, p->size);
+                printf("Found 0x%x, %"PRIu64" bytes\n", p->id, p->size);
                 rc = BPAK_OK;
                 break;
             }
@@ -241,16 +242,16 @@ int action_show(int argc, char **argv)
             else
                 flags_str[1] = '-';
 
-            printf("    %8.8x   %-12lu %-3u    %s",
+            printf("    %8.8x   %-12"PRIu64" %-3u    %s",
                    p->id,
                    p->size,
                    p->pad_bytes,
                    flags_str);
 
             if (p->flags & BPAK_FLAG_TRANSPORT)
-                printf("       %-12lu", p->transport_size);
+                printf("       %-12"PRIu64, p->transport_size);
             else
-                printf("       %-12lu", p->size);
+                printf("       %-12"PRIu64, p->size);
 
             printf("\n");
         }
@@ -289,12 +290,12 @@ int action_show(int argc, char **argv)
             no_of_meta_headers++;
         }
 
-        printf("Metadata usage: %i/%li bytes\n",
+        printf("Metadata usage: %i/%zu bytes\n",
                meta_size,
                sizeof(h->metadata));
 
-        printf("Transport size: %li bytes\n", bpak_pkg_size(&pkg));
-        printf("Installed size: %li bytes\n", bpak_pkg_installed_size(&pkg));
+        printf("Transport size: %zu bytes\n", bpak_pkg_size(&pkg));
+        printf("Installed size: %zu bytes\n", bpak_pkg_installed_size(&pkg));
     }
 err_pkg_close:
     bpak_pkg_close(&pkg);

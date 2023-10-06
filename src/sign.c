@@ -96,7 +96,7 @@ int action_sign(int argc, char **argv)
 
         fclose(sig_fp);
         if (bpak_get_verbosity()) {
-            printf("Loaded signature %li bytes\n", size);
+            printf("Loaded signature %zu bytes\n", size);
         }
 
         rc = bpak_pkg_write_raw_signature(&pkg, (uint8_t *)sig, size);

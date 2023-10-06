@@ -12,6 +12,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <inttypes.h>
 #include <getopt.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -294,16 +295,16 @@ int action_compare(int argc, char **argv)
             else
                 flags_str[1] = '-';
 
-            printf("   %8.8x   %-12lu %-3u    %s",
+            printf("   %8.8x   %-12"PRIu64" %-3u    %s",
                    p->id,
                    p->size,
                    p->pad_bytes,
                    flags_str);
 
             if (p->flags & BPAK_FLAG_TRANSPORT)
-                printf("       %-12lu", p->transport_size);
+                printf("       %-12"PRIu64, p->transport_size);
             else
-                printf("       %-12lu", p->size);
+                printf("       %-12"PRIu64, p->size);
 
             printf("\n");
             printf(NO_CLR);
@@ -329,16 +330,16 @@ int action_compare(int argc, char **argv)
                 else
                     flags_str[1] = '-';
 
-                printf("   %8.8x   %-12lu %-3u    %s",
+                printf("   %8.8x   %-12"PRIu64" %-3u    %s",
                        p->id,
                        p->size,
                        p->pad_bytes,
                        flags_str);
 
                 if (p->flags & BPAK_FLAG_TRANSPORT)
-                    printf("       %-12lu", p->transport_size);
+                    printf("       %-12"PRIu64, p->transport_size);
                 else
-                    printf("       %-12lu", p->size);
+                    printf("       %-12"PRIu64, p->size);
 
                 printf("\n");
                 printf(NO_CLR);

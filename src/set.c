@@ -126,7 +126,7 @@ int action_set(int argc, char **argv)
 
     if (read_bytes != sizeof(*h)) {
         rc = -BPAK_READ_ERROR;
-        fprintf(stderr, "Error: Could not read header %li\n", read_bytes);
+        fprintf(stderr, "Error: Could not read header %zu\n", read_bytes);
         goto err_close_fp_out;
     }
 
