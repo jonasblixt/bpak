@@ -222,7 +222,7 @@ BPAK_EXPORT int bpak_verify_merkle_tree(bpak_io_t read_payload,
 
     if (memcmp(calculated_root_hash,
                expected_root_hash,
-               sizeof(*expected_root_hash)) != 0) {
+               BPAK_MERKLE_HASH_BYTES) != 0) {
         return -BPAK_BAD_ROOT_HASH;
     }
 
