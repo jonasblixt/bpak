@@ -21,4 +21,5 @@ template*
 *.bak
 cov-int/
 __pycache__
+*.egg-info/
 tags

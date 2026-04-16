@@ -4,21 +4,33 @@
 Building and installing
 -----------------------
 
-The library depends on mbedtls and liblzma
+The library depends on mbedtls and liblzma.
 
-Build library and tool::
+Install Python module
+---------------------
 
-    $ cmake
+::
+
+    $ pip install .
+
+This compiles the library and Python extension from source. Requires
+``libmbedtls-dev`` and ``liblzma-dev`` (or equivalent) installed on the
+system.
+
+Build C library and tool
+------------------------
+
+::
+
+    $ mkdir build && cd build
+    $ cmake ..
     $ make
     $ sudo make install
 
-Optionally build with python support::
-
-    $ cmake -DBPAK_BUILD_PYTHON_WRAPPER=1
-
 Running tests::
 
-    $ cmake -DBPAK_BUILD_TESTS=1
+    $ mkdir build && cd build
+    $ cmake .. -DBPAK_BUILD_TESTS=1
     $ make && make test
 
 
@@ -29,12 +41,11 @@ cmake configure options
 Option                       Description
 ===========================  ====================================================
 BPAK_BUILD_MINIMAL           Build a minimal version of the library
-BPAK_BUILD_PYTHON_WRAPPER    Build the python wrapper
+BPAK_BUILD_TOOL              Build the bpak command-line tool (default: ON)
 BPAK_BUILD_TESTS             Build tests
 ===========================  ====================================================
 
-The default setting is that everything is enabled except the python wrapper and
-the tests.
+The default setting builds the library and tool. Tests are disabled by default.
 
 
 Build settings
