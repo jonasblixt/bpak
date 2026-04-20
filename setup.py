@@ -63,9 +63,11 @@ setup(
         "License :: OSI Approved :: BSD License",
         "Programming Language :: Python :: 3",
     ],
+    packages=["bpak"],
+    package_dir={"bpak": "python/bpak"},
     ext_modules=[
         Extension(
-            name="bpak",
+            name="bpak._bpak",
             sources=_wrapper_sources + _lib_sources,
             include_dirs=["include", "ext/uuid", "python"],
             define_macros=[("BPAK_HAVE_USER_SETTINGS", "1")],
@@ -73,4 +75,8 @@ setup(
             extra_compile_args=["-fvisibility=hidden"],
         )
     ],
+    install_requires=["click>=8.0"],
+    entry_points={
+        "console_scripts": ["bpak=bpak.__main__:cli"],
+    },
 )
