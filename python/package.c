@@ -6,6 +6,7 @@
 #include <bpak/pkg.h>
 #include <bpak/id.h>
 #include <bpak/crypto.h>
+#include <bpak/keystore.h>
 
 #include "python_wrapper.h"
 
@@ -173,7 +174,7 @@ static PyObject *package_sign(PyObject *self, PyObject *args, PyObject *kwds)
 
 static PyObject *package_add_file(PyObject *self, PyObject *args, PyObject *kwds)
 {
-    static char *kwlist[] = {"part_name", "filename", "with_merkle_tree", NULL};
+    static char *kwlist[] = {"part_name", "filename", "with_merkle_tree", "flags", NULL};
     BPAKPackage *package = (BPAKPackage *)self;
     struct bpak_header *h = bpak_pkg_header(&package->pkg);
     struct bpak_part_header *part;
@@ -181,15 +182,17 @@ static PyObject *package_add_file(PyObject *self, PyObject *args, PyObject *kwds
     const char *part_name = NULL;
     PyObject *filename;
     int with_merkle_tree = 0;
+    unsigned int flags = 0;
 
     rc = PyArg_ParseTupleAndKeywords(args,
                                      kwds,
-                                     "sO&|p:add_file",
+                                     "sO&|pI:add_file",
                                      kwlist,
                                      &part_name,
                                      &PyUnicode_FSDecoder,
                                      &filename,
-                                     &with_merkle_tree);
+                                     &with_merkle_tree,
+                                     &flags);
 
     if (!rc) {
         return NULL;
@@ -202,10 +205,10 @@ static PyObject *package_add_file(PyObject *self, PyObject *args, PyObject *kwds
 
     if (with_merkle_tree) {
         rc = bpak_pkg_add_file_with_merkle_tree(&package->pkg,
-                PyBytes_AsString(filename_ascii), part_name, 0);
+                PyBytes_AsString(filename_ascii), part_name, (uint8_t)flags);
     } else {
         rc = bpak_pkg_add_file(&package->pkg, PyBytes_AsString(filename_ascii),
-                part_name, 0);
+                part_name, (uint8_t)flags);
     }
 
     Py_DECREF(filename_ascii);
@@ -226,21 +229,23 @@ static PyObject *package_add_file(PyObject *self, PyObject *args, PyObject *kwds
 
 static PyObject *package_add_key(PyObject *self, PyObject *args, PyObject *kwds)
 {
-    static char *kwlist[] = {"part_name", "filename", NULL};
+    static char *kwlist[] = {"part_name", "filename", "flags", NULL};
     BPAKPackage *package = (BPAKPackage *)self;
     struct bpak_header *h = bpak_pkg_header(&package->pkg);
     struct bpak_part_header *part;
     int rc;
     const char *part_name = NULL;
     PyObject *filename;
+    unsigned int flags = 0;
 
     rc = PyArg_ParseTupleAndKeywords(args,
                                      kwds,
-                                     "sO&:add_key",
+                                     "sO&|I:add_key",
                                      kwlist,
                                      &part_name,
                                      &PyUnicode_FSDecoder,
-                                     &filename);
+                                     &filename,
+                                     &flags);
 
     if (!rc) {
         return NULL;
@@ -251,8 +256,8 @@ static PyObject *package_add_key(PyObject *self, PyObject *args, PyObject *kwds)
         return NULL;
     }
 
-
-    rc = bpak_pkg_add_key(&package->pkg, PyBytes_AsString(filename_ascii), part_name, 0);
+    rc = bpak_pkg_add_key(&package->pkg, PyBytes_AsString(filename_ascii),
+                           part_name, (uint8_t)flags);
 
     Py_DECREF(filename_ascii);
 
@@ -331,7 +336,20 @@ static PyObject *package_add_meta(PyObject *self, PyObject *args, PyObject *kwds
         }
     }
 
-    rc = bpak_add_meta(h, meta_id, part_ref, size, &meta);
+    if (size > BPAK_METADATA_BYTES) {
+        PyErr_Format(PyExc_ValueError,
+                     "metadata size %zd exceeds maximum %d bytes",
+                     size, BPAK_METADATA_BYTES);
+        goto err_out;
+    }
+
+    if (size > UINT16_MAX) {
+        PyErr_Format(PyExc_ValueError,
+                     "metadata size %zd exceeds uint16 maximum", size);
+        goto err_out;
+    }
+
+    rc = bpak_add_meta(h, meta_id, part_ref, (uint16_t)size, &meta);
     if (rc != BPAK_OK) {
         PyErr_Format(BPAKPackageError, "failed to add metadata: %s",
                 bpak_error_string(rc));
@@ -368,6 +386,135 @@ err_out:
     }
 
     return NULL;
+}
+
+static PyObject *package_extract_file(PyObject *self, PyObject *args,
+                                      PyObject *kwds)
+{
+    static char *kwlist[] = {"part_id", "filename", NULL};
+    BPAKPackage *package = (BPAKPackage *)self;
+    int rc;
+    bpak_id_t part_id;
+    PyObject *filename;
+
+    rc = PyArg_ParseTupleAndKeywords(args, kwds, "IO&:extract_file", kwlist,
+                                     &part_id, &PyUnicode_FSDecoder, &filename);
+    if (!rc) {
+        return NULL;
+    }
+
+    PyObject *filename_ascii = PyUnicode_AsASCIIString(filename);
+    if (!filename_ascii) {
+        return NULL;
+    }
+
+    rc = bpak_pkg_extract_file(&package->pkg, part_id,
+                               PyBytes_AsString(filename_ascii));
+
+    Py_DECREF(filename_ascii);
+
+    if (rc != BPAK_OK) {
+        return PyErr_Format(BPAKPackageError, "failed to extract file: %s",
+                            bpak_error_string(rc));
+    }
+
+    Py_RETURN_NONE;
+}
+
+static PyObject *package_delete_all_parts(PyObject *self, PyObject *args,
+                                          PyObject *kwds)
+{
+    static char *kwlist[] = {"keep_meta", NULL};
+    BPAKPackage *package = (BPAKPackage *)self;
+    int rc;
+    int keep_meta = 0;
+
+    rc = PyArg_ParseTupleAndKeywords(args, kwds, "|p:delete_all_parts",
+                                     kwlist, &keep_meta);
+    if (!rc) {
+        return NULL;
+    }
+
+    rc = bpak_pkg_delete_all_parts(&package->pkg, !keep_meta);
+    if (rc != BPAK_OK) {
+        return PyErr_Format(BPAKPackageError,
+                            "failed to delete all parts: %s",
+                            bpak_error_string(rc));
+    }
+
+    Py_RETURN_NONE;
+}
+
+static PyObject *package_part_sha256(PyObject *self, PyObject *args,
+                                     PyObject *kwds)
+{
+    static char *kwlist[] = {"part_id", NULL};
+    BPAKPackage *package = (BPAKPackage *)self;
+    int rc;
+    bpak_id_t part_id;
+    uint8_t hash_buffer[32];
+
+    rc = PyArg_ParseTupleAndKeywords(args, kwds, "I:part_sha256", kwlist,
+                                     &part_id);
+    if (!rc) {
+        return NULL;
+    }
+
+    rc = bpak_pkg_part_sha256(&package->pkg, hash_buffer, sizeof(hash_buffer),
+                              part_id);
+    if (rc != BPAK_OK) {
+        return PyErr_Format(BPAKPackageError,
+                            "failed to compute part sha256: %s",
+                            bpak_error_string(rc));
+    }
+
+    return PyBytes_FromStringAndSize((char *)hash_buffer, sizeof(hash_buffer));
+}
+
+static PyObject *package_verify_with_keystore(PyObject *self, PyObject *args,
+                                              PyObject *kwds)
+{
+    static char *kwlist[] = {"keystore_path", NULL};
+    BPAKPackage *package = (BPAKPackage *)self;
+    int rc;
+    PyObject *ks_filename;
+    struct bpak_key *key = NULL;
+    struct bpak_header *h = bpak_pkg_header(&package->pkg);
+
+    rc = PyArg_ParseTupleAndKeywords(args, kwds, "O&:verify_with_keystore",
+                                     kwlist, &PyUnicode_FSDecoder,
+                                     &ks_filename);
+    if (!rc) {
+        return NULL;
+    }
+
+    PyObject *filename_ascii = PyUnicode_AsASCIIString(ks_filename);
+    if (!filename_ascii) {
+        return NULL;
+    }
+
+    rc = bpak_keystore_load_key_from_file(PyBytes_AsString(filename_ascii),
+                                          h->keystore_id, h->key_id,
+                                          NULL, NULL, &key);
+
+    Py_DECREF(filename_ascii);
+
+    if (rc != BPAK_OK) {
+        return PyErr_Format(BPAKPackageError,
+                            "could not load key from keystore: %s",
+                            bpak_error_string(rc));
+    }
+
+    rc = bpak_pkg_verify(&package->pkg, key);
+
+    free(key);
+
+    if (rc != BPAK_OK) {
+        return PyErr_Format(BPAKPackageError, "verification failed: %s",
+                            bpak_error_string(rc));
+    }
+
+    Py_RETURN_TRUE;
 }
 
 static PyObject *package_get_part(PyObject *self, PyObject *args, PyObject *kwds)
@@ -614,6 +761,13 @@ static int package_set_signature(PyObject *self, PyObject *value,
         return -1;
     }
 
+    if (signature_sz > BPAK_SIGNATURE_MAX_BYTES) {
+        PyErr_Format(PyExc_ValueError,
+                     "signature size %zd exceeds maximum %d bytes",
+                     signature_sz, BPAK_SIGNATURE_MAX_BYTES);
+        return -1;
+    }
+
     rc = bpak_pkg_write_raw_signature(&package->pkg,
                                       signature_data,
                                       signature_sz);
@@ -803,6 +957,26 @@ static PyMethodDef package_methods[] = {
      (PyCFunction)(void (*)(void))package_get_meta,
      METH_VARARGS | METH_KEYWORDS,
      "Get a reference to a specific metadata object"},
+
+    {"extract_file",
+     (PyCFunction)(void (*)(void))package_extract_file,
+     METH_VARARGS | METH_KEYWORDS,
+     "Extract a part to a file"},
+
+    {"delete_all_parts",
+     (PyCFunction)(void (*)(void))package_delete_all_parts,
+     METH_VARARGS | METH_KEYWORDS,
+     "Delete all parts from the package"},
+
+    {"part_sha256",
+     (PyCFunction)(void (*)(void))package_part_sha256,
+     METH_VARARGS | METH_KEYWORDS,
+     "Compute SHA256 hash of a part"},
+
+    {"verify_with_keystore",
+     (PyCFunction)(void (*)(void))package_verify_with_keystore,
+     METH_VARARGS | METH_KEYWORDS,
+     "Verify package using a keystore bpak file"},
 
     /* For context manager use */
     {"__enter__",

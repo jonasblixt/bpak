@@ -191,12 +191,70 @@ static PyObject *part_read_data(PyObject *self, PyObject *Py_UNUSED(ignored))
     return bytes;
 }
 
-static PyObject *part_delete(PyObject *self, PyObject *Py_UNUSED(ignored))
+static PyObject *part_get_flags(PyObject *self, void *closure)
+{
+    (void)closure;
+    BPAKPart *part = (BPAKPart *)self;
+    struct bpak_header *h = bpak_pkg_header(&part->package->pkg);
+    struct bpak_part_header *p;
+    int rc = 0;
+
+    rc = bpak_get_part(h, part->part_id, &p);
+    if (rc != BPAK_OK) {
+        return PyErr_Format(PyExc_KeyError, "failed to get partition: %s",
+                bpak_error_string(rc));
+    }
+
+    return PyLong_FromLong(p->flags);
+}
+
+static PyObject *part_get_transport_size(PyObject *self, void *closure)
+{
+    (void)closure;
+    BPAKPart *part = (BPAKPart *)self;
+    struct bpak_header *h = bpak_pkg_header(&part->package->pkg);
+    struct bpak_part_header *p;
+    int rc = 0;
+
+    rc = bpak_get_part(h, part->part_id, &p);
+    if (rc != BPAK_OK) {
+        return PyErr_Format(PyExc_KeyError, "failed to get partition: %s",
+                bpak_error_string(rc));
+    }
+
+    return PyLong_FromUnsignedLongLong(p->transport_size);
+}
+
+static PyObject *part_get_pad_bytes(PyObject *self, void *closure)
+{
+    (void)closure;
+    BPAKPart *part = (BPAKPart *)self;
+    struct bpak_header *h = bpak_pkg_header(&part->package->pkg);
+    struct bpak_part_header *p;
+    int rc = 0;
+
+    rc = bpak_get_part(h, part->part_id, &p);
+    if (rc != BPAK_OK) {
+        return PyErr_Format(PyExc_KeyError, "failed to get partition: %s",
+                bpak_error_string(rc));
+    }
+
+    return PyLong_FromLong(p->pad_bytes);
+}
+
+static PyObject *part_delete(PyObject *self, PyObject *args, PyObject *kwds)
 {
     BPAKPart *part = (BPAKPart *)self;
     int rc;
+    int keep_meta = 0;
+    static char *kwlist[] = {"keep_meta", NULL};
 
-    rc = bpak_pkg_delete_part(&part->package->pkg, part->part_id, true);
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "|p:delete", kwlist,
+                                     &keep_meta)) {
+        return NULL;
+    }
+
+    rc = bpak_pkg_delete_part(&part->package->pkg, part->part_id, !keep_meta);
     if (rc != BPAK_OK) {
         return PyErr_Format(BPAKPackageError, "failed to delete part: %s",
                 bpak_error_string(rc));
@@ -213,8 +271,8 @@ static PyMethodDef part_methods[] = {
 
     {"delete",
      (PyCFunction)(void (*)(void))part_delete,
-     METH_NOARGS,
-     "Delete part from package"},
+     METH_VARARGS | METH_KEYWORDS,
+     "Delete part from package. Optional keep_meta=True to preserve metadata."},
 
     {NULL}
 };
@@ -242,6 +300,24 @@ static PyGetSetDef part_getset[] = {
      (getter)part_is_transport_encoded,
      (setter)NULL,
      "If part is transport encoded",
+     NULL},
+
+    {"flags",
+     (getter)part_get_flags,
+     (setter)NULL,
+     "Part flags byte",
+     NULL},
+
+    {"transport_size",
+     (getter)part_get_transport_size,
+     (setter)NULL,
+     "Part transport size in bytes",
+     NULL},
+
+    {"pad_bytes",
+     (getter)part_get_pad_bytes,
+     (setter)NULL,
+     "Part padding bytes",
      NULL},
 
     {NULL}

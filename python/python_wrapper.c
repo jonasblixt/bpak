@@ -7,6 +7,8 @@
 #include <bpak/pkg.h>
 #include <bpak/utils.h>
 #include <bpak/id.h>
+#include <bpak/crypto.h>
+#include <bpak/key.h>
 
 #include "python_wrapper.h"
 
@@ -132,6 +134,167 @@ static PyObject *m_transport_decode(PyObject *self, PyObject *args,
 }
 
 
+static PyObject *m_hash_kind_str(PyObject *module, PyObject *args,
+                                 PyObject *kwds)
+{
+    (void)module;
+    int rc;
+    static char *kwlist[] = {"kind", NULL};
+    unsigned int kind;
+
+    rc = PyArg_ParseTupleAndKeywords(args, kwds, "I:hash_kind_str", kwlist,
+                                     &kind);
+    if (!rc) {
+        return NULL;
+    }
+
+    const char *s = bpak_hash_kind((uint8_t)kind);
+    return PyUnicode_FromString(s);
+}
+
+static PyObject *m_signature_kind_str(PyObject *module, PyObject *args,
+                                      PyObject *kwds)
+{
+    (void)module;
+    int rc;
+    static char *kwlist[] = {"kind", NULL};
+    unsigned int kind;
+
+    rc = PyArg_ParseTupleAndKeywords(args, kwds, "I:signature_kind_str",
+                                     kwlist, &kind);
+    if (!rc) {
+        return NULL;
+    }
+
+    const char *s = bpak_signature_kind((uint8_t)kind);
+    return PyUnicode_FromString(s);
+}
+
+static PyObject *m_id_to_string(PyObject *module, PyObject *args,
+                                PyObject *kwds)
+{
+    (void)module;
+    int rc;
+    static char *kwlist[] = {"id", NULL};
+    unsigned int id;
+
+    rc = PyArg_ParseTupleAndKeywords(args, kwds, "I:id_to_string", kwlist,
+                                     &id);
+    if (!rc) {
+        return NULL;
+    }
+
+    const char *s = bpak_id_to_string((bpak_id_t)id);
+    if (s == NULL) {
+        Py_RETURN_NONE;
+    }
+
+    return PyUnicode_FromString(s);
+}
+
+static PyObject *m_meta_to_string(PyObject *module, PyObject *args,
+                                  PyObject *kwds)
+{
+    (void)module;
+    int rc;
+    static char *kwlist[] = {"package", "meta", NULL};
+    BPAKPackage *package = NULL;
+    BPAKMeta *meta_obj = NULL;
+
+    rc = PyArg_ParseTupleAndKeywords(args, kwds, "O!O!:meta_to_string",
+                                     kwlist,
+                                     &BPAKPackageType, &package,
+                                     &BPAKMetaType, &meta_obj);
+    if (!rc) {
+        return NULL;
+    }
+
+    struct bpak_header *h = bpak_pkg_header(&package->pkg);
+    struct bpak_meta_header *m;
+
+    rc = bpak_get_meta(h, meta_obj->meta_id, meta_obj->part_ref, &m);
+    if (rc != BPAK_OK) {
+        return PyErr_Format(PyExc_KeyError, "failed to get meta: %s",
+                            bpak_error_string(rc));
+    }
+
+    char buf[256];
+    rc = bpak_meta_to_string(h, m, buf, sizeof(buf));
+    if (rc != BPAK_OK) {
+        Py_RETURN_NONE;
+    }
+
+    return PyUnicode_FromString(buf);
+}
+
+static PyObject *m_add_transport_meta(PyObject *module, PyObject *args,
+                                      PyObject *kwds)
+{
+    (void)module;
+    int rc;
+    static char *kwlist[] = {"package", "part_id", "encoder_id", "decoder_id",
+                             NULL};
+    BPAKPackage *package = NULL;
+    unsigned int part_id;
+    unsigned int encoder_id;
+    unsigned int decoder_id;
+
+    rc = PyArg_ParseTupleAndKeywords(args, kwds, "O!III:add_transport_meta",
+                                     kwlist,
+                                     &BPAKPackageType, &package,
+                                     &part_id, &encoder_id, &decoder_id);
+    if (!rc) {
+        return NULL;
+    }
+
+    struct bpak_header *h = bpak_pkg_header(&package->pkg);
+
+    rc = bpak_add_transport_meta(h, (bpak_id_t)part_id,
+                                 (uint32_t)encoder_id, (uint32_t)decoder_id);
+    if (rc != BPAK_OK) {
+        return PyErr_Format(BPAKPackageError,
+                            "failed to add transport metadata: %s",
+                            bpak_error_string(rc));
+    }
+
+    rc = package_write_header(package, false);
+    if (rc != BPAK_OK) {
+        return PyErr_Format(PyExc_IOError, "could not write header: %s",
+                            bpak_error_string(rc));
+    }
+
+    Py_RETURN_NONE;
+}
+
+static PyObject *m_parse_public_key(PyObject *module, PyObject *args,
+                                    PyObject *kwds)
+{
+    (void)module;
+    int rc;
+    static char *kwlist[] = {"data", NULL};
+    const uint8_t *buffer;
+    Py_ssize_t length;
+    struct bpak_key *key = NULL;
+
+    rc = PyArg_ParseTupleAndKeywords(args, kwds, "y#:parse_public_key",
+                                     kwlist, &buffer, &length);
+    if (!rc) {
+        return NULL;
+    }
+
+    rc = bpak_crypto_parse_public_key(buffer, (size_t)length, &key);
+    if (rc != BPAK_OK) {
+        return PyErr_Format(BPAKPackageError, "failed to parse public key: %s",
+                            bpak_error_string(rc));
+    }
+
+    PyObject *result = Py_BuildValue("(iy#)", key->kind, key->data, key->size);
+
+    free(key);
+
+    return result;
+}
+
 static PyMethodDef module_methods[] = {
     {"id",
      (PyCFunction)(void (*)(void))m_generate_id,
@@ -157,19 +320,55 @@ static PyMethodDef module_methods[] = {
      "Transport decode from input to output, using origin for diff origin"
     },
 
+    {"hash_kind_str",
+     (PyCFunction)(void (*)(void))m_hash_kind_str,
+     METH_VARARGS | METH_KEYWORDS,
+     "Convert hash kind constant to string"
+    },
+
+    {"signature_kind_str",
+     (PyCFunction)(void (*)(void))m_signature_kind_str,
+     METH_VARARGS | METH_KEYWORDS,
+     "Convert signature kind constant to string"
+    },
+
+    {"id_to_string",
+     (PyCFunction)(void (*)(void))m_id_to_string,
+     METH_VARARGS | METH_KEYWORDS,
+     "Convert bpak id to known string name, or None"
+    },
+
+    {"meta_to_string",
+     (PyCFunction)(void (*)(void))m_meta_to_string,
+     METH_VARARGS | METH_KEYWORDS,
+     "Convert metadata to string representation"
+    },
+
+    {"add_transport_meta",
+     (PyCFunction)(void (*)(void))m_add_transport_meta,
+     METH_VARARGS | METH_KEYWORDS,
+     "Add transport metadata to a package"
+    },
+
+    {"parse_public_key",
+     (PyCFunction)(void (*)(void))m_parse_public_key,
+     METH_VARARGS | METH_KEYWORDS,
+     "Parse a public key from bytes, returns (kind, data)"
+    },
+
     {NULL}
 };
 
 static PyModuleDef module = {
     PyModuleDef_HEAD_INIT,
-    .m_name = "bpak",
+    .m_name = "bpak._bpak",
     .m_doc = NULL,
     .m_size = -1,
     .m_methods = module_methods
 };
 
 
-PyMODINIT_FUNC PyInit_bpak(void)
+PyMODINIT_FUNC PyInit__bpak(void)
 {
     PyObject *m_p;
 
@@ -225,5 +424,15 @@ PyMODINIT_FUNC PyInit_bpak(void)
     PyModule_AddIntConstant(m_p, "SIGN_PRIME256v1", BPAK_SIGN_PRIME256v1);
     PyModule_AddIntConstant(m_p, "SIGN_SECP384r1", BPAK_SIGN_SECP384r1);
     PyModule_AddIntConstant(m_p, "SIGN_SECP521r1", BPAK_SIGN_SECP521r1);
+
+    PyModule_AddIntConstant(m_p, "KEY_PUB_RSA4096", BPAK_KEY_PUB_RSA4096);
+    PyModule_AddIntConstant(m_p, "KEY_PUB_PRIME256v1", BPAK_KEY_PUB_PRIME256v1);
+    PyModule_AddIntConstant(m_p, "KEY_PUB_SECP384r1", BPAK_KEY_PUB_SECP384r1);
+    PyModule_AddIntConstant(m_p, "KEY_PUB_SECP521r1", BPAK_KEY_PUB_SECP521r1);
+
+    PyModule_AddIntConstant(m_p, "FLAG_EXCLUDE_FROM_HASH",
+                            BPAK_FLAG_EXCLUDE_FROM_HASH);
+    PyModule_AddIntConstant(m_p, "FLAG_TRANSPORT", BPAK_FLAG_TRANSPORT);
+
     return (m_p);
 }
