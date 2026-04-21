@@ -1,8 +1,15 @@
 Basic example
 =============
 
+.. note::
+
+   The examples in this user guide use the C ``bpak`` command-line tool. The
+   ``bpak`` CLI installed from the Python package has a different, idiomatic
+   Click argv; see :doc:`99_python_cli` for its command reference and a
+   migration table.
+
 In the simplest use-case for bitpacker the archive can be viewed as a container
-format for other binaries with metadata on sizes and offsets of the parts it 
+format for other binaries with metadata on sizes and offsets of the parts it
 contains.
 
 Create an empty archive::

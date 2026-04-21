@@ -71,6 +71,7 @@ set(TEST_SCRIPT_PYTHON
     test_python_create_package.py
     test_python_meta.py
     test_python_transport.py
+    test_python_cli.py
 )
 
 if (BPAK_BUILD_TESTS)
