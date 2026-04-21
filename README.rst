@@ -32,9 +32,17 @@ Documentation is available here: `BPAK documentation`_
 Building and installing
 -----------------------
 
-The library depends to mbedtls, liblzma, uuid
+The library depends on mbedtls and liblzma.
 
-Build library and tool::
+Install Python module::
+
+    $ pip install .
+
+This compiles the library and Python extension from source. Requires
+``libmbedtls-dev`` and ``liblzma-dev`` (or equivalent) installed on the
+system.
+
+Build C library and tool::
 
     $ mkdir build && cd build
     $ cmake ..
@@ -43,6 +51,7 @@ Build library and tool::
 
 Running tests::
 
+    $ mkdir build && cd build
     $ cmake .. -DBPAK_BUILD_TESTS=1
     $ make && make test
 

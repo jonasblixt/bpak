@@ -71,9 +71,10 @@ set(TEST_SCRIPT_PYTHON
     test_python_create_package.py
     test_python_meta.py
     test_python_transport.py
+    test_python_cli.py
 )
 
-if (BPAK_BUILD_PYTHON_WRAPPER)
+if (BPAK_BUILD_TESTS)
     foreach(test_script IN LISTS TEST_SCRIPT_PYTHON)
         add_test(NAME ${test_script}
         COMMAND "${CMAKE_CURRENT_LIST_DIR}/${test_script}" "${CMAKE_SOURCE_DIR}"

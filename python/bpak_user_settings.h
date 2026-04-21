@@ -1,0 +1,8 @@
+#ifndef BPAK_USER_SETTINGS_H
+#define BPAK_USER_SETTINGS_H
+
+#define BPAK_CONFIG_MERKLE  1
+#define BPAK_CONFIG_LZMA    1
+#define BPAK_CONFIG_MBEDTLS 1
+
+#endif

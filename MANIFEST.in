@@ -1,0 +1,9 @@
+graft include
+graft lib
+graft python
+graft ext/uuid
+include README.rst
+include LICENSE
+include heatshrink.LICENSE
+include setup.py
+include pyproject.toml
