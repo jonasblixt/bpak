@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import click
 
-from .. import _bpak
+from bpak import _bpak
+
 from ._common import handle_bpak_errors
 
 
@@ -51,14 +52,21 @@ def compare(file1: str, file2: str) -> None:
                 sym, color = "-", "red"
             else:
                 sym, color = "+", "green"
-            size = (p1 or p2).size
+            present = p1 if p1 is not None else p2
+            assert present is not None
+            size = present.size
             click.secho(
                 f"  {sym} {pid:08x}  {id_name:<20s}  size={size}",
                 fg=color,
             )
 
 
-def _parts_equal(pkg1, pkg2, p1, p2) -> bool:
+def _parts_equal(
+    pkg1: _bpak.Package,
+    pkg2: _bpak.Package,
+    p1: _bpak.Part,
+    p2: _bpak.Part,
+) -> bool:
     """Compare part-header fields and content via SHA-256."""
     if (
         p1.size != p2.size

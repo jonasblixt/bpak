@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
-import os
+from pathlib import Path
 
 import click
 
-from .. import _bpak
-from .._helpers import HASH_KIND_MAP, SIGN_KIND_MAP
+from bpak import _bpak
+from bpak._helpers import HASH_KIND_MAP, SIGN_KIND_MAP
+
 from ._common import handle_bpak_errors
 
 
@@ -33,9 +34,14 @@ from ._common import handle_bpak_errors
 @handle_bpak_errors
 def create(filename: str, hash_kind: str, signature_kind: str, force: bool) -> None:
     """Create a new empty bpak file."""
-    if os.path.exists(filename) and not force:
-        if not click.confirm(f"File '{filename}' exists. Overwrite?"):
-            return
+    if (
+        Path(filename).exists()
+        and not force
+        and not click.confirm(
+            f"File '{filename}' exists. Overwrite?",
+        )
+    ):
+        return
 
     with _bpak.Package(filename, "wb") as pkg:
         pkg.hash_kind = HASH_KIND_MAP[hash_kind]

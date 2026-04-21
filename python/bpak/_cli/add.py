@@ -6,8 +6,9 @@ from pathlib import Path
 
 import click
 
-from .. import _bpak
-from .._helpers import encode_meta_value
+from bpak import _bpak
+from bpak._helpers import encode_meta_value
+
 from ._common import (
     BPAK_ID,
     BPAK_METADATA_BYTES,
@@ -39,7 +40,7 @@ def add() -> None:
 )
 @handle_bpak_errors
 @open_package("r+")
-def add_part(pkg, id_: str, from_path: str, no_hash: bool) -> None:
+def add_part(pkg: _bpak.Package, id_: str, from_path: str, no_hash: bool) -> None:
     """Add a raw part from a file.
 
     The ID is the part's symbolic name (e.g. "rootfs"); the underlying
@@ -79,7 +80,7 @@ def add_part(pkg, id_: str, from_path: str, no_hash: bool) -> None:
 @handle_bpak_errors
 @open_package("r+")
 def add_meta(
-    pkg,
+    pkg: _bpak.Package,
     id_: int,
     from_string: str | None,
     from_file: str | None,
@@ -98,6 +99,7 @@ def add_meta(
         else:
             data = from_string.encode("ascii") + b"\x00"
     else:
+        assert from_file is not None
         data = Path(from_file).read_bytes()
 
     if len(data) > BPAK_METADATA_BYTES:
@@ -120,7 +122,7 @@ def add_meta(
 )
 @handle_bpak_errors
 @open_package("r+")
-def add_key(pkg, id_: str, from_path: str) -> None:
+def add_key(pkg: _bpak.Package, id_: str, from_path: str) -> None:
     """Embed a public key as a part (ID is the key's symbolic name)."""
     pkg.add_key(id_, from_path)
 
@@ -137,6 +139,6 @@ def add_key(pkg, id_: str, from_path: str) -> None:
 )
 @handle_bpak_errors
 @open_package("r+")
-def add_merkle(pkg, id_: str, from_path: str) -> None:
+def add_merkle(pkg: _bpak.Package, id_: str, from_path: str) -> None:
     """Add a part with an accompanying merkle tree (ID is the part's symbolic name)."""
     pkg.add_file(id_, from_path, with_merkle_tree=True)

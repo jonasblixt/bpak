@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import click
 
-from .. import _bpak
+from bpak import _bpak
+
 from ._common import (
     BPAK_ID,
     BPAK_METADATA_BYTES,
@@ -17,10 +18,17 @@ from ._common import (
 
 
 class _ShowGroup(click.Group):
-    """Dispatch ``bpak show FILE`` to the (hidden) summary subcommand so the
-    user doesn't have to type ``bpak show summary FILE`` explicitly."""
+    """Dispatch ``bpak show FILE`` to the (hidden) summary subcommand.
 
-    def resolve_command(self, ctx, args):
+    Allows the user to write ``bpak show FILE`` instead of the explicit
+    ``bpak show summary FILE``.
+    """
+
+    def resolve_command(
+        self,
+        ctx: click.Context,
+        args: list[str],
+    ) -> tuple[str | None, click.Command | None, list[str]]:
         if args and args[0] not in self.commands and not args[0].startswith("-"):
             args = ["summary", *args]
         return super().resolve_command(ctx, args)
@@ -52,21 +60,14 @@ def show_summary(ctx: click.Context, filename: str) -> None:
             s = _bpak.meta_to_string(pkg, m) or ""
             id_name = _bpak.id_to_string(m.id) or ""
             ref_str = f"{m.part_id_ref:08x}" if m.part_id_ref else "        "
-            click.echo(
-                f"    {m.id:08x}   {m.size:<3}    {id_name:<20s} {ref_str}   {s}"
-            )
+            click.echo(f"    {m.id:08x}   {m.size:<3}    {id_name:<20s} {ref_str}   {s}")
 
         click.echo("\nParts:")
-        click.echo(
-            "    ID         Size         Z-pad  Flags          Transport Size"
-        )
+        click.echo("    ID         Size         Z-pad  Flags          Transport Size")
         for p in pkg.parts:
             flags = flag_str(p.flags)
             ts = p.transport_size if p.flags & _bpak.FLAG_TRANSPORT else p.size
-            click.echo(
-                f"    {p.id:08x}   {p.size:<12} {p.pad_bytes:<3}    {flags}"
-                f"       {ts:<12}"
-            )
+            click.echo(f"    {p.id:08x}   {p.size:<12} {p.pad_bytes:<3}    {flags}       {ts:<12}")
 
         digest = pkg.digest
         if digest:
@@ -74,9 +75,7 @@ def show_summary(ctx: click.Context, filename: str) -> None:
 
         if verbose:
             meta_size = sum(m.size for m in pkg.meta)
-            click.echo(
-                f"Metadata usage: {meta_size}/{BPAK_METADATA_BYTES} bytes"
-            )
+            click.echo(f"Metadata usage: {meta_size}/{BPAK_METADATA_BYTES} bytes")
             click.echo(f"Transport size: {pkg.size} bytes")
             click.echo(f"Installed size: {pkg.installed_size} bytes")
 
@@ -90,11 +89,11 @@ def show_summary(ctx: click.Context, filename: str) -> None:
     type=BPAK_ID,
     default=None,
     help="Filter by part_id_ref; omit to list every ref. "
-         "Use 0 to pick unassociated/global metadata entries.",
+    "Use 0 to pick unassociated/global metadata entries.",
 )
 @handle_bpak_errors
 @open_package("rb")
-def show_meta(pkg, id_: int | None, part_ref: int | None) -> None:
+def show_meta(pkg: _bpak.Package, id_: int | None, part_ref: int | None) -> None:
     """Show one metadata entry, or list all of them."""
     found = False
     for m in pkg.meta:
@@ -106,9 +105,7 @@ def show_meta(pkg, id_: int | None, part_ref: int | None) -> None:
         s = _bpak.meta_to_string(pkg, m) or ""
         id_name = _bpak.id_to_string(m.id) or ""
         ref_str = f"{m.part_id_ref:08x}" if m.part_id_ref else "        "
-        click.echo(
-            f"{m.id:08x}  {id_name:<20s}  ref={ref_str}  size={m.size}  {s}"
-        )
+        click.echo(f"{m.id:08x}  {id_name:<20s}  ref={ref_str}  size={m.size}  {s}")
     if id_ is not None and not found:
         if part_ref is not None:
             raise click.ClickException(
@@ -128,7 +125,7 @@ def show_meta(pkg, id_: int | None, part_ref: int | None) -> None:
 )
 @handle_bpak_errors
 @open_package("rb")
-def show_part(pkg, id_: int, show_part_hash: bool) -> None:
+def show_part(pkg: _bpak.Package, id_: int, show_part_hash: bool) -> None:
     """Show a single part."""
     if show_part_hash:
         click.echo(bin2hex(pkg.part_sha256(id_)))
@@ -153,7 +150,7 @@ def show_part(pkg, id_: int, show_part_hash: bool) -> None:
 )
 @handle_bpak_errors
 @open_package("rb")
-def show_hash(pkg, binary_mode: bool) -> None:
+def show_hash(pkg: _bpak.Package, binary_mode: bool) -> None:
     """Print the package header hash (Package.digest)."""
     digest = pkg.digest
     if not digest:

@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import click
 
-from .. import _bpak
-from .._helpers import encode_meta_value
+from bpak import _bpak
+from bpak._helpers import encode_meta_value
+
 from ._common import (
     BPAK_ID,
     at_least_one_of,
@@ -39,13 +40,14 @@ def set_() -> None:
 @handle_bpak_errors
 @open_package("r+")
 def set_meta(
-    pkg, id_: int, value: str, encoder: str | None, part_ref: int
+    pkg: _bpak.Package,
+    id_: int,
+    value: str,
+    encoder: str | None,
+    part_ref: int,
 ) -> None:
     """Update an existing metadata entry, or create it if absent."""
-    if encoder:
-        new_data = encode_meta_value(value, encoder)
-    else:
-        new_data = value.encode("ascii") + b"\x00"
+    new_data = encode_meta_value(value, encoder) if encoder else value.encode("ascii") + b"\x00"
 
     try:
         m = pkg.get_meta(id_, part_ref)
@@ -78,7 +80,7 @@ def set_meta(
 )
 @handle_bpak_errors
 @open_package("r+")
-def set_header(pkg, key_id: int | None, keystore_id: int | None) -> None:
+def set_header(pkg: _bpak.Package, key_id: int | None, keystore_id: int | None) -> None:
     """Update header fields (key-id, keystore-id)."""
     at_least_one_of({"--key-id": key_id, "--keystore-id": keystore_id})
     if key_id is not None:

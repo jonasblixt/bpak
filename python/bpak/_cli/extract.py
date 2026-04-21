@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+from typing import TYPE_CHECKING
+
 import click
 
 from ._common import (
@@ -10,6 +13,9 @@ from ._common import (
     handle_bpak_errors,
     open_package,
 )
+
+if TYPE_CHECKING:
+    from bpak import _bpak
 
 
 @click.group()
@@ -28,7 +34,7 @@ def extract() -> None:
 )
 @handle_bpak_errors
 @open_package("rb")
-def extract_part(pkg, id_: int, output: str | None) -> None:
+def extract_part(pkg: _bpak.Package, id_: int, output: str | None) -> None:
     """Extract a part."""
     if output is not None:
         pkg.extract_file(id_, output)
@@ -59,13 +65,16 @@ def extract_part(pkg, id_: int, output: str | None) -> None:
 @handle_bpak_errors
 @open_package("rb")
 def extract_meta(
-    pkg, id_: int, output: str | None, part_ref: int
+    pkg: _bpak.Package,
+    id_: int,
+    output: str | None,
+    part_ref: int,
 ) -> None:
     """Extract a metadata value."""
     m = pkg.get_meta(id_, part_ref)
     data = m.raw_data
     if output is not None:
-        with open(output, "wb") as f:
+        with Path(output).open("wb") as f:
             f.write(data)
     else:
         sink = binary_sink(None)

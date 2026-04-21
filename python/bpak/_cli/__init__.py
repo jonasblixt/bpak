@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import sys
+from importlib.metadata import PackageNotFoundError, version
 
 import click
 
@@ -13,9 +13,8 @@ def _print_version(ctx: click.Context, _param: click.Option, value: bool) -> Non
     if not value or ctx.resilient_parsing:
         return
     try:
-        from importlib.metadata import version
         ver = version("bpak")
-    except Exception:
+    except PackageNotFoundError:
         ver = "unknown"
     click.echo(f"BitPacker {ver}")
     ctx.exit(0)
@@ -45,16 +44,16 @@ def cli(ctx: click.Context, verbose: int) -> None:
 
 # Wire subcommands. Imports are deferred here so a command file can import
 # from ._common without a circular dependency on this module.
-from . import create as _create  # noqa: E402
-from . import compare as _compare  # noqa: E402
-from . import show as _show  # noqa: E402
-from . import add as _add  # noqa: E402
-from . import set as _set  # noqa: E402
-from . import delete as _delete  # noqa: E402
-from . import extract as _extract  # noqa: E402
-from . import sign as _sign  # noqa: E402
-from . import transport as _transport  # noqa: E402
-from . import generate as _generate  # noqa: E402
+from . import add as _add
+from . import compare as _compare
+from . import create as _create
+from . import delete as _delete
+from . import extract as _extract
+from . import generate as _generate
+from . import set as _set
+from . import show as _show
+from . import sign as _sign
+from . import transport as _transport
 
 cli.add_command(_create.create)
 cli.add_command(_compare.compare)

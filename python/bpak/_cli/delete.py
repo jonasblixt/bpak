@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import click
 
 from ._common import (
@@ -10,6 +12,9 @@ from ._common import (
     handle_bpak_errors,
     open_package,
 )
+
+if TYPE_CHECKING:
+    from bpak import _bpak
 
 
 @click.group()
@@ -34,15 +39,17 @@ def delete() -> None:
 @handle_bpak_errors
 @open_package("r+")
 def delete_part(
-    pkg, id_: int | None, delete_all: bool, keep_meta: bool
+    pkg: _bpak.Package,
+    id_: int | None,
+    delete_all: bool,
+    keep_meta: bool,
 ) -> None:
     """Delete a single part, or --all of them."""
-    choice = exactly_one_of(
-        {"ID": id_ if id_ is not None else None, "--all": delete_all}
-    )
+    choice = exactly_one_of({"ID": id_ if id_ is not None else None, "--all": delete_all})
     if choice == "--all":
         pkg.delete_all_parts(keep_meta=keep_meta)
     else:
+        assert id_ is not None
         p = pkg.get_part(id_)
         p.delete(keep_meta=keep_meta)
 
@@ -60,7 +67,7 @@ def delete_part(
 )
 @handle_bpak_errors
 @open_package("r+")
-def delete_meta(pkg, id_: int, part_ref: int) -> None:
+def delete_meta(pkg: _bpak.Package, id_: int, part_ref: int) -> None:
     """Delete a metadata entry."""
     m = pkg.get_meta(id_, part_ref)
     m.delete()

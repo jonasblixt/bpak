@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import click
 
@@ -12,6 +13,9 @@ from ._common import (
     handle_bpak_errors,
     open_package,
 )
+
+if TYPE_CHECKING:
+    from bpak import _bpak
 
 
 @click.command()
@@ -30,18 +34,23 @@ from ._common import (
 )
 @handle_bpak_errors
 @open_package("r+")
-def sign(pkg, key_path: str | None, signature_path: str | None) -> None:
+def sign(
+    pkg: _bpak.Package,
+    key_path: str | None,
+    signature_path: str | None,
+) -> None:
     """Sign a bpak file."""
     choice = exactly_one_of({"--key": key_path, "--signature": signature_path})
     if choice == "--signature":
+        assert signature_path is not None
         sig_data = Path(signature_path).read_bytes()
         if len(sig_data) > BPAK_MAX_SIGNATURE_BYTES:
             raise click.ClickException(
-                f"Signature file too large "
-                f"({len(sig_data)} > {BPAK_MAX_SIGNATURE_BYTES} bytes)"
+                f"Signature file too large ({len(sig_data)} > {BPAK_MAX_SIGNATURE_BYTES} bytes)"
             )
         pkg.signature = sig_data
     else:
+        assert key_path is not None
         pkg.sign(key_path)
 
 
@@ -61,13 +70,19 @@ def sign(pkg, key_path: str | None, signature_path: str | None) -> None:
 )
 @handle_bpak_errors
 @open_package("rb")
-def verify(pkg, key_path: str | None, keystore_path: str | None) -> None:
+def verify(
+    pkg: _bpak.Package,
+    key_path: str | None,
+    keystore_path: str | None,
+) -> None:
     """Verify a bpak file signature."""
     choice = exactly_one_of(
-        {"--key": key_path, "--keystore": keystore_path}
+        {"--key": key_path, "--keystore": keystore_path},
     )
     if choice == "--keystore":
+        assert keystore_path is not None
         pkg.verify_with_keystore(keystore_path)
     else:
+        assert key_path is not None
         pkg.verify(key_path)
     click.echo("Verification OK")

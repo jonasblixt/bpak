@@ -2,10 +2,16 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import click
 
-from .. import _bpak
+from bpak import _bpak
+
 from ._common import BPAK_ID, handle_bpak_errors, open_package
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 @click.group()
@@ -30,24 +36,28 @@ def transport() -> None:
 )
 @handle_bpak_errors
 @open_package("r+")
-def transport_add(pkg, id_: int, encoder: int, decoder: int) -> None:
+def transport_add(
+    pkg: _bpak.Package,
+    id_: int,
+    encoder: int,
+    decoder: int,
+) -> None:
     """Add transport metadata linking a part to an encoder/decoder pair."""
     _bpak.add_transport_meta(pkg, id_, encoder, decoder)
 
 
 def _run_codec(
-    op,
+    op: Callable[..., None],
     filename: str,
     output: str,
     origin: str | None,
 ) -> None:
-    with _bpak.Package(filename, "rb") as pkg_in:
-        with _bpak.Package(output, "wb") as pkg_out:
-            if origin is not None:
-                with _bpak.Package(origin, "rb") as pkg_origin:
-                    op(pkg_in, pkg_out, pkg_origin)
-            else:
-                op(pkg_in, pkg_out)
+    with _bpak.Package(filename, "rb") as pkg_in, _bpak.Package(output, "wb") as pkg_out:
+        if origin is not None:
+            with _bpak.Package(origin, "rb") as pkg_origin:
+                op(pkg_in, pkg_out, pkg_origin)
+        else:
+            op(pkg_in, pkg_out)
 
 
 @transport.command("encode")

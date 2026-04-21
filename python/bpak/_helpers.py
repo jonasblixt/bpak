@@ -5,14 +5,16 @@ from __future__ import annotations
 import struct
 import uuid
 
-from . import (
+from bpak import (
     HASH_SHA256,
     HASH_SHA384,
     HASH_SHA512,
-    SIGN_PRIME256v1,
     SIGN_RSA4096,
+    SIGN_PRIME256v1,
     SIGN_SECP384r1,
     SIGN_SECP521r1,
+)
+from bpak import (
     id as bpak_id,
 )
 
@@ -51,10 +53,9 @@ def encode_meta_value(value: str, encoder: str) -> bytes:
     """Encode a metadata value using the specified encoder."""
     if encoder == "integer":
         return struct.pack("<Q", int(value, 0))
-    elif encoder == "id":
+    if encoder == "id":
         return struct.pack("<I", bpak_id(value))
-    elif encoder == "uuid":
+    if encoder == "uuid":
         return uuid.UUID(value).bytes
-    else:
-        msg = f"unknown encoder: {encoder}"
-        raise ValueError(msg)
+    msg = f"unknown encoder: {encoder}"
+    raise ValueError(msg)
