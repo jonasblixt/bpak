@@ -31,9 +31,19 @@ SIGN_KIND_MAP: dict[str, int] = {
 
 
 def resolve_id(arg: str) -> int:
-    """Convert a name string or '0x...' hex literal to a bpak_id_t."""
-    if arg.startswith("0x") or arg.startswith("0X"):
+    """Convert a name string or numeric literal to a bpak_id_t.
+
+    Accepts:
+      - ``0x...`` / ``0X...`` hex literals (any width).
+      - Bare decimal literals (``0``, ``42``, ...). Note: this means a
+        part or metadata named exactly ``"123"`` must be written as
+        ``0x...`` to disambiguate from the decimal 123.
+      - Any other string, which is CRC32-hashed via ``bpak_id()``.
+    """
+    if arg.startswith(("0x", "0X")):
         return int(arg, 16)
+    if arg.isdigit():
+        return int(arg)
     return bpak_id(arg)
 
 

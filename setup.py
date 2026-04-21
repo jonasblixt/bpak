@@ -63,8 +63,11 @@ setup(
         "License :: OSI Approved :: BSD License",
         "Programming Language :: Python :: 3",
     ],
-    packages=["bpak"],
-    package_dir={"bpak": "python/bpak"},
+    packages=["bpak", "bpak._cli"],
+    package_dir={
+        "bpak": "python/bpak",
+        "bpak._cli": "python/bpak/_cli",
+    },
     ext_modules=[
         Extension(
             name="bpak._bpak",
@@ -77,6 +80,6 @@ setup(
     ],
     install_requires=["click>=8.0"],
     entry_points={
-        "console_scripts": ["bpak=bpak.__main__:cli"],
+        "console_scripts": ["bpak=bpak._cli:cli"],
     },
 )
