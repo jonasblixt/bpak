@@ -50,12 +50,9 @@ BPAK_EXPORT int bpak_verify_compute_header_hash(struct bpak_header *header,
 
     rc = bpak_hash_final(&hash_ctx, output, *size, size);
 
-    if (rc != BPAK_OK)
-        goto err_free_hash_ctx_out;
-
 err_free_hash_ctx_out:
     bpak_hash_free(&hash_ctx);
-    return BPAK_OK;
+    return rc;
 }
 
 BPAK_EXPORT int bpak_verify_compute_payload_hash(struct bpak_header *header,
