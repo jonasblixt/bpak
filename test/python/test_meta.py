@@ -1,4 +1,7 @@
+import gc
 import uuid
+
+import pytest
 
 from bpaktest import PKG_UUID
 
@@ -30,3 +33,13 @@ def test_meta(pybpak, bpak, origin_pkg):
         assert p.get_meta(id=pybpak.id("py-test")).as_string() == \
             "Hello Python"
         assert p.get_meta(pybpak.id("bpak-version")).as_string() == "1.0.1"
+
+
+def test_add_meta_read_only(pybpak, origin_pkg):
+    """Adding meta data fails when the header can not be written. This
+    released the string data twice and corrupted the heap."""
+    for _ in range(100):
+        with pybpak.Package(str(origin_pkg), "rb") as p:
+            with pytest.raises(OSError):
+                p.add_meta(pybpak.id("py-test"), data="Hello")
+        gc.collect()

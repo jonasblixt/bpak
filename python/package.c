@@ -354,6 +354,7 @@ static PyObject *package_add_meta(PyObject *self, PyObject *args, PyObject *kwds
 
     if (was_unicode) {
         Py_DECREF(data);
+        was_unicode = false;
     }
 
     rc = package_write_header(package, false);
