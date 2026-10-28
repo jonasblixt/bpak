@@ -58,8 +58,8 @@ int bpak_pkg_close(struct bpak_package *pkg);
  * hash in the header
  *
  * @param[in] pkg Package pointer
- * @param[out] out Optional header output hash
- * @param[in, out] size Optional input size of \ref output buffer and result of
+ * @param[out] output Optional header output hash
+ * @param[in, out] size Optional input size of 'output' buffer and result of
  * computation size is stored here as well
  *
  * @return BPAK_OK on success
@@ -98,7 +98,7 @@ struct bpak_header *bpak_pkg_header(struct bpak_package *pkg);
  *
  * @param[in] pkg Package pointer
  * @param[in] signature DER encoded signature
- * @param[in] size Size of \ref signature in bytes
+ * @param[in] size Size of 'signature' in bytes
  *
  * @return BPAK_OK on success
  */
@@ -116,17 +116,19 @@ int bpak_pkg_write_raw_signature(struct bpak_package *pkg,
 int bpak_pkg_sign(struct bpak_package *pkg, const char *key_filename);
 
 /**
- * Verify the package
+ * Verify the signature of the package with 'key' and the payload, including
+ * merkle hash trees
  *
  * @param[in] pkg Package pointer
  * @param[in] key Verification key
  *
- * @return BPAK_OK on success
+ * @return BPAK_OK on success, -BPAK_VERIFY_FAIL if the signature does not
+ *         match or another negative error code
  */
 int bpak_pkg_verify(struct bpak_package *pkg, struct bpak_key *key);
 
 /**
- * Compute sha256 hash of part data
+ * Compute sha256 hash of part data, without padding
  *
  * @param[in] pkg Package pointer
  * @param[out] hash_buffer Output buffer
@@ -169,7 +171,7 @@ int bpak_pkg_transport_decode(struct bpak_package *input,
 /**
  * Writes current header to file
  *
- * @param[in] hdr BPAK Header
+ * @param[in] pkg Package pointer
  *
  * @return BPAK_OK on success
  */
@@ -192,7 +194,7 @@ int bpak_pkg_add_file(struct bpak_package *pkg, const char *filename,
  * Add a file part to a package and create a separate part with a merkle
  * hash tree.
  *
- * The hash tree part name will be bpak_id('part_name'-hash-tree')
+ * The hash tree part id is bpak_id("<part_name>-hash-tree")
  *
  * @param[in] pkg Pointer to a bpak package
  * @param[in] filename Full path to the file that should be added to the archive
@@ -206,8 +208,8 @@ int bpak_pkg_add_file_with_merkle_tree(struct bpak_package *pkg,
                                        const char *part_name, uint8_t flags);
 
 /**
- * Add a crypto key to the archive. This can add both PEM and DER encoded
- * keys
+ * Add a public key to the archive, for keystores. The key can be PEM or DER
+ * encoded and is stored DER encoded.
  *
  * @param[in] pkg Pointer to a bpak package
  * @param[in] filename Full path to the file that should be added to the archive

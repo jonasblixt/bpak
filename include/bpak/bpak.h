@@ -44,10 +44,19 @@ extern "C" {
  * Maximum number of bytes allocated for metadata
  *
  * \def BPAK_PART_ALIGN
- * Minimum alignment of data parts
+ * Alignment of data parts, parts are zero padded to a multiple of this
+ *
+ * \def BPAK_META_ALIGN
+ * Alignment of the meta data values in the 'metadata' array
  *
  * \def BPAK_SIGNATURE_MAX_BYTES
  * Maximum size of signature
+ *
+ * \def BPAK_HASH_MAX_LENGTH
+ * Size of the largest hash, sha512
+ *
+ * \def BPAK_CHUNK_BUFFER_LENGTH
+ * Size of the buffers that part data is read with, can be overridden
  *
  **/
 
@@ -89,7 +98,7 @@ enum bpak_signature_kind {
 
 /*! \public
  *
- * BPAK Result codes
+ * BPAK Result codes. Functions return BPAK_OK or a negated error code.
  */
 enum bpak_errors {
     BPAK_OK,
@@ -151,17 +160,17 @@ enum bpak_key_kind {
     BPAK_KEY_PRI_SECP521r1,
 };
 
-/*
+/**
  * \def BPAK_FLAG_EXCLUDE_FROM_HASH
- * Data within this part is not included in hashing context
+ * The data of this part is not included in the payload hash
  *
  **/
 #define BPAK_FLAG_EXCLUDE_FROM_HASH (1 << 0)
 
-/*
+/**
  * \def BPAK_FLAG_TRANSPORT
- * Part data stream prepared for transport. When this bit is set the following
- *  metadata must be included:
+ * The part data is transport encoded and its size is 'transport_size'. When
+ *  this bit is set the following metadata must be included:
  *
  * bpak-transport (struct bpak_transport_meta)
  *
@@ -188,11 +197,18 @@ struct bpak_transport_meta {
     uint8_t data[24];       /*!< Algorithm specific data */
 } __attribute__((packed));
 
+/**
+ * I/O callback for reading or writing 'length' bytes at 'offset'
+ *
+ * @return The number of bytes read or written or a negative error code
+ */
 typedef ssize_t (*bpak_io_t)(off_t offset, uint8_t *buffer, size_t length,
                              void *user);
 
+/** Allocator with the signature of calloc(), see bpak_set_calloc_free() */
 typedef void *(*bpak_calloc_t)(size_t, size_t);
 
+/** Deallocator with the signature of free(), see bpak_set_calloc_free() */
 typedef void (*bpak_free_t)(void *);
 
 /**
@@ -203,11 +219,13 @@ typedef void (*bpak_free_t)(void *);
 struct bpak_part_header {
     bpak_id_t id;            /*!< Part identifier */
     uint64_t size;           /*!< Data block size*/
-    uint64_t offset;         /*!< Offset in data decoded stream */
+    uint64_t offset;         /*!< Offset of the data in the decoded
+                                package, including the header */
     uint64_t transport_size; /*!< Should be populated when part data is
                                 prepared for transport. With the encoded
                                 size */
-    uint16_t pad_bytes; /*!< Part padding up to the next 128 byte boundary*/
+    uint16_t pad_bytes; /*!< Zero padding up to the next BPAK_PART_ALIGN
+                             (512) byte boundary */
     uint8_t flags;      /*!< Flags */
     uint8_t pad;        /*!< Pad to 32 bytes, set to zero */
 } __attribute__((packed));
@@ -276,9 +294,10 @@ struct bpak_header {
          _var++)
 
 /**
- * \def bpak_meta_get_ptr
+ * \def bpak_get_meta_ptr
  *
- * Helper macro to get the metadata pointer from a metadata header with a specific type
+ * Helper macro to get a pointer of type '_T *' to the value of the metadata
+ *  '__meta' in the header '_hdr'
  */
 #define bpak_get_meta_ptr(_hdr, __meta, _T)                                   \
     ((_T*)&(_hdr)->metadata[(__meta)->offset])
@@ -324,7 +343,7 @@ int bpak_get_meta_anyref(struct bpak_header *hdr, bpak_id_t id,
  * @param[out] meta Pointer to the metadata header
  *
  * @return BPAK_OK on success,
- *         -BPAK_NO_SPACE if the metadata array is full or
+ *         -BPAK_NO_SPACE_LEFT if the metadata array is full or
  *         -BPAK_EXISTS if a metadata with the same 'id' and 'part_ref_id'
  *         already exists
  **/
@@ -349,9 +368,9 @@ void bpak_del_meta(struct bpak_header *hdr,
  *
  * @param[in] hdr BPAK Header
  * @param[in] id ID of part
+ * @param[out] part Pointer to the part header
  *
- * @return BPAK_OK on success, -BPAK_FAILED if part_id already exists,
- *         -BPAK_NOT_FOUND if the part is missing
+ * @return BPAK_OK on success, -BPAK_NOT_FOUND if the part is missing
  *
  **/
 
@@ -367,7 +386,7 @@ int bpak_get_part(struct bpak_header *hdr, bpak_id_t id,
  * @param[out] part Output pointer to new part
  *
  * @return BPAK_OK on success,
- *         -BPAK_NO_SPACE if the array is full
+ *         -BPAK_NO_SPACE_LEFT if the array is full
  *         -BPAK_EXISTS if a part with the same 'id' already exists
  *
  **/
@@ -425,6 +444,7 @@ int bpak_init_header(struct bpak_header *hdr);
  * Get data offset of 'part' within the BPAK stream. This includes
  * the header (4kByte).
  *
+ * @param[in] h BPAK Header
  * @param[in] part BPAK Part pointer
  *
  * @return Offset in bytes
@@ -479,9 +499,11 @@ const char *bpak_signature_kind(uint8_t signature_kind);
 const char *bpak_hash_kind(uint8_t hash_kind);
 
 /**
- * Prototype for bpak core library debug call
+ * Log function of the library. The default implementation is a weak symbol
+ * that discards all messages, applications define their own to print them.
  *
- * @param[in] verbosity Verbosity level 0 to 2
+ * @param[in] verbosity Verbosity level 0 (errors) to 2 (debug)
+ * @param[in] fmt printf format string
  *
  * @return BPAK_OK on success
  */
@@ -500,7 +522,7 @@ int bpak_set_key_id(struct bpak_header *hdr, uint32_t key_id);
 
 /**
  * Set keystore ID which is used when verifying the package. The key pointed to
- *  by the 'key_id' is expected to exist in a keystore with id \ref keystore_id
+ *  by the 'key_id' is expected to exist in a keystore with id 'keystore_id'
  *
  * @param[in] hdr BPAK Header
  * @param[in] keystore_id The keystore ID
@@ -534,19 +556,19 @@ const char *bpak_version(void);
  * Override the default allocator
  *
  * @param[in] calloc_func Override calloc
- * @param[in] free_func Ovverride free
+ * @param[in] free_func Override free
  *
  * @return BPAK_OK on success,
  */
 int bpak_set_calloc_free(bpak_calloc_t calloc_func, bpak_free_t free_func);
 
 /**
- * Memory allocation wrapper
+ * Allocate zeroed memory with the allocator set by bpak_set_calloc_free()
  */
 void *bpak_calloc(size_t nmemb, size_t size);
 
 /**
- * Memory allocation wrapper
+ * Free memory from bpak_calloc()
  */
 void bpak_free(void *ptr);
 

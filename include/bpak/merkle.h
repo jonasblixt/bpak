@@ -51,9 +51,19 @@ struct bpak_merkle_context {
     bpak_io_t wr;     /*!< Function to write to the hash tree */
     bpak_io_t rd;     /*!< Function to read from the hash tree */
     off_t offset;
-    void *priv; /*!< Externalt context variable */
+    void *priv; /*!< External context variable */
 };
 
+/**
+ * Compute the size of the hash tree of 'input_data_length' bytes of data
+ *
+ * @param[in] input_data_length Size of the data in bytes, a multiple of
+ *                              BPAK_MERKLE_BLOCK_SZ
+ *
+ * @return Size of the hash tree in bytes, -BPAK_BAD_ALIGNMENT if the size is
+ *         not a multiple of the block size or -BPAK_NO_SPACE_LEFT if the
+ *         data is too large
+ */
 ssize_t bpak_merkle_compute_size(size_t input_data_length);
 
 /**
@@ -75,6 +85,7 @@ size_t bpak_merkle_get_size(struct bpak_merkle_context *ctx);
  * @param[in] wr Write callback function
  * @param[in] rd Read callback function
  * @param[in] offset Offset where hash tree data starts
+ * @param[in] zero_fill_output Write zeros to the hash tree area first
  * @param[in] priv Optional private context
  *
  * @return BPAK_OK on success and non zero number on error
@@ -87,7 +98,7 @@ int bpak_merkle_init(struct bpak_merkle_context *ctx, size_t input_data_length,
 
 /**
  * Process input data stream. This function can also be called with no buffer
- * and \ref sz set to zero to complete the hash tree computation.
+ * and 'length' set to zero to complete the hash tree computation.
  *
  * @param[in] ctx Context
  * @param[in] buffer Input data buffer

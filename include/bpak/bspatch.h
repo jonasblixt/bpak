@@ -72,8 +72,12 @@ struct bpak_bspatch_context {
  *  @param[in] ctx           Pointer to the context
  *  @param[in] buffer        Work buffer for bspatch
  *  @param[in] buffer_length Size of bspatch internal buffers in bytes
+ *  @param[in] input_length  Size of the patch in bytes
  *  @param[in] read_origin   Callback for reading origin data
+ *  @param[in] origin_offset Offset of the origin data
  *  @param[in] write_output  Callback for writing output data
+ *  @param[in] output_offset Offset of the output data
+ *  @param[in] compression   Compression of the patch
  *  @param[in] user_priv     User context sent to call backs
  *
  *  @return BPAK_OK on success or a negative number
@@ -97,7 +101,7 @@ int bpak_bspatch_write(struct bpak_bspatch_context *ctx, uint8_t *buffer,
                        size_t length);
 
 /**
- * Call bpak_bsptach_final when there is no more input.
+ * Call bpak_bspatch_final when there is no more input.
  *
  * @param[in] ctx Pointer to bspatch context
  *

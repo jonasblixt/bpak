@@ -54,6 +54,8 @@ struct bpak_bsdiff_context {
  * @param[in] new_data New, or target data
  * @param[in] new_length Length of target data
  * @param[in] write_output I/O callback for writing output data
+ * @param[in] output_offset Offset of the output data
+ * @param[in] compression Compression of the patch
  * @param[in] user_priv Priv context for i/o callback
  *
  * @return BPAK_OK on success or a negative number
@@ -69,7 +71,7 @@ int bpak_bsdiff_init(struct bpak_bsdiff_context *ctx, uint8_t *origin_data,
  *
  * @param[in] ctx The bsdiff context
  *
- * @return size out output patch on success or a negative number
+ * @return size of the output patch on success or a negative number
  */
 ssize_t bpak_bsdiff(struct bpak_bsdiff_context *ctx);
 

@@ -49,9 +49,9 @@ struct bpak_transport_decode {
 };
 
 /**
- * Initalizes the transport decode context for a BPAK package
+ * Initializes the transport decode context for a BPAK package
  *
- * NOTE: It's expected that the user provied correct offsets
+ * NOTE: It's expected that the user provides correct offsets
  *  for io callbacks. The transport decode layer assumes that
  *  reading/writing at offset zero means where the data starts.
  *
@@ -75,14 +75,13 @@ int bpak_transport_decode_init(struct bpak_transport_decode *ctx,
                                bpak_io_t write_output_header, void *user);
 /**
  * Provide an origin stream for the decoder. The patch decoder needs
- * an origin stream to produce the target binary. However, de-compressors
- * merkle-tree generator does not need this.
+ * an origin stream to produce the target binary. The merkle-tree generator
+ * does not need it.
  *
  * @param[in] ctx Pointer to a transport decode context
  * @param[in] origin_header Origin BPAK header
  * @param[in] read_origin Callback for reading origin data
  * @param[in] origin_offset Offset where origin data block starts
- * @param[in] origin_data_offset Origin data offset
  *
  * @return BPAK_OK on success or a negative number on failure
  */
@@ -92,7 +91,7 @@ int bpak_transport_decode_set_origin(struct bpak_transport_decode *ctx,
                                      off_t origin_offset);
 /**
  * Starts the decoding process. Some parts are re-created, for example
- * merkle hash tress, and therefore the input size is zero. In this case the
+ * merkle hash trees, and therefore the input size is zero. In this case the
  * start function will perform the actual decoding and no calls to
  * 'bpak_transport_decode_write_chunk' are needed.
  *
@@ -129,7 +128,7 @@ int bpak_transport_decode_write_chunk(struct bpak_transport_decode *ctx,
 int bpak_transport_decode_finish(struct bpak_transport_decode *ctx);
 
 /**
- * Free's the decoder context
+ * Frees the decoder context
  *
  * @param[in] ctx Pointer to a transport decode context
  *
