@@ -1,0 +1,104 @@
+[build-system]
+requires = ["scikit-build-core>=0.11"]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "bpak"
+dynamic = ["version"]
+description = "Bitpacker, a tool and library for signed firmware archives"
+readme = "README.rst"
+license = "BSD-3-Clause AND ISC"
+license-files = ["LICENSE", "heatshrink.LICENSE"]
+authors = [{ name = "Jonas Blixt", email = "jonpe960@gmail.com" }]
+requires-python = ">=3.10"
+classifiers = [
+    "Intended Audience :: Developers",
+    "Topic :: Software Development :: Embedded Systems",
+    "Programming Language :: C",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Typing :: Typed",
+]
+
+[project.urls]
+Homepage = "https://github.com/jonasblixt/bpak"
+Documentation = "https://bpak.readthedocs.io"
+Issues = "https://github.com/jonasblixt/bpak/issues"
+
+[dependency-groups]
+test = ["pytest>=7"]
+lint = ["ruff", "mypy"]
+dev = [{ include-group = "test" }, { include-group = "lint" }]
+
+[tool.scikit-build]
+minimum-version = "build-system.requires"
+# The python extension needs CMake 3.18, see python/CMakeLists.txt
+cmake.version = ">=3.18"
+# Only the extension, linked with the static library, goes into the wheel
+build.targets = ["bpak-python-wrapper"]
+install.components = ["python"]
+wheel.packages = ["python/bpak"]
+sdist.exclude = [
+    ".github", "docs", "examples", "test",
+    "CLAUDE.md", "todo.md", ".clang-format", ".readthedocs.yml", ".vimrc",
+]
+metadata.version.provider = "scikit_build_core.metadata.regex"
+metadata.version.input = "version.txt"
+metadata.version.regex = '(?P<value>\d+\.\d+\.\d+)'
+
+[tool.scikit-build.cmake.define]
+# New compiler versions must not break installs from source
+BPAK_WERROR = "OFF"
+
+[tool.uv]
+# Rebuild the C extension of the editable install when the C sources change
+cache-keys = [
+    { file = "pyproject.toml" },
+    { file = "version.txt" },
+    { file = "**/CMakeLists.txt" },
+    { file = "include/**/*.h" },
+    { file = "lib/**/*.c" },
+    { file = "lib/**/*.h" },
+    { file = "lib/*.in" },
+    { file = "python/*.c" },
+    { file = "python/*.h" },
+]
+
+[tool.ruff]
+line-length = 100
+# The tests follow their own, older style
+include = ["python/bpak/**/*.py", "python/bpak/**/*.pyi"]
+target-version = "py310"
+
+[tool.ruff.lint]
+# See: https://docs.astral.sh/ruff/rules/ for details
+select = ["ALL"]
+ignore = [
+    "COM812",   # Conflicts with the formatter
+    "ISC001",   # Conflicts with the formatter
+    "PLE0605",  # ruff does not handle += in __all__
+    "FBT",      # click passes flags as boolean arguments
+    "CPY001",   # Copyright notices are not used in the python sources
+]
+
+# click passes all options of a command as arguments
+pylint.max-args = 10
+pylint.max-positional-args = 10
+
+[tool.ruff.lint.pydocstyle]
+convention = "pep257"
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+
+[tool.mypy]
+strict = true
+files = ["python/bpak"]

@@ -12,9 +12,24 @@ Build library and tool::
     $ make
     $ sudo make install
 
-Optionally build with python support::
+The python package
+------------------
 
-    $ cmake -DBPAK_BUILD_PYTHON_WRAPPER=1
+Install the bpak python package from the repository root with pip, or add it
+to a `uv <https://docs.astral.sh/uv>`_ project::
+
+    $ pip install .
+    $ uv add /path/to/bpak
+
+The package is built with scikit-build-core and CMake and includes the
+library, so it only needs the mbedtls and liblzma development packages and a C
+compiler, for example ``libmbedtls-dev`` and ``liblzma-dev`` on Debian and
+Ubuntu. CMake is installed from PyPI during the build when it is missing. The
+package requires python 3.10 or later.
+
+Build a source distribution and a wheel into ``dist/``::
+
+    $ uv build
 
 Running tests
 -------------
@@ -35,12 +50,13 @@ cmake configure options
 Option                       Description
 ===========================  ====================================================
 BPAK_BUILD_MINIMAL           Build a minimal version of the library
-BPAK_BUILD_PYTHON_WRAPPER    Build the python wrapper
-BPAK_BUILD_TESTS             Build tests
+BPAK_BUILD_TESTS             Build the tests and the C extension of the python
+                             package
+BPAK_WERROR                  Treat compiler warnings as errors (default ON, OFF
+                             when the python package is built)
 ===========================  ====================================================
 
-The default setting is that everything is enabled except the python wrapper and
-the tests.
+The default setting is that everything is enabled except the tests.
 
 
 Build settings

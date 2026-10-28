@@ -7,9 +7,9 @@ from bpaktest import DATA_DIR, Part, Transport
 
 
 @pytest.fixture(scope="session")
-def pybpak(bpak_build_dir):
-    """The bpak python module from the build directory"""
-    sys.path.insert(0, str(bpak_build_dir / "python"))
+def pybpak(bpak_python_path):
+    """The bpak python package, from the CMake build or installed"""
+    sys.path[:0] = bpak_python_path
     module = importlib.import_module("bpak")
     module.set_log_func(
         lambda level, message: print(f"LOG: {level}, {message}", end=""))

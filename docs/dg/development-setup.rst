@@ -14,13 +14,26 @@ can be installed with::
           libcmocka-dev python3-dev python3-pytest openssl lcov
 
 Other distributions provide the same libraries under similar names: mbedtls,
-liblzma, libuuid, cmocka and the python3 development headers.
+liblzma, libuuid, cmocka and the python3 development headers. Python 3.10 or
+later is required.
 
-pytest can also be installed from PyPI into a virtual environment. CMake picks
-up the active virtual environment, so activate it before configuring::
+The python package is developed with `uv <https://docs.astral.sh/uv>`_.
+``uv sync`` creates a virtual environment in ``.venv`` with the pinned
+development tools from ``uv.lock`` (the ``dev`` dependency group in
+``pyproject.toml``) and an editable install of bpak::
 
-    $ python3 -m venv .venv && . .venv/bin/activate
-    $ pip install -r test/requirements.txt
+    $ uv sync
+    $ uv run python -c "import bpak"
+
+The editable install builds the C extension with scikit-build-core and CMake.
+``uv sync`` rebuilds it when C sources change, see ``tool.uv.cache-keys`` in
+``pyproject.toml``.
+
+CMake picks up an active virtual environment, so the system package for pytest
+is not needed when ``.venv`` is activated before configuring::
+
+    $ . .venv/bin/activate
+    $ cmake -B build -DBPAK_BUILD_TESTS=1
 
 Building
 --------
@@ -30,9 +43,14 @@ Configure a build directory with the tests enabled and build it::
     $ cmake -B build -DBPAK_BUILD_TESTS=1
     $ cmake --build build -j$(nproc)
 
-``BPAK_BUILD_TESTS`` also builds the python wrapper and compiles the library
-with coverage instrumentation. The C unit tests are built with
-AddressSanitizer, which includes leak detection.
+``BPAK_BUILD_TESTS`` also builds ``bpak._bpak``, the C extension of the
+python package, and compiles the library with coverage instrumentation. The C
+unit tests are built with AddressSanitizer, which includes leak detection.
+
+The python package in ``python/bpak`` wraps the C extension ``bpak._bpak``
+(``python/*.c``, typed in ``python/bpak/_bpak.pyi``). The build directory holds
+the package in ``build/python/bpak``, the extension and links to the python
+sources.
 
 Running tests
 -------------
@@ -49,7 +67,7 @@ Label        Description                                          Location
 ===========  ===================================================  ================
 unit         C unit tests of the library (cmocka)                 test/unit
 cli          Tests of the bpak tool (pytest)                      test/cli
-python       Tests of the python wrapper (pytest)                 test/python
+python       Tests of the python package (pytest)                 test/python
 golden       Golden sample packages and exported symbols          test/golden
 ===========  ===================================================  ================
 
@@ -62,6 +80,10 @@ gives access to all pytest options::
 
 Setting the environment variable ``BPAK_BUILD_DIR`` replaces
 ``--bpak-build-dir``.
+
+Without a build directory the tests run against the installed bpak package,
+for example the editable install of ``uv sync``. Tests that need the CMake
+build, which includes all tests that run the bpak tool, are skipped.
 
 A C unit test binary can be run on its own to see the result of every test
 case::
@@ -105,7 +127,7 @@ library, so internal symbols are available. A test file defines its tests as
 ``test_load_file()`` reads a whole file into memory. New test files must be
 added to ``UNIT_TESTS`` in ``test/unit/CMakeLists.txt``.
 
-Tool and python wrapper tests
+Tool and python package tests
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 These tests use `pytest <https://pytest.org>`_. Every test runs in its own
@@ -124,8 +146,8 @@ fixtures in ``test/conftest.py``:
     Creates a file with a given number of KiB of test data.
 
 ``pybpak``
-    The python wrapper module from the build directory (``test/python``
-    only). The ``origin_pkg`` and ``target_pkg`` fixtures provide signed
+    The bpak python package, from the build directory or installed
+    (``test/python`` only). The ``origin_pkg`` and ``target_pkg`` fixtures provide signed
     packages to test against.
 
 Parametrize tests that only differ in their input instead of duplicating them.
@@ -177,6 +199,15 @@ Code style
 C code is formatted with clang-format using the ``.clang-format`` file in the
 repository root. Only format the code you change.
 
+The python package is checked with `ruff <https://docs.astral.sh/ruff>`_ and
+`mypy <https://mypy-lang.org>`_, configured in ``pyproject.toml``. stubtest
+checks that the type stub of the C extension matches the extension::
+
+    $ uv run ruff check
+    $ uv run ruff format --check
+    $ uv run mypy
+    $ uv run python -m mypy.stubtest bpak._bpak
+
 Commit messages
 ---------------
 
@@ -204,7 +235,8 @@ for:
   file
 - ``bpak/version.h`` (``BPAK_VERSION_MAJOR``, ``BPAK_VERSION_STRING``, ...),
   which is generated into the build directory
-- the python package version in ``python/setup.py``
+- the python package version, read by scikit-build-core, see
+  ``pyproject.toml``
 - the Sphinx and Doxygen documentation
 
 Builds that do not use CMake (``BPAK_HAVE_USER_SETTINGS``) must provide their

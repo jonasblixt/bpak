@@ -169,14 +169,14 @@ static PyMethodDef module_methods[] = {
 
 static PyModuleDef module = {
     PyModuleDef_HEAD_INIT,
-    .m_name = "bpak",
+    .m_name = "bpak._bpak",
     .m_doc = NULL,
     .m_size = -1,
     .m_methods = module_methods
 };
 
 
-PyMODINIT_FUNC PyInit_bpak(void)
+PyMODINIT_FUNC PyInit__bpak(void)
 {
     PyObject *m_p;
 

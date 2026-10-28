@@ -49,6 +49,39 @@ jobs:
           build/test/pytest/
         retention-days: 7
 
+  python-package:
+    name: python-package (${{ matrix.python }})
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.10", "3.14"]
+    env:
+      UV_PYTHON: ${{ matrix.python }}
+    steps:
+    - uses: actions/checkout@v5
+    - uses: astral-sh/setup-uv@v6
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y --no-install-recommends libmbedtls-dev liblzma-dev openssl
+    - name: Install
+      run: uv sync --locked
+    - name: Lint
+      run: |
+        uv run ruff check
+        uv run ruff format --check
+        uv run mypy
+        uv run python -m mypy.stubtest bpak._bpak
+    - name: Build sdist and wheel
+      run: uv build
+    - name: Test the wheel
+      working-directory: ${{ runner.temp }}
+      run: |
+        uv venv wheel-venv
+        uv pip install --python wheel-venv $GITHUB_WORKSPACE/dist/*.whl
+        wheel-venv/bin/python -c "import bpak; print(bpak.id('bpak-test'))"
+
   build-windows:
     runs-on: windows-latest
     defaults:

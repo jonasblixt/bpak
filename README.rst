@@ -39,6 +39,12 @@ Build library and tool::
     $ make
     $ sudo make install
 
+Install the python package with pip, or set up a development environment
+with `uv <https://docs.astral.sh/uv>`_::
+
+    $ pip install .
+    $ uv sync
+
 Running tests (requires cmocka and pytest)::
 
     $ cmake .. -DBPAK_BUILD_TESTS=1

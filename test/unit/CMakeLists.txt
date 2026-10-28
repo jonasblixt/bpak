@@ -1,3 +1,4 @@
+find_package(PkgConfig REQUIRED)
 pkg_check_modules(CMOCKA REQUIRED IMPORTED_TARGET cmocka)
 
 set(UNIT_TESTS

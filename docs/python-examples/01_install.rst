@@ -4,7 +4,11 @@
 .. module:: apython
    :synopsis: How to install the BPAK python library
 
-See :ref:`Building and installing` section for details on installing bpak.
+The python package is installed with pip, or added to a uv project, from
+the bpak repository root, see :ref:`Building and installing`::
+
+    $ pip install .
+    $ uv add /path/to/bpak
 
 The following docker definition can be built from bpak root or by replacing
 the COPY row with commands to clone the bpak repository.

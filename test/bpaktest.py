@@ -88,6 +88,11 @@ class Transport:
     decoder: str
 
 
+def python_path(build_dir: Path) -> list:
+    """The python path of the bpak package in a CMake build directory"""
+    return [str(build_dir / "python")]
+
+
 class Bpak:
     """Runs the bpak tool with 'cwd' as working directory.
 

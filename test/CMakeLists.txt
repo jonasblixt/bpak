@@ -8,7 +8,7 @@ set(BPAK_TEST_DATA_DIR ${CMAKE_CURRENT_SOURCE_DIR}/data)
 add_subdirectory(unit)
 
 # Tool and python wrapper tests (pytest)
-find_package(Python 3.8 REQUIRED COMPONENTS Interpreter)
+find_package(Python 3.10 REQUIRED COMPONENTS Interpreter)
 
 execute_process(
     COMMAND ${Python_EXECUTABLE} -c "import pytest"
@@ -19,8 +19,8 @@ execute_process(
 if (PYTEST_MISSING)
     message(FATAL_ERROR
         "pytest not found for ${Python_EXECUTABLE}. Install it with your "
-        "package manager (e.g. python3-pytest) or with "
-        "'pip install -r ${CMAKE_CURRENT_SOURCE_DIR}/requirements.txt'")
+        "package manager (e.g. python3-pytest) or run 'uv sync' and "
+        "configure with the virtual environment in .venv activated")
 endif()
 
 # Each file is registered as a separate CTest test so 'ctest -j' runs them

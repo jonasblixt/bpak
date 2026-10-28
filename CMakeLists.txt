@@ -14,20 +14,22 @@ set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS version.txt)
 project(bpak VERSION ${BPAK_VERSION}
              DESCRIPTION BitPacker
              HOMEPAGE_URL https://github.com/jonasblixt/bpak
+             LANGUAGES C
 )
 
-enable_language(C)
 enable_testing()
 set(CMAKE_C_STANDARD 99)
-
-find_package(PkgConfig REQUIRED)
-
-add_compile_options(-Wall -Werror)
-include_directories(include/)
 
 option(BPAK_BUILD_MINIMAL "Build a minial version of the library" OFF)
 option(BPAK_BUILD_TOOL "Build the bpak tool" ON)
 option(BPAK_BUILD_TESTS "Build test cases" OFF)
+option(BPAK_WERROR "Treat compiler warnings as errors" ON)
+
+add_compile_options(-Wall)
+if (BPAK_WERROR)
+    add_compile_options(-Werror)
+endif()
+include_directories(include/)
 
 # TODO: Choice option for BPAK_CRYPTO_BACKEND
 #   Select between a pre-defined set of options
@@ -52,6 +54,11 @@ if (BPAK_BUILD_TESTS)
 endif()
 
 add_subdirectory("lib")
+
+# Python package builds with scikit-build-core, see pyproject.toml
+if (SKBUILD AND NOT BPAK_BUILD_TESTS)
+    add_subdirectory("python")
+endif()
 
 if ((NOT BPAK_BUILD_MINIMAL) AND BPAK_BUILD_TOOL)
     add_subdirectory("src")

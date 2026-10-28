@@ -24,3 +24,5 @@ template*
 cov-int/
 __pycache__
 tags
+.venv/
+/dist/

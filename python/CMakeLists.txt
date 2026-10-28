@@ -1,11 +1,17 @@
-include(GNUInstallDirs)
+# The C extension bpak._bpak of the python package in python/bpak.
+#
+# Wheels, built by scikit-build-core (see pyproject.toml), link the static
+# library into the extension. Test builds link it against the shared library
+# and assemble the package in the build directory, python/bpak/ with the
+# extension and links to the python sources.
 
-find_package(Python 3.6
-    COMPONENTS Interpreter Development
-)
+if (CMAKE_VERSION VERSION_LESS 3.18)
+    message(FATAL_ERROR "The python package requires CMake 3.18 or later")
+endif()
 
-add_library(
-    ${PROJECT_NAME}-python-wrapper SHARED
+find_package(Python 3.10 REQUIRED COMPONENTS Interpreter Development.Module)
+
+python_add_library(${PROJECT_NAME}-python-wrapper MODULE WITH_SOABI
     python_wrapper.c
     package.c
     meta.c
@@ -14,24 +20,46 @@ add_library(
 
 target_include_directories(${PROJECT_NAME}-python-wrapper PRIVATE
     ${CMAKE_SOURCE_DIR}/include
-    ${Python_INCLUDE_DIRS}
+    ${${PROJECT_NAME}_BINARY_DIR}/lib
 )
 
-target_link_libraries(${PROJECT_NAME}-python-wrapper
-    ${Python_LIBRARIES}
-    ${PROJECT_NAME}
+target_compile_options(${PROJECT_NAME}-python-wrapper PRIVATE -Wextra -pedantic)
+
+set_target_properties(${PROJECT_NAME}-python-wrapper PROPERTIES
+    OUTPUT_NAME _${PROJECT_NAME}
 )
 
-set_target_properties(${PROJECT_NAME}-python-wrapper
-    PROPERTIES VERSION ${PROJECT_VERSION})
-set_target_properties(${PROJECT_NAME}-python-wrapper
-    PROPERTIES SOVERSION ${PROJECT_VERSION_MAJOR})
+if (SKBUILD)
+    set_target_properties(${PROJECT_NAME}-static PROPERTIES
+        POSITION_INDEPENDENT_CODE ON
+    )
 
-target_compile_options(${PROJECT_NAME}-python-wrapper PRIVATE
-    -Wextra -pedantic
-    -I${${PROJECT_NAME}_BINARY_DIR}/lib/
-)
+    target_link_libraries(${PROJECT_NAME}-python-wrapper PRIVATE
+        ${PROJECT_NAME}-static
+        ${LZMA_LIBRARY}
+        ${MBEDCRYPTO_LIBRARY}
+    )
 
-set_target_properties(${PROJECT_NAME}-python-wrapper PROPERTIES PREFIX "")
-set_target_properties(${PROJECT_NAME}-python-wrapper
-    PROPERTIES OUTPUT_NAME ${PROJECT_NAME})
+    install(TARGETS ${PROJECT_NAME}-python-wrapper
+        LIBRARY DESTINATION ${PROJECT_NAME}
+        COMPONENT python
+    )
+else()
+    set(PACKAGE_DIR ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME})
+
+    target_link_libraries(${PROJECT_NAME}-python-wrapper PRIVATE ${PROJECT_NAME})
+
+    set_target_properties(${PROJECT_NAME}-python-wrapper PROPERTIES
+        LIBRARY_OUTPUT_DIRECTORY ${PACKAGE_DIR}
+    )
+
+    file(GLOB PACKAGE_SOURCES LIST_DIRECTORIES false CONFIGURE_DEPENDS
+        ${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_NAME}/*
+    )
+
+    file(MAKE_DIRECTORY ${PACKAGE_DIR})
+    foreach(source IN LISTS PACKAGE_SOURCES)
+        get_filename_component(name ${source} NAME)
+        file(CREATE_LINK ${source} ${PACKAGE_DIR}/${name} SYMBOLIC)
+    endforeach()
+endif()
