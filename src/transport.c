@@ -114,6 +114,7 @@ int action_transport(int argc, char **argv)
     struct bpak_package input;
     struct bpak_package output;
     struct bpak_package origin;
+    struct bpak_package *origin_pkg = NULL;
 
     rc = bpak_pkg_open(&input, filename, "rb+");
 
@@ -129,6 +130,8 @@ int action_transport(int argc, char **argv)
             fprintf(stderr, "Error: Could not open package %s\n", origin_file);
             return rc;
         }
+
+        origin_pkg = &origin;
     }
 
     if ((encode_flag || decode_flag) && !output_file) {
@@ -149,12 +152,12 @@ int action_transport(int argc, char **argv)
     }
 
     if (encode_flag) {
-        rc = bpak_pkg_transport_encode(&input, &output, &origin);
+        rc = bpak_pkg_transport_encode(&input, &output, origin_pkg);
     } else if (decode_flag) {
         rc = bpak_pkg_transport_decode(
             &input, /* Input package or 'patch' */
             &output,
-            &origin); /* Origin data to use for patch operation*/
+            origin_pkg); /* Origin data to use for patch operation*/
     } else if (add_flag && encoder_alg && decoder_alg) {
         rc = bpak_add_transport_meta(&input.header,
                                      part_ref,

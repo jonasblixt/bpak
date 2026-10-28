@@ -102,6 +102,38 @@ def test_decode_without_encoding(bpak):
     assert install.read_bytes() == target.read_bytes()
 
 
+def test_encode_decode_without_origin(bpak):
+    """Encoders that do not diff against an origin, here the merkle tree is
+    removed and regenerated, work without an origin package"""
+    target = bpak.create_package(
+        "target.bpak", transport=[merkle_tree("fs")],
+        parts=[Part("fs", DIFF2.with_name("diff2_target.bin"), merkle=True),
+               Part("data", DIFF3.with_name("diff3_target.bin"))])
+    patch = bpak.cwd / "patch.bpak"
+    install = bpak.cwd / "install.bpak"
+
+    bpak("transport", target, "--encode", "--output", patch)
+    bpak("transport", patch, "--decode", "--output", install)
+
+    assert patch.stat().st_size < target.stat().st_size
+    assert install.read_bytes() == target.read_bytes()
+
+
+def test_decode_without_origin(bpak):
+    """bspatch needs the origin"""
+    transport = [bsdiff("fs")]
+    parts = [Part("fs", DIFF3)]
+    origin = create_package(bpak, "origin", transport, parts)
+    target = create_package(bpak, "target", transport, parts)
+    patch = bpak.cwd / "patch.bpak"
+
+    bpak("transport", target, "--encode", "--origin", origin,
+         "--output", patch)
+    bpak.fails("transport", patch, "--decode",
+               "--output", bpak.cwd / "install.bpak",
+               error=BpakError.PATCH_READ_ORIGIN_ERROR)
+
+
 def test_origin_from_another_package(bpak):
     """Patches can only be created from and applied to an origin with the
     same package UUID"""
