@@ -4,6 +4,9 @@ Bitpacker: a C library (`lib/`, public headers in `include/bpak/`), a command
 line tool (`src/`) and a python wrapper (`python/`) for signed firmware
 archives. Developer documentation: `docs/dg/development-setup.rst`.
 
+Open tasks are tracked in `todo.md`. Add tasks you discover there and move
+them to Done, with the commit hash, when they are resolved.
+
 ## Build and test
 
 ```sh
