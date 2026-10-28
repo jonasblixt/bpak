@@ -1,0 +1,2 @@
+# Golden sets must stay byte identical, never convert line endings
+test/golden/*/** -text

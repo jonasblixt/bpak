@@ -33,6 +33,8 @@ set(PYTEST_FILES
     cli/test_meta.py
     cli/test_sign.py
     cli/test_transport.py
+    golden/test_packages.py
+    golden/test_symbols.py
     python/test_meta.py
     python/test_package.py
     python/test_sign.py

@@ -50,6 +50,7 @@ Label        Description                                          Location
 unit         C unit tests of the library (cmocka)                 test/unit
 cli          Tests of the bpak tool (pytest)                      test/cli
 python       Tests of the python wrapper (pytest)                 test/python
+golden       Golden sample packages and exported symbols          test/golden
 ===========  ===================================================  ================
 
 The pytest based tests can be run directly against a build directory, which
@@ -129,6 +130,37 @@ fixtures in ``test/conftest.py``:
 
 Parametrize tests that only differ in their input instead of duplicating them.
 New test files must be added to ``PYTEST_FILES`` in ``test/CMakeLists.txt``.
+
+Compatibility
+-------------
+
+Packages, patches and keystores live for a long time. Devices in the field
+run old versions of bpak, bootloaders are rarely updated and patches are
+created by newer versions than the ones that apply them. The package format
+and the ABI of the library must never change in an incompatible way. Two
+groups of tests guard this:
+
+``test/unit/test_abi.c``
+    The layout of the structs in the public headers and the values of all
+    enums, constants and predefined ids.
+
+``test/golden``
+    Golden sample packages. Every directory holds packages, patches and a
+    keystore that were created by a release, together with the input files
+    and the commands that created them. All later versions must read, verify
+    and decode them, and must create identical packages and patches from the
+    same commands. ``libbpak.symbols`` lists the functions that the shared
+    library exports.
+
+Never change an expected value or a golden set to make these tests pass.
+When a release adds to the format, for example a new encoder or a new kind of
+meta data, extend ``test/golden/generate.py`` and add a new golden set for the
+release. The set is named after ``version.txt``::
+
+    $ test/golden/generate.py --bpak-build-dir build
+
+New functions that the library exports are added to
+``test/golden/libbpak.symbols``.
 
 Coverage
 --------

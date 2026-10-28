@@ -1,0 +1,612 @@
+{
+  "version": "0.9.3",
+  "packages": {
+    "basic.bpak": {
+      "commands": [
+        "create basic.bpak -Y --hash-kind sha256 --signature-kind prime256v1",
+        "add basic.bpak --meta bpak-package --from-string 0888b0fa-9c48-4524-9845-06a641b61edd --encoder uuid",
+        "add basic.bpak --meta bpak-version --from-string 1.2.3-rc1",
+        "add basic.bpak --meta pb-load-addr --from-string 0x80000000 --encoder integer --part-ref kernel",
+        "add basic.bpak --part kernel --from-file '{inputs}/kernel.bin'",
+        "add basic.bpak --part dtb --from-file '{inputs}/dtb.bin' --set-flag dont-hash",
+        "set basic.bpak --key-id pb-development --keystore-id pb-internal",
+        "sign basic.bpak --key '{inputs}/secp256r1-key-pair.pem'"
+      ],
+      "verify_key": "secp256r1-pub-key.der",
+      "keystore": "keystore.bpak",
+      "parts": [
+        {
+          "id": "0xec103b08",
+          "size": 3172,
+          "flags": 0,
+          "sha256": "5e128213a4c3f1a7dd19e7c8ac0ce126cec54d6da6104dc10369c3c12229327f"
+        },
+        {
+          "id": "0xa731df7a",
+          "size": 200,
+          "flags": 1,
+          "sha256": "d3d6943590dc3ec369ad4cad227e215b9a99a335b9d9f106d82aff373bdf30bf"
+        }
+      ],
+      "meta": [
+        {
+          "id": "0xfb2f1f3f",
+          "part_id_ref": "0x00000000",
+          "data": "0888b0fa9c484524984506a641b61edd"
+        },
+        {
+          "id": "0x9a5bab69",
+          "part_id_ref": "0x00000000",
+          "data": "312e322e332d72633100"
+        },
+        {
+          "id": "0xd1e64a4b",
+          "part_id_ref": "0xec103b08",
+          "data": "0000008000000000"
+        }
+      ]
+    },
+    "sha384-secp384r1.bpak": {
+      "commands": [
+        "create sha384-secp384r1.bpak -Y --hash-kind sha384 --signature-kind secp384r1",
+        "add sha384-secp384r1.bpak --meta bpak-package --from-string 0888b0fa-9c48-4524-9845-06a641b61edd --encoder uuid",
+        "add sha384-secp384r1.bpak --part kernel --from-file '{inputs}/kernel.bin'",
+        "set sha384-secp384r1.bpak --key-id pb-development-384 --keystore-id pb-internal",
+        "sign sha384-secp384r1.bpak --key '{inputs}/secp384r1-key-pair.pem'"
+      ],
+      "verify_key": "secp384r1-pub-key.der",
+      "keystore": "keystore.bpak",
+      "parts": [
+        {
+          "id": "0xec103b08",
+          "size": 3172,
+          "flags": 0,
+          "sha256": "5e128213a4c3f1a7dd19e7c8ac0ce126cec54d6da6104dc10369c3c12229327f"
+        }
+      ],
+      "meta": [
+        {
+          "id": "0xfb2f1f3f",
+          "part_id_ref": "0x00000000",
+          "data": "0888b0fa9c484524984506a641b61edd"
+        }
+      ]
+    },
+    "sha512-secp521r1.bpak": {
+      "commands": [
+        "create sha512-secp521r1.bpak -Y --hash-kind sha512 --signature-kind secp521r1",
+        "add sha512-secp521r1.bpak --meta bpak-package --from-string 0888b0fa-9c48-4524-9845-06a641b61edd --encoder uuid",
+        "add sha512-secp521r1.bpak --part kernel --from-file '{inputs}/kernel.bin'",
+        "set sha512-secp521r1.bpak --key-id pb-development-521 --keystore-id pb-internal",
+        "sign sha512-secp521r1.bpak --key '{inputs}/secp521r1-key-pair.pem'"
+      ],
+      "verify_key": "secp521r1-pub-key.der",
+      "keystore": "keystore.bpak",
+      "parts": [
+        {
+          "id": "0xec103b08",
+          "size": 3172,
+          "flags": 0,
+          "sha256": "5e128213a4c3f1a7dd19e7c8ac0ce126cec54d6da6104dc10369c3c12229327f"
+        }
+      ],
+      "meta": [
+        {
+          "id": "0xfb2f1f3f",
+          "part_id_ref": "0x00000000",
+          "data": "0888b0fa9c484524984506a641b61edd"
+        }
+      ]
+    },
+    "sha256-rsa4096.bpak": {
+      "commands": [
+        "create sha256-rsa4096.bpak -Y --hash-kind sha256 --signature-kind rsa4096",
+        "add sha256-rsa4096.bpak --meta bpak-package --from-string 0888b0fa-9c48-4524-9845-06a641b61edd --encoder uuid",
+        "add sha256-rsa4096.bpak --part kernel --from-file '{inputs}/kernel.bin'",
+        "set sha256-rsa4096.bpak --key-id pb-development-rsa --keystore-id pb-internal",
+        "sign sha256-rsa4096.bpak --key '{inputs}/dev_rsa_private.pem'"
+      ],
+      "verify_key": "dev_rsa_public.der",
+      "keystore": "keystore.bpak",
+      "parts": [
+        {
+          "id": "0xec103b08",
+          "size": 3172,
+          "flags": 0,
+          "sha256": "5e128213a4c3f1a7dd19e7c8ac0ce126cec54d6da6104dc10369c3c12229327f"
+        }
+      ],
+      "meta": [
+        {
+          "id": "0xfb2f1f3f",
+          "part_id_ref": "0x00000000",
+          "data": "0888b0fa9c484524984506a641b61edd"
+        }
+      ]
+    },
+    "merkle.bpak": {
+      "commands": [
+        "create merkle.bpak -Y --hash-kind sha256 --signature-kind prime256v1",
+        "add merkle.bpak --meta bpak-package --from-string 0888b0fa-9c48-4524-9845-06a641b61edd --encoder uuid",
+        "add merkle.bpak --part fs --from-file '{inputs}/fs-origin.bin' --set-flag dont-hash --encoder merkle",
+        "set merkle.bpak --key-id pb-development --keystore-id pb-internal",
+        "sign merkle.bpak --key '{inputs}/secp256r1-key-pair.pem'"
+      ],
+      "verify_key": "secp256r1-pub-key.der",
+      "keystore": "keystore.bpak",
+      "parts": [
+        {
+          "id": "0xfaabeca7",
+          "size": 32768,
+          "flags": 1,
+          "sha256": "884d1b0c3d7cc85e046c08c97beb80d5441d388789b9327b580708b3e3ac599b"
+        },
+        {
+          "id": "0x77fadb17",
+          "size": 4096,
+          "flags": 1,
+          "sha256": "7b1266dab8d57f231b1b9634088aa1173194a565a7b5689768ea14abfa3ebb7d"
+        }
+      ],
+      "meta": [
+        {
+          "id": "0xfb2f1f3f",
+          "part_id_ref": "0x00000000",
+          "data": "0888b0fa9c484524984506a641b61edd"
+        },
+        {
+          "id": "0x7c9b2f93",
+          "part_id_ref": "0xfaabeca7",
+          "data": "479b7614b9b72545a3f1c9350ba07c37013ab379b4e9693b091b095d091dd74b"
+        },
+        {
+          "id": "0xe68fc9be",
+          "part_id_ref": "0xfaabeca7",
+          "data": "2072565a9f73186f43f35531e4b7ab85729d8ca6c0c4607f9df33f456885e903"
+        }
+      ]
+    },
+    "keystore.bpak": {
+      "commands": [
+        "create keystore.bpak -Y --hash-kind sha256 --signature-kind prime256v1",
+        "add keystore.bpak --meta bpak-package --from-string 5df103ef-e774-450b-95c5-1fef51ceec28 --encoder uuid",
+        "add keystore.bpak --meta keystore-provider-id --from-string pb-internal --encoder id",
+        "add keystore.bpak --part pb-development --from-file '{inputs}/secp256r1-pub-key.der' --encoder key",
+        "add keystore.bpak --part pb-development-384 --from-file '{inputs}/secp384r1-pub-key.der' --encoder key",
+        "add keystore.bpak --part pb-development-521 --from-file '{inputs}/secp521r1-pub-key.der' --encoder key",
+        "add keystore.bpak --part pb-development-rsa --from-file '{inputs}/dev_rsa_public.der' --encoder key",
+        "set keystore.bpak --key-id pb-development --keystore-id pb-internal",
+        "sign keystore.bpak --key '{inputs}/secp256r1-key-pair.pem'"
+      ],
+      "verify_key": "secp256r1-pub-key.der",
+      "keystore": "keystore.bpak",
+      "parts": [
+        {
+          "id": "0xa90f9680",
+          "size": 91,
+          "flags": 0,
+          "sha256": "b6b97296f33357e12aa32388e4bef53457ca9a70a61dc80822713839fe413435"
+        },
+        {
+          "id": "0x7e0b119e",
+          "size": 120,
+          "flags": 0,
+          "sha256": "ab14be72aeafeb3a0c80211762e7e00d4c0d8cee09688a201ce5a2aa0e7d1333"
+        },
+        {
+          "id": "0xf0037129",
+          "size": 158,
+          "flags": 0,
+          "sha256": "b83d2bd56dc4e7d0348c76767722a5abf9c9aa9fee4e175dbb45b677dfc92bee"
+        },
+        {
+          "id": "0x07dfc5dc",
+          "size": 550,
+          "flags": 0,
+          "sha256": "37ee13b7a03bc2945b7331123f55a7ff837d07556d651344f35e33c8ad423449"
+        }
+      ],
+      "meta": [
+        {
+          "id": "0xfb2f1f3f",
+          "part_id_ref": "0x00000000",
+          "data": "5df103efe774450b95c51fef51ceec28"
+        },
+        {
+          "id": "0xfb367d9a",
+          "part_id_ref": "0x00000000",
+          "data": "20215f36"
+        }
+      ]
+    },
+    "origin.bpak": {
+      "commands": [
+        "create origin.bpak -Y --hash-kind sha256 --signature-kind prime256v1",
+        "add origin.bpak --meta bpak-package --from-string 0888b0fa-9c48-4524-9845-06a641b61edd --encoder uuid",
+        "add origin.bpak --meta bpak-version --from-string 1.0.0",
+        "transport origin.bpak --add --part fs --encoder bsdiff --decoder bspatch",
+        "transport origin.bpak --add --part fs-hash-tree --encoder remove-data --decoder merkle-generate",
+        "transport origin.bpak --add --part boot --encoder bsdiff-no-comp --decoder bspatch-no-comp",
+        "add origin.bpak --part fs --from-file '{inputs}/fs-origin.bin' --set-flag dont-hash --encoder merkle",
+        "add origin.bpak --part data --from-file '{inputs}/data-origin.bin'",
+        "add origin.bpak --part boot --from-file '{inputs}/boot-origin.bin'",
+        "add origin.bpak --part dtb --from-file '{inputs}/dtb.bin'",
+        "set origin.bpak --key-id pb-development --keystore-id pb-internal",
+        "sign origin.bpak --key '{inputs}/secp256r1-key-pair.pem'"
+      ],
+      "verify_key": "secp256r1-pub-key.der",
+      "keystore": "keystore.bpak",
+      "parts": [
+        {
+          "id": "0xfaabeca7",
+          "size": 32768,
+          "flags": 1,
+          "sha256": "884d1b0c3d7cc85e046c08c97beb80d5441d388789b9327b580708b3e3ac599b"
+        },
+        {
+          "id": "0x77fadb17",
+          "size": 4096,
+          "flags": 1,
+          "sha256": "7b1266dab8d57f231b1b9634088aa1173194a565a7b5689768ea14abfa3ebb7d"
+        },
+        {
+          "id": "0x8cb72c7f",
+          "size": 6000,
+          "flags": 0,
+          "sha256": "aeea77252f3caf23ff75171df0855bec07ed862c3c854ae1af7b81df00919285"
+        },
+        {
+          "id": "0x67a971d8",
+          "size": 3000,
+          "flags": 0,
+          "sha256": "ee5517f9481428541fb747ba3eeaf9c8265fa4763e454a89175e20e786410f84"
+        },
+        {
+          "id": "0xa731df7a",
+          "size": 200,
+          "flags": 0,
+          "sha256": "d3d6943590dc3ec369ad4cad227e215b9a99a335b9d9f106d82aff373bdf30bf"
+        }
+      ],
+      "meta": [
+        {
+          "id": "0xfb2f1f3f",
+          "part_id_ref": "0x00000000",
+          "data": "0888b0fa9c484524984506a641b61edd"
+        },
+        {
+          "id": "0x9a5bab69",
+          "part_id_ref": "0x00000000",
+          "data": "312e302e3000"
+        },
+        {
+          "id": "0x2d44bbfb",
+          "part_id_ref": "0xfaabeca7",
+          "data": "f9ac7a9f884396b5000000000000000000000000000000000000000000000000"
+        },
+        {
+          "id": "0x2d44bbfb",
+          "part_id_ref": "0x77fadb17",
+          "data": "d04c00578fc5bcb5000000000000000000000000000000000000000000000000"
+        },
+        {
+          "id": "0x2d44bbfb",
+          "part_id_ref": "0x67a971d8",
+          "data": "3e8e870a92256275000000000000000000000000000000000000000000000000"
+        },
+        {
+          "id": "0x7c9b2f93",
+          "part_id_ref": "0xfaabeca7",
+          "data": "479b7614b9b72545a3f1c9350ba07c37013ab379b4e9693b091b095d091dd74b"
+        },
+        {
+          "id": "0xe68fc9be",
+          "part_id_ref": "0xfaabeca7",
+          "data": "2072565a9f73186f43f35531e4b7ab85729d8ca6c0c4607f9df33f456885e903"
+        }
+      ]
+    },
+    "target.bpak": {
+      "commands": [
+        "create target.bpak -Y --hash-kind sha256 --signature-kind prime256v1",
+        "add target.bpak --meta bpak-package --from-string 0888b0fa-9c48-4524-9845-06a641b61edd --encoder uuid",
+        "add target.bpak --meta bpak-version --from-string 1.1.0",
+        "transport target.bpak --add --part fs --encoder bsdiff --decoder bspatch",
+        "transport target.bpak --add --part fs-hash-tree --encoder remove-data --decoder merkle-generate",
+        "transport target.bpak --add --part boot --encoder bsdiff-no-comp --decoder bspatch-no-comp",
+        "add target.bpak --part fs --from-file '{inputs}/fs-target.bin' --set-flag dont-hash --encoder merkle",
+        "add target.bpak --part data --from-file '{inputs}/data-target.bin'",
+        "add target.bpak --part boot --from-file '{inputs}/boot-target.bin'",
+        "add target.bpak --part dtb --from-file '{inputs}/dtb.bin'",
+        "set target.bpak --key-id pb-development --keystore-id pb-internal",
+        "sign target.bpak --key '{inputs}/secp256r1-key-pair.pem'"
+      ],
+      "verify_key": "secp256r1-pub-key.der",
+      "keystore": "keystore.bpak",
+      "parts": [
+        {
+          "id": "0xfaabeca7",
+          "size": 32768,
+          "flags": 1,
+          "sha256": "c79c4da9db8c322f761b7c0d9cd1fe1a31cadc546536ef7c9304df4445dfed8e"
+        },
+        {
+          "id": "0x77fadb17",
+          "size": 4096,
+          "flags": 1,
+          "sha256": "10a2c1bdaa7a5495eb94ec9fe7a914f98d9dd556f5e5bd531cfe92026cdf1ac3"
+        },
+        {
+          "id": "0x8cb72c7f",
+          "size": 6500,
+          "flags": 0,
+          "sha256": "8160d0a1ccacca399a7c80e3bf6997648c7b7b553993346c749502f97f4890af"
+        },
+        {
+          "id": "0x67a971d8",
+          "size": 3100,
+          "flags": 0,
+          "sha256": "3bd4618ae19ccf625de59eafcf27361675eaacc6b1e553d50474c77c9b29bd24"
+        },
+        {
+          "id": "0xa731df7a",
+          "size": 200,
+          "flags": 0,
+          "sha256": "d3d6943590dc3ec369ad4cad227e215b9a99a335b9d9f106d82aff373bdf30bf"
+        }
+      ],
+      "meta": [
+        {
+          "id": "0xfb2f1f3f",
+          "part_id_ref": "0x00000000",
+          "data": "0888b0fa9c484524984506a641b61edd"
+        },
+        {
+          "id": "0x9a5bab69",
+          "part_id_ref": "0x00000000",
+          "data": "312e312e3000"
+        },
+        {
+          "id": "0x2d44bbfb",
+          "part_id_ref": "0xfaabeca7",
+          "data": "f9ac7a9f884396b5000000000000000000000000000000000000000000000000"
+        },
+        {
+          "id": "0x2d44bbfb",
+          "part_id_ref": "0x77fadb17",
+          "data": "d04c00578fc5bcb5000000000000000000000000000000000000000000000000"
+        },
+        {
+          "id": "0x2d44bbfb",
+          "part_id_ref": "0x67a971d8",
+          "data": "3e8e870a92256275000000000000000000000000000000000000000000000000"
+        },
+        {
+          "id": "0x7c9b2f93",
+          "part_id_ref": "0xfaabeca7",
+          "data": "479b7614b9b72545a3f1c9350ba07c37013ab379b4e9693b091b095d091dd74b"
+        },
+        {
+          "id": "0xe68fc9be",
+          "part_id_ref": "0xfaabeca7",
+          "data": "561a9022aba055411b49e79612ee26c6fe6c33148b7df91958d63939fb09c3fb"
+        }
+      ]
+    },
+    "target-lzma.bpak": {
+      "commands": [
+        "create target-lzma.bpak -Y --hash-kind sha256 --signature-kind prime256v1",
+        "add target-lzma.bpak --meta bpak-package --from-string 0888b0fa-9c48-4524-9845-06a641b61edd --encoder uuid",
+        "add target-lzma.bpak --meta bpak-version --from-string 1.1.0",
+        "transport target-lzma.bpak --add --part data --encoder bsdiff-lzma --decoder bspatch-lzma",
+        "add target-lzma.bpak --part fs --from-file '{inputs}/fs-target.bin' --set-flag dont-hash --encoder merkle",
+        "add target-lzma.bpak --part data --from-file '{inputs}/data-target.bin'",
+        "add target-lzma.bpak --part boot --from-file '{inputs}/boot-target.bin'",
+        "add target-lzma.bpak --part dtb --from-file '{inputs}/dtb.bin'",
+        "set target-lzma.bpak --key-id pb-development --keystore-id pb-internal",
+        "sign target-lzma.bpak --key '{inputs}/secp256r1-key-pair.pem'"
+      ],
+      "verify_key": "secp256r1-pub-key.der",
+      "keystore": "keystore.bpak",
+      "parts": [
+        {
+          "id": "0xfaabeca7",
+          "size": 32768,
+          "flags": 1,
+          "sha256": "c79c4da9db8c322f761b7c0d9cd1fe1a31cadc546536ef7c9304df4445dfed8e"
+        },
+        {
+          "id": "0x77fadb17",
+          "size": 4096,
+          "flags": 1,
+          "sha256": "10a2c1bdaa7a5495eb94ec9fe7a914f98d9dd556f5e5bd531cfe92026cdf1ac3"
+        },
+        {
+          "id": "0x8cb72c7f",
+          "size": 6500,
+          "flags": 0,
+          "sha256": "8160d0a1ccacca399a7c80e3bf6997648c7b7b553993346c749502f97f4890af"
+        },
+        {
+          "id": "0x67a971d8",
+          "size": 3100,
+          "flags": 0,
+          "sha256": "3bd4618ae19ccf625de59eafcf27361675eaacc6b1e553d50474c77c9b29bd24"
+        },
+        {
+          "id": "0xa731df7a",
+          "size": 200,
+          "flags": 0,
+          "sha256": "d3d6943590dc3ec369ad4cad227e215b9a99a335b9d9f106d82aff373bdf30bf"
+        }
+      ],
+      "meta": [
+        {
+          "id": "0xfb2f1f3f",
+          "part_id_ref": "0x00000000",
+          "data": "0888b0fa9c484524984506a641b61edd"
+        },
+        {
+          "id": "0x9a5bab69",
+          "part_id_ref": "0x00000000",
+          "data": "312e312e3000"
+        },
+        {
+          "id": "0x2d44bbfb",
+          "part_id_ref": "0x8cb72c7f",
+          "data": "6ee5071693983a93000000000000000000000000000000000000000000000000"
+        },
+        {
+          "id": "0x7c9b2f93",
+          "part_id_ref": "0xfaabeca7",
+          "data": "479b7614b9b72545a3f1c9350ba07c37013ab379b4e9693b091b095d091dd74b"
+        },
+        {
+          "id": "0xe68fc9be",
+          "part_id_ref": "0xfaabeca7",
+          "data": "561a9022aba055411b49e79612ee26c6fe6c33148b7df91958d63939fb09c3fb"
+        }
+      ]
+    }
+  },
+  "patches": {
+    "patch.bpak": {
+      "origin": "origin.bpak",
+      "target": "target.bpak",
+      "reproducible": true,
+      "parts": [
+        {
+          "id": "0xfaabeca7",
+          "size": 32768,
+          "flags": 3,
+          "sha256": "e5a837d4f316f7f54b0f1d7e27697538badb7f9a60d2d797057a04972d01416b"
+        },
+        {
+          "id": "0x77fadb17",
+          "size": 4096,
+          "flags": 3,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "id": "0x8cb72c7f",
+          "size": 6500,
+          "flags": 0,
+          "sha256": "8160d0a1ccacca399a7c80e3bf6997648c7b7b553993346c749502f97f4890af"
+        },
+        {
+          "id": "0x67a971d8",
+          "size": 3100,
+          "flags": 2,
+          "sha256": "53cbb0f690e882330531f1e78aeaecfc0fe80495d79d689d05023925dc996f40"
+        },
+        {
+          "id": "0xa731df7a",
+          "size": 200,
+          "flags": 0,
+          "sha256": "d3d6943590dc3ec369ad4cad227e215b9a99a335b9d9f106d82aff373bdf30bf"
+        }
+      ],
+      "meta": [
+        {
+          "id": "0xfb2f1f3f",
+          "part_id_ref": "0x00000000",
+          "data": "0888b0fa9c484524984506a641b61edd"
+        },
+        {
+          "id": "0x9a5bab69",
+          "part_id_ref": "0x00000000",
+          "data": "312e312e3000"
+        },
+        {
+          "id": "0x2d44bbfb",
+          "part_id_ref": "0xfaabeca7",
+          "data": "f9ac7a9f884396b5000000000000000000000000000000000000000000000000"
+        },
+        {
+          "id": "0x2d44bbfb",
+          "part_id_ref": "0x77fadb17",
+          "data": "d04c00578fc5bcb5000000000000000000000000000000000000000000000000"
+        },
+        {
+          "id": "0x2d44bbfb",
+          "part_id_ref": "0x67a971d8",
+          "data": "3e8e870a92256275000000000000000000000000000000000000000000000000"
+        },
+        {
+          "id": "0x7c9b2f93",
+          "part_id_ref": "0xfaabeca7",
+          "data": "479b7614b9b72545a3f1c9350ba07c37013ab379b4e9693b091b095d091dd74b"
+        },
+        {
+          "id": "0xe68fc9be",
+          "part_id_ref": "0xfaabeca7",
+          "data": "561a9022aba055411b49e79612ee26c6fe6c33148b7df91958d63939fb09c3fb"
+        }
+      ]
+    },
+    "patch-lzma.bpak": {
+      "origin": "origin.bpak",
+      "target": "target-lzma.bpak",
+      "reproducible": false,
+      "parts": [
+        {
+          "id": "0xfaabeca7",
+          "size": 32768,
+          "flags": 1,
+          "sha256": "c79c4da9db8c322f761b7c0d9cd1fe1a31cadc546536ef7c9304df4445dfed8e"
+        },
+        {
+          "id": "0x77fadb17",
+          "size": 4096,
+          "flags": 1,
+          "sha256": "10a2c1bdaa7a5495eb94ec9fe7a914f98d9dd556f5e5bd531cfe92026cdf1ac3"
+        },
+        {
+          "id": "0x8cb72c7f",
+          "size": 6500,
+          "flags": 2,
+          "sha256": "ccccda09ed59cebf87d177f4e10404de5c3d5de5ce9ccd89e559babdbc375517"
+        },
+        {
+          "id": "0x67a971d8",
+          "size": 3100,
+          "flags": 0,
+          "sha256": "3bd4618ae19ccf625de59eafcf27361675eaacc6b1e553d50474c77c9b29bd24"
+        },
+        {
+          "id": "0xa731df7a",
+          "size": 200,
+          "flags": 0,
+          "sha256": "d3d6943590dc3ec369ad4cad227e215b9a99a335b9d9f106d82aff373bdf30bf"
+        }
+      ],
+      "meta": [
+        {
+          "id": "0xfb2f1f3f",
+          "part_id_ref": "0x00000000",
+          "data": "0888b0fa9c484524984506a641b61edd"
+        },
+        {
+          "id": "0x9a5bab69",
+          "part_id_ref": "0x00000000",
+          "data": "312e312e3000"
+        },
+        {
+          "id": "0x2d44bbfb",
+          "part_id_ref": "0x8cb72c7f",
+          "data": "6ee5071693983a93000000000000000000000000000000000000000000000000"
+        },
+        {
+          "id": "0x7c9b2f93",
+          "part_id_ref": "0xfaabeca7",
+          "data": "479b7614b9b72545a3f1c9350ba07c37013ab379b4e9693b091b095d091dd74b"
+        },
+        {
+          "id": "0xe68fc9be",
+          "part_id_ref": "0xfaabeca7",
+          "data": "561a9022aba055411b49e79612ee26c6fe6c33148b7df91958d63939fb09c3fb"
+        }
+      ]
+    }
+  }
+}

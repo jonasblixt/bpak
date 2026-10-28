@@ -17,6 +17,8 @@ coverage_report
 *.gcda
 /*.sh
 *.bpak
+# Golden sample packages are part of the tests
+!test/golden/**/*.bpak
 template*
 *.bak
 cov-int/
