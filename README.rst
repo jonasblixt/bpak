@@ -1,7 +1,5 @@
 .. image:: docs/bitpacker.svg
     :width: 10 %
-.. image:: https://codecov.io/gh/jonasblixt/bpak/branch/master/graph/badge.svg
-  :target: https://codecov.io/gh/jonasblixt/bpak
 .. image:: https://github.com/jonasblixt/bpak/actions/workflows/build.yml/badge.svg
     :target: https://github.com/jonasblixt/bpak/actions/workflows/build.yml
 .. image:: https://scan.coverity.com/projects/20419/badge.svg

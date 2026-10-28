@@ -1,4 +1,0 @@
-ignore:
-  - src/uuid
-  - lib/uuid
-  - lib/heatshrink

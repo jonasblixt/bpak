@@ -306,8 +306,4 @@ extlinks = {
     ('https://github.com/jonasblixt/bpak/blob/' + version + '/%s', ''),
     'github-tree':
     ('https://github.com/jonasblixt/bpak/tree/' + version + '/%s', ''),
-    'codecov':
-    ('https://codecov.io/gh/jonasblixt/bpak/src/' + version + '/%s', ''),
-    'codecov-tree':
-    ('https://codecov.io/gh/jonasblixt/bpak/tree/' + version + '/%s', '')
 }
