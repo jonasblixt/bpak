@@ -19,28 +19,14 @@ Optionally build with python support::
 Running tests
 -------------
 
-The tests additionally depend on cmocka, pytest and openssl.
-
-Build and run all tests::
+Build and run the tests::
 
     $ cmake -B build -DBPAK_BUILD_TESTS=1
     $ cmake --build build
-    $ ctest --test-dir build --output-on-failure -j$(nproc)
+    $ ctest --test-dir build --output-on-failure
 
-The tests are split into three groups that can be selected with ``ctest -L``:
+The tests have additional dependencies, see :ref:`Development setup`.
 
-===========  ===================================================  ================
-Label        Description                                          Location
-===========  ===================================================  ================
-unit         C unit tests of the library (cmocka)                 test/unit
-cli          Tests of the bpak tool (pytest)                      test/cli
-python       Tests of the python wrapper (pytest)                 test/python
-===========  ===================================================  ================
-
-The pytest based tests can also be run directly against a build directory,
-which gives access to all pytest options::
-
-    $ pytest test --bpak-build-dir build -k transport -v
 
 cmake configure options
 -----------------------
