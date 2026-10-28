@@ -1,82 +1,61 @@
-
-add_compile_options(
-        -fsanitize=address
-        -DTEST_SRC_DIR="${CMAKE_SOURCE_DIR}/test"
-        -I${${PROJECT_NAME}_BINARY_DIR}/lib/
-)
-add_link_options(-fsanitize=address)
-include_directories(${CMAKE_SOURCE_DIR}/lib)
-
-set(C_TESTS
-    test_alignment
-    test_bsdiff
-    test_bsdiff_hs
-    test_core_meta
-    test_core_part
-    test_merkle
-    test_meta_align
-    test_misc
-    test_struct_sz
-)
-
-foreach(c_test IN LISTS C_TESTS)
-    add_executable(${c_test} ${c_test}.c nala.c common.c)
-    target_link_libraries(${c_test}
-        ${PROJECT_NAME}
-        ${MBEDTLS_LIBRARY}
-        ${MBEDCRYPTO_LIBRARY}
-        ${UUID_LIBRARY}
-    )
-    add_test(${c_test} ${c_test})
-endforeach()
-
-set(TEST_SCRIPTS
-    test_misc.sh
-    test_corrupt_header.sh
-    test_corrupt_merkle_tree.sh
-    test_corrupt_payload2.sh
-    test_corrupt_payload.sh
-    test_create.sh
-    test_extract.sh
-    test_generate_id.sh
-    test_help_output.sh
-    test_keystore_gen.sh
-    test_multiple_bsdiff.sh
-    test_openssl_resign.sh
-    test_openssl_sign.sh
-    test_set_string.sh
-    test_sign_dont_hash.sh
-    test_signec256.sh
-    test_signec384.sh
-    test_signec521.sh
-    test_sign_rsa4096.sh
-    test_transport.sh
-    test_transport4.sh
-    test_transport5.sh
-    test_transport6.sh
-    test_transport_lzma.sh
-    test_delete.sh
-    test_add_meta.sh
-)
-
-foreach(test_script IN LISTS TEST_SCRIPTS)
-    add_test(NAME ${test_script}
-      COMMAND "${CMAKE_CURRENT_LIST_DIR}/${test_script}" "${CMAKE_SOURCE_DIR}"
-      WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/test")
-endforeach()
-
-
-set(TEST_SCRIPT_PYTHON
-    test_python_lib.py
-    test_python_create_package.py
-    test_python_meta.py
-    test_python_transport.py
-)
-
-if (BPAK_BUILD_PYTHON_WRAPPER)
-    foreach(test_script IN LISTS TEST_SCRIPT_PYTHON)
-        add_test(NAME ${test_script}
-        COMMAND "${CMAKE_CURRENT_LIST_DIR}/${test_script}" "${CMAKE_SOURCE_DIR}"
-        WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/test")
-    endforeach()
+if (BPAK_BUILD_MINIMAL)
+    message(FATAL_ERROR "BPAK_BUILD_TESTS requires BPAK_BUILD_MINIMAL=OFF")
 endif()
+
+set(BPAK_TEST_DATA_DIR ${CMAKE_CURRENT_SOURCE_DIR}/data)
+
+# C unit tests (cmocka)
+add_subdirectory(unit)
+
+# Tool and python wrapper tests (pytest)
+find_package(Python 3.8 REQUIRED COMPONENTS Interpreter)
+
+execute_process(
+    COMMAND ${Python_EXECUTABLE} -c "import pytest"
+    RESULT_VARIABLE PYTEST_MISSING
+    OUTPUT_QUIET ERROR_QUIET
+)
+
+if (PYTEST_MISSING)
+    message(FATAL_ERROR
+        "pytest not found for ${Python_EXECUTABLE}. Install it with your "
+        "package manager (e.g. python3-pytest) or with "
+        "'pip install -r ${CMAKE_CURRENT_SOURCE_DIR}/requirements.txt'")
+endif()
+
+# Each file is registered as a separate CTest test so 'ctest -j' runs them
+# in parallel.
+set(PYTEST_FILES
+    cli/test_basic.py
+    cli/test_corruption.py
+    cli/test_delete.py
+    cli/test_keystore.py
+    cli/test_meta.py
+    cli/test_sign.py
+    cli/test_transport.py
+    python/test_meta.py
+    python/test_package.py
+    python/test_sign.py
+    python/test_transport.py
+)
+
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/pytest)
+
+foreach(pytest_file IN LISTS PYTEST_FILES)
+    get_filename_component(suite ${pytest_file} DIRECTORY)
+    get_filename_component(name ${pytest_file} NAME_WE)
+    set(test_name ${suite}.${name})
+
+    add_test(NAME ${test_name}
+        COMMAND ${Python_EXECUTABLE} -m pytest
+            ${CMAKE_CURRENT_SOURCE_DIR}/${pytest_file}
+            --bpak-build-dir=${PROJECT_BINARY_DIR}
+            --basetemp=${CMAKE_CURRENT_BINARY_DIR}/pytest/${test_name}
+            --junitxml=${CMAKE_CURRENT_BINARY_DIR}/junit/${test_name}.xml
+            -p no:cacheprovider
+    )
+    set_tests_properties(${test_name} PROPERTIES
+        LABELS ${suite}
+        ENVIRONMENT "CC=${CMAKE_C_COMPILER}"
+    )
+endforeach()

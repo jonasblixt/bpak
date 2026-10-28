@@ -41,9 +41,9 @@ Build library and tool::
     $ make
     $ sudo make install
 
-Running tests::
+Running tests (requires cmocka and pytest)::
 
     $ cmake .. -DBPAK_BUILD_TESTS=1
-    $ make && make test
+    $ make && ctest --output-on-failure
 
 .. _BPAK documentation: http://bpak.readthedocs.io/en/latest
