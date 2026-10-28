@@ -439,7 +439,7 @@ int bpak_mbed_parse_public_key(const uint8_t *buffer, size_t length,
 {
     int rc = BPAK_OK;
     struct bpak_key *key = NULL;
-    uint8_t key_buffer[512];
+    uint8_t key_buffer[1024];
     enum bpak_key_kind kind;
     mbedtls_pk_context ctx;
     mbedtls_pk_init(&ctx);

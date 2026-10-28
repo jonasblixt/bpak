@@ -22,7 +22,7 @@ BPAK_EXPORT int bpak_keystore_load_key_from_file(const char *filename,
                                                  struct bpak_key **output)
 {
     int rc;
-    uint8_t key_buffer[512];
+    uint8_t key_buffer[1024];
     struct bpak_package pkg;
     struct bpak_part_header *key_part = NULL;
     struct bpak_meta_header *meta = NULL;
@@ -60,6 +60,11 @@ BPAK_EXPORT int bpak_keystore_load_key_from_file(const char *filename,
         goto err_close_pkg_out;
 
     key_length = bpak_part_size_wo_pad(key_part);
+
+    if (key_length > sizeof(key_buffer)) {
+        rc = -BPAK_SIZE_ERROR;
+        goto err_close_pkg_out;
+    }
 
     if (fseek(pkg.fp, bpak_part_offset(&pkg.header, key_part), SEEK_SET) != 0) {
         rc = -BPAK_SEEK_ERROR;
