@@ -1,0 +1,10 @@
+#ifndef BPAK_VERSION_H
+#define BPAK_VERSION_H
+
+/* Generated from version.txt, do not edit */
+#define BPAK_VERSION_MAJOR  @PROJECT_VERSION_MAJOR@
+#define BPAK_VERSION_MINOR  @PROJECT_VERSION_MINOR@
+#define BPAK_VERSION_PATCH  @PROJECT_VERSION_PATCH@
+#define BPAK_VERSION_STRING "@PROJECT_VERSION@"
+
+#endif

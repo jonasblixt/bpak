@@ -1,18 +1,17 @@
 cmake_minimum_required(VERSION 3.10)
 
-# Extract version info from bpak.h
-file(READ "include/bpak/version.h" ver)
+# version.txt is the single source of the project version
+file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/version.txt" BPAK_VERSION LIMIT_COUNT 1)
 
-string(REGEX MATCH ".+BPAK_VERSION_MAJOR\ +([0-9]*)" _ ${ver})
-set(ver_major ${CMAKE_MATCH_1})
+if (NOT BPAK_VERSION MATCHES "^[0-9]+\\.[0-9]+\\.[0-9]+$")
+    message(FATAL_ERROR
+        "version.txt must contain MAJOR.MINOR.PATCH, got '${BPAK_VERSION}'")
+endif()
 
-string(REGEX MATCH ".+BPAK_VERSION_MINOR\ +([0-9]*)" _ ${ver})
-set(ver_minor ${CMAKE_MATCH_1})
+# Re-run cmake when the version changes
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS version.txt)
 
-string(REGEX MATCH ".+BPAK_VERSION_PATCH\ +([0-9]*)" _ ${ver})
-set(ver_patch ${CMAKE_MATCH_1})
-
-project(bpak VERSION ${ver_major}.${ver_minor}.${ver_patch}
+project(bpak VERSION ${BPAK_VERSION}
              DESCRIPTION BitPacker
              HOMEPAGE_URL https://github.com/jonasblixt/bpak
 )

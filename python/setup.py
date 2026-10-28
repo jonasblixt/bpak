@@ -1,14 +1,12 @@
 #!/usr/bin/env python3
 
+from pathlib import Path
 from setuptools import setup
 from setuptools import Extension
-import re
 
 def read_version():
-    with open("../include/bpak/version.h", "r") as f:
-        return re.search(r"BPAK_VERSION_STRING \"(.*)\"$",
-                         f.read(),
-                         re.MULTILINE).group(1)
+    version_file = Path(__file__).resolve().parent.parent / "version.txt"
+    return version_file.read_text().strip()
 
 setup(name='bpak',
       version=read_version(),

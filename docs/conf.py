@@ -7,6 +7,14 @@ import sphinx_rtd_theme
 import alabaster
 import subprocess
 
+# version.txt is the single source of the project version
+with open(os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                       '..', 'version.txt')) as f:
+    version = f.read().strip()
+
+# Used by doxygen.cfg
+os.environ['BPAK_VERSION'] = version
+
 read_the_docs_build = os.environ.get('READTHEDOCS', None) == 'True'
 
 if read_the_docs_build:
@@ -59,13 +67,7 @@ author = u'Jonas Blixt'
 # |version| and |release|, also used in various other places throughout the
 # built documents.
 #
-# The name of the branch/tag on github
-import re
-with open("../include/bpak/bpak.h") as f:
-    r = re.compile(".+\[([0-9\.]+)\]", re.DOTALL)
-    configure_ac_text = f.read()
-    m = r.match(configure_ac_text)
-    version = m.group(1)
+# 'version' is read from version.txt at the top of this file
 
 # The full version, including alpha/beta/rc tags.
 release = version

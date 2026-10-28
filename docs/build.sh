@@ -8,4 +8,4 @@ EOF
 
 docker build -f tmp_dockerfile -t local_sphinx_docker $(pwd)/$(dirname $0)/..
 rm tmp_dockerfile
-docker run --rm -u $(id -u):$(id -g) -v $(pwd)/$(dirname $0)/..:/docs local_sphinx_docker bash -c "cd docs && doxygen doxygen.cfg && sphinx-build -b html . _build/html"
+docker run --rm -u $(id -u):$(id -g) -e BPAK_VERSION="$(cat $(dirname $0)/../version.txt)" -v $(pwd)/$(dirname $0)/..:/docs local_sphinx_docker bash -c "cd docs && doxygen doxygen.cfg && sphinx-build -b html . _build/html"

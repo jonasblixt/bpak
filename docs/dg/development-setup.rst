@@ -161,6 +161,26 @@ Bug fixes are additionally prefixed with ``bugfix:``::
 
 Keep bug fixes in separate commits from other changes.
 
+Versioning
+----------
+
+``version.txt`` in the repository root holds the project version on the form
+``MAJOR.MINOR.PATCH`` and is the only place where it is defined. It is used
+for:
+
+- the CMake project version, the shared library version and the pkg-config
+  file
+- ``bpak/version.h`` (``BPAK_VERSION_MAJOR``, ``BPAK_VERSION_STRING``, ...),
+  which is generated into the build directory
+- the python package version in ``python/setup.py``
+- the Sphinx and Doxygen documentation
+
+Builds that do not use CMake (``BPAK_HAVE_USER_SETTINGS``) must provide their
+own ``bpak/version.h``, see ``lib/version.h.in``.
+
+To make a release, update ``version.txt``, commit it as ``Version X.Y.Z`` and
+tag the commit ``vX.Y.Z``.
+
 Documentation
 -------------
 

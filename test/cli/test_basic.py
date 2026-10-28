@@ -2,7 +2,7 @@
 
 import pytest
 
-from bpaktest import DEFAULT_VERIFY_KEY, PKG_UUID, Part
+from bpaktest import DEFAULT_VERIFY_KEY, PKG_UUID, SOURCE_DIR, Part
 
 
 @pytest.mark.parametrize("command", [
@@ -17,6 +17,11 @@ def test_help(bpak, command):
 @pytest.mark.parametrize("args", [[], ["-V"], ["--version"], ["-h"]])
 def test_no_action(bpak, args):
     bpak(*args, verbose=False)
+
+
+def test_version_matches_version_txt(bpak):
+    version = (SOURCE_DIR / "version.txt").read_text().strip()
+    assert bpak.output("--version").decode().split() == ["BitPacker", version]
 
 
 def test_generate_id(bpak):

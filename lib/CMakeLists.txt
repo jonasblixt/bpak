@@ -4,6 +4,8 @@ include(GNUInstallDirs)
 configure_file(${PROJECT_NAME}.pc.in ${PROJECT_NAME}.pc @ONLY)
 configure_file(build_config.h.in
         ${${PROJECT_NAME}_BINARY_DIR}/lib/bpak/build_config.h @ONLY)
+configure_file(version.h.in
+        ${${PROJECT_NAME}_BINARY_DIR}/lib/bpak/version.h @ONLY)
 
 set(LIB_SRC_FILES
     bpak.c
@@ -22,6 +24,7 @@ file(GLOB_RECURSE LIB_PUBLIC_HEADERS "${CMAKE_SOURCE_DIR}/include/bpak/*.h")
 set(LIB_PUBLIC_HEADERS
     ${LIB_PUBLIC_HEADERS}
     ${${PROJECT_NAME}_BINARY_DIR}/lib/bpak/build_config.h
+    ${${PROJECT_NAME}_BINARY_DIR}/lib/bpak/version.h
 )
 if (NOT BPAK_BUILD_MINIMAL)
     set(LIB_SRC_FILES

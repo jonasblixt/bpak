@@ -42,6 +42,13 @@ Things that are easy to get wrong in the pytest tests:
   and add missing codes to `BpakError` in `test/bpaktest.py`.
 - String meta data is stored with a trailing NUL byte.
 
+## Version
+
+`version.txt` is the single source of the version. `bpak/version.h` is
+generated from `lib/version.h.in` into the build directory, never add a
+version number anywhere else. Releases: update `version.txt`, commit as
+`Version X.Y.Z` and tag `vX.Y.Z`.
+
 ## Conventions
 
 - Commit subjects are prefixed with the area: `lib/verify: ...`, `python: ...`,
