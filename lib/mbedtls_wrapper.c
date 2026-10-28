@@ -320,6 +320,7 @@ int bpak_mbed_load_public_key(const char *filename, struct bpak_key **output)
 
     memcpy(key->data, &tmp[sizeof(tmp) - len], len);
     (*output) = key;
+    mbedtls_pk_free(&ctx);
     return BPAK_OK;
 
 err_free_key_out:
@@ -420,13 +421,16 @@ int bpak_mbed_load_private_key(const char *filename, struct bpak_key **output)
     }
     memcpy(key->data, &tmp[sizeof(tmp) - len], len);
     (*output) = key;
-    mbedtls_pk_free(&ctx);
-    return rc;
+    goto err_free_ctx_out;
 
 err_free_key_out:
     bpak_free(key);
 err_free_ctx_out:
     mbedtls_pk_free(&ctx);
+#if MBEDTLS_VERSION_MAJOR >= 3
+    mbedtls_ctr_drbg_free(&ctr_drbg);
+    mbedtls_entropy_free(&entropy);
+#endif
     return rc;
 }
 
