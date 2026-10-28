@@ -37,7 +37,7 @@ int action_show(int argc, char **argv)
     bpak_id_t part_id = 0;
     bpak_id_t part_hash_id = 0;
     bpak_id_t meta_id = 0;
-    char hash_str[128];
+    char hash_str[BPAK_HASH_MAX_LENGTH * 2 + 1];
 
     struct option long_options[] = {
         { "help", no_argument, 0, 'h' },

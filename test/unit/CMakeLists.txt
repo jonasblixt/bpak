@@ -8,6 +8,7 @@ set(UNIT_TESTS
     test_crypto
     test_merkle
     test_misc
+    test_utils
 )
 
 foreach(unit_test IN LISTS UNIT_TESTS)

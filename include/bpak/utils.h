@@ -24,8 +24,8 @@ extern "C" {
  *
  * @param[in] data Data to convert
  * @param[in] data_sz Size of input data in bytes
- * @param[out] buf Output buffer
- * @param[in] buf_sz Size of output buffer in bytes
+ * @param[out] buf Output buffer, null terminated
+ * @param[in] buf_sz Size of output buffer in bytes, at least 2 * data_sz + 1
  *
  * @return BPAK_OK on success
  */

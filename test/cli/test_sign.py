@@ -28,6 +28,24 @@ def test_sign_verify(bpak, hash_kind, signature_kind, sign_key, verify_key):
     bpak("verify", pkg, "--key", DATA_DIR / verify_key)
 
 
+@pytest.mark.parametrize("hash_kind, sign_key, digest_size", [
+    ("sha256", "secp256r1-key-pair.pem", 32),
+    ("sha384", "secp384r1-key-pair.pem", 48),
+    ("sha512", "secp521r1-key-pair.pem", 64),
+])
+def test_show_hash(bpak, hash_kind, sign_key, digest_size):
+    """The header hash is what gets signed, 'show' prints it in different
+    formats"""
+    pkg = bpak.create_package("test.bpak", hash_kind=hash_kind,
+                              sign_key=DATA_DIR / sign_key)
+
+    digest = bpak.output("show", pkg, "--binary-hash")
+    assert len(digest) == digest_size
+
+    assert bpak.output("show", pkg, "--hash").decode().strip() == digest.hex()
+    assert f"Header hash:  {digest.hex()}\n" in bpak.output("show", pkg).decode()
+
+
 def test_verify_wrong_key(bpak):
     pkg = bpak.create_package("test.bpak")
 

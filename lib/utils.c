@@ -21,27 +21,18 @@
 BPAK_EXPORT int bpak_bin2hex(uint8_t *data, size_t data_sz, char *buf,
                              size_t buf_sz)
 {
-    uint8_t b;
-    size_t i = data_sz;
-    size_t n = 0;
+    static const char hex[] = "0123456789abcdef";
 
-    for (i = 0; i < data_sz; i++) {
-        b = data[i];
-        b = (b >> 4) & 0x0F;
-        buf[n++] = (b > 9) ? ('a' + (b - 10)) : ('0' + b);
+    /* Two characters per byte and a null terminator */
+    if (buf_sz < (data_sz * 2 + 1))
+        return -1;
 
-        if (n > buf_sz)
-            return -1;
-
-        b = data[i];
-        b = b & 0x0F;
-        buf[n++] = (b > 9) ? ('a' + (b - 10)) : ('0' + b);
-
-        if (n > buf_sz)
-            return -1;
+    for (size_t i = 0; i < data_sz; i++) {
+        buf[i * 2] = hex[(data[i] >> 4) & 0x0F];
+        buf[i * 2 + 1] = hex[data[i] & 0x0F];
     }
 
-    buf[n] = 0;
+    buf[data_sz * 2] = 0;
 
     return BPAK_OK;
 }
