@@ -2,9 +2,9 @@
 
 import pytest
 
-from bpaktest import DEFAULT_VERIFY_KEY, BpakError, Part, corrupt
+from bpaktest import (DEFAULT_VERIFY_KEY, HEADER_SIZE, BpakError, Part,
+                      corrupt)
 
-HEADER_SIZE = 4096
 DATA_SIZE_KIB = 128
 
 
