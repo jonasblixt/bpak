@@ -32,7 +32,7 @@ jobs:
         DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
           build-essential cmake pkg-config openssl \
           libmbedtls-dev liblzma-dev uuid-dev \
-          libcmocka-dev python3-dev python3-pytest
+          libcmocka-dev python3-dev python3-pytest python3-click
     - name: Build
       run: |
         cmake -B build -DBPAK_BUILD_TESTS=1
@@ -73,6 +73,8 @@ jobs:
         uv run ruff format --check
         uv run mypy
         uv run python -m mypy.stubtest bpak._bpak
+    - name: Test
+      run: uv run pytest test/cli test/python test/golden
     - name: Build sdist and wheel
       run: uv build
     - name: Test the wheel
@@ -80,7 +82,9 @@ jobs:
       run: |
         uv venv wheel-venv
         uv pip install --python wheel-venv $GITHUB_WORKSPACE/dist/*.whl
-        wheel-venv/bin/python -c "import bpak; print(bpak.id('bpak-test'))"
+        wheel-venv/bin/bpak --version
+        wheel-venv/bin/bpak create test.bpak
+        wheel-venv/bin/bpak show test.bpak
 
   build-windows:
     runs-on: windows-latest

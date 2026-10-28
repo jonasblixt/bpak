@@ -46,18 +46,10 @@ def bpak_python_path(pytestconfig) -> list:
     return python_path(build_dir) if build_dir else []
 
 
-@pytest.fixture(scope="session")
-def bpak_tool(bpak_build_dir) -> Path:
-    tool = bpak_build_dir / "src" / "bpak"
-    if not tool.is_file():
-        pytest.fail(f"bpak tool not found at {tool}")
-    return tool
-
-
 @pytest.fixture
-def bpak(bpak_tool, tmp_path) -> Bpak:
+def bpak(bpak_python_path, tmp_path) -> Bpak:
     """Runs the bpak tool inside the test's temporary directory"""
-    return Bpak(bpak_tool, tmp_path)
+    return Bpak(bpak_python_path, tmp_path)
 
 
 @pytest.fixture

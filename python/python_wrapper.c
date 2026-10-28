@@ -7,10 +7,10 @@
 #include <bpak/pkg.h>
 #include <bpak/utils.h>
 #include <bpak/id.h>
+#include <bpak/crypto.h>
 
 #include "python_wrapper.h"
 
-PyObject *BPAKPackageError;
 static PyObject *log_func = Py_None;
 
 int bpak_printf(int verbosity, const char *fmt, ...)
@@ -95,8 +95,7 @@ static PyObject *m_transport_encode(PyObject *self, PyObject *args,
                                    origin ? &origin->pkg : NULL);
 
     if (rc != BPAK_OK) {
-        return PyErr_Format(BPAKPackageError,
-            "Transport encoding failed: %s", bpak_error_string(rc));
+        return bpak_raise(rc, "Transport encoding failed");
     }
 
     Py_RETURN_NONE;
@@ -131,50 +130,161 @@ static PyObject *m_transport_decode(PyObject *self, PyObject *args,
                                    origin ? &origin->pkg : NULL);
 
     if (rc != BPAK_OK) {
-        return PyErr_Format(BPAKPackageError,
-            "Transport decoding failed: %s", bpak_error_string(rc));
+        return bpak_raise(rc, "Transport decoding failed");
     }
 
     Py_RETURN_NONE;
 }
 
+static PyObject *m_version(PyObject *module, PyObject *Py_UNUSED(args))
+{
+    (void)module;
+
+    return PyUnicode_FromString(bpak_version());
+}
+
+static PyObject *m_id_to_string(PyObject *module, PyObject *args,
+                                PyObject *kwds)
+{
+    int rc;
+    static char *kwlist[] = { "id", NULL };
+    bpak_id_t id;
+    (void)module;
+
+    rc = PyArg_ParseTupleAndKeywords(args, kwds, "I:id_to_string", kwlist, &id);
+    if (!rc) {
+        return NULL;
+    }
+
+    return PyUnicode_FromString(bpak_id_to_string(id));
+}
+
+static PyObject *m_hash_kind_to_string(PyObject *module, PyObject *args,
+                                       PyObject *kwds)
+{
+    int rc;
+    static char *kwlist[] = { "kind", NULL };
+    unsigned char kind;
+    (void)module;
+
+    rc = PyArg_ParseTupleAndKeywords(args,
+                                     kwds,
+                                     "b:hash_kind_to_string",
+                                     kwlist,
+                                     &kind);
+    if (!rc) {
+        return NULL;
+    }
+
+    return PyUnicode_FromString(bpak_hash_kind(kind));
+}
+
+static PyObject *m_signature_kind_to_string(PyObject *module, PyObject *args,
+                                            PyObject *kwds)
+{
+    int rc;
+    static char *kwlist[] = { "kind", NULL };
+    unsigned char kind;
+    (void)module;
+
+    rc = PyArg_ParseTupleAndKeywords(args,
+                                     kwds,
+                                     "b:signature_kind_to_string",
+                                     kwlist,
+                                     &kind);
+    if (!rc) {
+        return NULL;
+    }
+
+    return PyUnicode_FromString(bpak_signature_kind(kind));
+}
+
+static PyObject *m_parse_public_key(PyObject *module, PyObject *args,
+                                    PyObject *kwds)
+{
+    int rc;
+    static char *kwlist[] = { "data", NULL };
+    const char *data;
+    Py_ssize_t size;
+    struct bpak_key *key = NULL;
+    PyObject *result;
+    (void)module;
+
+    rc = PyArg_ParseTupleAndKeywords(args,
+                                     kwds,
+                                     "y#:parse_public_key",
+                                     kwlist,
+                                     &data,
+                                     &size);
+    if (!rc) {
+        return NULL;
+    }
+
+    rc = bpak_crypto_parse_public_key((const uint8_t *)data, size, &key);
+    if (rc != BPAK_OK) {
+        return bpak_raise(rc, "Could not parse key");
+    }
+
+    result =
+        Py_BuildValue("(iy#)", key->kind, key->data, (Py_ssize_t)key->size);
+    free(key);
+    return result;
+}
 
 static PyMethodDef module_methods[] = {
-    {"id",
-     (PyCFunction)(void (*)(void))m_generate_id,
-     METH_VARARGS | METH_KEYWORDS,
-     "Convert string to bpak id"
-    },
+    { "version",
+      (PyCFunction)(void (*)(void))m_version,
+      METH_NOARGS,
+      "Version of the bpak library" },
 
-    {"set_log_func",
-     (PyCFunction)(void (*)(void))m_set_log_func,
-     METH_VARARGS | METH_KEYWORDS,
-     "Set logging function callback"
-    },
+    { "id_to_string",
+      (PyCFunction)(void (*)(void))m_id_to_string,
+      METH_VARARGS | METH_KEYWORDS,
+      "Name of a well known bpak id, or an empty string" },
 
-    {"transport_encode",
-     (PyCFunction)(void (*)(void))m_transport_encode,
-     METH_VARARGS | METH_KEYWORDS,
-     "Transport encode from input to output, using origin for diff origin"
-    },
+    { "hash_kind_to_string",
+      (PyCFunction)(void (*)(void))m_hash_kind_to_string,
+      METH_VARARGS | METH_KEYWORDS,
+      "Name of a hash kind (one of HASH_ constants)" },
 
-    {"transport_decode",
-     (PyCFunction)(void (*)(void))m_transport_decode,
-     METH_VARARGS | METH_KEYWORDS,
-     "Transport decode from input to output, using origin for diff origin"
-    },
+    { "signature_kind_to_string",
+      (PyCFunction)(void (*)(void))m_signature_kind_to_string,
+      METH_VARARGS | METH_KEYWORDS,
+      "Name of a signature kind (one of SIGN_ constants)" },
 
-    {NULL}
+    { "parse_public_key",
+      (PyCFunction)(void (*)(void))m_parse_public_key,
+      METH_VARARGS | METH_KEYWORDS,
+      "Parse a DER encoded public key, returns (KEY_ kind, DER data)" },
+
+    { "id",
+      (PyCFunction)(void (*)(void))m_generate_id,
+      METH_VARARGS | METH_KEYWORDS,
+      "Convert string to bpak id" },
+
+    { "set_log_func",
+      (PyCFunction)(void (*)(void))m_set_log_func,
+      METH_VARARGS | METH_KEYWORDS,
+      "Set logging function callback" },
+
+    { "transport_encode",
+      (PyCFunction)(void (*)(void))m_transport_encode,
+      METH_VARARGS | METH_KEYWORDS,
+      "Transport encode from input to output, using origin for diff origin" },
+
+    { "transport_decode",
+      (PyCFunction)(void (*)(void))m_transport_decode,
+      METH_VARARGS | METH_KEYWORDS,
+      "Transport decode from input to output, using origin for diff origin" },
+
+    { NULL }
 };
 
-static PyModuleDef module = {
-    PyModuleDef_HEAD_INIT,
-    .m_name = "bpak._bpak",
-    .m_doc = NULL,
-    .m_size = -1,
-    .m_methods = module_methods
-};
-
+static PyModuleDef module = { PyModuleDef_HEAD_INIT,
+                              .m_name = "bpak._bpak",
+                              .m_doc = NULL,
+                              .m_size = -1,
+                              .m_methods = module_methods };
 
 PyMODINIT_FUNC PyInit__bpak(void)
 {
@@ -194,11 +304,7 @@ PyMODINIT_FUNC PyInit__bpak(void)
         return NULL;
     }
 
-    BPAKPackageError = PyErr_NewException("bpak.Error", NULL, NULL);
-    Py_XINCREF(BPAKPackageError);
-    if (PyModule_AddObject(m_p, "Error", BPAKPackageError) < 0) {
-        Py_XDECREF(BPAKPackageError);
-        Py_CLEAR(BPAKPackageError);
+    if (bpak_exceptions_init(m_p) < 0) {
         Py_DECREF(m_p);
         return NULL;
     }
@@ -232,5 +338,20 @@ PyMODINIT_FUNC PyInit__bpak(void)
     PyModule_AddIntConstant(m_p, "SIGN_PRIME256v1", BPAK_SIGN_PRIME256v1);
     PyModule_AddIntConstant(m_p, "SIGN_SECP384r1", BPAK_SIGN_SECP384r1);
     PyModule_AddIntConstant(m_p, "SIGN_SECP521r1", BPAK_SIGN_SECP521r1);
+
+    PyModule_AddIntConstant(m_p, "KEY_PUB_RSA4096", BPAK_KEY_PUB_RSA4096);
+    PyModule_AddIntConstant(m_p, "KEY_PUB_PRIME256v1", BPAK_KEY_PUB_PRIME256v1);
+    PyModule_AddIntConstant(m_p, "KEY_PUB_SECP384r1", BPAK_KEY_PUB_SECP384r1);
+    PyModule_AddIntConstant(m_p, "KEY_PUB_SECP521r1", BPAK_KEY_PUB_SECP521r1);
+
+    PyModule_AddIntConstant(m_p,
+                            "FLAG_EXCLUDE_FROM_HASH",
+                            BPAK_FLAG_EXCLUDE_FROM_HASH);
+    PyModule_AddIntConstant(m_p, "FLAG_TRANSPORT", BPAK_FLAG_TRANSPORT);
+
+    PyModule_AddIntConstant(m_p, "METADATA_BYTES", BPAK_METADATA_BYTES);
+    PyModule_AddIntConstant(m_p,
+                            "SIGNATURE_MAX_BYTES",
+                            BPAK_SIGNATURE_MAX_BYTES);
     return (m_p);
 }

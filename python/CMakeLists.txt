@@ -13,6 +13,7 @@ find_package(Python 3.10 REQUIRED COMPONENTS Interpreter Development.Module)
 
 python_add_library(${PROJECT_NAME}-python-wrapper MODULE WITH_SOABI
     python_wrapper.c
+    exceptions.c
     package.c
     meta.c
     part.c

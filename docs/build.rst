@@ -4,32 +4,40 @@
 Building and installing
 -----------------------
 
-The library depends on mbedtls and liblzma
+The library depends on mbedtls and liblzma.
 
-Build library and tool::
+The bpak tool and the python package
+------------------------------------
 
-    $ cmake
-    $ make
-    $ sudo make install
+The ``bpak`` command line tool is part of the bpak python package. Install the
+tool from the repository root with `uv <https://docs.astral.sh/uv>`_, which
+puts it in an isolated environment::
 
-The python package
-------------------
+    $ uv tool install .
 
-Install the bpak python package from the repository root with pip, or add it
-to a `uv <https://docs.astral.sh/uv>`_ project::
+or install the package with pip::
 
     $ pip install .
-    $ uv add /path/to/bpak
 
 The package is built with scikit-build-core and CMake and includes the
 library, so it only needs the mbedtls and liblzma development packages and a C
 compiler, for example ``libmbedtls-dev`` and ``liblzma-dev`` on Debian and
 Ubuntu. CMake is installed from PyPI during the build when it is missing. The
-package requires python 3.10 or later.
+package depends on `click <https://click.palletsprojects.com>`_ and requires
+python 3.10 or later.
 
 Build a source distribution and a wheel into ``dist/``::
 
     $ uv build
+
+The library
+-----------
+
+Build and install the library::
+
+    $ cmake -B build
+    $ cmake --build build
+    $ sudo cmake --install build
 
 Running tests
 -------------
@@ -55,8 +63,6 @@ BPAK_BUILD_TESTS             Build the tests and the C extension of the python
 BPAK_WERROR                  Treat compiler warnings as errors (default ON, OFF
                              when the python package is built)
 ===========================  ====================================================
-
-The default setting is that everything is enabled except the tests.
 
 
 Build settings

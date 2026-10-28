@@ -1,5 +1,7 @@
 import uuid
 
+import pytest
+
 from bpaktest import DATA_DIR, PKG_UUID
 
 
@@ -31,3 +33,26 @@ def test_verify_and_resign(pybpak, bpak, origin_pkg):
 
     # The tool must agree with the python wrapper
     bpak("verify", origin_pkg, "--key", DATA_DIR / "secp384r1-pub-key.pem")
+
+
+def test_verify_with_keystore(pybpak, tmp_path, origin_pkg):
+    keystore = tmp_path / "keystore.bpak"
+    with pybpak.Package(keystore, "wb+") as p:
+        p.add_meta(pybpak.id("bpak-package"),
+                   data=uuid.UUID("5df103ef-e774-450b-95c5-1fef51ceec28").bytes)
+        p.add_meta(pybpak.id("keystore-provider-id"),
+                   data=pybpak.id("pb-internal").to_bytes(4, "little"))
+        p.add_key("pb-development", DATA_DIR / "secp256r1-pub-key.der")
+
+    # origin_pkg has key-id 'pb-development' and keystore-id 'pb-internal'
+    with pybpak.Package(origin_pkg, "rb") as p:
+        assert p.verify(keystore_path=keystore)
+
+    with pybpak.Package(origin_pkg, "rb+") as p:
+        p.keystore_id = pybpak.id("another-keystore")
+
+        with pytest.raises(pybpak.KeystoreIdMismatchError):
+            p.verify(keystore_path=keystore)
+
+        with pytest.raises(TypeError):
+            p.verify()

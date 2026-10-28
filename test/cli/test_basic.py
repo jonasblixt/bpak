@@ -1,14 +1,18 @@
 """Basic command line handling: help, version, id generation and inspection"""
 
+import hashlib
+import re
+import uuid
+
 import pytest
 
 from bpaktest import (DEFAULT_SIGN_KEY, DEFAULT_VERIFY_KEY, PKG_UUID, SOURCE_DIR,
-                      BpakError, Part)
+                      BpakError, Part, bpak_id)
 
 
 @pytest.mark.parametrize("command", [
     None, "create", "add", "transport", "sign", "verify", "show", "set",
-    "generate", "compare",
+    "generate", "compare", "extract", "delete", "completion",
 ])
 def test_help(bpak, command):
     args = [command] if command else []
@@ -66,3 +70,87 @@ def test_not_a_package(bpak, tmp_path, command, content, error):
     bpak.fails(command[0], path, *command[1:], error=error)
 
     assert path.read_bytes() == content
+
+
+@pytest.mark.parametrize("args", [
+    ["create", "test.bpak", "-Y", "--hash-kind", "md5"],
+    ["add", "test.bpak", "--from-string", "1.0.0"],
+    ["add", "test.bpak", "--meta", "bpak-version"],
+    ["add", "test.bpak", "--part", "fs", "--from-string", "1.0.0"],
+    ["delete", "test.bpak"],
+    ["extract", "test.bpak"],
+    ["sign", "test.bpak"],
+    ["verify", "test.bpak"],
+    ["transport", "test.bpak"],
+    ["transport", "test.bpak", "--encode"],
+    ["set", "test.bpak"],
+], ids=lambda args: "-".join(args[0:1] + args[2:3]))
+def test_usage_error(bpak, args):
+    """Commands that are used wrong exit with 2 and leave the package as it
+    is"""
+    bpak("create", "test.bpak")
+    pkg = bpak.cwd / "test.bpak"
+    content = pkg.read_bytes()
+
+    assert bpak.run(*args, check=False).returncode == 2
+    assert pkg.read_bytes() == content
+
+
+def test_non_ascii_path(bpak, make_data):
+    data = make_data("dåta.bin", 4)
+    pkg = bpak.create_package("påket.bpak", parts=[Part("fs", data)])
+
+    bpak("verify", pkg, "--key", DEFAULT_VERIFY_KEY)
+
+
+def test_extract_to_stdout(bpak, make_data):
+    data = make_data("data.bin", 4)
+    pkg = bpak.create_package("test.bpak", parts=[Part("fs", data)])
+
+    assert bpak.output("extract", pkg, "--part", "fs") == data.read_bytes()
+    assert bpak.output("extract", pkg, "--meta", "bpak-package") == \
+        uuid.UUID(PKG_UUID).bytes
+
+
+def test_extract_write_error(bpak, make_data):
+    """Errors writing the output file exit with BPAK_FAILED like the C
+    tool, not with a python traceback"""
+    data = make_data("data.bin", 4)
+    pkg = bpak.create_package("test.bpak", parts=[Part("fs", data)])
+
+    args = ["extract", pkg, "--meta", "bpak-package", "--output",
+            bpak.cwd / "missing" / "out.bin"]
+    bpak.fails(*args, error=BpakError.FAILED)
+    stderr = bpak.run(*args, check=False).stderr.decode()
+    assert stderr.startswith("Error: ")
+    assert "Traceback" not in stderr
+
+
+def test_show_part_hash(bpak, make_data):
+    data = make_data("data.bin", 4)
+    pkg = bpak.create_package("test.bpak", parts=[Part("fs", data)])
+
+    assert bpak.output("show", pkg, "--part-hash", "fs").decode().strip() == \
+        hashlib.sha256(data.read_bytes()).hexdigest()
+
+
+def test_compare(bpak, make_data):
+    data = make_data("data.bin", 4)
+    first = bpak.create_package(
+        "first.bpak", parts=[Part("same", data), Part("removed", data)])
+    second = bpak.create_package(
+        "second.bpak", parts=[Part("same", data), Part("added", data)],
+        package_uuid="e8ba8bde-6d4a-4cbd-9cd5-f3c8d0e5d9a3")
+    bpak("add", second, "--meta", "bpak-version", "--from-string", "1.0.0")
+
+    output = bpak.output("compare", first, second).decode()
+    marks = {line.split()[1]: line[0] for line in output.splitlines()
+             if re.match(r"[-+=*]   [0-9a-f]{8} ", line)}
+
+    assert marks == {
+        f"{bpak_id('bpak-package'):08x}": "*",
+        f"{bpak_id('bpak-version'):08x}": "+",
+        f"{bpak_id('same'):08x}": "=",
+        f"{bpak_id('removed'):08x}": "-",
+        f"{bpak_id('added'):08x}": "+",
+    }

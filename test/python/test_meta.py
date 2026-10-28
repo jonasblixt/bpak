@@ -35,11 +35,42 @@ def test_meta(pybpak, bpak, origin_pkg):
         assert p.get_meta(pybpak.id("bpak-version")).as_string() == "1.0.1"
 
 
+def test_describe(pybpak, origin_pkg):
+    with pybpak.Package(origin_pkg, "rb+") as p:
+        assert p.get_meta(pybpak.id("bpak-package")).describe() == PKG_UUID
+        root_hash = p.get_meta(pybpak.id("merkle-root-hash"), pybpak.id("fs"))
+        assert root_hash.describe() == root_hash.raw_data.hex()
+
+        # Meta data that is not well known has no description
+        p.add_meta(pybpak.id("py-test"), data="Hello")
+        assert p.get_meta(pybpak.id("py-test")).describe() == ""
+
+
+def test_grow_meta(pybpak, tmp_path):
+    """Meta data grows when it is set to longer data, and is kept as it is
+    when there is no space left"""
+    with pybpak.Package(tmp_path / "test.bpak", "wb+") as p:
+        first = p.add_meta(pybpak.id("first"), data="1")
+        second = p.add_meta(pybpak.id("second"), data="2")
+
+        first.raw_data = "one"
+        assert first.as_string() == "one"
+        assert second.as_string() == "2"
+
+        # Use up the rest of the meta data area, meta data is 8 byte aligned
+        used = sum((m.size + 7) // 8 * 8 for m in p.meta)
+        p.add_meta(pybpak.id("filler"), size=pybpak.METADATA_BYTES - used)
+
+        with pytest.raises(pybpak.NoSpaceLeftError):
+            first.raw_data = "one more"
+        assert first.as_string() == "one"
+
+
 def test_add_meta_read_only(pybpak, origin_pkg):
     """Adding meta data fails when the header can not be written. This
     released the string data twice and corrupted the heap."""
     for _ in range(100):
-        with pybpak.Package(str(origin_pkg), "rb") as p:
+        with pybpak.Package(origin_pkg, "rb") as p:
             with pytest.raises(OSError):
                 p.add_meta(pybpak.id("py-test"), data="Hello")
         gc.collect()

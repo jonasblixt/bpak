@@ -131,6 +131,42 @@ static PyObject *part_get_offset(PyObject *self, void *closure)
     return PyLong_FromLong(bpak_part_offset(h, p));
 }
 
+/* Fields of the part header, returned by the getters below */
+enum part_field {
+    PART_INSTALLED_SIZE,
+    PART_TRANSPORT_SIZE,
+    PART_PAD_BYTES,
+    PART_FLAGS,
+};
+
+static PyObject *part_get_field(PyObject *self, void *closure)
+{
+    BPAKPart *part = (BPAKPart *)self;
+    struct bpak_header *h = bpak_pkg_header(&part->package->pkg);
+    struct bpak_part_header *p;
+    int rc = 0;
+
+    rc = bpak_get_part(h, part->part_id, &p);
+    if (rc != BPAK_OK) {
+        return PyErr_Format(PyExc_KeyError,
+                            "failed to get partition: %s",
+                            bpak_error_string(rc));
+    }
+
+    switch ((enum part_field)(intptr_t)closure) {
+    case PART_INSTALLED_SIZE:
+        return PyLong_FromUnsignedLongLong(p->size);
+    case PART_TRANSPORT_SIZE:
+        return PyLong_FromUnsignedLongLong(p->transport_size);
+    case PART_PAD_BYTES:
+        return PyLong_FromLong(p->pad_bytes);
+    case PART_FLAGS:
+        return PyLong_FromLong(p->flags);
+    }
+
+    Py_RETURN_NONE;
+}
+
 static PyObject *part_is_transport_encoded(PyObject *self, void *closure)
 {
     (void)closure;
@@ -191,60 +227,95 @@ static PyObject *part_read_data(PyObject *self, PyObject *Py_UNUSED(ignored))
     return bytes;
 }
 
-static PyObject *part_delete(PyObject *self, PyObject *Py_UNUSED(ignored))
+static PyObject *part_delete(PyObject *self, PyObject *args, PyObject *kwds)
 {
+    static char *kwlist[] = { "remove_meta", NULL };
     BPAKPart *part = (BPAKPart *)self;
+    int remove_meta = 1;
     int rc;
 
-    rc = bpak_pkg_delete_part(&part->package->pkg, part->part_id, true);
+    rc = PyArg_ParseTupleAndKeywords(args,
+                                     kwds,
+                                     "|p:delete",
+                                     kwlist,
+                                     &remove_meta);
+    if (!rc) {
+        return NULL;
+    }
+
+    rc = bpak_pkg_delete_part(&part->package->pkg, part->part_id, remove_meta);
     if (rc != BPAK_OK) {
-        return PyErr_Format(BPAKPackageError, "failed to delete part: %s",
-                bpak_error_string(rc));
+        return bpak_raise(rc, "failed to delete part");
     }
 
     Py_RETURN_NONE;
 }
 
 static PyMethodDef part_methods[] = {
-    {"read_data",
-     (PyCFunction)(void (*)(void))part_read_data,
-     METH_NOARGS,
-     "Read all the data into a buffer"},
+    { "read_data",
+      (PyCFunction)(void (*)(void))part_read_data,
+      METH_NOARGS,
+      "Read all the data into a buffer" },
 
-    {"delete",
-     (PyCFunction)(void (*)(void))part_delete,
-     METH_NOARGS,
-     "Delete part from package"},
+    { "delete",
+      (PyCFunction)(void (*)(void))part_delete,
+      METH_VARARGS | METH_KEYWORDS,
+      "Delete part and, unless remove_meta is false, its meta data" },
 
-    {NULL}
+    { NULL }
 };
 
 static PyGetSetDef part_getset[] = {
-    {"id",
-     (getter)part_get_id,
-     (setter)part_set_id,
-     "Part ID (32-bit)",
-     NULL},
+    { "id",
+      (getter)part_get_id,
+      (setter)part_set_id,
+      "Part ID (32-bit)",
+      NULL },
 
-    {"size",
-     (getter)part_get_size,
-     (setter)NULL,
-     "Part size (in bytes)",
-     NULL},
+    { "size",
+      (getter)part_get_size,
+      (setter)NULL,
+      "Size of the part in the package including padding, or the transport "
+      "size if the part is transport encoded",
+      NULL },
 
-    {"offset",
-     (getter)part_get_offset,
-     (setter)NULL,
-     "Part size offset in the unencoded bytestream, including header",
-     NULL},
+    { "installed_size",
+      (getter)part_get_field,
+      (setter)NULL,
+      "Size of the part data when it is installed, without padding",
+      (void *)PART_INSTALLED_SIZE },
 
-    {"is_transport_encoded",
-     (getter)part_is_transport_encoded,
-     (setter)NULL,
-     "If part is transport encoded",
-     NULL},
+    { "transport_size",
+      (getter)part_get_field,
+      (setter)NULL,
+      "Size of the transport encoded part data",
+      (void *)PART_TRANSPORT_SIZE },
 
-    {NULL}
+    { "pad_bytes",
+      (getter)part_get_field,
+      (setter)NULL,
+      "Number of zero bytes that pad the part to the part alignment",
+      (void *)PART_PAD_BYTES },
+
+    { "flags",
+      (getter)part_get_field,
+      (setter)NULL,
+      "Part flags (FLAG_ constants)",
+      (void *)PART_FLAGS },
+
+    { "offset",
+      (getter)part_get_offset,
+      (setter)NULL,
+      "Part size offset in the unencoded bytestream, including header",
+      NULL },
+
+    { "is_transport_encoded",
+      (getter)part_is_transport_encoded,
+      (setter)NULL,
+      "If part is transport encoded",
+      NULL },
+
+    { NULL }
 };
 
 PyTypeObject BPAKPartType = {

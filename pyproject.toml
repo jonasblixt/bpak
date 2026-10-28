@@ -11,6 +11,7 @@ license = "BSD-3-Clause AND ISC"
 license-files = ["LICENSE", "heatshrink.LICENSE"]
 authors = [{ name = "Jonas Blixt", email = "jonpe960@gmail.com" }]
 requires-python = ">=3.10"
+dependencies = ["click>=8.1,<9"]
 classifiers = [
     "Intended Audience :: Developers",
     "Topic :: Software Development :: Embedded Systems",
@@ -29,6 +30,9 @@ classifiers = [
 Homepage = "https://github.com/jonasblixt/bpak"
 Documentation = "https://bpak.readthedocs.io"
 Issues = "https://github.com/jonasblixt/bpak/issues"
+
+[project.scripts]
+bpak = "bpak.__main__:main"
 
 [dependency-groups]
 test = ["pytest>=7"]

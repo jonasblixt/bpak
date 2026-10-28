@@ -4,6 +4,7 @@
 #include <Python.h>
 #include <bpak/bpak.h>
 #include <bpak/pkg.h>
+#include <bpak/utils.h>
 
 #include "python_wrapper.h"
 
@@ -231,16 +232,54 @@ static int meta_set_rawdata(PyObject *self, PyObject *value, void* closure)
 
     uint8_t *meta_data = bpak_get_meta_ptr(h, m, uint8_t);
 
-    rc = 0;
-    if (new_size <= m->size) {
-        memcpy(meta_data, new_data, new_size);
-        memset(meta_data + new_size, 0, m->size - new_size);
-    } else {
-        PyErr_Format(PyExc_ValueError, "data too long, cannot grow meta");
-        rc = -1;
+    if (new_size > m->size) {
+        /* Grow the meta data by removing and adding it again. Work on a copy
+         * of the header so that the meta data is kept if there is no space
+         * left. */
+        struct bpak_header *tmp = PyMem_Malloc(sizeof(*tmp));
+        struct bpak_meta_header *tmp_meta;
 
-        goto return_out;
+        if (tmp == NULL) {
+            PyErr_NoMemory();
+            rc = -1;
+            goto return_out;
+        }
+
+        memcpy(tmp, h, sizeof(*tmp));
+
+        rc = bpak_get_meta(tmp, meta->meta_id, meta->part_ref, &tmp_meta);
+        if (rc == BPAK_OK) {
+            bpak_del_meta(tmp, tmp_meta);
+            rc = bpak_add_meta(tmp,
+                               meta->meta_id,
+                               meta->part_ref,
+                               new_size,
+                               &tmp_meta);
+        }
+
+        if (rc != BPAK_OK) {
+            PyMem_Free(tmp);
+            bpak_raise(rc, "could not grow meta data");
+            rc = -1;
+            goto return_out;
+        }
+
+        memcpy(h, tmp, sizeof(*h));
+        PyMem_Free(tmp);
+
+        rc = bpak_get_meta(h, meta->meta_id, meta->part_ref, &m);
+        if (rc != BPAK_OK) {
+            bpak_raise(rc, "could not grow meta data");
+            rc = -1;
+            goto return_out;
+        }
+
+        meta_data = bpak_get_meta_ptr(h, m, uint8_t);
     }
+
+    rc = 0;
+    memcpy(meta_data, new_data, new_size);
+    memset(meta_data + new_size, 0, m->size - new_size);
 
     rc = package_write_header(meta->package, false);
     if (rc != BPAK_OK) {
@@ -305,6 +344,30 @@ static PyObject *meta_as_string(PyObject *self, PyObject *Py_UNUSED(ignored))
     return PyUnicode_DecodeASCII(meta_ptr, len, "strict");
 }
 
+static PyObject *meta_describe(PyObject *self, PyObject *Py_UNUSED(ignored))
+{
+    BPAKMeta *meta = (BPAKMeta *)self;
+    struct bpak_header *h = bpak_pkg_header(&meta->package->pkg);
+    struct bpak_meta_header *m;
+    /* Large enough for any meta data and a terminating NUL */
+    char buf[BPAK_METADATA_BYTES + 1] = { 0 };
+    int rc = 0;
+
+    rc = bpak_get_meta(h, meta->meta_id, meta->part_ref, &m);
+    if (rc != BPAK_OK) {
+        return PyErr_Format(PyExc_KeyError,
+                            "failed to get meta: %s",
+                            bpak_error_string(rc));
+    }
+
+    rc = bpak_meta_to_string(h, m, buf, sizeof(buf));
+    if (rc != BPAK_OK) {
+        return bpak_raise(rc, "could not format meta data");
+    }
+
+    return PyUnicode_DecodeASCII(buf, strlen(buf), "replace");
+}
+
 static PyObject *meta_delete(PyObject *self, PyObject *Py_UNUSED(ignored))
 {
     BPAKMeta *meta = (BPAKMeta *)self;
@@ -330,22 +393,28 @@ static PyObject *meta_delete(PyObject *self, PyObject *Py_UNUSED(ignored))
 }
 
 static PyMethodDef meta_methods[] = {
-    {"as_uuid",
-     (PyCFunction)(void (*)(void))meta_as_uuid,
-     METH_NOARGS,
-     "Interpret the data as a UUID object"},
+    { "as_uuid",
+      (PyCFunction)(void (*)(void))meta_as_uuid,
+      METH_NOARGS,
+      "Interpret the data as a UUID object" },
 
-    {"as_string",
-     (PyCFunction)(void (*)(void))meta_as_string,
-     METH_NOARGS,
-     "Interpret the data as a string object"},
+    { "as_string",
+      (PyCFunction)(void (*)(void))meta_as_string,
+      METH_NOARGS,
+      "Interpret the data as a string object" },
 
-    {"delete",
-     (PyCFunction)(void (*)(void))meta_delete,
-     METH_NOARGS,
-     "Delete metadata from package"},
+    { "describe",
+      (PyCFunction)(void (*)(void))meta_describe,
+      METH_NOARGS,
+      "Human readable data of well known meta data, empty for other meta "
+      "data" },
 
-    {NULL}
+    { "delete",
+      (PyCFunction)(void (*)(void))meta_delete,
+      METH_NOARGS,
+      "Delete metadata from package" },
+
+    { NULL }
 };
 
 static PyGetSetDef meta_getset[] = {

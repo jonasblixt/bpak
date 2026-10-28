@@ -1,9 +1,11 @@
-"""Helpers shared by the bpak tool and python wrapper tests."""
+"""Helpers shared by the bpak tool and python package tests."""
 
 import enum
+import os
 import shlex
 import struct
 import subprocess
+import sys
 import zlib
 from dataclasses import dataclass
 from pathlib import Path
@@ -94,31 +96,39 @@ def python_path(build_dir: Path) -> list:
 
 
 class Bpak:
-    """Runs the bpak tool with 'cwd' as working directory.
+    """Runs the bpak tool, 'python -m bpak', with 'cwd' as working directory.
+
+    'path' is put first on the python path, see python_path(), an empty path
+    runs the installed package.
 
     The command line and its output is printed so that pytest shows a full
     transcript for failing tests.
     """
 
-    def __init__(self, tool: Path, cwd: Path):
-        self.tool = tool
+    def __init__(self, path: list, cwd: Path):
         self.cwd = cwd
+        self.env = dict(os.environ)
+        if path:
+            self.env["PYTHONPATH"] = os.pathsep.join(
+                [*path, *filter(None, [os.environ.get("PYTHONPATH")])])
 
     def run(self, *args, check: bool = True,
             verbose: bool = True) -> subprocess.CompletedProcess:
-        cmd = [str(self.tool), *(str(arg) for arg in args)]
+        cmd = [str(arg) for arg in args]
         if verbose:
             cmd.append("-vvv")
 
-        result = subprocess.run(cmd, cwd=self.cwd, capture_output=True)
+        result = subprocess.run([sys.executable, "-m", "bpak", *cmd],
+                                cwd=self.cwd, env=self.env,
+                                capture_output=True)
 
-        print(f"$ {shlex.join(cmd)}")
+        print(f"$ bpak {shlex.join(cmd)}")
         print(result.stdout.decode(errors="replace"), end="")
         print(result.stderr.decode(errors="replace"), end="")
 
         if check and result.returncode != 0:
             raise AssertionError(
-                f"'{shlex.join(cmd)}' exited with {result.returncode}")
+                f"'bpak {shlex.join(cmd)}' exited with {result.returncode}")
         return result
 
     __call__ = run

@@ -7,21 +7,23 @@ set(BPAK_TEST_DATA_DIR ${CMAKE_CURRENT_SOURCE_DIR}/data)
 # C unit tests (cmocka)
 add_subdirectory(unit)
 
-# Tool and python wrapper tests (pytest)
+# Tool and python package tests (pytest)
 find_package(Python 3.10 REQUIRED COMPONENTS Interpreter)
 
-execute_process(
-    COMMAND ${Python_EXECUTABLE} -c "import pytest"
-    RESULT_VARIABLE PYTEST_MISSING
-    OUTPUT_QUIET ERROR_QUIET
-)
+foreach(module pytest click)
+    execute_process(
+        COMMAND ${Python_EXECUTABLE} -c "import ${module}"
+        RESULT_VARIABLE MODULE_MISSING
+        OUTPUT_QUIET ERROR_QUIET
+    )
 
-if (PYTEST_MISSING)
-    message(FATAL_ERROR
-        "pytest not found for ${Python_EXECUTABLE}. Install it with your "
-        "package manager (e.g. python3-pytest) or run 'uv sync' and "
-        "configure with the virtual environment in .venv activated")
-endif()
+    if (MODULE_MISSING)
+        message(FATAL_ERROR
+            "${module} not found for ${Python_EXECUTABLE}. Install it with "
+            "your package manager (e.g. python3-${module}) or run 'uv sync' "
+            "and configure with the virtual environment in .venv activated")
+    endif()
+endforeach()
 
 # Each file is registered as a separate CTest test so 'ctest -j' runs them
 # in parallel.

@@ -30,24 +30,28 @@ Documentation is available here: `BPAK documentation`_
 Building and installing
 -----------------------
 
-The library depends to mbedtls, liblzma, uuid
+The library depends on mbedtls and liblzma.
 
-Build library and tool::
+The bpak tool is part of the bpak python package, install it with
+`uv <https://docs.astral.sh/uv>`_ or pip::
 
-    $ mkdir build && cd build
-    $ cmake ..
-    $ make
-    $ sudo make install
-
-Install the python package with pip, or set up a development environment
-with `uv <https://docs.astral.sh/uv>`_::
-
+    $ uv tool install .
     $ pip install .
+
+Set up a development environment with the tool and the test and lint tools::
+
     $ uv sync
+    $ uv run bpak --help
 
-Running tests (requires cmocka and pytest)::
+Build and install the library::
 
-    $ cmake .. -DBPAK_BUILD_TESTS=1
-    $ make && ctest --output-on-failure
+    $ cmake -B build
+    $ cmake --build build
+    $ sudo cmake --install build
+
+Running tests (requires cmocka, pytest and click)::
+
+    $ cmake -B build -DBPAK_BUILD_TESTS=1
+    $ cmake --build build && ctest --test-dir build --output-on-failure
 
 .. _BPAK documentation: http://bpak.readthedocs.io/en/latest

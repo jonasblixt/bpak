@@ -11,11 +11,11 @@ can be installed with::
 
     $ sudo apt install build-essential cmake pkg-config \
           libmbedtls-dev liblzma-dev uuid-dev \
-          libcmocka-dev python3-dev python3-pytest openssl lcov
+          libcmocka-dev python3-dev python3-pytest python3-click openssl lcov
 
 Other distributions provide the same libraries under similar names: mbedtls,
-liblzma, libuuid, cmocka and the python3 development headers. Python 3.10 or
-later is required.
+liblzma, libuuid, cmocka, click and the python3 development headers. Python
+3.10 or later is required.
 
 The python package is developed with `uv <https://docs.astral.sh/uv>`_.
 ``uv sync`` creates a virtual environment in ``.venv`` with the pinned
@@ -23,14 +23,14 @@ development tools from ``uv.lock`` (the ``dev`` dependency group in
 ``pyproject.toml``) and an editable install of bpak::
 
     $ uv sync
-    $ uv run python -c "import bpak"
+    $ uv run bpak --help
 
 The editable install builds the C extension with scikit-build-core and CMake.
 ``uv sync`` rebuilds it when C sources change, see ``tool.uv.cache-keys`` in
 ``pyproject.toml``.
 
-CMake picks up an active virtual environment, so the system package for pytest
-is not needed when ``.venv`` is activated before configuring::
+CMake picks up an active virtual environment, so the system packages for pytest
+and click are not needed when ``.venv`` is activated before configuring::
 
     $ . .venv/bin/activate
     $ cmake -B build -DBPAK_BUILD_TESTS=1
@@ -47,10 +47,13 @@ Configure a build directory with the tests enabled and build it::
 python package, and compiles the library with coverage instrumentation. The C
 unit tests are built with AddressSanitizer, which includes leak detection.
 
-The python package in ``python/bpak`` wraps the C extension ``bpak._bpak``
-(``python/*.c``, typed in ``python/bpak/_bpak.pyi``). The build directory holds
-the package in ``build/python/bpak``, the extension and links to the python
-sources.
+The ``bpak`` tool is implemented in python, in ``python/bpak/__main__.py``. It
+uses the python package in ``python/bpak``, which wraps the C extension
+``bpak._bpak`` (``python/*.c``, typed in ``python/bpak/_bpak.pyi``). The build
+directory holds the package in ``build/python/bpak``, the extension and links
+to the python sources. Run the tool from there without installing it::
+
+    $ PYTHONPATH=build/python python3 -m bpak --help
 
 Running tests
 -------------
@@ -81,9 +84,11 @@ gives access to all pytest options::
 Setting the environment variable ``BPAK_BUILD_DIR`` replaces
 ``--bpak-build-dir``.
 
-Without a build directory the tests run against the installed bpak package,
-for example the editable install of ``uv sync``. Tests that need the CMake
-build, which includes all tests that run the bpak tool, are skipped.
+Without a build directory the tests of the tool and the python package run
+against the installed bpak package, for example the editable install of
+``uv sync``. Tests that need files from the CMake build are skipped::
+
+    $ uv run pytest test/cli test/python test/golden
 
 A C unit test binary can be run on its own to see the result of every test
 case::
@@ -135,18 +140,22 @@ temporary directory. Shared helpers are found in ``test/bpaktest.py`` and
 fixtures in ``test/conftest.py``:
 
 ``bpak``
-    Runs the bpak tool. ``bpak("show", pkg)`` runs a command with ``-vvv``
+    Runs the bpak tool, ``python -m bpak`` with the python package from the
+    source tree and the C extension from the build directory.
+    ``bpak("show", pkg)`` runs a command with ``-vvv``
     and fails the test if it returns an error. Verbose logs are written to
     stdout, so use ``bpak.output(...)`` to run a command without them and get
     its output. ``bpak.fails(..., error=BpakError.VERIFY_FAIL)`` expects a
-    command to fail with a specific error. ``bpak.create_package(...)``
+    command to fail with a specific error, the tool exits with the negated
+    ``enum bpak_errors`` value. Usage errors exit with 2.
+    ``bpak.create_package(...)``
     creates and signs a package with optional parts and transport rules.
 
 ``make_data``
     Creates a file with a given number of KiB of test data.
 
 ``pybpak``
-    The bpak python package, from the build directory or installed
+    The bpak python package with the C extension from the build directory
     (``test/python`` only). The ``origin_pkg`` and ``target_pkg`` fixtures provide signed
     packages to test against.
 

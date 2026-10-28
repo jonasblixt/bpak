@@ -54,8 +54,13 @@ def test_delete_part(bpak, pkg_two_parts, pkg_one_part):
                                                              pkg_one_part)
 
 
-def test_delete_all(bpak, pkg_two_parts):
-    bpak("delete", pkg_two_parts, "--all")
+@pytest.mark.parametrize("args", [
+    ["--all"],
+    ["--all", "--part", "test1"],
+], ids=["all", "all-and-part"])
+def test_delete_all(bpak, pkg_two_parts, args):
+    """--all deletes all parts, also with --part like the C tool"""
+    bpak("delete", pkg_two_parts, *args)
 
     assert package_hash(bpak, pkg_two_parts) == EMPTY_PACKAGE_HASH
 

@@ -26,7 +26,7 @@ GOLDEN_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(GOLDEN_DIR.parent))
 
 from bpaktest import (DATA_DIR, SOURCE_DIR, Bpak, Header,  # noqa: E402
-                      hash_tree_id)
+                      hash_tree_id, python_path)
 
 PACKAGE_UUID = "0888b0fa-9c48-4524-9845-06a641b61edd"
 KEYSTORE_UUID = "5df103ef-e774-450b-95c5-1fef51ceec28"
@@ -233,7 +233,7 @@ def main():
     output.mkdir()
     inputs = output / "inputs"
     create_inputs(inputs)
-    bpak = Bpak(args.bpak_build_dir.resolve() / "src" / "bpak", output)
+    bpak = Bpak(python_path(args.bpak_build_dir.resolve()), output)
 
     manifest = {"version": version, "packages": {}, "patches": {}}
 
