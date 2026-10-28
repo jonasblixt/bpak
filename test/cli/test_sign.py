@@ -5,8 +5,8 @@ import subprocess
 
 import pytest
 
-from bpaktest import (DATA_DIR, DEFAULT_SIGN_KEY, DEFAULT_VERIFY_KEY, Part,
-                      corrupt)
+from bpaktest import (DATA_DIR, DEFAULT_SIGN_KEY, DEFAULT_VERIFY_KEY,
+                      HEADER_SIZE, SIGNATURE_OFFSET, BpakError, Part, corrupt)
 
 requires_openssl = pytest.mark.skipif(shutil.which("openssl") is None,
                                       reason="openssl not found")
@@ -52,6 +52,30 @@ def test_verify_wrong_key(bpak):
     result = bpak("verify", pkg, "--key", DATA_DIR / "secp384r1-pub-key.der",
                   check=False)
     assert result.returncode != 0
+
+
+def test_verify_unsigned(bpak):
+    pkg = bpak.create_package("test.bpak", sign_key=None)
+
+    bpak.fails("verify", pkg, "--key", DEFAULT_VERIFY_KEY,
+               error=BpakError.VERIFY_FAIL)
+
+
+def test_verify_signature_from_another_package(bpak):
+    """A signature is only valid for the header it was created for"""
+    pkg = bpak.create_package("test.bpak")
+    other = bpak.create_package(
+        "other.bpak", parts=[Part("data", DATA_DIR / "test_data.bin")])
+
+    with open(other, "rb") as f:
+        f.seek(SIGNATURE_OFFSET)
+        signature = f.read(HEADER_SIZE - SIGNATURE_OFFSET)
+    with open(pkg, "r+b") as f:
+        f.seek(SIGNATURE_OFFSET)
+        f.write(signature)
+
+    bpak.fails("verify", pkg, "--key", DEFAULT_VERIFY_KEY,
+               error=BpakError.VERIFY_FAIL)
 
 
 def test_dont_hash(bpak):

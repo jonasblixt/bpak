@@ -34,3 +34,14 @@ def test_corruption_is_detected(bpak, make_data, part, offset, error):
     corrupt(pkg, offset)
 
     bpak.fails("verify", pkg, "--key", DEFAULT_VERIFY_KEY, error=error)
+
+
+def test_truncated_package(bpak, make_data):
+    data = make_data("data.bin", DATA_SIZE_KIB)
+    pkg = bpak.create_package("test.bpak", parts=[Part("fs", data)])
+
+    with open(pkg, "r+b") as f:
+        f.truncate(HEADER_SIZE + DATA_SIZE_KIB * 1024 - 1)
+
+    bpak.fails("verify", pkg, "--key", DEFAULT_VERIFY_KEY,
+               error=BpakError.READ_ERROR)

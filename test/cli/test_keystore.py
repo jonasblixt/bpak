@@ -6,7 +6,7 @@ import subprocess
 
 import pytest
 
-from bpaktest import DATA_DIR, SOURCE_DIR, Header, bpak_id
+from bpaktest import (DATA_DIR, SOURCE_DIR, BpakError, Header, bpak_id)
 
 KEYSTORE_ID = "pb-internal"
 
@@ -53,6 +53,35 @@ def test_verify_with_keystore(bpak, keystore, key_name):
                               keystore_id=KEYSTORE_ID)
 
     bpak("verify", pkg, "--keystore", keystore)
+
+
+def test_verify_with_keystore_wrong_key(bpak, keystore):
+    """The package is signed with another key than the key-id refers to"""
+    pkg = bpak.create_package("test.bpak",
+                              sign_key=DATA_DIR / "secp256r1-key-pair.pem",
+                              key_id="pb-development2",
+                              keystore_id=KEYSTORE_ID)
+
+    bpak.fails("verify", pkg, "--keystore", keystore,
+               error=BpakError.VERIFY_FAIL)
+
+
+def test_verify_with_keystore_unknown_key(bpak, keystore):
+    pkg = bpak.create_package("test.bpak",
+                              key_id="not-in-keystore",
+                              keystore_id=KEYSTORE_ID)
+
+    bpak.fails("verify", pkg, "--keystore", keystore,
+               error=BpakError.NOT_FOUND)
+
+
+def test_verify_with_keystore_wrong_keystore_id(bpak, keystore):
+    pkg = bpak.create_package("test.bpak",
+                              key_id="pb-development",
+                              keystore_id="some-other-keystore")
+
+    bpak.fails("verify", pkg, "--keystore", keystore,
+               error=BpakError.KEYSTORE_ID_MISMATCH)
 
 
 def test_key_parts(keystore):
