@@ -88,3 +88,14 @@ def test_verify_fails(pybpak, tmp_path):
     with pybpak.Package(str(path), "rb") as p:
         with pytest.raises(pybpak.Error):
             p.verify(str(DATA_DIR / "secp384r1-pub-key.der"))
+
+
+@pytest.mark.parametrize("content", [b"Not a package\n", bytes(8192)],
+                         ids=["short-file", "zeros"])
+def test_open_not_a_package(pybpak, tmp_path, content):
+    """A failed open closed the file a second time and crashed"""
+    path = tmp_path / "file"
+    path.write_bytes(content)
+
+    with pytest.raises(pybpak.Error):
+        pybpak.Package(str(path), "rb")

@@ -75,8 +75,11 @@ static int package_init(BPAKPackage *self, PyObject *args, PyObject *kwds)
     Py_DECREF(filename_ascii);
 
     if (rc != BPAK_OK) {
+        /* bpak_pkg_open closes the file on errors but leaves 'fp' set, the
+         * dealloc would close it again */
+        memset(&self->pkg, 0, sizeof(self->pkg));
         PyErr_SetString(BPAKPackageError, "could not open package");
-        return rc;
+        return -1;
     }
 
     return 0;
