@@ -341,8 +341,8 @@ BPAK_EXPORT int bpak_pkg_add_key(struct bpak_package *pkg, const char *filename,
     }
 
     /* Write zero padding */
-    uint8_t zero = 0;
-    if (fwrite(&zero, 1, p->pad_bytes, pkg->fp) != p->pad_bytes) {
+    static const uint8_t zeros[BPAK_PART_ALIGN];
+    if (fwrite(zeros, 1, p->pad_bytes, pkg->fp) != p->pad_bytes) {
         rc = -BPAK_WRITE_ERROR;
         goto err_free_key_out;
     }
