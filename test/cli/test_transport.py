@@ -7,7 +7,7 @@ again. The decoded package must be identical to the target.
 
 import pytest
 
-from bpaktest import DATA_DIR, Part, Transport
+from bpaktest import DATA_DIR, BpakError, Part, Transport
 
 
 def bsdiff(part):
@@ -100,3 +100,28 @@ def test_decode_without_encoding(bpak):
 
     bpak("compare", target, install)
     assert install.read_bytes() == target.read_bytes()
+
+
+def test_origin_from_another_package(bpak):
+    """Patches can only be created from and applied to an origin with the
+    same package UUID"""
+    transport = [bsdiff("fs")]
+    parts = [Part("fs", DIFF3)]
+
+    origin = create_package(bpak, "origin", transport, parts)
+    target = create_package(bpak, "target", transport, parts)
+    # Same data as the origin but another package UUID
+    other = bpak.create_package(
+        "other.bpak", transport=transport,
+        parts=[part.for_version("origin") for part in parts],
+        package_uuid="e8ba8bde-6d4a-4cbd-9cd5-f3c8d0e5d9a3")
+    patch = bpak.cwd / "patch.bpak"
+
+    bpak.fails("transport", target, "--encode", "--origin", other,
+               "--output", patch, error=BpakError.PACKAGE_UUID_MISMATCH)
+
+    bpak("transport", target, "--encode", "--origin", origin,
+         "--output", patch)
+    bpak.fails("transport", patch, "--decode", "--origin", other,
+               "--output", bpak.cwd / "install.bpak",
+               error=BpakError.PACKAGE_UUID_MISMATCH)

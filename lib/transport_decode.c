@@ -184,7 +184,7 @@ bpak_transport_decode_set_origin(struct bpak_transport_decode *ctx,
     if (rc != BPAK_OK)
         return rc;
 
-    patch_package_uuid = bpak_get_meta_ptr(origin_header, meta, uint8_t);
+    patch_package_uuid = bpak_get_meta_ptr(ctx->patch_header, meta, uint8_t);
 
     if (memcmp(origin_package_uuid, patch_package_uuid, 16) != 0)
         return -BPAK_PACKAGE_UUID_MISMATCH;
