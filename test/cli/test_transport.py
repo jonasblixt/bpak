@@ -7,7 +7,7 @@ again. The decoded package must be identical to the target.
 
 import pytest
 
-from bpaktest import DATA_DIR, BpakError, Part, Transport
+from bpaktest import DATA_DIR, BpakError, Header, Part, Transport, bpak_id
 
 
 def bsdiff(part):
@@ -125,3 +125,22 @@ def test_origin_from_another_package(bpak):
     bpak.fails("transport", patch, "--decode", "--origin", other,
                "--output", bpak.cwd / "install.bpak",
                error=BpakError.PACKAGE_UUID_MISMATCH)
+
+
+def test_extract_encoded_part(bpak):
+    """Extracting a transport encoded part gives the encoded data, which is
+    not padded"""
+    transport = [Transport("p1", "bsdiff-no-comp", "bspatch-no-comp")]
+    parts = [Part("p1", DIFF4)]
+    origin = create_package(bpak, "origin", transport, parts)
+    target = create_package(bpak, "target", transport, parts)
+    patch = bpak.cwd / "patch.bpak"
+    output = bpak.cwd / "p1.bin"
+
+    bpak("transport", target, "--encode", "--origin", origin,
+         "--output", patch)
+    bpak("extract", patch, "--part", "p1", "--output", output)
+
+    part = Header.read(patch).part(bpak_id("p1"))
+    assert part.pad_bytes > 0
+    assert output.stat().st_size == part.transport_size

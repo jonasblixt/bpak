@@ -445,7 +445,7 @@ BPAK_EXPORT int bpak_pkg_extract_file(struct bpak_package *pkg,
     }
 
     char copy_buffer[BPAK_CHUNK_BUFFER_LENGTH];
-    size_t bytes_to_copy = bpak_part_size(part) - part->pad_bytes;
+    size_t bytes_to_copy = bpak_part_size_wo_pad(part);
     size_t chunk_to_write = 0;
     size_t chunk_read = 0;
 
