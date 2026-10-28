@@ -305,7 +305,7 @@ texinfo_documents = [
 # extlins
 extlinks = {
     'github-blob':
-    ('https://github.com/jonasblixt/bpak/blob/' + version + '/%s', ''),
+    ('https://github.com/jonasblixt/bpak/blob/v' + version + '/%s', ''),
     'github-tree':
-    ('https://github.com/jonasblixt/bpak/tree/' + version + '/%s', ''),
+    ('https://github.com/jonasblixt/bpak/tree/v' + version + '/%s', ''),
 }
