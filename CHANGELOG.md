@@ -5,7 +5,7 @@ tool. The package format and the library ABI stay compatible, see
 [Compatibility](docs/development.md#compatibility). The SONAME of the
 shared library follows the major version.
 
-## 1.0.0 (unreleased)
+## 1.0.0 (2026-10-29)
 
 ### Added
 
