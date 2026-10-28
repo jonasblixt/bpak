@@ -3,8 +3,8 @@
 Bitpacker: a C library (`lib/`, public headers in `include/bpak/`) and a
 python package (`python/bpak/`) with the `bpak` command line tool
 (`python/bpak/__main__.py`, click) for signed firmware archives. The package
-wraps the C extension `_bpak` (`python/*.c`). Developer documentation:
-`docs/dg/development-setup.rst`.
+wraps the C extension `_bpak` (`python/*.c`). Documentation is Markdown in
+`README.md` and `docs/`, developer documentation in `docs/development.md`.
 
 Open tasks are tracked in `todo.md`. Add tasks you discover there and move
 them to Done, with the commit hash, when they are resolved.
@@ -90,5 +90,9 @@ version number anywhere else. Releases: update `version.txt`, commit as
 - New error codes need an exception in `python/exceptions.c`,
   `python/bpak/__init__.py` and `python/bpak/_bpak.pyi`. Changes to the C
   extension API must be reflected in the stub `python/bpak/_bpak.pyi`.
+- Documentation is plain Markdown, the C API is documented in the public
+  headers. Update `docs/` in the same commit as the change it describes and
+  keep the commands and their output in `docs/user-guide.md` in sync with the
+  tool.
 - Library functions log through `bpak_printf`, which is a weak symbol in
   `lib/bpak.c` that the python extension and the unit tests override.

@@ -6,7 +6,7 @@ build-backend = "scikit_build_core.build"
 name = "bpak"
 dynamic = ["version"]
 description = "Bitpacker, a tool and library for signed firmware archives"
-readme = "README.rst"
+readme = "README.md"
 license = "BSD-3-Clause AND ISC"
 license-files = ["LICENSE", "heatshrink.LICENSE"]
 authors = [{ name = "Jonas Blixt", email = "jonpe960@gmail.com" }]
@@ -28,7 +28,7 @@ classifiers = [
 
 [project.urls]
 Homepage = "https://github.com/jonasblixt/bpak"
-Documentation = "https://bpak.readthedocs.io"
+Documentation = "https://github.com/jonasblixt/bpak/tree/master/docs"
 Issues = "https://github.com/jonasblixt/bpak/issues"
 
 [project.scripts]
@@ -49,7 +49,7 @@ install.components = ["python"]
 wheel.packages = ["python/bpak"]
 sdist.exclude = [
     ".github", "docs", "examples", "test",
-    "CLAUDE.md", "todo.md", ".clang-format", ".readthedocs.yml", ".vimrc",
+    "CLAUDE.md", "todo.md", ".clang-format", ".vimrc",
 ]
 metadata.version.provider = "scikit_build_core.metadata.regex"
 metadata.version.input = "version.txt"
