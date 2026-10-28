@@ -22,7 +22,7 @@ int bpak_printf(int verbosity, const char *fmt, ...)
     va_end(args);
 
     if (log_func != Py_None) {
-        PyObject_CallFunction(log_func, "(is)", verbosity, log_buf);
+        Py_XDECREF(PyObject_CallFunction(log_func, "(is)", verbosity, log_buf));
     }
 
     return BPAK_OK;
@@ -49,12 +49,19 @@ static PyObject *m_set_log_func(PyObject *module, PyObject *args,
 {
     int rc;
     static char *kwlist[] = {"log_func", NULL};
+    PyObject *func = NULL;
     (void)module;
 
-    rc = PyArg_ParseTupleAndKeywords(args, kwds, "O", kwlist, &log_func);
+    rc = PyArg_ParseTupleAndKeywords(args, kwds, "O", kwlist, &func);
     if (!rc) {
         return NULL;
     }
+
+    /* Keep a reference, the callback may otherwise be garbage collected */
+    Py_INCREF(func);
+    if (log_func != Py_None)
+        Py_DECREF(log_func);
+    log_func = func;
 
     Py_RETURN_NONE;
 }
