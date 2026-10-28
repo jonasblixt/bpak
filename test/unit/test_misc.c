@@ -17,15 +17,6 @@ static void test_error_codes(void **state)
     assert_ptr_equal(bpak_error_string(-(BPAK_EXISTS + 1)), unknown);
 }
 
-static void test_struct_sz(void **state)
-{
-    (void)state;
-    assert_int_equal(sizeof(struct bpak_header), 4096);
-    assert_int_equal(sizeof(struct bpak_transport_meta), 32);
-    assert_int_equal(sizeof(struct bpak_part_header), 32);
-    assert_int_equal(sizeof(struct bpak_meta_header), 16);
-}
-
 static void test_part_alignment(void **state)
 {
     (void)state;
@@ -77,7 +68,6 @@ int main(void)
 {
     const struct CMUnitTest tests[] = {
         cmocka_unit_test(test_error_codes),
-        cmocka_unit_test(test_struct_sz),
         cmocka_unit_test(test_part_alignment),
         cmocka_unit_test(test_meta_align),
     };

@@ -1,6 +1,7 @@
 pkg_check_modules(CMOCKA REQUIRED IMPORTED_TARGET cmocka)
 
 set(UNIT_TESTS
+    test_abi
     test_alg_heatshrink
     test_bsdiff
     test_core_meta
