@@ -46,8 +46,9 @@ BPAK_EXPORT int bpak_pkg_open(struct bpak_package *pkg, const char *filename,
 
     size_t read_bytes = fread(&pkg->header, 1, sizeof(pkg->header), pkg->fp);
 
-    /* Initialize and write BPAK header when new files are created */
-    if (read_bytes != sizeof(pkg->header)) {
+    /* Initialize and write BPAK header when new files are created. Any
+     * other file must contain a complete header, never write to it. */
+    if (read_bytes == 0) {
         rc = bpak_init_header(&pkg->header);
         if (rc != BPAK_OK) {
             goto err_close_io;
@@ -69,6 +70,10 @@ BPAK_EXPORT int bpak_pkg_open(struct bpak_package *pkg, const char *filename,
             rc = -BPAK_SEEK_ERROR;
             goto err_close_io;
         }
+    } else if (read_bytes != sizeof(pkg->header)) {
+        bpak_printf(0, "Error: %s is too small to be a package\n", filename);
+        rc = -BPAK_READ_ERROR;
+        goto err_close_io;
     }
 
     rc = bpak_valid_header(&pkg->header);

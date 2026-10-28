@@ -31,13 +31,15 @@ struct bpak_package {
 };
 
 /**
- * Open a package for reading or writing
+ * Open a package for reading or writing. An empty header is written to
+ * empty files.
  *
  * @param[in] pkg Package pointer
  * @param[in] filename Filename
  * @param[in] mode File mode
  *
- * @return BPAK_OK on success
+ * @return BPAK_OK on success, -BPAK_READ_ERROR if the file is smaller than
+ *         a header or -BPAK_BAD_MAGIC if it is not a package
  */
 int bpak_pkg_open(struct bpak_package *pkg, const char *filename,
                   const char *mode);
