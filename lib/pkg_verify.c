@@ -65,6 +65,11 @@ err_out:
     return rc;
 }
 
+static int hash_chunk(void *priv, uint8_t *buffer, size_t length)
+{
+    return bpak_hash_update(priv, buffer, length);
+}
+
 BPAK_EXPORT int bpak_pkg_part_sha256(struct bpak_package *pkg,
                                      uint8_t *hash_buffer,
                                      size_t hash_buffer_length,
@@ -73,11 +78,7 @@ BPAK_EXPORT int bpak_pkg_part_sha256(struct bpak_package *pkg,
     int rc;
     struct bpak_part_header *part;
     struct bpak_hash_context hash;
-    uint8_t chunk[BPAK_CHUNK_BUFFER_LENGTH];
     off_t offset;
-    size_t part_size;
-    size_t bytes_to_hash;
-    size_t chunk_len;
 
     rc = bpak_get_part(&pkg->header, part_id, &part);
 
@@ -96,26 +97,11 @@ BPAK_EXPORT int bpak_pkg_part_sha256(struct bpak_package *pkg,
         goto err_free_hash_ctx_out;
     }
 
-    part_size = bpak_part_size_wo_pad(part);
-    bytes_to_hash = part_size;
+    rc =
+        bpak_file_feed(pkg->fp, bpak_part_size_wo_pad(part), hash_chunk, &hash);
 
-    while (bytes_to_hash > 0) {
-        chunk_len = (bytes_to_hash > sizeof(chunk))?sizeof(chunk):bytes_to_hash;
-
-        if (fread(chunk, 1, chunk_len, pkg->fp) != chunk_len) {
-            rc = -BPAK_READ_ERROR;
-            goto err_free_hash_ctx_out;
-        }
-
-        rc = bpak_hash_update(&hash, chunk, chunk_len);
-
-        if (rc != BPAK_OK)
-            goto err_free_hash_ctx_out;
-
-        bytes_to_hash -= chunk_len;
-    }
-
-    rc = bpak_hash_final(&hash, hash_buffer, hash_buffer_length, NULL);
+    if (rc == BPAK_OK)
+        rc = bpak_hash_final(&hash, hash_buffer, hash_buffer_length, NULL);
 
 err_free_hash_ctx_out:
     bpak_hash_free(&hash);

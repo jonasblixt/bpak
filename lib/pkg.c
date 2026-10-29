@@ -129,6 +129,42 @@ ssize_t bpak_file_write(off_t offset, uint8_t *buffer, size_t length,
     return fwrite(buffer, 1, length, fp);
 }
 
+int bpak_file_feed(FILE *fp, uint64_t length, bpak_consume_t consume,
+                   void *priv)
+{
+    uint8_t chunk_buffer[BPAK_CHUNK_BUFFER_LENGTH];
+    int rc;
+
+    while (length > 0) {
+        size_t chunk = BPAK_MIN(length, sizeof(chunk_buffer));
+
+        if (fread(chunk_buffer, 1, chunk, fp) != chunk)
+            return -BPAK_READ_ERROR;
+
+        rc = consume(priv, chunk_buffer, chunk);
+
+        if (rc != BPAK_OK)
+            return rc;
+
+        length -= chunk;
+    }
+
+    return BPAK_OK;
+}
+
+static int file_write_chunk(void *priv, uint8_t *buffer, size_t length)
+{
+    if (fwrite(buffer, 1, length, (FILE *)priv) != length)
+        return -BPAK_WRITE_ERROR;
+
+    return BPAK_OK;
+}
+
+int bpak_file_copy(FILE *in_fp, FILE *out_fp, uint64_t length)
+{
+    return bpak_file_feed(in_fp, length, file_write_chunk, out_fp);
+}
+
 BPAK_EXPORT int bpak_pkg_update_hash(struct bpak_package *pkg, char *output,
                                      size_t *size)
 {
@@ -261,6 +297,11 @@ static ssize_t decode_read_origin(off_t offset, uint8_t *buffer, size_t length,
     return bpak_file_read(offset, buffer, length, priv->origin_fp);
 }
 
+static int decode_write_chunk(void *priv, uint8_t *buffer, size_t length)
+{
+    return bpak_transport_decode_write_chunk(priv, buffer, length);
+}
+
 BPAK_EXPORT int bpak_pkg_transport_decode(struct bpak_package *input,
                                           struct bpak_package *output,
                                           struct bpak_package *origin)
@@ -272,7 +313,6 @@ BPAK_EXPORT int bpak_pkg_transport_decode(struct bpak_package *input,
     struct bpak_header *patch_header = bpak_pkg_header(output);
     struct bpak_part_header *origin_part = NULL;
     struct bpak_transport_decode decode_ctx;
-    uint8_t chunk_buffer[BPAK_CHUNK_BUFFER_LENGTH];
     uint8_t decode_buffer[BPAK_CHUNK_BUFFER_LENGTH];
     struct decode_private decode_private;
 
@@ -355,33 +395,18 @@ BPAK_EXPORT int bpak_pkg_transport_decode(struct bpak_package *input,
         }
 
         /* If there is any input data chunk it up and feed the decoder */
-        size_t bytes_to_process = bpak_part_size(part);
+        rc = bpak_file_feed(input->fp,
+                            bpak_part_size(part),
+                            decode_write_chunk,
+                            &decode_ctx);
 
-        while (bytes_to_process) {
-            size_t chunk_length =
-                BPAK_MIN(bytes_to_process, sizeof(chunk_buffer));
-            size_t bytes_read = fread(chunk_buffer, 1, chunk_length, input->fp);
-
-            if (bytes_read != chunk_length) {
-                bpak_printf(0, "%s: bytes_read != chunk_length\n", __func__);
-                rc = -BPAK_READ_ERROR;
-                goto err_out;
-            }
-
-            rc = bpak_transport_decode_write_chunk(&decode_ctx,
-                                                   chunk_buffer,
-                                                   chunk_length);
-
-            if (rc != BPAK_OK) {
-                bpak_printf(
-                    0,
-                    "Error: Decoder write chunk failed for part 0x%x (%i)\n",
-                    part->id,
-                    rc);
-                goto err_out;
-            }
-
-            bytes_to_process -= chunk_length;
+        if (rc != BPAK_OK) {
+            bpak_printf(
+                0,
+                "Error: Decoder write chunk failed for part 0x%x (%i)\n",
+                part->id,
+                rc);
+            goto err_out;
         }
 
         rc = bpak_transport_decode_finish(&decode_ctx);
@@ -456,37 +481,10 @@ BPAK_EXPORT int bpak_pkg_extract_file(struct bpak_package *pkg,
         fp = stdout;
     }
 
-    char copy_buffer[BPAK_CHUNK_BUFFER_LENGTH];
-    size_t bytes_to_copy = bpak_part_size_wo_pad(part);
-    size_t chunk_to_write = 0;
-    size_t chunk_read = 0;
+    rc = bpak_file_copy(pkg->fp, fp, bpak_part_size_wo_pad(part));
 
-    while (bytes_to_copy) {
-        if (bytes_to_copy > sizeof(copy_buffer)) {
-            chunk_to_write = sizeof(copy_buffer);
-        } else {
-            chunk_to_write = bytes_to_copy;
-        }
-
-        chunk_read = fread(copy_buffer, 1, chunk_to_write, pkg->fp);
-        if (chunk_read != chunk_to_write) {
-            rc = -BPAK_READ_ERROR;
-            goto err_close_fp_out;
-        }
-
-
-        if (fwrite(copy_buffer, 1, chunk_read, fp) != chunk_read) {
-            rc = -BPAK_WRITE_ERROR;
-            goto err_close_fp_out;
-        }
-
-        bytes_to_copy -= chunk_to_write;
-    }
-
-err_close_fp_out:
-    if ((fp != stdout) && (fp != NULL)) {
+    if (fp != stdout)
         fclose(fp);
-    }
 
     return rc;
 }

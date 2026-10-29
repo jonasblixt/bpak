@@ -57,32 +57,11 @@ static int transport_copy(struct bpak_header *input_hdr,
         return -BPAK_SEEK_ERROR;
     }
 
-    uint8_t buf[1024];
-    uint64_t bytes_to_copy = bpak_part_size(p);
-    uint64_t chunk = 0;
+    rc = bpak_file_copy(input_fp, output_fp, bpak_part_size(p));
 
-    while (bytes_to_copy) {
-        chunk = (bytes_to_copy > sizeof(buf)) ? sizeof(buf) : bytes_to_copy;
-        uint64_t read_bytes = fread(buf, 1, chunk, input_fp);
+    if (rc != BPAK_OK)
+        bpak_printf(0, "Error: Could not copy part %x (%i)\n", id, rc);
 
-        if (read_bytes != chunk) {
-            bpak_printf(0, "Error: Could not read chunk");
-            rc = -BPAK_READ_ERROR;
-            goto err_out;
-        }
-
-        uint64_t written_bytes = fwrite(buf, 1, chunk, output_fp);
-
-        if (written_bytes != read_bytes) {
-            bpak_printf(0, "Error: Could not write chunk");
-            rc = -BPAK_WRITE_ERROR;
-            goto err_out;
-        }
-
-        bytes_to_copy -= chunk;
-    }
-
-err_out:
     return rc;
 }
 

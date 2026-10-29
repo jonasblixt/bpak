@@ -22,6 +22,8 @@
 #include <bpak/crc.h>
 #include <bpak/crypto.h>
 
+#include "internal.h"
+
 static const uint8_t zeros[BPAK_PART_ALIGN];
 
 /* The package before it is changed, to restore it when the change fails */
@@ -121,26 +123,6 @@ static int pkg_add_part_finish(struct bpak_package *pkg,
     return bpak_pkg_write_header(pkg);
 }
 
-/* Copy 'length' bytes from 'in_fp' to 'out_fp', a short read is an error */
-static int copy_data(FILE *in_fp, FILE *out_fp, uint64_t length)
-{
-    uint8_t chunk_buffer[BPAK_CHUNK_BUFFER_LENGTH];
-
-    while (length) {
-        size_t chunk = BPAK_MIN(length, sizeof(chunk_buffer));
-
-        if (fread(chunk_buffer, 1, chunk, in_fp) != chunk)
-            return -BPAK_READ_ERROR;
-
-        if (fwrite(chunk_buffer, 1, chunk, out_fp) != chunk)
-            return -BPAK_WRITE_ERROR;
-
-        length -= chunk;
-    }
-
-    return BPAK_OK;
-}
-
 #if BPAK_CONFIG_MERKLE == 1
 static ssize_t merkle_wr(off_t offset, uint8_t *buf, size_t size, void *priv)
 {
@@ -156,6 +138,11 @@ static ssize_t merkle_rd(off_t offset, uint8_t *buf, size_t size, void *priv)
     return size;
 }
 
+static int merkle_write_chunk(void *priv, uint8_t *buffer, size_t length)
+{
+    return bpak_merkle_write_chunk(priv, buffer, length);
+}
+
 /* Compute the hash tree of the data of part 'p' in the package */
 static int compute_merkle_tree(struct bpak_package *pkg,
                                struct bpak_part_header *p, uint8_t *tree,
@@ -163,7 +150,6 @@ static int compute_merkle_tree(struct bpak_package *pkg,
                                bpak_merkle_hash_t root_hash)
 {
     struct bpak_merkle_context ctx;
-    uint8_t chunk_buffer[BPAK_CHUNK_BUFFER_LENGTH];
     int rc;
 
     rc = bpak_merkle_init(&ctx,
@@ -182,19 +168,10 @@ static int compute_merkle_tree(struct bpak_package *pkg,
     if (fseeko(pkg->fp, bpak_part_offset(&pkg->header, p), SEEK_SET) != 0)
         return -BPAK_SEEK_ERROR;
 
-    for (uint64_t left = p->size; left > 0;) {
-        size_t chunk = BPAK_MIN(left, sizeof(chunk_buffer));
+    rc = bpak_file_feed(pkg->fp, p->size, merkle_write_chunk, &ctx);
 
-        if (fread(chunk_buffer, 1, chunk, pkg->fp) != chunk)
-            return -BPAK_READ_ERROR;
-
-        rc = bpak_merkle_write_chunk(&ctx, chunk_buffer, chunk);
-
-        if (rc != BPAK_OK)
-            return rc;
-
-        left -= chunk;
-    }
+    if (rc != BPAK_OK)
+        return rc;
 
     return bpak_merkle_finish(&ctx, root_hash);
 }
@@ -337,7 +314,7 @@ BPAK_EXPORT int bpak_pkg_add_file(struct bpak_package *pkg,
         pkg_add_part_start(pkg, bpak_id(part_name), flags, statbuf.st_size, &p);
 
     if (rc == BPAK_OK)
-        rc = copy_data(in_fp, pkg->fp, p->size);
+        rc = bpak_file_copy(in_fp, pkg->fp, p->size);
 
     if (rc == BPAK_OK)
         rc = pkg_add_part_finish(pkg, p);

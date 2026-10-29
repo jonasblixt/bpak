@@ -13,6 +13,7 @@
 #define BPAK_LIB_INTERNAL_H
 
 #include <stdint.h>
+#include <stdio.h>
 #include <bpak/bpak.h>
 
 /**
@@ -46,5 +47,25 @@ ssize_t bpak_file_read(off_t offset, uint8_t *buffer, size_t length,
                        void *user);
 ssize_t bpak_file_write(off_t offset, uint8_t *buffer, size_t length,
                         void *user);
+
+/** Consumer of the data of bpak_file_feed(), returns BPAK_OK or an error */
+typedef int (*bpak_consume_t)(void *priv, uint8_t *buffer, size_t length);
+
+/**
+ * Read 'length' bytes from the current position of 'fp' in chunks and pass
+ * them to 'consume'.
+ *
+ * @return BPAK_OK, -BPAK_READ_ERROR on a short read or the error of
+ *         'consume'
+ */
+int bpak_file_feed(FILE *fp, uint64_t length, bpak_consume_t consume,
+                   void *priv);
+
+/**
+ * Copy 'length' bytes from the current position of 'in_fp' to 'out_fp'.
+ *
+ * @return BPAK_OK, -BPAK_READ_ERROR on a short read or -BPAK_WRITE_ERROR
+ */
+int bpak_file_copy(FILE *in_fp, FILE *out_fp, uint64_t length);
 
 #endif // BPAK_LIB_INTERNAL_H
