@@ -83,7 +83,7 @@ static void test_sign_verify(void **state)
     assert_int_equal(rc, BPAK_OK);
     assert_true(verified);
 
-    /* A modified hash must not verify */
+    /* A modified hash does not verify, which is not an error */
     hash[0] ^= 0xff;
     verified = true;
     rc = bpak_crypto_verify(signature,
@@ -93,7 +93,8 @@ static void test_sign_verify(void **state)
                             BPAK_HASH_SHA256,
                             public_key,
                             &verified);
-    assert_false(rc == BPAK_OK && verified);
+    assert_int_equal(rc, BPAK_OK);
+    assert_false(verified);
 
     bpak_free(private_key);
     bpak_free(public_key);

@@ -159,6 +159,8 @@ int bpak_mbed_verify(const uint8_t *signature, size_t signature_length,
         return -BPAK_KEY_DECODE;
     }
 
+    /* A signature that does not match is not an error, see
+     * bpak_crypto_verify() */
     rc = mbedtls_pk_verify(&ctx,
                            md_type,
                            (unsigned char *)hash,
@@ -166,12 +168,7 @@ int bpak_mbed_verify(const uint8_t *signature, size_t signature_length,
                            (unsigned char *)signature,
                            signature_length);
 
-    if (rc == 0) {
-        rc = BPAK_OK;
-        (*verified) = true;
-    } else {
-        rc = -BPAK_VERIFY_FAIL;
-    }
+    (*verified) = (rc == 0);
 
     mbedtls_pk_free(&ctx);
     return BPAK_OK;
