@@ -72,6 +72,11 @@ tool. The package format and the library ABI stay compatible, see
   with `merkle-root-hash` and fails with `BPAK_BAD_ROOT_HASH`, and the sizes
   of the merkle salt and root hash are checked. `bpak transport --decode`
   printed the offset of the merkle tree.
+- `bpak_merkle_init` rejected data of 8 GiB to 1 TiB, which
+  `bpak_merkle_compute_size` accepts, so adding such a file with
+  `--encoder merkle` crashed. Earlier versions can not verify these
+  packages. `bpak_merkle_write_chunk` wrote past the hash tree when it got
+  more data than the tree was created for, it fails with `BPAK_SIZE_ERROR`.
 - Python package: crashes when opening a file that is not a package, when
   using a closed package and after the log callback was released, reference
   leaks in `Package.parts` and `Package.meta`, meta data larger than the

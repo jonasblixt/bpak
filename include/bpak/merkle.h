@@ -104,7 +104,8 @@ int bpak_merkle_init(struct bpak_merkle_context *ctx, size_t input_data_length,
  * @param[in] buffer Input data buffer
  * @param[in] length Available bytes in buffer
  *
- * @return BPAK_OK on success
+ * @return BPAK_OK on success, -BPAK_SIZE_ERROR for more data than the
+ *         'input_data_length' of bpak_merkle_init() or a negative error code
  */
 int bpak_merkle_write_chunk(struct bpak_merkle_context *ctx, uint8_t *buffer,
                             size_t length);

@@ -69,16 +69,17 @@ BPAK_EXPORT int bpak_merkle_init(struct bpak_merkle_context *ctx,
     /* Compute the length of each level and the total length of the hash tree */
     level_length = input_data_length;
     do {
+        /* Up to BPAK_MERKLE_MAX_LEVELS levels, like
+         * bpak_merkle_compute_size */
+        if (level >= BPAK_MERKLE_MAX_LEVELS)
+            return -BPAK_NO_SPACE_LEFT;
+
         level_length = (level_length >> BPAK_MERKLE_BLOCK_BITS) * 32;
         pad_bytes = (~level_length + 1) & (BPAK_MERKLE_BLOCK_SZ - 1);
         level_length += pad_bytes;
         ctx->level_length[level] = level_length;
         ctx->hash_tree_length += level_length;
         level = level + 1;
-
-        if (level >= BPAK_MERKLE_MAX_LEVELS)
-            return -BPAK_NO_SPACE_LEFT;
-
     } while (level_length != BPAK_MERKLE_BLOCK_SZ);
 
     ctx->no_of_levels = level;
@@ -132,8 +133,17 @@ BPAK_EXPORT int bpak_merkle_write_chunk(struct bpak_merkle_context *ctx,
     size_t chunk_length;
     uint8_t *chunk_buffer = buffer;
 
+    if (ctx->finished && length > 0)
+        return -BPAK_SIZE_ERROR;
+
     while (data_to_process > 0) {
         if (ctx->block_byte_counter == BPAK_MERKLE_BLOCK_SZ) {
+            /* More data than 'input_data_length' would overwrite the next
+             * level */
+            if (ctx->input_chunk_counter / BPAK_MERKLE_HASH_BYTES >=
+                ctx->input_data_length / BPAK_MERKLE_BLOCK_SZ)
+                return -BPAK_SIZE_ERROR;
+
             rc = bpak_hash_init(&ctx->running_hash, BPAK_HASH_SHA256);
             if (rc != BPAK_OK)
                 return rc;

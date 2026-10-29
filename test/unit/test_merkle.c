@@ -197,6 +197,101 @@ static void test_merkle_unaligned_input(void **state)
         "8effc062924445d3389c6b360b29cf1c142d29497df783a63eabcea6f7779436");
 }
 
+/* bpak_merkle_init supports the sizes that bpak_merkle_compute_size does */
+static void test_merkle_init_levels(void **state)
+{
+    (void)state;
+    struct bpak_merkle_context ctx;
+    const size_t sizes[] = { 4096,
+                             8 * 1024 * 1024 * 1024ul,
+                             8 * 1024 * 1024 * 1024ul + 4096,
+                             1024 * 1024 * 1024 * 1024ul };
+    int rc;
+
+    for (size_t i = 0; i < sizeof(sizes) / sizeof(sizes[0]); i++) {
+        rc = bpak_merkle_init(&ctx,
+                              sizes[i],
+                              salt,
+                              sizeof(salt),
+                              merkle_wr,
+                              merkle_rd,
+                              0,
+                              false,
+                              NULL);
+        assert_int_equal(rc, BPAK_OK);
+        assert_int_equal(bpak_merkle_get_size(&ctx),
+                         bpak_merkle_compute_size(sizes[i]));
+    }
+
+    assert_int_equal(ctx.no_of_levels, BPAK_MERKLE_MAX_LEVELS);
+
+    rc = bpak_merkle_init(&ctx,
+                          1024 * 1024 * 1024 * 1024ul + 4096,
+                          salt,
+                          sizeof(salt),
+                          merkle_wr,
+                          merkle_rd,
+                          0,
+                          false,
+                          NULL);
+    assert_int_equal(rc, -BPAK_NO_SPACE_LEFT);
+}
+
+/* More data than the tree was created for */
+static void test_merkle_too_much_data(void **state)
+{
+    (void)state;
+    struct bpak_merkle_context ctx;
+    uint8_t tree[2 * 4096];
+    uint8_t block[4096] = { 0 };
+    bpak_merkle_hash_t root;
+    int rc;
+
+    memset(tree, 0x55, sizeof(tree));
+
+    rc = bpak_merkle_init(&ctx,
+                          2 * 4096,
+                          salt,
+                          sizeof(salt),
+                          merkle_wr,
+                          merkle_rd,
+                          0,
+                          true,
+                          tree);
+    assert_int_equal(rc, BPAK_OK);
+    assert_int_equal(bpak_merkle_get_size(&ctx), 4096);
+
+    rc = bpak_merkle_write_chunk(&ctx, block, sizeof(block));
+    assert_int_equal(rc, BPAK_OK);
+    rc = bpak_merkle_write_chunk(&ctx, block, sizeof(block));
+    assert_int_equal(rc, BPAK_OK);
+    rc = bpak_merkle_write_chunk(&ctx, block, 1);
+    assert_int_equal(rc, -BPAK_SIZE_ERROR);
+
+    /* Nothing was written after the tree */
+    for (size_t i = 4096; i < sizeof(tree); i++)
+        assert_int_equal(tree[i], 0x55);
+
+    rc = bpak_merkle_finish(&ctx, root);
+    assert_int_equal(rc, BPAK_OK);
+
+    /* A 4 KiB tree is finished after the first block */
+    rc = bpak_merkle_init(&ctx,
+                          4096,
+                          salt,
+                          sizeof(salt),
+                          merkle_wr,
+                          merkle_rd,
+                          0,
+                          true,
+                          tree);
+    assert_int_equal(rc, BPAK_OK);
+    rc = bpak_merkle_write_chunk(&ctx, block, sizeof(block));
+    assert_int_equal(rc, BPAK_OK);
+    rc = bpak_merkle_write_chunk(&ctx, block, 1);
+    assert_int_equal(rc, -BPAK_SIZE_ERROR);
+}
+
 int main(void)
 {
     const struct CMUnitTest tests[] = {
@@ -208,6 +303,8 @@ int main(void)
         cmocka_unit_test(test_merkle_516KiB),
         cmocka_unit_test(test_merkle_64MiB),
         cmocka_unit_test(test_merkle_unaligned_input),
+        cmocka_unit_test(test_merkle_init_levels),
+        cmocka_unit_test(test_merkle_too_much_data),
     };
 
     return cmocka_run_group_tests(tests, NULL, NULL);
