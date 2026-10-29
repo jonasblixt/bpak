@@ -159,7 +159,8 @@ int bpak_pkg_transport_encode(struct bpak_package *input,
                               struct bpak_package *origin);
 
 /**
- * Transport decode package
+ * Transport decode package. The header of 'output' is set to the decoded
+ *  header, the header of 'input' is not changed.
  *
  * @param[in] input BPAK Package input stream
  * @param[in] output BPAK Package output, the result

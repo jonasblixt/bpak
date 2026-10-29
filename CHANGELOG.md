@@ -119,6 +119,10 @@ tool. The package format and the library ABI stay compatible, see
   prefix, which clashed with programs that use heatshrink themselves.
 - `bpak_pkg_size` and `bpak_pkg_installed_size` wrapped around when the size
   does not fit `size_t`, they return `SIZE_MAX`.
+- `bpak_pkg_transport_decode` and `bpak.transport_decode` cleared the
+  transport flags in the header of the input package instead of the output
+  package, so the input package reported the wrong sizes, and the output
+  package kept the header it was opened with until it was opened again.
 - Python package: crashes when opening a file that is not a package, when
   using a closed package and after the log callback was released, reference
   leaks in `Package.parts` and `Package.meta`, meta data larger than the

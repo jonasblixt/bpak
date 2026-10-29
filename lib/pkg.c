@@ -288,12 +288,17 @@ BPAK_EXPORT int bpak_pkg_transport_decode(struct bpak_package *input,
 {
     int rc;
 
-    struct bpak_header *patch_header = bpak_pkg_header(input);
+    /* The decoder clears the transport flags in the header it decodes, decode
+     * a copy in the output header and leave the input header unchanged */
+    struct bpak_header *patch_header = bpak_pkg_header(output);
     struct bpak_part_header *origin_part = NULL;
     struct bpak_transport_decode decode_ctx;
     uint8_t chunk_buffer[BPAK_CHUNK_BUFFER_LENGTH];
     uint8_t decode_buffer[BPAK_CHUNK_BUFFER_LENGTH];
     struct decode_private decode_private;
+
+    if (output != input)
+        memcpy(patch_header, bpak_pkg_header(input), sizeof(*patch_header));
 
     memset(&decode_private, 0, sizeof(struct decode_private));
     decode_private.output_fp = output->fp;
