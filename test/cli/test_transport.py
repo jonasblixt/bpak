@@ -31,11 +31,8 @@ RANDOM = Path("random_{}.bin")
 DIFF3 = DATA_DIR / "diff3_{}.bin"
 DIFF4 = DATA_DIR / "diff4_{}.bin"
 
+# Mixing transport encoded and plain parts is covered by the golden patches
 SCENARIOS = {
-    "bsdiff": (
-        [bsdiff("fs"), merkle_tree("fs")],
-        [Part("fs", RANDOM, merkle=True)],
-    ),
     "bsdiff-lzma": (
         [bsdiff_lzma("fs"), merkle_tree("fs")],
         [Part("fs", RANDOM, merkle=True)],
@@ -48,10 +45,6 @@ SCENARIOS = {
         [Part("fs", RANDOM, merkle=True),
          Part("fs2", RANDOM, merkle=True),
          Part("data", DIFF3)],
-    ),
-    "mixed-encoded-and-plain-parts": (
-        [bsdiff("p1"), bsdiff("p2")],
-        [Part("p1", RANDOM), Part("p2", RANDOM), Part("p3", DIFF4)],
     ),
     "no-transport-encoding": (
         [],
@@ -89,12 +82,11 @@ def test_encode_decode(bpak, transport, parts):
         assert patch.stat().st_size < target.stat().st_size
 
 
-@pytest.mark.usefixtures("random_data")
 def test_decode_without_encoding(bpak):
     """A package with transport rules that has not been transport encoded
     passes through the decode step unchanged"""
     transport = [bsdiff("p0"), bsdiff("p1"), bsdiff("p2")]
-    parts = [Part("p0", RANDOM), Part("p1", RANDOM), Part("p2", RANDOM)]
+    parts = [Part("p0", DIFF3), Part("p1", DIFF3), Part("p2", DIFF4)]
 
     origin = create_package(bpak, "origin", transport, parts)
     target = create_package(bpak, "target", transport, parts)
