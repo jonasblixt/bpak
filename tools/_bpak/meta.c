@@ -6,7 +6,7 @@
 #include <bpak/pkg.h>
 #include <bpak/utils.h>
 
-#include "python_wrapper.h"
+#include "module.h"
 
 PyObject *meta_allocate(BPAKPackage *package, bpak_id_t meta_id, bpak_id_t part_ref)
 {

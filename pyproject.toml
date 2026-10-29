@@ -32,7 +32,7 @@ Documentation = "https://github.com/jonasblixt/bpak/tree/master/docs"
 Issues = "https://github.com/jonasblixt/bpak/issues"
 
 [project.scripts]
-bpak = "bpak.__main__:main"
+bpak = "bpak.cli:main"
 
 [dependency-groups]
 test = ["pytest>=7"]
@@ -41,12 +41,12 @@ dev = [{ include-group = "test" }, { include-group = "lint" }]
 
 [tool.scikit-build]
 minimum-version = "build-system.requires"
-# The python extension needs CMake 3.18, see python/CMakeLists.txt
+# The python extension needs CMake 3.18, see tools/CMakeLists.txt
 cmake.version = ">=3.18"
 # Only the extension, linked with the static library, goes into the wheel
 build.targets = ["bpak-python-wrapper"]
 install.components = ["python"]
-wheel.packages = ["python/bpak"]
+wheel.packages = ["tools/bpak"]
 sdist.exclude = [
     ".github", "docs", "examples", "test",
     "CLAUDE.md", "todo.md", ".clang-format",
@@ -69,14 +69,14 @@ cache-keys = [
     { file = "lib/**/*.c" },
     { file = "lib/**/*.h" },
     { file = "lib/*.in" },
-    { file = "python/*.c" },
-    { file = "python/*.h" },
+    { file = "tools/_bpak/*.c" },
+    { file = "tools/_bpak/*.h" },
 ]
 
 [tool.ruff]
 line-length = 100
 # The tests follow their own, older style
-include = ["python/bpak/**/*.py", "python/bpak/**/*.pyi"]
+include = ["tools/bpak/**/*.py", "tools/bpak/**/*.pyi"]
 target-version = "py310"
 
 [tool.ruff.lint]
@@ -105,7 +105,7 @@ line-ending = "auto"
 
 [tool.mypy]
 strict = true
-files = ["python/bpak"]
+files = ["tools/bpak"]
 
 # Here and not in test/, pytest takes the value of '--bpak-build-dir build'
 # for a path and would then not find a configuration in test/

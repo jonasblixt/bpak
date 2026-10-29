@@ -5,7 +5,7 @@
 #include <stdarg.h>
 #include <bpak/bpak.h>
 
-#include "python_wrapper.h"
+#include "module.h"
 
 PyObject *BPAKPackageError;
 

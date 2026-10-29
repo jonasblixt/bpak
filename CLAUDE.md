@@ -1,11 +1,11 @@
 # bpak
 
 Bitpacker: a C library (`lib/`, public headers in `include/bpak/`,
-third-party code in `lib/vendor/`) and a python package (`python/bpak/`)
-with the `bpak` command line tool (`python/bpak/__main__.py`, click) for
-signed firmware archives. The package
-wraps the C extension `_bpak` (`python/*.c`). Documentation is Markdown in
-`README.md` and `docs/`, developer documentation in `docs/development.md`.
+third-party code in `lib/vendor/`) and a python package (`tools/bpak/`)
+with the `bpak` command line tool (`tools/bpak/cli.py`, click) for signed
+firmware archives. The package wraps the C extension `bpak._bpak`
+(`tools/_bpak/`). Documentation is Markdown in `README.md` and `docs/`,
+developer documentation in `docs/development.md`.
 
 Open tasks are tracked in `todo.md`. Add tasks you discover there and move
 them to Done, with the commit hash, when they are resolved.
@@ -18,7 +18,7 @@ cmake --build build -j$(nproc)
 ctest --test-dir build --output-on-failure -j$(nproc)
 ctest --test-dir build -L unit                     # or: cli, python, golden, abi, examples
 pytest test --bpak-build-dir build -k <pattern>    # tool/python tests directly
-PYTHONPATH=build/python python3 -m bpak           # run the tool from the build
+PYTHONPATH=build/tools python3 -m bpak            # run the tool from the build
 
 uv sync                                           # .venv, editable install, dev tools
 uv run pytest test/cli test/python test/golden    # against the editable install
@@ -93,10 +93,10 @@ change. Releases: update `version.txt` and the release heading in
   separate commits from other changes.
 - C code follows `.clang-format`, only format the code you change. Keep the
   copyright notices in third-party code and its license in `LICENSES/`. Python
-  code in `python/bpak` follows ruff and strict mypy (`pyproject.toml`).
-- New error codes need an exception in `python/exceptions.c`,
-  `python/bpak/__init__.py` and `python/bpak/_bpak.pyi`. Changes to the C
-  extension API must be reflected in the stub `python/bpak/_bpak.pyi`.
+  code in `tools/bpak` follows ruff and strict mypy (`pyproject.toml`).
+- New error codes need an exception in `tools/_bpak/exceptions.c`,
+  `tools/bpak/__init__.py` and `tools/bpak/_bpak.pyi`. Changes to the C
+  extension API must be reflected in the stub `tools/bpak/_bpak.pyi`.
 - Documentation is plain Markdown, the C API is documented in the public
   headers. Update `docs/` in the same commit as the change it describes and
   keep the commands and their output in `docs/user-guide.md` in sync with the

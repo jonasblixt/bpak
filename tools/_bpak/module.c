@@ -9,7 +9,7 @@
 #include <bpak/id.h>
 #include <bpak/crypto.h>
 
-#include "python_wrapper.h"
+#include "module.h"
 
 static PyObject *log_func = Py_None;
 

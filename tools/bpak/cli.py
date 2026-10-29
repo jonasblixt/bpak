@@ -929,7 +929,3 @@ def main() -> None:
             stream.reconfigure(errors="surrogateescape")
 
     cli(prog_name="bpak")
-
-
-if __name__ == "__main__":
-    main()

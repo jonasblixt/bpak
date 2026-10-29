@@ -23,7 +23,7 @@ def cmake_build_dir(pytestconfig):
         return None
 
     build_dir = build_dir.resolve()
-    if not any((build_dir / "python" / "bpak").glob("_bpak*")):
+    if not any((build_dir / "tools" / "bpak").glob("_bpak*")):
         pytest.fail(f"the C extension bpak._bpak is not built in {build_dir}")
     return build_dir
 

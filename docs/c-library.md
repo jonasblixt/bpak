@@ -8,8 +8,8 @@ every function, this page gives an overview.
 
 ```mermaid
 flowchart TD
-    tool["bpak tool<br>python/bpak/__main__.py"] --> python["python package<br>python/bpak"]
-    python --> ext["C extension bpak._bpak<br>python/*.c"]
+    tool["bpak tool<br>tools/bpak/cli.py"] --> python["python package<br>tools/bpak"]
+    python --> ext["C extension bpak._bpak<br>tools/_bpak/"]
     ext --> pkg
     subgraph libbpak
         pkg["pkg: packages in files<br>pkg.h"]

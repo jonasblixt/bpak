@@ -8,7 +8,7 @@
 #include <bpak/crypto.h>
 #include <bpak/keystore.h>
 
-#include "python_wrapper.h"
+#include "module.h"
 
 int package_write_header(BPAKPackage *package, bool update_hash)
 {

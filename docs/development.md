@@ -50,14 +50,14 @@ $ cmake --build build -j$(nproc)
 package, and compiles the library with coverage instrumentation. The C unit
 tests are built with AddressSanitizer, which includes leak detection.
 
-The `bpak` tool is implemented in python, in `python/bpak/__main__.py`. It
-uses the python package in `python/bpak`, which wraps the C extension
-`bpak._bpak` (`python/*.c`, typed in `python/bpak/_bpak.pyi`). The build
-directory holds the package in `build/python/bpak`, the extension and links
+The `bpak` tool is implemented in python, in `tools/bpak/cli.py`. It uses
+the python package in `tools/bpak`, which wraps the C extension
+`bpak._bpak` (`tools/_bpak/`, typed in `tools/bpak/_bpak.pyi`). The build
+directory holds the package in `build/tools/bpak`, the extension and links
 to the python sources. Run the tool from there without installing it:
 
 ```
-$ PYTHONPATH=build/python python3 -m bpak --help
+$ PYTHONPATH=build/tools python3 -m bpak --help
 ```
 
 Build a source distribution and a wheel of the python package into `dist/`:
@@ -237,7 +237,7 @@ $ uv run python -m mypy.stubtest bpak._bpak
 
 The documentation is written in Markdown: `README.md` and the pages in
 `docs/`. The C API is documented in the public headers in `include/bpak/`
-and the python API in the type stub `python/bpak/_bpak.pyi`. Update the
+and the python API in the type stub `tools/bpak/_bpak.pyi`. Update the
 documentation in the same commit as the change it describes, and make sure
 that command examples and their output match the current tool.
 

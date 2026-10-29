@@ -21,5 +21,5 @@ set_tests_properties(examples.c_example examples.package PROPERTIES
 # package.py works in a temporary directory that it leaves for inspection
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/tmp)
 set_tests_properties(examples.package PROPERTIES
-    ENVIRONMENT "PYTHONPATH=${PROJECT_BINARY_DIR}/python;TMPDIR=${CMAKE_CURRENT_BINARY_DIR}/tmp"
+    ENVIRONMENT "PYTHONPATH=${PROJECT_BINARY_DIR}/tools;TMPDIR=${CMAKE_CURRENT_BINARY_DIR}/tmp"
 )

@@ -1,8 +1,8 @@
-# The C extension bpak._bpak of the python package in python/bpak.
+# The C extension bpak._bpak of the python package in tools/bpak.
 #
 # Wheels, built by scikit-build-core (see pyproject.toml), link the static
 # library into the extension. Test builds link it against the shared library
-# and assemble the package in the build directory, python/bpak/ with the
+# and assemble the package in the build directory, tools/bpak/ with the
 # extension and links to the python sources.
 
 if (CMAKE_VERSION VERSION_LESS 3.18)
@@ -12,11 +12,11 @@ endif()
 find_package(Python 3.10 REQUIRED COMPONENTS Interpreter Development.Module)
 
 python_add_library(${PROJECT_NAME}-python-wrapper MODULE WITH_SOABI
-    python_wrapper.c
-    exceptions.c
-    package.c
-    meta.c
-    part.c
+    _bpak/module.c
+    _bpak/exceptions.c
+    _bpak/package.c
+    _bpak/meta.c
+    _bpak/part.c
 )
 
 target_compile_options(${PROJECT_NAME}-python-wrapper PRIVATE -Wextra -pedantic)

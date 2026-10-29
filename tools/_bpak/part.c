@@ -6,7 +6,7 @@
 #include <bpak/bpak.h>
 #include <bpak/pkg.h>
 
-#include "python_wrapper.h"
+#include "module.h"
 
 PyObject *part_allocate(BPAKPackage *package, bpak_id_t part_id)
 {

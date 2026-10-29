@@ -46,7 +46,7 @@ add_subdirectory("lib")
 # Test builds and python package builds with scikit-build-core, see
 # pyproject.toml, build the C extension
 if (BPAK_BUILD_TESTS OR SKBUILD)
-    add_subdirectory("python")
+    add_subdirectory("tools")
 endif()
 
 if (BPAK_BUILD_TESTS)

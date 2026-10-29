@@ -1,7 +1,7 @@
 """BPAK - Bit Packer.
 
 Python interface to the bpak library, the C extension bpak._bpak. The
-'bpak' command line tool is implemented in bpak.__main__.
+'bpak' command line tool is implemented in bpak.cli.
 """
 
 from ._bpak import (

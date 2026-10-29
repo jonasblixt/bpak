@@ -1,5 +1,5 @@
-#ifndef PYTHONWRAPPER_PYTHONWRAPPER_H_
-#define PYTHONWRAPPER_PYTHONWRAPPER_H_
+#ifndef BPAK_PYTHON_MODULE_H_
+#define BPAK_PYTHON_MODULE_H_
 
 #include <bpak/pkg.h>
 

@@ -92,7 +92,7 @@ class Transport:
 
 def python_path(build_dir: Path) -> list:
     """The python path of the bpak package in a CMake build directory"""
-    return [str(build_dir / "python")]
+    return [str(build_dir / "tools")]
 
 
 class Bpak:
