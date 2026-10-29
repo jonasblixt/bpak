@@ -198,6 +198,14 @@ BPAK_EXPORT int bpak_pkg_write_raw_signature(struct bpak_package *pkg,
                                              const uint8_t *signature,
                                              size_t size)
 {
+    if (size > sizeof(pkg->header.signature)) {
+        bpak_printf(0,
+                    "Signature is %zu bytes, the maximum is %zu\n",
+                    size,
+                    sizeof(pkg->header.signature));
+        return -BPAK_SIZE_ERROR;
+    }
+
     memset(pkg->header.signature, 0, sizeof(pkg->header.signature));
     memcpy(pkg->header.signature, signature, size);
     pkg->header.signature_sz = size;

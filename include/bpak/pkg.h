@@ -98,9 +98,11 @@ struct bpak_header *bpak_pkg_header(struct bpak_package *pkg);
  *
  * @param[in] pkg Package pointer
  * @param[in] signature DER encoded signature
- * @param[in] size Size of 'signature' in bytes
+ * @param[in] size Size of 'signature' in bytes, at most
+ *                 BPAK_SIGNATURE_MAX_BYTES
  *
- * @return BPAK_OK on success
+ * @return BPAK_OK on success,
+ *         -BPAK_SIZE_ERROR if 'size' is larger than BPAK_SIGNATURE_MAX_BYTES
  */
 int bpak_pkg_write_raw_signature(struct bpak_package *pkg,
                                  const uint8_t *signature, size_t size);
