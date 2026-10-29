@@ -68,7 +68,8 @@ def check_contents(bpak, path: Path, info: dict) -> None:
             f"meta {meta['id']}/{meta['part_id_ref']}"
 
 
-@pytest.mark.parametrize("golden_set, name, info", items("packages"))
+@pytest.mark.parametrize("golden_set, name, info",
+                         items("packages") + items("patches"))
 def test_read(bpak, copy, golden_set, name, info):
     pkg = copy(golden_set, name)
 
@@ -118,14 +119,6 @@ def test_reproduce(bpak, golden_set, name, info):
         bpak(*(arg.format(inputs=inputs) for arg in shlex.split(command)))
 
     assert comparable(bpak.cwd / name) == comparable(golden_set / name)
-
-
-@pytest.mark.parametrize("golden_set, name, info", items("patches"))
-def test_read_patch(bpak, copy, golden_set, name, info):
-    patch = copy(golden_set, name)
-
-    bpak("show", patch)
-    check_contents(bpak, patch, info)
 
 
 @pytest.mark.parametrize("golden_set, name, info", items("patches"))
