@@ -6,13 +6,6 @@ move it to **Done** with the commit that resolved it.
 
 ## Bugs
 
-- [ ] The `bpak` tool prints `Error: [Errno 32] Broken pipe` and an ignored
-      `BrokenPipeError` when its output is piped into a command that exits
-      early, for example `bpak show demo.bpak | head -3`.
-- [ ] `bpak generate keystore` writes a line with only spaces after the last
-      byte of a key whose size is a multiple of 8, for example a secp384r1
-      key (120 bytes), `generate_keystore` in `tools/bpak/cli.py`.
-
 ## Release
 
 - [ ] Release 1.0.0 from `work-1.0.0`: move the `Version 1.0.0` commit
@@ -21,9 +14,19 @@ move it to **Done** with the commit that resolved it.
 
 ## Build
 
-- [ ] Publish wheels to PyPI. `uv build` creates wheels that link mbedtls
-      and liblzma dynamically. manylinux wheels (cibuildwheel) need mbedtls
-      and liblzma in the build image and auditwheel to bundle them.
+- [ ] Before the first upload: create the `pypi` environment with the
+      `PYPI_API_TOKEN` and `TEST_PYPI_API_TOKEN` secrets in the GitHub
+      repository. The project does not exist on PyPI yet, so the first
+      upload needs a token scoped to the account; replace it with a
+      project-scoped token afterwards. Try the upload with a manual run of
+      `wheels.yml` (TestPyPI) first.
+- [ ] Use trusted publishing for the PyPI uploads instead of API tokens,
+      in `wheels.yml` and in punchboot.
+- [ ] Build wheels for macOS and Windows. The wheels are Linux only, other
+      platforms build the sdist and need mbedtls and liblzma installed.
+      `tools/wheels/install-deps.sh` builds mbedtls from source and could do
+      the same on macOS, liblzma would also have to be built for the
+      deployment target.
 - [ ] `BPAK_BUILD_MINIMAL` builds only the core, but the verify, merkle,
       transport decode and bspatch sources have no dependencies either and
       are what a bootloader uses. Consider adding them to the minimal build,
@@ -46,13 +49,6 @@ move it to **Done** with the commit that resolved it.
       tests are ~2.5x slower than with the C tool. Consider pytest-xdist,
       splitting the scenarios into separate CTest tests or running the tool
       in-process with click's `CliRunner`.
-- [ ] Check the full ABI of the shared library with libabigail (`abidiff`)
-      against the last release. `test_abi` and `libbpak.symbols` cover the
-      format, the public structs and the exported functions, but not
-      function signatures or structs that embed internal state, like
-      `struct bpak_transport_decode`.
-- [ ] The python wrapper has no golden sample tests of its own, it is only
-      tested against packages created by the current version.
 
 ## CI
 
@@ -67,8 +63,6 @@ move it to **Done** with the commit that resolved it.
 
 ## Documentation
 
-- [ ] `README.md` is the long description of the python package, its relative
-      links and the logo do not work on PyPI.
 - [ ] Check command examples in `docs/` automatically, for example a test that
       runs the `$ bpak` lines of `docs/user-guide.md`.
 
@@ -218,3 +212,12 @@ move it to **Done** with the commit that resolved it.
         star import in `__init__.py`, shared options in `cli.py`
         (5170215..850c80a)
       - CI: the pip-install job tests the sdist in python-package (216fb38)
+- [x] `bpak show | head` printed a `BrokenPipeError` (5a6f6e6)
+- [x] `bpak generate keystore` wrote trailing spaces and a line with only
+      spaces after keys whose size is a multiple of 8 (9c66947)
+- [x] The SONAME would have changed to `libbpak.so.1` with 1.0.0 (ddc7dcb)
+- [x] Compare the full ABI with the last release with abidiff, CI job `abi`
+      (6faff92)
+- [x] Golden sample tests for the python package (734353e)
+- [x] Wheels with cibuildwheel and uploads to PyPI, absolute links in
+      `README.md` for the description on PyPI (56c6f2d)
