@@ -121,6 +121,9 @@ int bpak_pkg_sign(struct bpak_package *pkg, const char *key_filename);
  * Verify the signature of the package with 'key' and the payload, including
  * merkle hash trees
  *
+ * The file is verified as it is during the call, data that is read from it
+ *  afterwards is only covered if the file can not be changed in between.
+ *
  * @param[in] pkg Package pointer
  * @param[in] key Verification key
  *

@@ -267,7 +267,9 @@ struct bpak_header {
     struct bpak_part_header parts[BPAK_MAX_PARTS]; /*!< Part header array */
     uint8_t metadata[BPAK_METADATA_BYTES];         /*!< Meta data byte array */
     uint8_t hash_kind;        /*!< Hash kind used in package */
-    uint8_t signature_kind;   /*!< Signature kind used in package */
+    uint8_t signature_kind;   /*!< Signature kind used in package, set by
+                                   bpak_pkg_sign(). Verification uses the
+                                   kind of the key, not this field */
     uint16_t alignment;       /*!< Alignment */
     uint8_t payload_hash[64]; /*!< Payload hash */
     uint32_t key_id;          /*!< Signing key identifier */

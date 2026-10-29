@@ -59,6 +59,10 @@ struct bpak_transport_decode {
  *  only within the part being decoded and read the origin only within the
  *  part with the same id, a patch that does not fails.
  *
+ * The patch is not authenticated, the header of a transport encoded package
+ *  can not be verified before it is decoded. Verify the output package
+ *  before it is used.
+ *
  * @param[in] ctx Pointer to a transport decode context
  * @param[in] buffer Work buffer
  * @param[in] buffer_length Length of work buffer

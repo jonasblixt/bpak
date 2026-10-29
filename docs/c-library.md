@@ -177,6 +177,13 @@ bootloader can use directly on a header in memory and a read callback:
 3. `bpak_verify_payload()` reads the parts through the callback, compares
    the payload hash and checks the merkle hash trees.
 
+Verification covers the data as it is read during the verification. Data
+that is read again afterwards, for example with `bpak_pkg_extract_file()`,
+is only covered when nothing can change it in between, so verify packages
+in storage that an attacker can not write, or verify a copy and use that
+copy. The `signature_kind` in the header is informational, the signature
+is checked with the algorithm of the key.
+
 ### Transport decoding on a device
 
 `transport.h` decodes a transport encoded package as a stream, so a device can
@@ -191,7 +198,10 @@ apply an update while it is downloaded without storing the encoded package:
    arrives, then `bpak_transport_decode_finish()`.
 4. `bpak_transport_decode_free()`.
 
-After decoding, verify the output package as described above.
+The decoder checks that the patch stays within the parts, but the patch is
+not authenticated: the header of a transport encoded package can not be
+verified before it is decoded. Verify the output package as described above
+before it is used.
 
 ### Errors and logging
 
