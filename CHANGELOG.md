@@ -32,6 +32,10 @@ tool. The package format and the library ABI stay compatible, see
   fail to compile, `struct bpak_hash_context` contains the mbedtls contexts.
 - `bpak_printf` is declared with the `format(printf)` attribute, compilers
   check the arguments of calls to it.
+- `bpak/heatshrink_decoder.h` only defines the decoder state that
+  `struct bpak_bspatch_context` embeds. The declarations of the heatshrink
+  functions, which the library does not export, and `HEATSHRINK_USE_INDEX`
+  are removed.
 
 ### Fixed
 

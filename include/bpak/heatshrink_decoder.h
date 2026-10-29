@@ -43,9 +43,6 @@ extern "C" {
 #define HEATSHRINK_STATIC_WINDOW_BITS       8
 #define HEATSHRINK_STATIC_LOOKAHEAD_BITS    7
 
-/* Use indexing for faster compression. (This requires additional space.) */
-#define HEATSHRINK_USE_INDEX 0
-
 typedef enum {
     HSDR_SINK_OK,              /* data sunk, ready to poll */
     HSDR_SINK_FULL,            /* out of space in internal buffer */
@@ -85,24 +82,6 @@ typedef struct {
     uint8_t buffers[(1 << HEATSHRINK_DECODER_WINDOW_BITS(_)) +
                     HEATSHRINK_DECODER_INPUT_BUFFER_SIZE(_)];
 } heatshrink_decoder;
-
-/* Reset a decoder. */
-void heatshrink_decoder_reset(heatshrink_decoder *hsd);
-
-/* Sink at most SIZE bytes from IN_BUF into the decoder. *INPUT_SIZE is set to
- * indicate how many bytes were actually sunk (in case a buffer was filled). */
-HSD_sink_res heatshrink_decoder_sink(heatshrink_decoder *hsd, uint8_t *in_buf,
-                                     size_t size, size_t *input_size);
-
-/* Poll for output from the decoder, copying at most OUT_BUF_SIZE bytes into
- * OUT_BUF (setting *OUTPUT_SIZE to the actual amount copied). */
-HSD_poll_res heatshrink_decoder_poll(heatshrink_decoder *hsd, uint8_t *out_buf,
-                                     size_t out_buf_size, size_t *output_size);
-
-/* Notify the dencoder that the input stream is finished.
- * If the return value is HSDR_FINISH_MORE, there is still more output, so
- * call heatshrink_decoder_poll and repeat. */
-HSD_finish_res heatshrink_decoder_finish(heatshrink_decoder *hsd);
 
 #ifdef __cplusplus
 } // extern "C"

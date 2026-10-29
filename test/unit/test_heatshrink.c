@@ -4,7 +4,7 @@
 #include <string.h>
 
 #include "vendor/heatshrink/heatshrink_encoder.h"
-#include <bpak/heatshrink_decoder.h>
+#include "vendor/heatshrink/heatshrink_decoder.h"
 
 #include "test_helpers.h"
 

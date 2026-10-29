@@ -29,9 +29,8 @@
 #include <string.h>
 #include <bpak/bpak.h>
 #include <bpak/bspatch.h>
-#include <bpak/heatshrink_decoder.h>
-
 #include "internal.h"
+#include "vendor/heatshrink/heatshrink_decoder.h"
 
 #if BPAK_CONFIG_LZMA == 1
 static void *lzma_alloc_wrap(void *opaque, size_t nmemb, size_t size)
