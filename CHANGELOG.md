@@ -2,7 +2,8 @@
 
 Changes that affect users of the library, the python package and the `bpak`
 tool. The package format and the library ABI stay compatible, see
-[Compatibility](docs/development.md#compatibility).
+[Compatibility](docs/development.md#compatibility). The SONAME of the
+shared library follows the major version.
 
 ## 1.0.0 (unreleased)
 
@@ -20,6 +21,9 @@ tool. The package format and the library ABI stay compatible, see
 
 ### Changed
 
+- The SONAME of the shared library is `libbpak.so.1`. The ABI is compatible
+  with 0.9, but programs linked against `libbpak.so.0` have to be linked
+  again.
 - The `bpak` tool is implemented in python and is part of the `bpak` python
   package, install it with `pip install .` or `uv tool install .`. The C
   implementation in `src/` is removed. Commands and options are unchanged,
