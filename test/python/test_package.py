@@ -318,3 +318,39 @@ def test_update_hash(pybpak, tmp_path):
         assert len(payload_hash) == 32
         assert p.update_hash() == p.digest
         assert p.payload_hash == payload_hash
+
+
+@pytest.mark.parametrize("name, bits", [("hash_kind", 8),
+                                        ("signature_kind", 8),
+                                        ("key_id", 32),
+                                        ("keystore_id", 32)])
+def test_header_field_values(pybpak, tmp_path, name, bits):
+    """The header fields reject values that do not fit, they were
+    truncated, and deleting them raises TypeError, it crashed"""
+    with pybpak.Package(tmp_path / "test.bpak", "wb+") as p:
+        setattr(p, name, 2**bits - 1)
+        assert getattr(p, name) == 2**bits - 1
+
+        for value in (2**bits, 2**bits + 5, 2**64, -1):
+            with pytest.raises(OverflowError):
+                setattr(p, name, value)
+        with pytest.raises(TypeError):
+            setattr(p, name, "1")
+        with pytest.raises(TypeError, match="cannot delete"):
+            delattr(p, name)
+
+        assert getattr(p, name) == 2**bits - 1
+
+
+def test_part_id_values(pybpak, tmp_path):
+    """Part.id rejects values that do not fit and deleting it raises
+    TypeError, it crashed"""
+    with pybpak.Package(tmp_path / "test.bpak", "wb+") as p:
+        part = p.add_file("kernel", KERNEL)
+
+        with pytest.raises(OverflowError):
+            part.id = 2**32
+        with pytest.raises(TypeError, match="cannot delete"):
+            del part.id
+
+        assert part.id == bpak_id("kernel")

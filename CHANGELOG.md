@@ -165,3 +165,7 @@ tool. The package format and the library ABI stay compatible, see
   clearing the signature were not reported.
 - `bpak` tool: `delete --all --part`, file errors printed a traceback, file
   names that are not UTF-8.
+- Python package: deleting an int attribute, for example `del pkg.key_id`,
+  crashed, and values that do not fit the field were truncated,
+  `pkg.hash_kind = 256` stored 0. Such values raise `OverflowError` and
+  deleting an attribute raises `TypeError`.

@@ -769,7 +769,7 @@ static int package_set_hash_kind(PyObject *self, PyObject *value, void *closure)
 {
     (void)closure;
     int rc;
-    int hash_kind;
+    unsigned long long hash_kind;
     BPAKPackage *package = (BPAKPackage *)self;
     struct bpak_header *h = bpak_pkg_header(&package->pkg);
 
@@ -777,17 +777,11 @@ static int package_set_hash_kind(PyObject *self, PyObject *value, void *closure)
         return -1;
     }
 
-    if (!PyLong_Check(value)) {
-        PyErr_SetString(PyExc_TypeError, "type mismatch");
-	    return -1;
-    }
-
-    hash_kind = PyLong_AsUnsignedLong(value);
-    if (PyErr_Occurred()) {
+    if (py_to_uint(value, UINT8_MAX, "hash_kind", &hash_kind) < 0) {
         return -1;
     }
 
-    h->hash_kind = (uint32_t)hash_kind;
+    h->hash_kind = (uint8_t)hash_kind;
 
     rc = package_write_header(package, false);
 
@@ -813,7 +807,7 @@ static int package_set_key_id(PyObject *self, PyObject *value, void *closure)
 {
     (void)closure;
     int rc;
-    int key_id;
+    unsigned long long key_id;
     BPAKPackage *package = (BPAKPackage *)self;
     struct bpak_header *h = bpak_pkg_header(&package->pkg);
 
@@ -821,13 +815,7 @@ static int package_set_key_id(PyObject *self, PyObject *value, void *closure)
         return -1;
     }
 
-    if (!PyLong_Check(value)) {
-        PyErr_SetString(PyExc_TypeError, "type mismatch");
-	    return -1;
-    }
-
-    key_id = PyLong_AsUnsignedLong(value);
-    if (PyErr_Occurred()) {
+    if (py_to_uint(value, UINT32_MAX, "key_id", &key_id) < 0) {
         return -1;
     }
 
@@ -857,7 +845,7 @@ static int package_set_keystore_id(PyObject *self, PyObject *value, void *closur
 {
     (void)closure;
     int rc;
-    int keystore_id;
+    unsigned long long keystore_id;
     BPAKPackage *package = (BPAKPackage *)self;
     struct bpak_header *h = bpak_pkg_header(&package->pkg);
 
@@ -865,13 +853,7 @@ static int package_set_keystore_id(PyObject *self, PyObject *value, void *closur
         return -1;
     }
 
-    if (!PyLong_Check(value)) {
-        PyErr_SetString(PyExc_TypeError, "type mismatch");
-	    return -1;
-    }
-
-    keystore_id = PyLong_AsUnsignedLong(value);
-    if (PyErr_Occurred()) {
+    if (py_to_uint(value, UINT32_MAX, "keystore_id", &keystore_id) < 0) {
         return -1;
     }
 
@@ -965,7 +947,7 @@ static int package_set_signature_kind(PyObject *self, PyObject *value, void *clo
 {
     (void)closure;
     int rc;
-    int signature_kind;
+    unsigned long long signature_kind;
     BPAKPackage *package = (BPAKPackage *)self;
     struct bpak_header *h = bpak_pkg_header(&package->pkg);
 
@@ -973,17 +955,11 @@ static int package_set_signature_kind(PyObject *self, PyObject *value, void *clo
         return -1;
     }
 
-    if (!PyLong_Check(value)) {
-        PyErr_SetString(PyExc_TypeError, "type mismatch");
-	    return -1;
-    }
-
-    signature_kind = PyLong_AsUnsignedLong(value);
-    if (PyErr_Occurred()) {
+    if (py_to_uint(value, UINT8_MAX, "signature_kind", &signature_kind) < 0) {
         return -1;
     }
 
-    h->signature_kind = (uint32_t)signature_kind;
+    h->signature_kind = (uint8_t)signature_kind;
 
     rc = package_write_header(package, false);
 

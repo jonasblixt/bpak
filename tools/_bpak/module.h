@@ -38,6 +38,15 @@ int package_check_open(BPAKPackage *package);
 PyObject *part_allocate(BPAKPackage *package, bpak_id_t part_id);
 PyObject *meta_allocate(BPAKPackage *package, bpak_id_t meta_id, bpak_id_t part_ref);
 
+/* Convert 'value', the new value of the attribute 'name', to an unsigned
+ * integer of at most 'max'. Raises TypeError when the attribute is deleted
+ * ('value' is NULL) or 'value' is not an int, and OverflowError when it is
+ * negative or larger than 'max'. Returns 0 or -1 with an exception set. */
+int py_to_uint(PyObject *value,
+               unsigned long long max,
+               const char *name,
+               unsigned long long *out);
+
 /* Create the exception classes and add them to the module */
 int bpak_exceptions_init(PyObject *module);
 

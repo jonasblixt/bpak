@@ -44,6 +44,50 @@ int bpak_printf(int verbosity, const char *fmt, ...)
     return BPAK_OK;
 }
 
+int py_to_uint(PyObject *value,
+               unsigned long long max,
+               const char *name,
+               unsigned long long *out)
+{
+    unsigned long long result;
+
+    if (value == NULL) {
+        PyErr_Format(PyExc_TypeError, "cannot delete %s", name);
+        return -1;
+    }
+
+    if (!PyLong_Check(value)) {
+        PyErr_Format(PyExc_TypeError,
+                     "%s must be an int, not %.200s",
+                     name,
+                     Py_TYPE(value)->tp_name);
+        return -1;
+    }
+
+    result = PyLong_AsUnsignedLongLong(value);
+    if (result == (unsigned long long)-1 && PyErr_Occurred()) {
+        if (PyErr_ExceptionMatches(PyExc_OverflowError)) {
+            goto out_of_range;
+        }
+        return -1;
+    }
+
+    if (result > max) {
+        goto out_of_range;
+    }
+
+    *out = result;
+    return 0;
+
+out_of_range:
+    PyErr_Clear();
+    PyErr_Format(PyExc_OverflowError,
+                 "%s must be between 0 and %llu",
+                 name,
+                 max);
+    return -1;
+}
+
 /* MODULE DEFINITION */
 static PyObject *m_generate_id(PyObject *module, PyObject *args, PyObject *kwds)
 {

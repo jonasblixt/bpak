@@ -61,7 +61,7 @@ static int meta_set_id(PyObject *self, PyObject *value, void *closure)
 {
     (void)closure;
     int rc = 0;
-    unsigned int meta_id;
+    unsigned long long meta_id;
     BPAKMeta *meta = (BPAKMeta *)self;
     struct bpak_header *h = bpak_pkg_header(&meta->package->pkg);
     struct bpak_meta_header *m;
@@ -70,17 +70,7 @@ static int meta_set_id(PyObject *self, PyObject *value, void *closure)
         return -1;
     }
 
-    if (!PyLong_Check(value)) {
-        PyErr_SetString(PyExc_TypeError, "type mismatch");
-	    return -1;
-    }
-
-    meta_id = PyLong_AsUnsignedLong(value);
-    if (PyErr_Occurred()) {
-        return -1;
-    }
-    if (((uint32_t)meta_id) != meta_id) {
-        PyErr_SetString(PyExc_OverflowError, "outside 32-bit range");
+    if (py_to_uint(value, UINT32_MAX, "id", &meta_id) < 0) {
         return -1;
     }
 
@@ -91,8 +81,8 @@ static int meta_set_id(PyObject *self, PyObject *value, void *closure)
         return -1;
     }
 
-    m->id = meta_id;
-    meta->meta_id = meta_id;
+    m->id = (bpak_id_t)meta_id;
+    meta->meta_id = (bpak_id_t)meta_id;
 
     rc = package_write_header(meta->package, false);
     if (rc != BPAK_OK) {
@@ -116,7 +106,7 @@ static int meta_set_part_id_ref(PyObject *self, PyObject *value, void *closure)
 {
     (void)closure;
     int rc = 0;
-    unsigned int part_ref = 0;
+    unsigned long long part_ref = 0;
     BPAKMeta *meta = (BPAKMeta *)self;
     struct bpak_header *h = bpak_pkg_header(&meta->package->pkg);
     struct bpak_meta_header *m;
@@ -125,20 +115,9 @@ static int meta_set_part_id_ref(PyObject *self, PyObject *value, void *closure)
         return -1;
     }
 
-    if (value != Py_None) {
-        if (!PyLong_Check(value)) {
-            PyErr_SetString(PyExc_TypeError, "type mismatch");
-            return -1;
-        }
-
-        part_ref = PyLong_AsUnsignedLong(value);
-        if (PyErr_Occurred()) {
-            return -1;
-        }
-        if (((uint32_t)part_ref) != part_ref) {
-            PyErr_SetString(PyExc_OverflowError, "outside 32-bit range");
-            return -1;
-        }
+    if (value != Py_None &&
+        py_to_uint(value, UINT32_MAX, "part_id_ref", &part_ref) < 0) {
+        return -1;
     }
 
     rc = bpak_get_meta(h, meta->meta_id, meta->part_ref, &m);
@@ -148,8 +127,8 @@ static int meta_set_part_id_ref(PyObject *self, PyObject *value, void *closure)
         return -1;
     }
 
-    m->part_id_ref = part_ref;
-    meta->part_ref = part_ref;
+    m->part_id_ref = (bpak_id_t)part_ref;
+    meta->part_ref = (bpak_id_t)part_ref;
 
     rc = package_write_header(meta->package, false);
     if (rc != BPAK_OK) {
@@ -204,6 +183,11 @@ static int meta_set_rawdata(PyObject *self, PyObject *value, void* closure)
     int rc = 0;
 
     if (package_check_open(meta->package) < 0) {
+        return -1;
+    }
+
+    if (value == NULL) {
+        PyErr_SetString(PyExc_TypeError, "cannot delete raw_data");
         return -1;
     }
 

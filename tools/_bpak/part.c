@@ -60,7 +60,7 @@ static int part_set_id(PyObject *self, PyObject *value, void *closure)
 {
     (void)closure;
     int rc = 0;
-    unsigned int part_id;
+    unsigned long long part_id;
     BPAKPart *part = (BPAKPart *)self;
     struct bpak_header *h = bpak_pkg_header(&part->package->pkg);
     struct bpak_part_header *p;
@@ -69,17 +69,7 @@ static int part_set_id(PyObject *self, PyObject *value, void *closure)
         return -1;
     }
 
-    if (!PyLong_Check(value)) {
-        PyErr_SetString(PyExc_TypeError, "type mismatch");
-	    return -1;
-    }
-
-    part_id = PyLong_AsUnsignedLong(value);
-    if (PyErr_Occurred()) {
-        return -1;
-    }
-    if (((uint32_t)part_id) != part_id) {
-        PyErr_SetString(PyExc_OverflowError, "outside 32-bit range");
+    if (py_to_uint(value, UINT32_MAX, "id", &part_id) < 0) {
         return -1;
     }
 
@@ -90,8 +80,8 @@ static int part_set_id(PyObject *self, PyObject *value, void *closure)
         return -1;
     }
 
-    p->id = part_id;
-    part->part_id = part_id;
+    p->id = (bpak_id_t)part_id;
+    part->part_id = (bpak_id_t)part_id;
 
     rc = package_write_header(part->package, false);
     if (rc != BPAK_OK) {
