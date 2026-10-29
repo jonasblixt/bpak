@@ -201,9 +201,11 @@ callback gets a length larger than the buffer, and AddressSanitizer and
 UndefinedBehaviorSanitizer report memory errors.
 
 Test builds run every file in `test/fuzz/corpus/<target>` through the target,
-label `fuzz`, with `test/fuzz/driver.c` instead of libFuzzer. Add the
-reproducer of every bug a fuzzer finds to the corpus. Set
-`BPAK_FUZZ_VERBOSE=2` to see the log of the library:
+label `fuzz`, with `test/fuzz/driver.c` instead of libFuzzer. The golden
+packages in `test/golden/0.9.3` are part of the seed corpus of the `header`,
+`transport` and `verify` targets, `test/fuzz/CMakeLists.txt` lists the
+packages each target runs. Add the reproducer of every bug a fuzzer finds to
+the corpus. Set `BPAK_FUZZ_VERBOSE=2` to see the log of the library:
 
 ```
 $ BPAK_FUZZ_VERBOSE=2 build/test/fuzz/fuzz_bspatch_corpus crash-file
@@ -217,6 +219,14 @@ $ cmake -B build-fuzz -DCMAKE_C_COMPILER=clang -DBPAK_BUILD_FUZZERS=ON
 $ cmake --build build-fuzz -j$(nproc)
 $ mkdir -p corpus && cp test/fuzz/corpus/bspatch/* corpus/
 $ build-fuzz/test/fuzz/fuzz_bspatch -max_total_time=600 corpus
+```
+
+Seed the `header`, `transport` and `verify` targets with the golden packages
+as well:
+
+```
+$ mkdir -p corpus && cp test/fuzz/corpus/transport/* test/golden/0.9.3/*.bpak corpus/
+$ build-fuzz/test/fuzz/fuzz_transport -max_total_time=600 corpus
 ```
 
 On Debian and Ubuntu install `clang` and `libclang-rt-dev`, or run the

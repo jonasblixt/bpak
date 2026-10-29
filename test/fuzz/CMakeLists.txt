@@ -1,6 +1,7 @@
 # Fuzz targets for the code that parses untrusted input, see
 # docs/development.md. BPAK_BUILD_FUZZERS builds them with libFuzzer, test
-# builds run the corpus in corpus/<target> with driver.c.
+# builds run the corpus in corpus/<target> and the golden packages of the
+# target with driver.c.
 set(FUZZ_TARGETS
     bspatch
     header
@@ -8,9 +9,19 @@ set(FUZZ_TARGETS
     verify
 )
 
+set(GOLDEN_SET ${PROJECT_SOURCE_DIR}/test/golden/0.9.3)
+
 set(FUZZ_DEFINITIONS
-    BPAK_FUZZ_KEY_DIR="${PROJECT_SOURCE_DIR}/test/golden/0.9.3/inputs"
-    BPAK_FUZZ_ORIGIN="${PROJECT_SOURCE_DIR}/test/golden/0.9.3/origin.bpak"
+    BPAK_FUZZ_KEY_DIR="${GOLDEN_SET}/inputs"
+    BPAK_FUZZ_ORIGIN="${GOLDEN_SET}/origin.bpak"
+)
+
+# Golden packages that are part of the seed corpus of a target, the header
+# target only reads their header
+set(FUZZ_GOLDEN_header basic keystore merkle patch)
+set(FUZZ_GOLDEN_transport patch patch-lzma)
+set(FUZZ_GOLDEN_verify
+    basic merkle sha256-rsa4096 sha384-secp384r1 sha512-secp521r1
 )
 
 foreach(target IN LISTS FUZZ_TARGETS)
@@ -39,9 +50,15 @@ foreach(target IN LISTS FUZZ_TARGETS)
             ${LZMA_LIBRARY}
         )
 
+        set(golden_packages)
+        foreach(name IN LISTS FUZZ_GOLDEN_${target})
+            list(APPEND golden_packages ${GOLDEN_SET}/${name}.bpak)
+        endforeach()
+
         add_test(NAME fuzz.${target}
             COMMAND fuzz_${target}_corpus
                 ${CMAKE_CURRENT_SOURCE_DIR}/corpus/${target}
+                ${golden_packages}
         )
         set_tests_properties(fuzz.${target} PROPERTIES LABELS fuzz)
     endif()
