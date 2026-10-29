@@ -164,117 +164,109 @@ static void offtout(int64_t x, uint8_t *buf)
         buf[7] |= 0x80;
 }
 
+/* Write output after the output that was written before */
+static int output_write(struct bpak_bsdiff_context *ctx, uint8_t *buffer,
+                        size_t length)
+{
+    if (length == 0)
+        return BPAK_OK;
+
+    ssize_t n_written = ctx->write_output(ctx->output_offset + ctx->output_pos,
+                                          buffer,
+                                          length,
+                                          ctx->user_priv);
+
+    if (n_written < 0)
+        return n_written;
+
+    if (n_written != (ssize_t)length) {
+        bpak_printf(0, "Error: Write error (%zd != %zu)\n", n_written, length);
+        return -BPAK_WRITE_ERROR;
+    }
+
+    ctx->output_pos += n_written;
+    return BPAK_OK;
+}
+
 #if BPAK_CONFIG_LZMA == 1
-static int lzma_compressor_write(struct bpak_bsdiff_context *ctx,
-                                 uint8_t *buffer, size_t length)
+/* Compress 'length' bytes with LZMA_RUN, or finish the stream with
+ * LZMA_FINISH */
+static int lzma_compressor_code(struct bpak_bsdiff_context *ctx,
+                                uint8_t *buffer, size_t length,
+                                lzma_action action)
 {
     lzma_stream *strm = (lzma_stream *)ctx->compressor_priv;
-    lzma_action action = LZMA_RUN;
-
     uint8_t outbuf[BPAK_CHUNK_BUFFER_LENGTH];
+    int rc;
 
     strm->next_in = buffer;
     strm->avail_in = length;
-    strm->next_out = outbuf;
-    strm->avail_out = sizeof(outbuf);
 
-    while (strm->avail_in > 0) {
+    while (action == LZMA_FINISH || strm->avail_in > 0) {
+        strm->next_out = outbuf;
+        strm->avail_out = sizeof(outbuf);
+
         lzma_ret ret = lzma_code(strm, action);
-        ssize_t write_size = sizeof(outbuf) - strm->avail_out;
 
-        if (ret != LZMA_OK) {
+        if (ret != LZMA_OK && ret != LZMA_STREAM_END) {
             bpak_printf(0, "lzma error %u\n", ret);
             return -BPAK_COMPRESSOR_ERROR;
         }
 
-        if (write_size > 0) {
-            ssize_t n_written =
-                ctx->write_output(ctx->output_offset + ctx->output_pos,
-                                  outbuf,
-                                  write_size,
-                                  ctx->user_priv);
+        rc = output_write(ctx, outbuf, sizeof(outbuf) - strm->avail_out);
 
-            if (n_written < 0)
-                return n_written;
-            if (n_written != write_size)
-                return -BPAK_WRITE_ERROR;
-
-            strm->next_out = outbuf;
-            strm->avail_out = sizeof(outbuf);
-            ctx->output_pos += n_written;
-        }
-    }
-
-    return BPAK_OK;
-}
-
-static int lzma_compressor_final(struct bpak_bsdiff_context *ctx)
-{
-    lzma_stream *strm = (lzma_stream *)ctx->compressor_priv;
-    lzma_action action = LZMA_FINISH;
-
-    uint8_t outbuf[BPAK_CHUNK_BUFFER_LENGTH];
-
-    strm->next_in = NULL;
-    strm->avail_in = 0;
-    strm->next_out = outbuf;
-    strm->avail_out = sizeof(outbuf);
-
-    while (true) {
-        lzma_ret ret = lzma_code(strm, action);
-
-        if ((ret != LZMA_OK) && (ret != LZMA_STREAM_END)) {
-            bpak_printf(0, "lzma final error %u\n", ret);
-            return -BPAK_COMPRESSOR_ERROR;
-        }
-
-        ssize_t write_size = sizeof(outbuf) - strm->avail_out;
-
-        if (write_size > 0) {
-            ssize_t n_written =
-                ctx->write_output(ctx->output_offset + ctx->output_pos,
-                                  outbuf,
-                                  write_size,
-                                  ctx->user_priv);
-
-            if (n_written < 0)
-                return n_written;
-            if (n_written != write_size)
-                return -BPAK_WRITE_ERROR;
-
-            strm->next_out = outbuf;
-            strm->avail_out = sizeof(outbuf);
-            ctx->output_pos += n_written;
-        }
+        if (rc != BPAK_OK)
+            return rc;
 
         if (ret == LZMA_STREAM_END)
-            return BPAK_OK;
+            break;
     }
 
     return BPAK_OK;
 }
-
 #endif // BPAK_CONFIG_LZMA
+
+/* Write the output of the heatshrink encoder until it needs more input */
+static int hs_compressor_poll(struct bpak_bsdiff_context *ctx)
+{
+    heatshrink_encoder *hse = (heatshrink_encoder *)ctx->compressor_priv;
+    uint8_t output_buffer[BPAK_CHUNK_BUFFER_LENGTH];
+    size_t poll_sz = 0;
+    HSE_poll_res pres;
+    int rc;
+
+    do {
+        pres = heatshrink_encoder_poll(hse,
+                                       output_buffer,
+                                       sizeof(output_buffer),
+                                       &poll_sz);
+
+        if (pres < 0)
+            return -BPAK_COMPRESSOR_ERROR;
+
+        rc = output_write(ctx, output_buffer, poll_sz);
+
+        if (rc != BPAK_OK)
+            return rc;
+    } while (pres == HSER_POLL_MORE);
+
+    return BPAK_OK;
+}
 
 static int hs_compressor_write(struct bpak_bsdiff_context *ctx, uint8_t *buffer,
                                size_t length)
 {
     heatshrink_encoder *hse = (heatshrink_encoder *)ctx->compressor_priv;
-
-    unsigned char output_buffer[BPAK_CHUNK_BUFFER_LENGTH];
     size_t sink_sz = 0;
-    size_t poll_sz = 0;
     size_t sunk = 0;
-    ssize_t n_written;
-    HSE_poll_res pres = 0;
-    HSE_sink_res sres = 0;
+    int rc;
 
     do {
         if (length > 0) {
-            sres = heatshrink_encoder_sink(hse,
-                                           &buffer[sunk],
-                                           length - sunk,
-                                           &sink_sz);
+            HSE_sink_res sres = heatshrink_encoder_sink(hse,
+                                                        &buffer[sunk],
+                                                        length - sunk,
+                                                        &sink_sz);
 
             if (sres < 0)
                 return -BPAK_COMPRESSOR_ERROR;
@@ -282,29 +274,10 @@ static int hs_compressor_write(struct bpak_bsdiff_context *ctx, uint8_t *buffer,
             sunk += sink_sz;
         }
 
-        do {
-            pres = heatshrink_encoder_poll(hse,
-                                           output_buffer,
-                                           sizeof(output_buffer),
-                                           &poll_sz);
+        rc = hs_compressor_poll(ctx);
 
-            if (pres < 0)
-                return -BPAK_COMPRESSOR_ERROR;
-
-            if (poll_sz > 0) {
-                n_written =
-                    ctx->write_output(ctx->output_offset + ctx->output_pos,
-                                      output_buffer,
-                                      poll_sz,
-                                      ctx->user_priv);
-                if (n_written < 0)
-                    return n_written;
-                if (n_written != (ssize_t)poll_sz)
-                    return -BPAK_WRITE_ERROR;
-                ctx->output_pos += n_written;
-            }
-        } while (pres == HSER_POLL_MORE);
-
+        if (rc != BPAK_OK)
+            return rc;
     } while (sunk < length);
 
     return BPAK_OK;
@@ -313,45 +286,17 @@ static int hs_compressor_write(struct bpak_bsdiff_context *ctx, uint8_t *buffer,
 static int hs_compressor_final(struct bpak_bsdiff_context *ctx)
 {
     heatshrink_encoder *hse = (heatshrink_encoder *)ctx->compressor_priv;
-    uint8_t output_buffer[BPAK_CHUNK_BUFFER_LENGTH];
-    size_t poll_sz = 0;
-    ssize_t n_written;
-    HSE_poll_res pres = 0;
-    HSE_finish_res fres = 0;
+    HSE_finish_res fres;
+    int rc;
 
-    do {
-        fres = heatshrink_encoder_finish(hse);
+    while ((fres = heatshrink_encoder_finish(hse)) == HSER_FINISH_MORE) {
+        rc = hs_compressor_poll(ctx);
 
-        if (fres < 0)
-            return -BPAK_COMPRESSOR_ERROR;
+        if (rc != BPAK_OK)
+            return rc;
+    }
 
-        if (fres == HSER_FINISH_MORE) {
-            pres = heatshrink_encoder_poll(hse,
-                                           output_buffer,
-                                           sizeof(output_buffer),
-                                           &poll_sz);
-
-            if (pres < 0)
-                return -BPAK_COMPRESSOR_ERROR;
-
-            if (poll_sz > 0) {
-                n_written =
-                    ctx->write_output(ctx->output_offset + ctx->output_pos,
-                                      output_buffer,
-                                      poll_sz,
-                                      ctx->user_priv);
-
-                if (n_written < 0)
-                    return n_written;
-                if (n_written != (ssize_t)poll_sz)
-                    return -BPAK_WRITE_ERROR;
-
-                ctx->output_pos += poll_sz;
-            }
-        }
-    } while (fres == HSER_FINISH_MORE);
-
-    return BPAK_OK;
+    return (fres < 0) ? -BPAK_COMPRESSOR_ERROR : BPAK_OK;
 }
 
 static int compressor_init(struct bpak_bsdiff_context *ctx)
@@ -411,59 +356,33 @@ static int compressor_write(struct bpak_bsdiff_context *ctx, uint8_t *buffer,
                             size_t length)
 {
     switch (ctx->compression) {
-    case BPAK_COMPRESSION_NONE: {
-        ssize_t bytes_written =
-            ctx->write_output(ctx->output_offset + ctx->output_pos,
-                              buffer,
-                              length,
-                              ctx->user_priv);
-
-        if (bytes_written < 0)
-            return bytes_written;
-
-        if (bytes_written != (ssize_t)length) {
-            bpak_printf(0,
-                        "Error: Write error (%zd != %zu)\n",
-                        bytes_written,
-                        length);
-            return -BPAK_WRITE_ERROR;
-        }
-
-        ctx->output_pos += bytes_written;
-    } break;
+    case BPAK_COMPRESSION_NONE:
+        return output_write(ctx, buffer, length);
     case BPAK_COMPRESSION_HS:
         return hs_compressor_write(ctx, buffer, length);
-        break;
 #if BPAK_CONFIG_LZMA == 1
     case BPAK_COMPRESSION_LZMA:
-        return lzma_compressor_write(ctx, buffer, length);
-        break;
+        return lzma_compressor_code(ctx, buffer, length, LZMA_RUN);
 #endif
     default:
         return -BPAK_UNSUPPORTED_COMPRESSION;
     }
-
-    return BPAK_OK;
 }
 
 static int compressor_final(struct bpak_bsdiff_context *ctx)
 {
     switch (ctx->compression) {
     case BPAK_COMPRESSION_NONE:
-        break;
+        return BPAK_OK;
     case BPAK_COMPRESSION_HS:
         return hs_compressor_final(ctx);
-        break;
 #if BPAK_CONFIG_LZMA == 1
     case BPAK_COMPRESSION_LZMA:
-        return lzma_compressor_final(ctx);
-        break;
+        return lzma_compressor_code(ctx, NULL, 0, LZMA_FINISH);
 #endif
     default:
         return -BPAK_UNSUPPORTED_COMPRESSION;
     }
-
-    return BPAK_OK;
 }
 
 static void compressor_free(struct bpak_bsdiff_context *ctx)
