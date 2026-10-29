@@ -143,6 +143,7 @@ tool. The package format and the library ABI stay compatible, see
   arguments, they printed wrong values, for example in 32-bit builds.
 - The public headers were not installed when the library is built as a
   CMake subproject with `add_subdirectory`.
+- `bpak/key.h` did not compile unless `bpak/bpak.h` was included first.
 - Python package: crashes when opening a file that is not a package, when
   using a closed package and after the log callback was released, reference
   leaks in `Package.parts` and `Package.meta`, meta data larger than the

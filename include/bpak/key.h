@@ -1,6 +1,9 @@
 #ifndef INCLUDE_BPAK_KEY_H
 #define INCLUDE_BPAK_KEY_H
 
+#include <stdint.h>
+#include <bpak/bpak.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif

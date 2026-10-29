@@ -42,3 +42,18 @@ foreach(unit_test IN LISTS UNIT_TESTS)
     add_test(NAME unit.${unit_test} COMMAND ${unit_test})
     set_tests_properties(unit.${unit_test} PROPERTIES LABELS unit)
 endforeach()
+
+# Every public header compiles on its own
+file(GLOB PUBLIC_HEADERS RELATIVE ${PROJECT_SOURCE_DIR}/include
+    ${PROJECT_SOURCE_DIR}/include/bpak/*.h
+)
+set(HEADER_SOURCES)
+foreach(header IN LISTS PUBLIC_HEADERS)
+    string(MAKE_C_IDENTIFIER ${header} name)
+    set(source ${CMAKE_CURRENT_BINARY_DIR}/headers/${name}.c)
+    file(GENERATE OUTPUT ${source} CONTENT "#include <${header}>\n")
+    list(APPEND HEADER_SOURCES ${source})
+endforeach()
+add_library(test_headers OBJECT ${HEADER_SOURCES})
+target_compile_options(test_headers PRIVATE -Wextra -pedantic)
+target_link_libraries(test_headers PRIVATE ${PROJECT_NAME}-static)

@@ -155,7 +155,8 @@ int main(void)
 has more helpers, for example for temporary files, headers with meta data
 and parts, bspatch control data and an allocator that checks that the
 library frees what it allocates. New test files must be added to
-`UNIT_TESTS` in `test/unit/CMakeLists.txt`.
+`UNIT_TESTS` in `test/unit/CMakeLists.txt`. Test builds also compile every
+public header on its own, a header must include what it uses.
 
 ### Tool and python package tests
 
