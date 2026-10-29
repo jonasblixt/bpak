@@ -62,6 +62,31 @@ def test_set_meta(bpak, pkg, encoder, initial, updated, expected):
     assert extract_meta(bpak, pkg, "test-meta") == expected
 
 
+def test_set_meta_part_ref(bpak, pkg):
+    """--part-ref selects the meta data of a part, without it the meta data
+    without a part reference"""
+    for part_ref in (None, "kernel", "dtb"):
+        part_ref_args = ["--part-ref", part_ref] if part_ref else []
+        bpak("add", pkg, "--meta", "pb-load-addr", *part_ref_args,
+             "--from-string", "0x1000", "--encoder", "integer")
+
+    bpak("set", pkg, "--meta", "pb-load-addr", "--part-ref", "kernel",
+         "--from-string", "0x80000000", "--encoder", "integer")
+
+    def load_addr(*part_ref_args):
+        return int.from_bytes(bpak.output("extract", pkg, "--meta",
+                                          "pb-load-addr", *part_ref_args),
+                              "little")
+
+    assert load_addr("--part-ref", "kernel") == 0x80000000
+    assert load_addr("--part-ref", "dtb") == 0x1000
+    assert load_addr() == 0x1000
+
+    bpak.fails("set", pkg, "--meta", "pb-load-addr", "--part-ref", "rootfs",
+               "--from-string", "0", "--encoder", "integer",
+               error=BpakError.NOT_FOUND)
+
+
 def test_extract_part(bpak, make_data, tmp_path):
     data = make_data("data.bin", 128)
     pkg = bpak.create_package("test.bpak",

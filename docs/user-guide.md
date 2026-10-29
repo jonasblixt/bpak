@@ -105,8 +105,8 @@ $ bpak extract demo.bpak --meta bpak-version --output version.bin
 ```
 
 Change an existing value with `set`, which takes the same `--encoder` for
-integers and ids as `add`. `set` can only change meta data that does not
-refer to a part:
+integers and ids as `add`. Meta data that refers to a part is selected with
+`--part-ref`, like `--meta pb-load-addr --part-ref kernel`:
 
 ```
 $ bpak set demo.bpak --meta bpak-version --from-string 1.1.1

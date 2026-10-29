@@ -6,6 +6,12 @@ tool. The package format and the library ABI stay compatible, see
 
 ## 1.0.0 (unreleased)
 
+### Added
+
+- `bpak set --part-ref` changes meta data that refers to a part, for
+  example `pb-load-addr`. `set` could only change meta data without a part
+  reference.
+
 ### Changed
 
 - The `bpak` tool is implemented in python and is part of the `bpak` python

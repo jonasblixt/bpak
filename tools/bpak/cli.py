@@ -657,6 +657,9 @@ def _show_package(filename: pathlib.Path, pkg: bpak.Package) -> None:
     type=click.Choice(["integer", "id"]),
     help="Encode the value as a 64 bit integer or a bpak id.",
 )
+@click.option(
+    "-r", "--part-ref", type=BPAK_ID, default=0, help="Part that the meta data belongs to."
+)
 @click.option("-k", "--key-id", type=BPAK_ID, help="Set the key id.")
 @click.option("-i", "--keystore-id", type=BPAK_ID, help="Set the keystore id.")
 @verbose_option
@@ -665,6 +668,7 @@ def set_(
     meta_id: int | None,
     from_string: str | None,
     encoder: str | None,
+    part_ref: int,
     key_id: int | None,
     keystore_id: int | None,
 ) -> None:
@@ -680,7 +684,7 @@ def set_(
     with bpak.Package(filename, "r+") as pkg:
         if meta_id is not None:
             assert from_string is not None  # noqa: S101
-            meta = _get_meta(pkg, meta_id)
+            meta = _get_meta(pkg, meta_id, part_ref)
 
             if encoder is None:
                 meta.raw_data = _string_data(from_string)
