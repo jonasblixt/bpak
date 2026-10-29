@@ -51,6 +51,9 @@ if (BPAK_BUILD_TESTS OR SKBUILD)
 endif()
 
 if (BPAK_BUILD_TESTS)
+    # Python for the examples and the tests, tools/ finds it with the
+    # components that the C extension needs
+    find_package(Python 3.10 REQUIRED COMPONENTS Interpreter)
     add_subdirectory("examples")
     add_subdirectory("test")
 endif()

@@ -8,8 +8,6 @@ set(BPAK_TEST_DATA_DIR ${CMAKE_CURRENT_SOURCE_DIR}/data)
 add_subdirectory(unit)
 
 # Tool and python package tests (pytest)
-find_package(Python 3.10 REQUIRED COMPONENTS Interpreter)
-
 foreach(module pytest click)
     execute_process(
         COMMAND ${Python_EXECUTABLE} -c "import ${module}"
