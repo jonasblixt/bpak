@@ -303,17 +303,18 @@ return_out:
 
 static PyObject *meta_as_uuid(PyObject *self, PyObject *Py_UNUSED(ignored))
 {
-    static PyObject *py_uuid = NULL;
     static PyObject *uuid_ctor = NULL;
 
-    /* Setup uuid module */
-    if (!py_uuid) {
-        py_uuid = PyImport_ImportModule("uuid");
-        if (!py_uuid) {
-            /* Exception already set */
+    if (uuid_ctor == NULL) {
+        PyObject *py_uuid = PyImport_ImportModule("uuid");
+        if (py_uuid == NULL) {
             return NULL;
         }
         uuid_ctor = PyObject_GetAttrString(py_uuid, "UUID");
+        Py_DECREF(py_uuid);
+        if (uuid_ctor == NULL) {
+            return NULL;
+        }
     }
 
     PyObject *bytes = meta_get_rawdata(self, NULL);

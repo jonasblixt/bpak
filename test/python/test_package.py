@@ -354,3 +354,13 @@ def test_part_id_values(pybpak, tmp_path):
             del part.id
 
         assert part.id == bpak_id("kernel")
+
+
+def test_wrapper_details(pybpak, tmp_path):
+    """sign() reported argument errors as verify() and the docstring of
+    Package.meta described the parts"""
+    with pybpak.Package(tmp_path / "test.bpak", "wb+") as p:
+        with pytest.raises(TypeError, match=r"sign\(\)"):
+            p.sign()
+
+    assert "meta data" in pybpak.Package.meta.__doc__

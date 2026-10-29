@@ -187,7 +187,7 @@ static PyObject *package_sign(PyObject *self, PyObject *args, PyObject *kwds)
 
     rc = PyArg_ParseTupleAndKeywords(args,
                                      kwds,
-                                     "O&:verify",
+                                     "O&:sign",
                                      kwlist,
                                      &PyUnicode_FSConverter,
                                      &sign_key_filename);
@@ -1222,7 +1222,7 @@ static PyGetSetDef package_getset[] = {
     { "meta",
       (getter)package_get_meta_list,
       (setter)NULL,
-      "List of all parts in package",
+      "List of all meta data in package",
       NULL },
 
     { NULL },
