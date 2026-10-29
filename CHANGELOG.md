@@ -92,6 +92,8 @@ tool. The package format and the library ABI stay compatible, see
   transport size of a transport encoded part, and left the in-memory
   header changed when it failed. A failed `bpak_pkg_open` left the closed
   file in the package, and `filename` was never set.
+- `BPAK_DECLARE_STATIC_KEY` stored the key in a byte array, which is not
+  aligned for `struct bpak_key`.
 - Python package: crashes when opening a file that is not a package, when
   using a closed package and after the log callback was released, reference
   leaks in `Package.parts` and `Package.meta`, meta data larger than the

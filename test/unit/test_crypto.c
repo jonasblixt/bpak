@@ -99,9 +99,25 @@ static void test_sign_verify(void **state)
     bpak_free(public_key);
 }
 
+static void test_static_key(void **state)
+{
+    (void)state;
+    uint8_t before = 1;
+    BPAK_DECLARE_STATIC_KEY(key, 91);
+    uint8_t after = 2;
+
+    /* Aligned for struct bpak_key, with room for the data */
+    assert_int_equal((uintptr_t)key % __alignof__(struct bpak_key), 0);
+    assert_int_equal(key->size, 91);
+    memset(key->data, 0xaa, key->size);
+    assert_int_equal(before, 1);
+    assert_int_equal(after, 2);
+}
+
 int main(void)
 {
     const struct CMUnitTest tests[] = {
+        cmocka_unit_test(test_static_key),
         cmocka_unit_test(test_sha256),
         cmocka_unit_test(test_sign_verify),
     };

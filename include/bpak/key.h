@@ -8,12 +8,16 @@ extern "C" {
 /**
  * \def BPAK_DECLARE_STATIC_KEY
  * Declare a 'struct bpak_key *' called '__name' with room for '__size' bytes
- * of key data on the stack
+ * of key data on the stack. The storage is a union with the struct, so it is
+ * aligned for it.
  */
-#define BPAK_DECLARE_STATIC_KEY(__name, __size) \
-    uint8_t __##__name##_data[sizeof(struct bpak_key) + __size]; \
-    struct bpak_key *__name = (struct bpak_key *) __##__name##_data; \
-    __name->size = __size;
+#define BPAK_DECLARE_STATIC_KEY(__name, __size)                                \
+    union {                                                                    \
+        struct bpak_key key;                                                   \
+        uint8_t data[sizeof(struct bpak_key) + (__size)];                      \
+    } __##__name##_data;                                                       \
+    struct bpak_key *__name = &__##__name##_data.key;                          \
+    __name->size = (__size);
 
 /**
  * A key, followed by its DER encoded data
