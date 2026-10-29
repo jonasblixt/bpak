@@ -16,6 +16,8 @@
 #include <bpak/pkg.h>
 #include <bpak/id.h>
 
+#include "internal.h"
+
 BPAK_EXPORT int bpak_bin2hex(uint8_t *data, size_t data_sz, char *buf,
                              size_t buf_sz)
 {
@@ -159,10 +161,7 @@ BPAK_EXPORT uint32_t bpak_part_id_to_hash_tree_id(bpak_id_t part_id)
 BPAK_EXPORT bpak_id_t bpak_hash_tree_id_to_part_id(struct bpak_header *header,
                                                   bpak_id_t part_id)
 {
-    bpak_foreach_part (header, part) {
-        if (!part->id)
-            break;
-
+    bpak_foreach_used_part (header, part) {
         if (bpak_crc32(part->id, (uint8_t *)"-hash-tree", 10) == part_id) {
             return part->id;
         }

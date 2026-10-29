@@ -319,7 +319,7 @@ BPAK_EXPORT int bpak_valid_header(struct bpak_header *hdr)
             return -BPAK_NOT_SUPPORTED;
 
         if (p->pad_bytes >= BPAK_PART_ALIGN ||
-            ((p->size + p->pad_bytes) % BPAK_PART_ALIGN) != 0)
+            (bpak_part_decoded_size(p) % BPAK_PART_ALIGN) != 0)
             return -BPAK_BAD_ALIGNMENT;
 
         if (p->size > size_max - p->pad_bytes || p->transport_size > size_max)
@@ -327,14 +327,14 @@ BPAK_EXPORT int bpak_valid_header(struct bpak_header *hdr)
 
         uint64_t stored_size = (p->flags & BPAK_FLAG_TRANSPORT)
                                    ? p->transport_size
-                                   : p->size + p->pad_bytes;
+                                   : bpak_part_decoded_size(p);
 
         if (stored_size > off_max - stored_end ||
-            p->size + p->pad_bytes > off_max - decoded_end)
+            bpak_part_decoded_size(p) > off_max - decoded_end)
             return -BPAK_SIZE_ERROR;
 
         stored_end += stored_size;
-        decoded_end += p->size + p->pad_bytes;
+        decoded_end += bpak_part_decoded_size(p);
     }
 
     /* The meta data values are aligned and within the meta data array */
@@ -372,9 +372,7 @@ BPAK_EXPORT off_t bpak_part_offset(struct bpak_header *h,
 {
     off_t offset = sizeof(*h);
 
-    bpak_foreach_part (h, p) {
-        if (!p->id)
-            break;
+    bpak_foreach_used_part (h, p) {
         if (p->id == part->id)
             break;
 
@@ -395,7 +393,7 @@ BPAK_EXPORT size_t bpak_part_size(struct bpak_part_header *part)
     if (part->flags & BPAK_FLAG_TRANSPORT)
         return part->transport_size;
     else
-        return (part->size + part->pad_bytes);
+        return bpak_part_decoded_size(part);
 }
 
 BPAK_EXPORT size_t bpak_part_size_wo_pad(struct bpak_part_header *part)

@@ -311,10 +311,7 @@ bpak_transport_encode(FILE *input_fp, struct bpak_header *input_header,
     /* Initialize output header by copying the input header */
     memcpy(output_header, input_header, sizeof(*input_header));
 
-    bpak_foreach_part (input_header, ph) {
-        if (ph->id == 0)
-            break;
-
+    bpak_foreach_used_part (input_header, ph) {
         if (bpak_get_meta(input_header,
                           BPAK_ID_BPAK_TRANSPORT,
                           ph->id,

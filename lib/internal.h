@@ -16,6 +16,19 @@
 #include <stdio.h>
 #include <bpak/bpak.h>
 
+/** Iterate over the parts in use, they end at the first empty slot */
+#define bpak_foreach_used_part(_hdr, _var)                                     \
+    for (struct bpak_part_header *_var = (_hdr)->parts;                        \
+         _var != &((_hdr)->parts[BPAK_MAX_PARTS]) && _var->id != 0;            \
+         _var++)
+
+/** Size of a part in the decoded package, with its padding */
+static inline uint64_t
+bpak_part_decoded_size(const struct bpak_part_header *part)
+{
+    return part->size + part->pad_bytes;
+}
+
 /**
  * Get a pointer to the value of the meta data 'id' of the part
  * 'part_id_ref'.

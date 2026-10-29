@@ -203,12 +203,8 @@ BPAK_EXPORT size_t bpak_pkg_installed_size(struct bpak_package *pkg)
 {
     size_t installed_size = 0;
 
-    bpak_foreach_part (&pkg->header, p) {
-        if (!p->id)
-            break;
-
-        installed_size = add_size(installed_size, p->size + p->pad_bytes);
-    }
+    bpak_foreach_used_part (&pkg->header, p)
+        installed_size = add_size(installed_size, bpak_part_decoded_size(p));
 
     return installed_size;
 }
@@ -217,10 +213,7 @@ BPAK_EXPORT size_t bpak_pkg_size(struct bpak_package *pkg)
 {
     size_t transport_size = sizeof(struct bpak_header);
 
-    bpak_foreach_part (&pkg->header, p) {
-        if (!p->id)
-            break;
-
+    bpak_foreach_used_part (&pkg->header, p) {
         if (p->flags & BPAK_FLAG_TRANSPORT)
             transport_size = add_size(transport_size, p->transport_size);
         else
@@ -368,10 +361,7 @@ BPAK_EXPORT int bpak_pkg_transport_decode(struct bpak_package *input,
         goto err_out;
     }
 
-    bpak_foreach_part (patch_header, part) {
-        if (part->id == 0)
-            break;
-
+    bpak_foreach_used_part (patch_header, part) {
         /* Compute origin and output offsets */
         if (origin != NULL) {
             rc = bpak_get_part(&origin->header, part->id, &origin_part);
@@ -527,7 +517,7 @@ static int delete_part(struct bpak_package *pkg, bpak_id_t part_id,
      * decoded package */
     uint64_t stored_offset = bpak_part_offset(h, part);
     uint64_t stored_size = bpak_part_size(part);
-    uint64_t decoded_size = part->size + part->pad_bytes;
+    uint64_t decoded_size = bpak_part_decoded_size(part);
     uint64_t bytes_to_process = 0;
 
     bpak_del_part(h, part);

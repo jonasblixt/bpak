@@ -75,6 +75,7 @@ FixNamespaceComments: true
 ForEachMacros:
   - bpak_foreach_part
   - bpak_foreach_meta
+  - bpak_foreach_used_part
 IfMacros:
 IncludeBlocks:   Preserve
 IncludeCategories:

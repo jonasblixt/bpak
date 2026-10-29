@@ -41,7 +41,7 @@ static ssize_t bspatch_write_output(off_t offset, uint8_t *buffer,
     if (!range_within(offset,
                       length,
                       ctx->decoders.bspatch.output_offset,
-                      ctx->part->size + ctx->part->pad_bytes)) {
+                      bpak_part_decoded_size(ctx->part))) {
         bpak_printf(0, "Error: Patch writes outside of the part\n");
         return -BPAK_PATCH_WRITE_ERROR;
     }
@@ -119,7 +119,7 @@ static ssize_t merkle_generate(struct bpak_transport_decode *ctx)
     if (tree_size < 0)
         return tree_size;
 
-    if ((uint64_t)tree_size != ctx->part->size + ctx->part->pad_bytes) {
+    if ((uint64_t)tree_size != bpak_part_decoded_size(ctx->part)) {
         bpak_printf(0, "Error: The hash tree does not fit the part\n");
         return -BPAK_SIZE_ERROR;
     }
@@ -405,7 +405,7 @@ bpak_transport_decode_write_chunk(struct bpak_transport_decode *ctx,
     } break;
     case 0: /* Copy data */
     {
-        uint64_t part_size = ctx->part->size + ctx->part->pad_bytes;
+        uint64_t part_size = bpak_part_decoded_size(ctx->part);
 
         if ((uint64_t)ctx->copy_offset > part_size ||
             length > part_size - ctx->copy_offset) {
@@ -464,11 +464,11 @@ BPAK_EXPORT int bpak_transport_decode_finish(struct bpak_transport_decode *ctx)
 
     /* Check that the produced output length matches what the patch input
      * header says */
-    if (output_length != (ssize_t)(ctx->part->size + ctx->part->pad_bytes)) {
+    if (output_length != (ssize_t)bpak_part_decoded_size(ctx->part)) {
         bpak_printf(0,
                     "Error: Decoded part size does not match the expected size "
                     "%" PRIu64 " != %zd\n",
-                    ctx->part->size + ctx->part->pad_bytes,
+                    bpak_part_decoded_size(ctx->part),
                     output_length);
         return -BPAK_SIZE_ERROR;
     }

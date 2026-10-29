@@ -71,12 +71,9 @@ static int pkg_add_part_start(struct bpak_package *pkg, bpak_id_t id,
     uint64_t decoded_end = sizeof(*h);
     int rc;
 
-    bpak_foreach_part (h, other) {
-        if (!other->id)
-            break;
-
+    bpak_foreach_used_part (h, other) {
         stored_end += bpak_part_size(other);
-        decoded_end += other->size + other->pad_bytes;
+        decoded_end += bpak_part_decoded_size(other);
     }
 
     rc = bpak_add_part(h, id, &p);
