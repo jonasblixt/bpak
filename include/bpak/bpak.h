@@ -229,7 +229,9 @@ struct bpak_part_header {
     bpak_id_t id;            /*!< Part identifier */
     uint64_t size;           /*!< Data block size*/
     uint64_t offset;         /*!< Offset of the data in the decoded
-                                package, including the header */
+                                package, including the header. Not used
+                                by the library, which computes the
+                                offsets with bpak_part_offset() */
     uint64_t transport_size; /*!< Should be populated when part data is
                                 prepared for transport. With the encoded
                                 size */
@@ -285,7 +287,9 @@ struct bpak_header {
 /**
  * \def bpak_foreach_part
  *
- * Helper macro to iterate over all parts in a package
+ * Helper macro to iterate over all part slots in a package. The parts are
+ * followed by empty slots, an empty slot (id 0) ends the parts, see
+ * bpak_valid_header().
  */
 #define bpak_foreach_part(_hdr, _var)                                        \
     for (struct bpak_part_header *_var = (_hdr)->parts;                      \

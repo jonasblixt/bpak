@@ -160,6 +160,9 @@ BPAK_EXPORT bpak_id_t bpak_hash_tree_id_to_part_id(struct bpak_header *header,
                                                   bpak_id_t part_id)
 {
     bpak_foreach_part (header, part) {
+        if (!part->id)
+            break;
+
         if (bpak_crc32(part->id, (uint8_t *)"-hash-tree", 10) == part_id) {
             return part->id;
         }

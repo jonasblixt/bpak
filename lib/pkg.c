@@ -153,6 +153,9 @@ BPAK_EXPORT size_t bpak_pkg_installed_size(struct bpak_package *pkg)
     size_t installed_size = 0;
 
     bpak_foreach_part (&pkg->header, p) {
+        if (!p->id)
+            break;
+
         installed_size += p->size + p->pad_bytes;
     }
 
@@ -164,6 +167,9 @@ BPAK_EXPORT size_t bpak_pkg_size(struct bpak_package *pkg)
     size_t transport_size = 0;
 
     bpak_foreach_part (&pkg->header, p) {
+        if (!p->id)
+            break;
+
         if (p->flags & BPAK_FLAG_TRANSPORT)
             transport_size += p->transport_size;
         else

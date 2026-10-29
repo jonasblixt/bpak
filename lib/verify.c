@@ -81,7 +81,7 @@ BPAK_EXPORT int bpak_verify_compute_payload_hash(struct bpak_header *header,
         size_t chunk = 0;
 
         if (!p->id)
-            continue;
+            break;
 
         if (p->flags & BPAK_FLAG_EXCLUDE_FROM_HASH) {
             current_offset += bpak_part_size(p);
@@ -264,7 +264,7 @@ BPAK_EXPORT int bpak_verify_payload(struct bpak_header *header,
     /* Compute and compare merkle hash trees and root hashes */
     bpak_foreach_part (header, p) {
         if (!p->id)
-            continue;
+            break;
 
         /* Test part to see if it has a hash tree */
         rc = bpak_get_meta(header,
