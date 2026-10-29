@@ -122,6 +122,17 @@ def test_non_ascii_path(pybpak, bpak, tmp_path):
     bpak("verify", path, "--key", DEFAULT_VERIFY_KEY)
 
 
+def test_read_empty_part(pybpak, tmp_path):
+    empty = tmp_path / "empty.bin"
+    empty.write_bytes(b"")
+
+    with pybpak.Package(tmp_path / "test.bpak", "wb+") as p:
+        part = p.add_file("empty", empty)
+
+        assert part.installed_size == 0
+        assert part.read_data() == b""
+
+
 def test_part_fields(pybpak, tmp_path):
     path = tmp_path / "test.bpak"
 

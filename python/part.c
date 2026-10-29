@@ -217,7 +217,11 @@ static PyObject *part_read_data(PyObject *self, PyObject *Py_UNUSED(ignored))
                 strerror(ferror(fp)));
     }
 
-    read_size = fread(PyBytes_AsString(bytes), part_size, 1, fp);
+    /* fread returns 0 for empty parts */
+    read_size = 1;
+    if (part_size > 0) {
+        read_size = fread(PyBytes_AsString(bytes), part_size, 1, fp);
+    }
     if (read_size != 1) {
         Py_DECREF(bytes);
         return PyErr_Format(PyExc_IOError, "failed to read: %s",
