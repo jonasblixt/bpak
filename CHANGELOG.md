@@ -59,6 +59,9 @@ tool. The package format and the library ABI stay compatible, see
   larger than the part.
 - `bpak_calloc`, `bpak_free` and `bpak_transport_encode` were declared in
   the public headers but not exported by the shared library.
+- With an allocator from `bpak_set_calloc_free`, the lzma encoder and
+  decoder freed memory from `malloc` with it. The lzma decoder may use at
+  most 64 MiB (`BPAK_BSPATCH_LZMA_MEMLIMIT`), it had no limit.
 - Python package: crashes when opening a file that is not a package, when
   using a closed package and after the log callback was released, reference
   leaks in `Package.parts` and `Package.meta`, meta data larger than the

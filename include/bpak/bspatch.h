@@ -23,6 +23,16 @@
 
 #define BPAK_BSPATCH_CTRL_BUFFER_LENGTH 24
 
+/**
+ * \def BPAK_BSPATCH_LZMA_MEMLIMIT
+ * Memory that the lzma decoder may use, patches that need more fail. bsdiff
+ * compresses with the default preset, which needs about 9 MiB. Can be
+ * overridden.
+ */
+#ifndef BPAK_BSPATCH_LZMA_MEMLIMIT
+#define BPAK_BSPATCH_LZMA_MEMLIMIT (64 * 1024 * 1024)
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif

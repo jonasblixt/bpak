@@ -240,6 +240,50 @@ static void test_diff_patch_lzma(void **state)
     check_diff_patch(64 * 1024, BPAK_COMPRESSION_LZMA);
 }
 
+/* An allocator that tags its allocations, freeing anything else fails */
+#define ALLOC_TAG 0x62706b61u
+
+static unsigned int tagged_allocations;
+
+static void *tagged_calloc(size_t nmemb, size_t size)
+{
+    uint32_t *p = calloc(1, nmemb * size + 16);
+
+    assert_non_null(p);
+    *p = ALLOC_TAG;
+    tagged_allocations++;
+    return (uint8_t *)p + 16;
+}
+
+static void tagged_free(void *ptr)
+{
+    if (ptr == NULL)
+        return;
+
+    uint32_t *p = (uint32_t *)((uint8_t *)ptr - 16);
+
+    assert_int_equal(*p, ALLOC_TAG);
+    assert_true(tagged_allocations > 0);
+    tagged_allocations--;
+    *p = 0;
+    free(p);
+}
+
+static void test_lzma_allocator(void **state)
+{
+    (void)state;
+
+    tagged_allocations = 0;
+    assert_int_equal(bpak_set_calloc_free(tagged_calloc, tagged_free), BPAK_OK);
+
+    /* liblzma allocates with the allocator of the stream when it is
+     * initialized */
+    check_diff_patch(64 * 1024, BPAK_COMPRESSION_LZMA);
+
+    assert_int_equal(bpak_set_calloc_free(calloc, free), BPAK_OK);
+    assert_int_equal(tagged_allocations, 0);
+}
+
 /* bspatch control data: sign and magnitude, little endian */
 static void put_ctrl(uint8_t *buf, int64_t value)
 {
@@ -372,6 +416,7 @@ int main(void)
         cmocka_unit_test(test_diff_patch_hs),
         cmocka_unit_test(test_diff_patch_lzma),
         cmocka_unit_test(test_patch_bad_ctrl),
+        cmocka_unit_test(test_lzma_allocator),
     };
 
     return cmocka_run_group_tests(tests, NULL, NULL);

@@ -370,7 +370,9 @@ static int compressor_init(struct bpak_bsdiff_context *ctx)
     case BPAK_COMPRESSION_LZMA: {
         lzma_stream *stream;
         stream = bpak_calloc(sizeof(lzma_stream), 1);
-        ctx->compressor_priv = stream;
+
+        if (stream == NULL)
+            return -BPAK_FAILED;
 
         lzma_options_lzma opt_lzma2;
         if (lzma_lzma_preset(&opt_lzma2, LZMA_PRESET_DEFAULT)) {
@@ -384,15 +386,17 @@ static int compressor_init(struct bpak_bsdiff_context *ctx)
             {.id = LZMA_VLI_UNKNOWN, .options = NULL},
         };
 
+        /* liblzma allocates the encoder with the allocator of the stream */
+        stream->allocator = &lzma_alloc;
+
         lzma_ret ret = lzma_stream_encoder(stream, filters, LZMA_CHECK_CRC64);
 
-        if (ret != LZMA_OK)
+        if (ret != LZMA_OK) {
+            bpak_free(stream);
             return -BPAK_COMPRESSOR_ERROR;
+        }
 
-        if (stream == NULL)
-            return -BPAK_FAILED;
-
-        stream->allocator = &lzma_alloc;
+        ctx->compressor_priv = stream;
     } break;
 #endif
     default:

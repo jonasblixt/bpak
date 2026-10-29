@@ -293,14 +293,17 @@ static int decompressor_init(struct bpak_bspatch_context *ctx)
     case BPAK_COMPRESSION_LZMA: {
         lzma_stream *strm = &ctx->decompressor.lzma_stream;
 
-        lzma_ret ret = lzma_stream_decoder(strm, UINT64_MAX, LZMA_CONCATENATED);
+        /* liblzma allocates the decoder with the allocator of the stream */
+        strm->allocator = &lzma_alloc;
+
+        lzma_ret ret = lzma_stream_decoder(strm,
+                                           BPAK_BSPATCH_LZMA_MEMLIMIT,
+                                           LZMA_CONCATENATED);
 
         if (ret != LZMA_OK) {
             bpak_printf(0, "lzma init error (%u)\n", ret);
             return -BPAK_DECOMPRESSOR_ERROR;
         }
-
-        strm->allocator = &lzma_alloc;
     } break;
 #endif
     default:
