@@ -78,6 +78,20 @@ static int64_t offtin(uint8_t *buf)
     return y;
 }
 
+/* Largest value of off_t */
+#define BSPATCH_OFF_MAX ((((uint64_t)1) << (sizeof(off_t) * 8 - 1)) - 1)
+
+/* Add 'value' to the position '*end' if the result fits off_t */
+static bool bspatch_add_position(uint64_t *end, int64_t value)
+{
+    if (value < 0 || *end > BSPATCH_OFF_MAX ||
+        (uint64_t)value > BSPATCH_OFF_MAX - *end)
+        return false;
+
+    *end += value;
+    return true;
+}
+
 static int bspatch_write(struct bpak_bspatch_context *ctx, uint8_t *buffer,
                          size_t length)
 {
@@ -124,6 +138,23 @@ process_more:
         if (ctx->diff_count < 0 || ctx->extra_count < 0 ||
             (ctx->adjust < 0 &&
              ctx->origin_position < -ctx->adjust - ctx->diff_count)) {
+            bpak_printf(0, "Error: Bad patch control data\n");
+            ctx->state = BPAK_PATCH_STATE_ERROR;
+            rc = -BPAK_SIZE_ERROR;
+            break;
+        }
+
+        /* The offsets passed to the callbacks must fit off_t */
+        uint64_t origin_end = (uint64_t)ctx->origin_offset;
+        uint64_t output_end = (uint64_t)ctx->output_offset;
+
+        if (!bspatch_add_position(&origin_end, ctx->origin_position) ||
+            !bspatch_add_position(&origin_end, ctx->diff_count) ||
+            !bspatch_add_position(&origin_end,
+                                  ctx->adjust > 0 ? ctx->adjust : 0) ||
+            !bspatch_add_position(&output_end, ctx->output_position) ||
+            !bspatch_add_position(&output_end, ctx->diff_count) ||
+            !bspatch_add_position(&output_end, ctx->extra_count)) {
             bpak_printf(0, "Error: Bad patch control data\n");
             ctx->state = BPAK_PATCH_STATE_ERROR;
             rc = -BPAK_SIZE_ERROR;

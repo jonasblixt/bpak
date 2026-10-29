@@ -335,7 +335,10 @@ static void test_patch_bad_ctrl(void **state)
     /* diff, extra, adjust */
     const int64_t negative_diff[] = { -16, 0, 0 };
     const int64_t negative_extra[] = { 0, -16, 0 };
-    const int64_t huge_diff[] = { INT64_MAX, 0, INT64_MAX };
+    const int64_t huge_diff[] = { (int64_t)1 << 40, 0, 0 };
+    const int64_t overflow_diff[] = { 4, 0, 0, INT64_MAX, 0, 0 };
+    const int64_t overflow_adjust[] = { 1, 0, INT64_MAX };
+    const int64_t overflow_extra[] = { 1, INT64_MAX, 0 };
     const int64_t before_origin[] = { 0, 0, -1 };
     const int64_t before_origin_after_diff[] = { 4, 0, -5 };
     const int64_t back_to_start[] = { 4, 0, -4, 4, 2, 0 };
@@ -348,6 +351,11 @@ static void test_patch_bad_ctrl(void **state)
     /* Runs out of patch data in the diff, which is not an error until the
      * caller compares the output size */
     assert_int_equal(apply_ctrl(huge_diff, 3), 0);
+
+    /* The positions do not fit off_t */
+    assert_int_equal(apply_ctrl(overflow_diff, 6), -BPAK_SIZE_ERROR);
+    assert_int_equal(apply_ctrl(overflow_adjust, 3), -BPAK_SIZE_ERROR);
+    assert_int_equal(apply_ctrl(overflow_extra, 3), -BPAK_SIZE_ERROR);
 
     /* Seeking back to the start of the origin is valid */
     assert_int_equal(apply_ctrl(back_to_start, 6), 10);

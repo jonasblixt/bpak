@@ -69,6 +69,12 @@ struct bpak_bspatch_context {
 /**
  *  Initialize the BPAK bspatch context
  *
+ *  The patch is not authenticated. bspatch rejects negative lengths and
+ *  offsets that do not fit off_t, and the lengths passed to 'read_origin'
+ *  never exceed the buffer it passes, but it does not know the sizes of the
+ *  origin and the output: the callbacks must check that the offsets and
+ *  lengths are within them. bpak_transport_decode does this.
+ *
  *  @param[in] ctx           Pointer to the context
  *  @param[in] buffer        Work buffer for bspatch
  *  @param[in] buffer_length Size of bspatch internal buffers in bytes

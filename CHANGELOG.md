@@ -52,6 +52,8 @@ tool. The package format and the library ABI stay compatible, see
   signature sizes larger than the signature field. The payload hash and
   transport decoding did not validate the header. Lookups of id 0 found
   empty slots.
+- bspatch computed offsets that overflow `off_t` from large lengths in a
+  patch, such patches fail with `BPAK_SIZE_ERROR`.
 - Python package: crashes when opening a file that is not a package, when
   using a closed package and after the log callback was released, reference
   leaks in `Package.parts` and `Package.meta`, meta data larger than the
