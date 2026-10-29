@@ -6,41 +6,23 @@ import subprocess
 
 import pytest
 
-from bpaktest import (DATA_DIR, HEADER_SIZE, SOURCE_DIR, BpakError, Header,
-                      bpak_id, corrupt)
+from bpaktest import (DATA_DIR, HEADER_SIZE, SOURCE_DIR, BpakError, bpak_id,
+                      corrupt)
 
 KEYSTORE_ID = "pb-internal"
 
-# Key name in the keystore: (hash kind, signature kind, private key,
-# public key)
+# Key name in the keystore fixture: (hash kind, signature kind, private
+# key, public key)
 KEYS = {
     "pb-development": ("sha256", "prime256v1", "secp256r1-key-pair.pem",
                        "secp256r1-pub-key.der"),
-    "pb-development2": ("sha384", "secp384r1", "secp384r1-key-pair.pem",
-                        "secp384r1-pub-key.der"),
-    "pb-development3": ("sha512", "secp521r1", "secp521r1-key-pair.pem",
-                        "secp521r1-pub-key.der"),
-    "pb-development4": ("sha256", "rsa4096", "dev_rsa_private.pem",
-                        "dev_rsa_public.der"),
+    "pb-development-384": ("sha384", "secp384r1", "secp384r1-key-pair.pem",
+                           "secp384r1-pub-key.der"),
+    "pb-development-521": ("sha512", "secp521r1", "secp521r1-key-pair.pem",
+                           "secp521r1-pub-key.der"),
+    "pb-development-rsa": ("sha256", "rsa4096", "dev_rsa_private.pem",
+                           "dev_rsa_public.der"),
 }
-
-
-@pytest.fixture
-def keystore(bpak):
-    pkg = "keystore.bpak"
-    bpak("create", pkg, "-Y")
-    bpak("add", pkg, "--meta", "bpak-package",
-         "--from-string", "5df103ef-e774-450b-95c5-1fef51ceec28",
-         "--encoder", "uuid")
-    bpak("add", pkg, "--meta", "keystore-provider-id",
-         "--from-string", KEYSTORE_ID, "--encoder", "id")
-
-    for name, (_, _, _, public_key) in KEYS.items():
-        bpak("add", pkg, "--part", name, "--from-file", DATA_DIR / public_key,
-             "--encoder", "key")
-
-    bpak("sign", pkg, "--key", DATA_DIR / "secp256r1-key-pair.pem")
-    return bpak.cwd / pkg
 
 
 @pytest.mark.parametrize("key_name", KEYS)
@@ -60,7 +42,7 @@ def test_verify_with_keystore_wrong_key(bpak, keystore):
     """The package is signed with another key than the key-id refers to"""
     pkg = bpak.create_package("test.bpak",
                               sign_key=DATA_DIR / "secp256r1-key-pair.pem",
-                              key_id="pb-development2",
+                              key_id="pb-development-384",
                               keystore_id=KEYSTORE_ID)
 
     bpak.fails("verify", pkg, "--keystore", keystore,
@@ -94,24 +76,6 @@ def test_verify_with_keystore_wrong_keystore_id(bpak, keystore):
 
     bpak.fails("verify", pkg, "--keystore", keystore,
                error=BpakError.KEYSTORE_ID_MISMATCH)
-
-
-def test_key_parts(keystore):
-    """Keys are stored as DER encoded public keys followed by zero
-    padding up to the part alignment"""
-    header = Header.read(keystore)
-    data = keystore.read_bytes()
-
-    for name, (_, _, _, public_key) in KEYS.items():
-        der = (DATA_DIR / public_key).read_bytes()
-        part = header.part(bpak_id(name))
-        offset = header.part_offset(part.id)
-
-        assert part.size == len(der)
-        assert (part.size + part.pad_bytes) % 512 == 0
-        assert data[offset:offset + part.size] == der
-        assert data[offset + part.size:offset + part.stored_size] == \
-            bytes(part.pad_bytes)
 
 
 GENERATED_KEYSTORE_TEST = r"""

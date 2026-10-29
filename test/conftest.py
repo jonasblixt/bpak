@@ -1,9 +1,11 @@
 import os
+import shutil
 from pathlib import Path
 
 import pytest
 
-from bpaktest import DATA_DIR, Bpak, python_path, random_bytes
+from bpaktest import (DATA_DIR, GOLDEN_KEYSTORE, Bpak, python_path,
+                      random_bytes)
 
 
 def pytest_addoption(parser):
@@ -77,3 +79,11 @@ def random_data(tmp_path) -> Path:
     Path(str(path).format("target")).write_bytes(
         origin + random_bytes(64 * 1024, seed=2))
     return path
+
+
+@pytest.fixture
+def keystore(tmp_path) -> Path:
+    """A copy of the golden keystore in the test directory. It has the
+    public keys of the keys in test/data, see test/golden/generate.py, and
+    the keystore id 'pb-internal'."""
+    return Path(shutil.copy(GOLDEN_KEYSTORE, tmp_path / "keystore.bpak"))

@@ -174,6 +174,8 @@ temporary directory. Shared helpers are in `test/bpaktest.py` and fixtures in
   that differ, for transport encoding. `random_bytes()` in `bpaktest.py`
   returns pseudo-random data that is the same in every run, generate large
   test data with it instead of committing it to `test/data`.
+- `keystore` is a copy of the keystore of the golden set 0.9.3 with the
+  public keys in `test/data` and the keystore id `pb-internal`.
 - `pybpak` is the bpak python package with the C extension from the build
   directory (`test/python` only). The `origin_pkg` and `target_pkg` fixtures
   provide signed packages to test against.

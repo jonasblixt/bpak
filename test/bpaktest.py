@@ -18,6 +18,9 @@ PKG_UUID = "0888b0fa-9c48-4524-9845-06a641b61edd"
 DEFAULT_SIGN_KEY = DATA_DIR / "secp256r1-key-pair.pem"
 DEFAULT_VERIFY_KEY = DATA_DIR / "secp256r1-pub-key.der"
 
+# A keystore created by a released version, see the keystore fixture
+GOLDEN_KEYSTORE = SOURCE_DIR / "test" / "golden" / "0.9.3" / "keystore.bpak"
+
 
 class BpakError(enum.IntEnum):
     """'enum bpak_errors' in include/bpak/bpak.h"""
