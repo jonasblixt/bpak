@@ -174,15 +174,43 @@ int bpak_mbed_verify(const uint8_t *signature, size_t signature_length,
     return BPAK_OK;
 }
 
+/* The random number generator of signing and of parsing private keys */
+struct rng {
+    mbedtls_entropy_context entropy;
+    mbedtls_ctr_drbg_context ctr_drbg;
+};
+
+/* Seed the generator, free it with rng_free() also when this fails */
+static int rng_init(struct rng *rng)
+{
+    const char *pers = "mbedtls_pk_sign";
+
+    mbedtls_entropy_init(&rng->entropy);
+    mbedtls_ctr_drbg_init(&rng->ctr_drbg);
+
+    if (mbedtls_ctr_drbg_seed(&rng->ctr_drbg,
+                              mbedtls_entropy_func,
+                              &rng->entropy,
+                              (const unsigned char *)pers,
+                              strlen(pers)) != 0)
+        return -BPAK_FAILED;
+
+    return BPAK_OK;
+}
+
+static void rng_free(struct rng *rng)
+{
+    mbedtls_ctr_drbg_free(&rng->ctr_drbg);
+    mbedtls_entropy_free(&rng->entropy);
+}
+
 int bpak_mbed_sign(const uint8_t *hash, size_t hash_length,
                    enum bpak_hash_kind kind, struct bpak_key *key,
                    uint8_t *signature, size_t *signature_length)
 {
     int rc;
-    const char *pers = "mbedtls_pk_sign";
     mbedtls_pk_context ctx;
-    mbedtls_entropy_context entropy;
-    mbedtls_ctr_drbg_context ctr_drbg;
+    struct rng rng;
     mbedtls_md_type_t md_type;
 
     rc = hash_kind(kind, &md_type);
@@ -190,20 +218,11 @@ int bpak_mbed_sign(const uint8_t *hash, size_t hash_length,
     if (rc != BPAK_OK)
         return rc;
 
-    mbedtls_entropy_init(&entropy);
-    mbedtls_ctr_drbg_init(&ctr_drbg);
     mbedtls_pk_init(&ctx);
+    rc = rng_init(&rng);
 
-    rc = mbedtls_ctr_drbg_seed(&ctr_drbg,
-                               mbedtls_entropy_func,
-                               &entropy,
-                               (const unsigned char *)pers,
-                               strlen(pers));
-
-    if (rc != 0) {
-        rc = -BPAK_FAILED;
+    if (rc != BPAK_OK)
         goto err_free_crypto_ctx_out;
-    }
 
 #if MBEDTLS_VERSION_MAJOR >= 3
     rc = mbedtls_pk_parse_key(&ctx,
@@ -212,7 +231,7 @@ int bpak_mbed_sign(const uint8_t *hash, size_t hash_length,
                               NULL,
                               0,
                               mbedtls_ctr_drbg_random,
-                              &ctr_drbg);
+                              &rng.ctr_drbg);
 #else
     rc = mbedtls_pk_parse_key(&ctx, key->data, key->size, NULL, 0);
 #endif
@@ -232,7 +251,7 @@ int bpak_mbed_sign(const uint8_t *hash, size_t hash_length,
                          *signature_length,
                          signature_length,
                          mbedtls_ctr_drbg_random,
-                         &ctr_drbg);
+                         &rng.ctr_drbg);
 #else
     rc = mbedtls_pk_sign(&ctx,
                          md_type,
@@ -241,7 +260,7 @@ int bpak_mbed_sign(const uint8_t *hash, size_t hash_length,
                          signature,
                          signature_length,
                          mbedtls_ctr_drbg_random,
-                         &ctr_drbg);
+                         &rng.ctr_drbg);
 #endif
 
     if (rc != 0) {
@@ -251,111 +270,114 @@ int bpak_mbed_sign(const uint8_t *hash, size_t hash_length,
     }
 
 err_free_crypto_ctx_out:
-    mbedtls_entropy_free(&entropy);
-    mbedtls_ctr_drbg_free(&ctr_drbg);
+    rng_free(&rng);
     mbedtls_pk_free(&ctx);
     return rc;
 }
 
-int bpak_mbed_load_public_key(const char *filename, struct bpak_key **output)
+/* The kinds of keys that bpak supports */
+static const struct {
+    const char *name;
+    size_t bitlen;
+    enum bpak_key_kind public_kind;
+    enum bpak_key_kind private_kind;
+} key_kinds[] = {
+    { "EC", 256, BPAK_KEY_PUB_PRIME256v1, BPAK_KEY_PRI_PRIME256v1 },
+    { "EC", 384, BPAK_KEY_PUB_SECP384r1, BPAK_KEY_PRI_SECP384r1 },
+    { "EC", 521, BPAK_KEY_PUB_SECP521r1, BPAK_KEY_PRI_SECP521r1 },
+    { "RSA", 4096, BPAK_KEY_PUB_RSA4096, BPAK_KEY_PRI_RSA4096 },
+};
+
+/* Allocate a key with the DER encoding of the public or the private key in
+ * 'ctx'. A key of a kind that is not supported fails with 'unsupported'. */
+static int key_from_pk(mbedtls_pk_context *ctx, bool private_key,
+                       int unsupported, struct bpak_key **output)
 {
-    int rc = BPAK_OK;
-    unsigned char tmp[1024];
-    struct bpak_key *key = NULL;
-    mbedtls_pk_context ctx;
-    mbedtls_pk_init(&ctx);
+    int rc = unsupported;
+    unsigned char der[4096];
+    /* Public keys are at most 1024 bytes */
+    size_t der_size = private_key ? sizeof(der) : 1024;
+    struct bpak_key *key;
+    size_t i;
+    int len;
 
-    if (mbedtls_pk_parse_public_keyfile(&ctx, filename) != 0) {
-        rc = -BPAK_KEY_DECODE;
-        goto err_free_ctx;
-    }
-
-    int len = mbedtls_pk_write_pubkey_der(&ctx, tmp, sizeof(tmp));
+    if (private_key)
+        len = mbedtls_pk_write_key_der(ctx, der, der_size);
+    else
+        len = mbedtls_pk_write_pubkey_der(ctx, der, der_size);
 
     if (len < 0) {
+        bpak_printf(0, "Error: Could not encode the key (mbedtls: %i)\n", len);
         rc = -BPAK_KEY_DECODE;
-        goto err_free_ctx;
+        goto out;
+    }
+
+    for (i = 0; i < sizeof(key_kinds) / sizeof(key_kinds[0]); i++) {
+        if (strcmp(mbedtls_pk_get_name(ctx), key_kinds[i].name) == 0 &&
+            mbedtls_pk_get_bitlen(ctx) == key_kinds[i].bitlen)
+            break;
+    }
+
+    if (i == sizeof(key_kinds) / sizeof(key_kinds[0])) {
+        bpak_printf(0,
+                    "Error: Unsupported key (%s, %zu bits)\n",
+                    mbedtls_pk_get_name(ctx),
+                    mbedtls_pk_get_bitlen(ctx));
+        goto out;
     }
 
     key = bpak_calloc(sizeof(struct bpak_key) + len, 1);
 
     if (key == NULL) {
         rc = -BPAK_FAILED;
-        goto err_free_ctx;
+        goto out;
     }
 
-    key->size = len;
-
-    if (strcmp(mbedtls_pk_get_name(&ctx), "EC") == 0) {
-        switch (mbedtls_pk_get_bitlen(&ctx)) {
-        case 256:
-            key->kind = BPAK_KEY_PUB_PRIME256v1;
-            break;
-        case 384:
-            key->kind = BPAK_KEY_PUB_SECP384r1;
-            break;
-        case 521:
-            key->kind = BPAK_KEY_PUB_SECP521r1;
-            break;
-        default:
-            rc = -BPAK_UNSUPPORTED_KEY;
-            goto err_free_key_out;
-        };
-    } else if (strcmp(mbedtls_pk_get_name(&ctx), "RSA") == 0) {
-        if (mbedtls_pk_get_bitlen(&ctx) == 4096) {
-            key->kind = BPAK_KEY_PUB_RSA4096;
-        } else {
-            rc = -BPAK_UNSUPPORTED_KEY;
-            goto err_free_key_out;
-        }
-    } else {
-        rc = -BPAK_UNSUPPORTED_KEY;
-        goto err_free_key_out;
-    }
-
-    memcpy(key->data, &tmp[sizeof(tmp) - len], len);
+    key->kind =
+        private_key ? key_kinds[i].private_kind : key_kinds[i].public_kind;
+    key->size = (uint16_t)len;
+    memcpy(key->data, &der[der_size - len], len);
     (*output) = key;
-    mbedtls_pk_free(&ctx);
-    return BPAK_OK;
+    rc = BPAK_OK;
 
-err_free_key_out:
-    bpak_free(key);
-err_free_ctx:
+out:
+    /* The DER encoded private key */
+    mbedtls_platform_zeroize(der, sizeof(der));
+    return rc;
+}
+
+int bpak_mbed_load_public_key(const char *filename, struct bpak_key **output)
+{
+    int rc = -BPAK_KEY_DECODE;
+    mbedtls_pk_context ctx;
+    mbedtls_pk_init(&ctx);
+
+    if (mbedtls_pk_parse_public_keyfile(&ctx, filename) == 0)
+        rc = key_from_pk(&ctx, false, -BPAK_UNSUPPORTED_KEY, output);
+
     mbedtls_pk_free(&ctx);
     return rc;
 }
 
 int bpak_mbed_load_private_key(const char *filename, struct bpak_key **output)
 {
-    int rc = BPAK_OK;
-    unsigned char tmp[4096];
+    int rc;
     mbedtls_pk_context ctx;
     mbedtls_pk_init(&ctx);
 
 #if MBEDTLS_VERSION_MAJOR >= 3
-    mbedtls_ctr_drbg_context ctr_drbg;
-    mbedtls_entropy_context entropy;
-    const char *pers = "mbedtls_pk_sign";
+    struct rng rng;
 
-    mbedtls_entropy_init(&entropy);
-    mbedtls_ctr_drbg_init(&ctr_drbg);
+    rc = rng_init(&rng);
 
-    rc = mbedtls_ctr_drbg_seed(&ctr_drbg,
-                               mbedtls_entropy_func,
-                               &entropy,
-                               (const unsigned char *)pers,
-                               strlen(pers));
-
-    if (rc != 0) {
-        rc = -BPAK_FAILED;
+    if (rc != BPAK_OK)
         goto err_free_ctx_out;
-    }
 
     rc = mbedtls_pk_parse_keyfile(&ctx,
                                   filename,
                                   NULL,
                                   mbedtls_ctr_drbg_random,
-                                  &ctr_drbg);
+                                  &rng.ctr_drbg);
 #else
     rc = mbedtls_pk_parse_keyfile(&ctx, filename, NULL);
 #endif
@@ -366,74 +388,12 @@ int bpak_mbed_load_private_key(const char *filename, struct bpak_key **output)
         goto err_free_ctx_out;
     }
 
-    int len = mbedtls_pk_write_key_der(&ctx, tmp, sizeof(tmp));
+    rc = key_from_pk(&ctx, true, -BPAK_KEY_DECODE, output);
 
-    if (len < 0) {
-        bpak_printf(0, "Error: Could not load private key (%i)\n", len);
-        rc = -BPAK_KEY_DECODE;
-        goto err_free_ctx_out;
-    }
-
-    bpak_printf(1, "Loaded private key %i bytes\n", len);
-
-    struct bpak_key *key = bpak_calloc(sizeof(struct bpak_key) + len, 1);
-
-    if (key == NULL) {
-        rc = -BPAK_FAILED;
-        goto err_free_ctx_out;
-    }
-
-    key->size = len;
-
-    if (strcmp(mbedtls_pk_get_name(&ctx), "EC") == 0) {
-        switch (mbedtls_pk_get_bitlen(&ctx)) {
-        case 256:
-            key->kind = BPAK_KEY_PRI_PRIME256v1;
-            break;
-        case 384:
-            key->kind = BPAK_KEY_PRI_SECP384r1;
-            break;
-        case 521:
-            key->kind = BPAK_KEY_PRI_SECP521r1;
-            break;
-        default:
-            bpak_printf(0,
-                        "Unknown bit-length (%zu)\n",
-                        mbedtls_pk_get_bitlen(&ctx));
-            rc = -BPAK_KEY_DECODE;
-            goto err_free_key_out;
-        };
-    } else if (strcmp(mbedtls_pk_get_name(&ctx), "RSA") == 0) {
-        if (mbedtls_pk_get_bitlen(&ctx) == 4096) {
-            key->kind = BPAK_KEY_PRI_RSA4096;
-        } else {
-            bpak_printf(0,
-                        "Unknown bit-length (%zu)\n",
-                        mbedtls_pk_get_bitlen(&ctx));
-            rc = -BPAK_KEY_DECODE;
-            goto err_free_key_out;
-        }
-    } else {
-        bpak_printf(0,
-                    "Error: Unknown key type (%s)\n",
-                    mbedtls_pk_get_name(&ctx));
-        rc = -BPAK_KEY_DECODE;
-        goto err_free_key_out;
-    }
-    memcpy(key->data, &tmp[sizeof(tmp) - len], len);
-    (*output) = key;
-    goto err_free_ctx_out;
-
-err_free_key_out:
-    mbedtls_platform_zeroize(key, sizeof(struct bpak_key) + len);
-    bpak_free(key);
 err_free_ctx_out:
-    /* The DER encoded private key */
-    mbedtls_platform_zeroize(tmp, sizeof(tmp));
     mbedtls_pk_free(&ctx);
 #if MBEDTLS_VERSION_MAJOR >= 3
-    mbedtls_ctr_drbg_free(&ctr_drbg);
-    mbedtls_entropy_free(&entropy);
+    rng_free(&rng);
 #endif
     return rc;
 }
@@ -441,70 +401,13 @@ err_free_ctx_out:
 int bpak_mbed_parse_public_key(const uint8_t *buffer, size_t length,
                                struct bpak_key **output)
 {
-    int rc = BPAK_OK;
-    struct bpak_key *key = NULL;
-    uint8_t key_buffer[1024];
-    enum bpak_key_kind kind;
+    int rc = -BPAK_KEY_DECODE;
     mbedtls_pk_context ctx;
     mbedtls_pk_init(&ctx);
 
-    rc = mbedtls_pk_parse_public_key(&ctx, buffer, length);
+    if (mbedtls_pk_parse_public_key(&ctx, buffer, length) == 0)
+        rc = key_from_pk(&ctx, false, -BPAK_KEY_DECODE, output);
 
-    if (rc != 0) {
-        rc = -BPAK_KEY_DECODE;
-        goto err_free_ctx_out;
-    }
-
-    if (strcmp(mbedtls_pk_get_name(&ctx), "EC") == 0) {
-        switch (mbedtls_pk_get_bitlen(&ctx)) {
-        case 256:
-            kind = BPAK_KEY_PUB_PRIME256v1;
-            break;
-        case 384:
-            kind = BPAK_KEY_PUB_SECP384r1;
-            break;
-        case 521:
-            kind = BPAK_KEY_PUB_SECP521r1;
-            break;
-        default:
-            rc = -BPAK_KEY_DECODE;
-            goto err_free_ctx_out;
-        };
-    } else if (strcmp(mbedtls_pk_get_name(&ctx), "RSA") == 0) {
-        if (mbedtls_pk_get_bitlen(&ctx) == 4096) {
-            kind = BPAK_KEY_PUB_RSA4096;
-        } else {
-            rc = -BPAK_KEY_DECODE;
-            goto err_free_ctx_out;
-        }
-    } else {
-        rc = -BPAK_KEY_DECODE;
-        goto err_free_ctx_out;
-    }
-
-    int len = mbedtls_pk_write_pubkey_der(&ctx, key_buffer, sizeof(key_buffer));
-
-    if (len < 0) {
-        rc = -BPAK_KEY_DECODE;
-        (*output) = NULL;
-        goto err_free_ctx_out;
-    }
-
-    key = bpak_calloc(1, sizeof(struct bpak_key) + len);
-
-    if (key == NULL) {
-        rc = -BPAK_FAILED;
-        goto err_free_ctx_out;
-    }
-
-    memcpy(key->data, &key_buffer[sizeof(key_buffer) - len], len);
-
-    key->size = (uint16_t)len;
-    key->kind = kind;
-
-    (*output) = key;
-
-err_free_ctx_out:
     mbedtls_pk_free(&ctx);
     return rc;
 }
