@@ -2,10 +2,14 @@ include(GNUInstallDirs)
 
 # @ONLY "Restrict variable replacement to references of the form @VAR@"
 configure_file(${PROJECT_NAME}.pc.in ${PROJECT_NAME}.pc @ONLY)
+
+# Generated public headers, next to the public headers in include/bpak/ when
+# installed
+set(LIB_GENERATED_INCLUDE_DIR ${${PROJECT_NAME}_BINARY_DIR}/include)
 configure_file(build_config.h.in
-        ${${PROJECT_NAME}_BINARY_DIR}/lib/bpak/build_config.h @ONLY)
+        ${LIB_GENERATED_INCLUDE_DIR}/bpak/build_config.h @ONLY)
 configure_file(version.h.in
-        ${${PROJECT_NAME}_BINARY_DIR}/lib/bpak/version.h @ONLY)
+        ${LIB_GENERATED_INCLUDE_DIR}/bpak/version.h @ONLY)
 
 set(LIB_SRC_FILES
     bpak.c
@@ -21,8 +25,8 @@ file(GLOB_RECURSE LIB_PUBLIC_HEADERS "${CMAKE_SOURCE_DIR}/include/bpak/*.h")
 
 set(LIB_PUBLIC_HEADERS
     ${LIB_PUBLIC_HEADERS}
-    ${${PROJECT_NAME}_BINARY_DIR}/lib/bpak/build_config.h
-    ${${PROJECT_NAME}_BINARY_DIR}/lib/bpak/version.h
+    ${LIB_GENERATED_INCLUDE_DIR}/bpak/build_config.h
+    ${LIB_GENERATED_INCLUDE_DIR}/bpak/version.h
 )
 if (NOT BPAK_BUILD_MINIMAL)
     set(LIB_SRC_FILES
@@ -65,13 +69,19 @@ set_target_properties(${PROJECT_NAME} PROPERTIES VERSION ${PROJECT_VERSION})
 set_target_properties(${PROJECT_NAME} PROPERTIES SOVERSION ${PROJECT_VERSION_MAJOR})
 set_target_properties(${PROJECT_NAME}-static PROPERTIES OUTPUT_NAME ${PROJECT_NAME})
 
-set(LIB_CFLAGS
-    -Wextra -pedantic
-    -I${${PROJECT_NAME}_BINARY_DIR}/lib/
-)
+foreach(target ${PROJECT_NAME} ${PROJECT_NAME}-static)
+    target_include_directories(${target} PUBLIC
+        $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
+        $<BUILD_INTERFACE:${LIB_GENERATED_INCLUDE_DIR}>
+    )
+    target_compile_options(${target} PRIVATE -Wextra -pedantic)
 
-target_compile_options(${PROJECT_NAME} PRIVATE ${LIB_CFLAGS})
-target_compile_options(${PROJECT_NAME}-static PRIVATE ${LIB_CFLAGS})
+    # Coverage of the library when the tests run, see docs/development.md
+    if (BPAK_BUILD_TESTS)
+        target_compile_options(${target} PRIVATE -g -fprofile-arcs -ftest-coverage)
+        target_link_libraries(${target} gcov)
+    endif()
+endforeach()
 
 set(LIB_LIBS)
 

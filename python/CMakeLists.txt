@@ -19,11 +19,6 @@ python_add_library(${PROJECT_NAME}-python-wrapper MODULE WITH_SOABI
     part.c
 )
 
-target_include_directories(${PROJECT_NAME}-python-wrapper PRIVATE
-    ${CMAKE_SOURCE_DIR}/include
-    ${${PROJECT_NAME}_BINARY_DIR}/lib
-)
-
 target_compile_options(${PROJECT_NAME}-python-wrapper PRIVATE -Wextra -pedantic)
 
 set_target_properties(${PROJECT_NAME}-python-wrapper PROPERTIES

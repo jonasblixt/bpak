@@ -28,7 +28,6 @@ add_compile_options(-Wall)
 if (BPAK_WERROR)
     add_compile_options(-Werror)
 endif()
-include_directories(include/)
 
 if (NOT BPAK_BUILD_MINIMAL)
     set(BPAK_CONFIG_MERKLE 1)
@@ -42,16 +41,14 @@ else()
     set(BPAK_CONFIG_MERKLE 0)
 endif()
 
-if (BPAK_BUILD_TESTS)
-    add_subdirectory("python")
-    add_subdirectory("test")
-    add_compile_options(-g -fprofile-arcs -ftest-coverage)
-    link_libraries(gcov)
-endif()
-
 add_subdirectory("lib")
 
-# Python package builds with scikit-build-core, see pyproject.toml
-if (SKBUILD AND NOT BPAK_BUILD_TESTS)
+# Test builds and python package builds with scikit-build-core, see
+# pyproject.toml, build the C extension
+if (BPAK_BUILD_TESTS OR SKBUILD)
     add_subdirectory("python")
+endif()
+
+if (BPAK_BUILD_TESTS)
+    add_subdirectory("test")
 endif()

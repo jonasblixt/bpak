@@ -139,7 +139,7 @@ def test_generate_keystore(bpak, bpak_build_dir, keystore, tmp_path):
     cc = shlex.split(os.environ.get("CC", "cc"))
     subprocess.run([*cc, "-Wall", "-Werror",
                     "-I", str(SOURCE_DIR / "include"),
-                    "-I", str(bpak_build_dir / "lib"),
+                    "-I", str(bpak_build_dir / "include"),
                     "-o", str(program), str(source), str(main)],
                    check=True)
 

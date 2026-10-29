@@ -31,7 +31,10 @@ flowchart TD
 The lower layers do not depend on files or on a particular crypto library.
 A bootloader typically uses the core and the verify and transport layers
 with I/O callbacks and its own hash and signature implementation, while the
-`pkg` layer works on files and is used by tools.
+`pkg` layer works on files and is used by tools. A bootloader compiles the
+sources it needs, see
+[Building the library into another project](#building-the-library-into-another-project).
+The CMake option `BPAK_BUILD_MINIMAL` builds only the core.
 
 | Header       | Contents                                                                 |
 |--------------|--------------------------------------------------------------------------|
