@@ -255,6 +255,16 @@ tests guard this:
 - `test/abi/libbpak.symbols` lists the functions that the shared library
   exports, `test/abi/test_symbols.py` checks that it still exports them and
   nothing that is not listed, and that the SONAME stays `libbpak.so.0`.
+- `test/abi/abidiff.sh` builds the last release and the working tree and
+  compares the ABI of the shared libraries with `abidiff` from libabigail,
+  including the function signatures and all types they use. It fails for
+  everything but added functions. CI runs it, locally it needs
+  `abigail-tools`:
+
+  ```
+  $ test/abi/abidiff.sh          # the last release tag before HEAD
+  $ test/abi/abidiff.sh v0.9.3
+  ```
 - `test/golden` holds golden sample packages. Every directory holds
   packages, patches and a keystore that were created by a release, together
   with the input files and the commands that created them. All later

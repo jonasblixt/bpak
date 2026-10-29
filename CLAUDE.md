@@ -75,7 +75,9 @@ must work with old decoders. The options of the `bpak` tool must stay
 compatible, `test/golden` replays recorded command lines.
 `test/unit/test_abi.c` checks struct layouts, enums and ids, `test/golden/`
 checks committed packages from earlier releases and `test/abi/` the exported
-symbols (`libbpak.symbols`). Never update expected values or golden sets to
+symbols (`libbpak.symbols`) and the SONAME, which stays `libbpak.so.0`.
+`test/abi/abidiff.sh` compares the full ABI with the last release (CI, needs
+abigail-tools). Never update expected values or golden sets to
 make these tests pass. Add a new golden set with `test/golden/generate.py`
 when a release extends the format, and add new exported functions to
 `test/abi/libbpak.symbols`.

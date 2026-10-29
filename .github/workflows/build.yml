@@ -93,6 +93,21 @@ jobs:
             $GITHUB_WORKSPACE/test/data/secp256r1-pub-key.der
         done
 
+  abi:
+    # Compare the ABI of the library with the last release
+    runs-on: ubuntu-24.04
+    steps:
+    - uses: actions/checkout@v5
+      with:
+        fetch-depth: 0
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y --no-install-recommends \
+          abigail-tools libmbedtls-dev liblzma-dev
+    - name: Compare the ABI
+      run: test/abi/abidiff.sh
+
   build-windows:
     runs-on: windows-latest
     defaults:
