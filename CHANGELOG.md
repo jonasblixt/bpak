@@ -68,6 +68,10 @@ tool. The package format and the library ABI stay compatible, see
   buffer, left the buffer uninitialized when it was too small for a hash and
   read the values of known meta data regardless of their size. `bpak show`
   prints `<invalid>` for values that are too small for their type.
+- Transport decoding compares the merkle root hash of a generated hash tree
+  with `merkle-root-hash` and fails with `BPAK_BAD_ROOT_HASH`, and the sizes
+  of the merkle salt and root hash are checked. `bpak transport --decode`
+  printed the offset of the merkle tree.
 - Python package: crashes when opening a file that is not a package, when
   using a closed package and after the log callback was released, reference
   leaks in `Package.parts` and `Package.meta`, meta data larger than the

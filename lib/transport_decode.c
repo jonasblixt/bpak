@@ -98,6 +98,10 @@ static ssize_t merkle_generate(struct bpak_transport_decode *ctx)
                     fs_id);
         return rc;
     }
+
+    if (meta->size != BPAK_MERKLE_HASH_BYTES)
+        return -BPAK_SIZE_ERROR;
+
     salt = bpak_get_meta_ptr(ctx->patch_header, meta, uint8_t);
 
     /* Get filesystem header */
@@ -123,12 +127,12 @@ static ssize_t merkle_generate(struct bpak_transport_decode *ctx)
     off_t output_offset = bpak_part_offset(ctx->patch_header, ctx->part) -
                           sizeof(struct bpak_header) + ctx->output_offset;
 
-    bpak_printf(0, "Merkle tree at offset: %i\n", output_offset);
+    bpak_printf(2, "Merkle tree at offset: %lld\n", (long long)output_offset);
 
     rc = bpak_merkle_init(&ctx->decoders.merkle,
                           bpak_part_size(fs_part),
                           salt,
-                          32,
+                          BPAK_MERKLE_HASH_BYTES,
                           ctx->write_output,
                           ctx->read_output,
                           output_offset,
@@ -157,10 +161,11 @@ static ssize_t merkle_generate(struct bpak_transport_decode *ctx)
 
         if (chunk_length != bytes_to_read) {
             bpak_printf(0,
-                        "Error: Wanted to read %zu at offset %i but got %i\n",
+                        "Error: Wanted to read %zu at offset %lld but got "
+                        "%zd\n",
                         bytes_to_read,
-                        ctx->output_offset + data_offset,
-                        chunk_length);
+                        (long long)data_offset,
+                        (ssize_t)chunk_length);
             return -BPAK_READ_ERROR;
         }
 
@@ -185,7 +190,26 @@ static ssize_t merkle_generate(struct bpak_transport_decode *ctx)
         return rc;
     }
 
-    // TODO: Check roothash?
+    /* The signed root hash, the header is verified after decoding but a
+     * mismatch is found here already */
+    rc = bpak_get_meta(ctx->patch_header,
+                       BPAK_ID_MERKLE_ROOT_HASH,
+                       fs_id,
+                       &meta);
+
+    if (rc != BPAK_OK)
+        return -BPAK_MISSING_META_DATA;
+
+    if (meta->size != BPAK_MERKLE_HASH_BYTES)
+        return -BPAK_SIZE_ERROR;
+
+    if (memcmp(roothash,
+               bpak_get_meta_ptr(ctx->patch_header, meta, uint8_t),
+               BPAK_MERKLE_HASH_BYTES) != 0) {
+        bpak_printf(0, "Error: The merkle root hash does not match\n");
+        return -BPAK_BAD_ROOT_HASH;
+    }
+
     return bpak_merkle_get_size(&ctx->decoders.merkle);
 }
 

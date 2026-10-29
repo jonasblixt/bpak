@@ -79,11 +79,65 @@ static void test_header_hash_buffer_too_small(void **state)
                      -BPAK_SIZE_ERROR);
 }
 
+static ssize_t no_read(off_t offset, uint8_t *buffer, size_t length, void *user)
+{
+    (void)offset;
+    (void)buffer;
+    (void)length;
+    (void)user;
+    fail_msg("parts excluded from the hash are not read");
+    return -BPAK_READ_ERROR;
+}
+
+/* The merkle meta data of a part with sizes 'root_size' and 'salt_size' */
+static int verify_merkle_meta(uint16_t root_size, uint16_t salt_size)
+{
+    struct bpak_header h;
+    struct bpak_part_header *part;
+    struct bpak_meta_header *meta;
+    size_t hash_size = sizeof(h.payload_hash);
+    int rc;
+
+    bpak_init_header(&h);
+    assert_int_equal(bpak_add_part(&h, bpak_id("fs"), &part), BPAK_OK);
+    part->size = 4096;
+    part->flags = BPAK_FLAG_EXCLUDE_FROM_HASH;
+
+    assert_int_equal(
+        bpak_add_meta(&h, BPAK_ID_MERKLE_ROOT_HASH, part->id, root_size, &meta),
+        BPAK_OK);
+    assert_int_equal(
+        bpak_add_meta(&h, BPAK_ID_MERKLE_SALT, part->id, salt_size, &meta),
+        BPAK_OK);
+
+    rc = bpak_verify_compute_payload_hash(&h,
+                                          no_read,
+                                          sizeof(h),
+                                          NULL,
+                                          h.payload_hash,
+                                          &hash_size);
+    assert_int_equal(rc, BPAK_OK);
+
+    return bpak_verify_payload(&h, no_read, sizeof(h), NULL);
+}
+
+static void test_merkle_meta_size(void **state)
+{
+    (void)state;
+
+    assert_int_equal(verify_merkle_meta(8, 32), -BPAK_SIZE_ERROR);
+    assert_int_equal(verify_merkle_meta(32, 8), -BPAK_SIZE_ERROR);
+
+    /* The sizes are right, the hash tree part is missing */
+    assert_int_equal(verify_merkle_meta(32, 32), -BPAK_NOT_FOUND);
+}
+
 int main(void)
 {
     const struct CMUnitTest tests[] = {
         cmocka_unit_test(test_header_hash_coverage),
         cmocka_unit_test(test_header_hash_buffer_too_small),
+        cmocka_unit_test(test_merkle_meta_size),
     };
 
     return cmocka_run_group_tests(tests, NULL, NULL);

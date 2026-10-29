@@ -276,6 +276,10 @@ BPAK_EXPORT int bpak_verify_payload(struct bpak_header *header,
             /* This part does not have a merkle tree, skip to next part */
             continue;
         }
+
+        if (meta->size != BPAK_MERKLE_HASH_BYTES)
+            return -BPAK_SIZE_ERROR;
+
         part_merkle_root_hash = bpak_get_meta_ptr(header, meta, uint8_t);
 
         /* There should also be a salt meta data for this part */
@@ -286,6 +290,10 @@ BPAK_EXPORT int bpak_verify_payload(struct bpak_header *header,
 
         if (rc != BPAK_OK)
             return -BPAK_MISSING_META_DATA;
+
+        if (meta->size != BPAK_MERKLE_HASH_BYTES)
+            return -BPAK_SIZE_ERROR;
+
         part_merkle_salt = bpak_get_meta_ptr(header, meta, uint8_t);
 
         /* Compute the part id for the merkle tree, this is always an

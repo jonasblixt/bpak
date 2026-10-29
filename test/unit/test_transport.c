@@ -237,9 +237,9 @@ static void test_copy_too_much(void **state)
     assert_int_equal(rc, -BPAK_SIZE_ERROR);
 }
 
-static void test_merkle_tree_too_small(void **state)
+/* Generate the hash tree of a 4096 byte part when it is decoded */
+static int decode_merkle(uint64_t tree_size, uint16_t salt_size, bool root_hash)
 {
-    (void)state;
     struct bpak_header h;
     struct bpak_transport_decode ctx;
     uint8_t buffer[BPAK_CHUNK_BUFFER_LENGTH];
@@ -250,21 +250,26 @@ static void test_merkle_tree_too_small(void **state)
 
     init_package(&h);
     fs = add_part(&h, "fs", 4096);
-    tree = add_part(&h, "fs-hash-tree", PART_SIZE);
+    tree = add_part(&h, "fs-hash-tree", tree_size);
     tree->flags = BPAK_FLAG_TRANSPORT;
 
-    rc = bpak_add_meta(&h, BPAK_ID_MERKLE_SALT, fs->id, 32, &meta);
+    rc = bpak_add_meta(&h, BPAK_ID_MERKLE_SALT, fs->id, salt_size, &meta);
     assert_int_equal(rc, BPAK_OK);
+
+    /* A zero root hash, which does not match */
+    if (root_hash) {
+        rc = bpak_add_meta(&h, BPAK_ID_MERKLE_ROOT_HASH, fs->id, 32, &meta);
+        assert_int_equal(rc, BPAK_OK);
+    }
+
     rc = bpak_add_transport_meta(&h,
                                  tree->id,
                                  BPAK_ID_MERKLE_GENERATE,
                                  BPAK_ID_MERKLE_GENERATE);
     assert_int_equal(rc, BPAK_OK);
 
-    /* The computed tree does not fit the tree part */
-    assert_true(bpak_merkle_compute_size(4096) > PART_SIZE);
-    memset(output, 0, sizeof(output));
-    output_limit = HEADER_SIZE + 4096 + PART_SIZE;
+    memset(output, 0x55, sizeof(output));
+    output_limit = HEADER_SIZE + 4096 + tree_size;
 
     rc = bpak_transport_decode_init(&ctx,
                                     buffer,
@@ -281,7 +286,28 @@ static void test_merkle_tree_too_small(void **state)
     assert_int_equal(rc, BPAK_OK);
 
     rc = bpak_transport_decode_finish(&ctx);
-    assert_int_equal(rc, -BPAK_SIZE_ERROR);
+    bpak_transport_decode_free(&ctx);
+    return rc;
+}
+
+static void test_merkle_tree_too_small(void **state)
+{
+    (void)state;
+
+    /* The computed tree does not fit the tree part */
+    assert_true(bpak_merkle_compute_size(4096) > PART_SIZE);
+    assert_int_equal(decode_merkle(PART_SIZE, 32, true), -BPAK_SIZE_ERROR);
+}
+
+static void test_merkle_bad_meta(void **state)
+{
+    (void)state;
+    uint64_t tree_size = bpak_merkle_compute_size(4096);
+
+    assert_int_equal(decode_merkle(tree_size, 16, true), -BPAK_SIZE_ERROR);
+    assert_int_equal(decode_merkle(tree_size, 32, false),
+                     -BPAK_MISSING_META_DATA);
+    assert_int_equal(decode_merkle(tree_size, 32, true), -BPAK_BAD_ROOT_HASH);
 }
 
 int main(void)
@@ -292,6 +318,7 @@ int main(void)
         cmocka_unit_test(test_patch_reads_outside_origin),
         cmocka_unit_test(test_copy_too_much),
         cmocka_unit_test(test_merkle_tree_too_small),
+        cmocka_unit_test(test_merkle_bad_meta),
     };
 
     return cmocka_run_group_tests(tests, NULL, NULL);
