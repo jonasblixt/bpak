@@ -268,8 +268,9 @@ tests guard this:
 - `test/golden` holds golden sample packages. Every directory holds
   packages, patches and a keystore that were created by a release, together
   with the input files and the commands that created them. All later
-  versions must read, verify and decode them, and must create identical
-  packages and patches from the same commands.
+  versions must read, verify and decode them, with the tool and with the
+  python package, and must create identical packages and patches from the
+  same commands.
 
 Never change an expected value or a golden set to make these tests pass.
 When a release adds to the format, for example a new encoder or a new kind of

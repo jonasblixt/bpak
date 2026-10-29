@@ -1,5 +1,7 @@
+import importlib
 import os
 import shutil
+import sys
 from pathlib import Path
 
 import pytest
@@ -52,6 +54,27 @@ def bpak_python_path(pytestconfig) -> list:
 def bpak(bpak_python_path, tmp_path) -> Bpak:
     """Runs the bpak tool inside the test's temporary directory"""
     return Bpak(bpak_python_path, tmp_path)
+
+
+@pytest.fixture(scope="session")
+def pybpak(bpak_python_path):
+    """The bpak python package, from the CMake build or installed"""
+    sys.path[:0] = bpak_python_path
+    module = importlib.import_module("bpak")
+    module.set_log_func(print_log)
+    return module
+
+
+def print_log(level, message):
+    print(f"LOG: {level}, {message}", end="")
+
+
+@pytest.fixture
+def set_log_func(pybpak):
+    """pybpak.set_log_func, restores the default log function after the
+    test"""
+    yield pybpak.set_log_func
+    pybpak.set_log_func(print_log)
 
 
 @pytest.fixture

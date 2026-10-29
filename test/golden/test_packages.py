@@ -148,3 +148,58 @@ def test_encode_patch(bpak, copy, golden_set, name, info):
          "--output", output)
 
     assert output.read_bytes() == (golden_set / name).read_bytes()
+
+
+# The python package uses the library directly instead of through the tool
+
+@pytest.mark.parametrize("golden_set, name, info",
+                         items("packages") + items("patches"))
+def test_python_read(pybpak, copy, golden_set, name, info):
+    with pybpak.Package(copy(golden_set, name), "rb") as pkg:
+        parts = [{"id": f"{part.id:#010x}",
+                  "size": part.installed_size,
+                  "flags": part.flags,
+                  "sha256": hashlib.sha256(part.read_data()).hexdigest()}
+                 for part in pkg.parts]
+        meta = [{"id": f"{meta.id:#010x}",
+                 "part_id_ref": f"{meta.part_id_ref:#010x}",
+                 "data": meta.raw_data.hex()}
+                for meta in pkg.meta]
+
+    assert parts == info["parts"]
+    assert meta == info["meta"]
+
+
+@pytest.mark.parametrize("golden_set, name, info", items("packages"))
+def test_python_verify(pybpak, copy, golden_set, name, info):
+    pkg_path = copy(golden_set, name)
+    keystore = copy(golden_set, info["keystore"])
+
+    with pybpak.Package(pkg_path, "rb") as pkg:
+        assert pkg.verify(golden_set / "inputs" / info["verify_key"])
+        assert pkg.verify(keystore_path=keystore)
+
+
+@pytest.mark.parametrize("golden_set, name, info", items("patches"))
+def test_python_decode_patch(pybpak, copy, tmp_path, golden_set, name, info):
+    output = tmp_path / "output.bpak"
+
+    with pybpak.Package(copy(golden_set, name), "rb+") as patch, \
+            pybpak.Package(copy(golden_set, info["origin"]), "rb+") as origin, \
+            pybpak.Package(output, "wb+") as output_pkg:
+        pybpak.transport_decode(patch, output_pkg, origin)
+
+    assert output.read_bytes() == (golden_set / info["target"]).read_bytes()
+
+
+@pytest.mark.parametrize("golden_set, name, info",
+                         items("patches", only_reproducible=True))
+def test_python_encode_patch(pybpak, copy, tmp_path, golden_set, name, info):
+    output = tmp_path / "output.bpak"
+
+    with pybpak.Package(copy(golden_set, info["target"]), "rb+") as target, \
+            pybpak.Package(copy(golden_set, info["origin"]), "rb+") as origin, \
+            pybpak.Package(output, "wb+") as output_pkg:
+        pybpak.transport_encode(target, output_pkg, origin)
+
+    assert output.read_bytes() == (golden_set / name).read_bytes()
