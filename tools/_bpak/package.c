@@ -343,33 +343,16 @@ static PyObject *package_add_meta(PyObject *self, PyObject *args, PyObject *kwds
         return PyErr_Format(PyExc_TypeError, "must specify either initial data or size");
     }
 
+    PyObject *bytes = NULL;
     Py_ssize_t new_size = 0;
-    char *new_data = NULL;
-    bool was_unicode = false;
 
     if (data) {
-        if (PyUnicode_Check(data)) {
-            PyObject *bytes = PyUnicode_AsASCIIString(data);
-            if (!bytes) {
-                return NULL;
-            }
-            data = bytes;
-            was_unicode = true;
-        }
-
-        if (PyBytes_Check(data)) {
-            if (PyBytes_AsStringAndSize(data, &new_data, &new_size) < 0) {
-                return NULL;
-            }
-        } else {
-            PyErr_SetString(PyExc_TypeError, "type mismatch, data must be bytes or str");
+        bytes = meta_data_bytes(data, "data");
+        if (bytes == NULL) {
             return NULL;
         }
 
-        if (was_unicode) {
-            new_size++;
-        }
-
+        new_size = PyBytes_GET_SIZE(bytes);
         if (size < 0) {
             size = new_size;
         }
@@ -398,25 +381,19 @@ static PyObject *package_add_meta(PyObject *self, PyObject *args, PyObject *kwds
     uint8_t *meta_ptr = bpak_get_meta_ptr(h, meta, uint8_t);
 
     if (to_copy > 0) {
-        memcpy(meta_ptr, new_data, to_copy);
+        memcpy(meta_ptr, PyBytes_AS_STRING(bytes), to_copy);
     }
 
-    if (was_unicode) {
-        Py_DECREF(data);
-        was_unicode = false;
-    }
+    Py_CLEAR(bytes);
 
     if (package_write_header_or_raise(package, PyExc_OSError) < 0) {
-        goto err_out;
+        return NULL;
     }
 
-    return meta_allocate(package, meta->id, meta->part_id_ref);
+    return meta_allocate(package, meta_id, part_ref);
 
 err_out:
-    if (was_unicode) {
-        Py_DECREF(data);
-    }
-
+    Py_XDECREF(bytes);
     return NULL;
 }
 

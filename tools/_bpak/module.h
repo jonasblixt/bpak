@@ -44,6 +44,11 @@ struct bpak_meta_header *package_find_meta(BPAKPackage *package,
                                            bpak_id_t meta_id,
                                            bpak_id_t part_ref);
 
+/* The meta data of 'value', the new value of 'name', as a new reference to a
+ * bytes object. str values are ASCII encoded and include a terminating NUL.
+ * Raises TypeError for other types. */
+PyObject *meta_data_bytes(PyObject *value, const char *name);
+
 PyObject *part_allocate(BPAKPackage *package, bpak_id_t part_id);
 PyObject *meta_allocate(BPAKPackage *package, bpak_id_t meta_id, bpak_id_t part_ref);
 

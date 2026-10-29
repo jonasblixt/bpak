@@ -48,6 +48,33 @@ static struct bpak_meta_header *meta_header(BPAKMeta *meta)
     return package_find_meta(meta->package, meta->meta_id, meta->part_ref);
 }
 
+PyObject *meta_data_bytes(PyObject *value, const char *name)
+{
+    if (PyUnicode_Check(value)) {
+        PyObject *ascii = PyUnicode_AsASCIIString(value);
+        if (ascii == NULL) {
+            return NULL;
+        }
+
+        /* Include the terminating NUL of the bytes object */
+        PyObject *result = PyBytes_FromStringAndSize(PyBytes_AS_STRING(ascii),
+                                                     PyBytes_GET_SIZE(ascii) + 1);
+        Py_DECREF(ascii);
+        return result;
+    }
+
+    if (PyBytes_Check(value)) {
+        Py_INCREF(value);
+        return value;
+    }
+
+    PyErr_Format(PyExc_TypeError,
+                 "%s must be bytes or str, not %.200s",
+                 name,
+                 Py_TYPE(value)->tp_name);
+    return NULL;
+}
+
 static void meta_dealloc(BPAKMeta *self)
 {
     if (self != NULL) {
@@ -137,32 +164,13 @@ static int meta_set_rawdata(PyObject *self, PyObject *value, void* closure)
         return -1;
     }
 
-    /* Support setting either as raw bytes or as string */
-    Py_ssize_t  new_size = 0;
-    char *new_data = NULL;
-    bool was_unicode = false;
-
-    if (PyUnicode_Check(value)) {
-        PyObject *bytes = PyUnicode_AsASCIIString(value);
-        if (!bytes) {
-            return -1;
-        }
-        value = bytes;
-        was_unicode = true;
+    PyObject *bytes = meta_data_bytes(value, "raw_data");
+    if (bytes == NULL) {
+        return -1;
     }
 
-    if (PyBytes_Check(value)) {
-        if (PyBytes_AsStringAndSize(value, &new_data, &new_size) < 0) {
-            return -1;
-        }
-    } else {
-        PyErr_SetString(PyExc_TypeError, "type mismatch");
-	    return -1;
-    }
-
-    if (was_unicode) {
-        new_size++;
-    }
+    const char *new_data = PyBytes_AS_STRING(bytes);
+    Py_ssize_t new_size = PyBytes_GET_SIZE(bytes);
 
     if (new_size > BPAK_METADATA_BYTES) {
         bpak_raise(-BPAK_SIZE_ERROR,
@@ -226,10 +234,7 @@ static int meta_set_rawdata(PyObject *self, PyObject *value, void* closure)
     rc = package_write_header_or_raise(meta->package, PyExc_OSError);
 
 return_out:
-    if (was_unicode) {
-        Py_DECREF(value);
-    }
-
+    Py_DECREF(bytes);
     return rc;
 }
 
