@@ -220,16 +220,10 @@ static int meta_set_rawdata(PyObject *self, PyObject *value, void* closure)
         meta_data = bpak_get_meta_ptr(h, m, uint8_t);
     }
 
-    rc = 0;
     memcpy(meta_data, new_data, new_size);
     memset(meta_data + new_size, 0, m->size - new_size);
 
-    rc = package_write_header(meta->package, false);
-    if (rc != BPAK_OK) {
-        PyErr_Format(PyExc_IOError, "could not write header: %s",
-                bpak_error_string(rc));
-        rc = -1;
-    }
+    rc = package_write_header_or_raise(meta->package, PyExc_OSError);
 
 return_out:
     if (was_unicode) {
@@ -313,7 +307,6 @@ static PyObject *meta_delete(PyObject *self, PyObject *Py_UNUSED(ignored))
     BPAKMeta *meta = (BPAKMeta *)self;
     struct bpak_header *h = bpak_pkg_header(&meta->package->pkg);
     struct bpak_meta_header *m;
-    int rc = 0;
 
     if (package_check_open(meta->package) < 0) {
         return NULL;
@@ -326,10 +319,8 @@ static PyObject *meta_delete(PyObject *self, PyObject *Py_UNUSED(ignored))
 
     bpak_del_meta(h, m);
 
-    rc = package_write_header(meta->package, false);
-    if (rc != BPAK_OK) {
-        return PyErr_Format(PyExc_IOError, "could not write header: %s",
-            bpak_error_string(rc));
+    if (package_write_header_or_raise(meta->package, PyExc_OSError) < 0) {
+        return NULL;
     }
 
     Py_RETURN_NONE;

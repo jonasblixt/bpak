@@ -30,7 +30,9 @@ extern PyTypeObject BPAKMetaType;
 /* Base class of all bpak exceptions, 'bpak.Error' */
 extern PyObject *BPAKPackageError;
 
-int package_write_header(BPAKPackage *package, bool update_hash);
+/* Write the header to the file. Raises 'exc', or the bpak exception of the
+ * error if 'exc' is NULL, and returns -1 when it fails. */
+int package_write_header_or_raise(BPAKPackage *package, PyObject *exc);
 
 /* Raise ValueError and return -1 if the package is closed */
 int package_check_open(BPAKPackage *package);

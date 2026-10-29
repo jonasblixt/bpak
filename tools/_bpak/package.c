@@ -10,21 +10,24 @@
 
 #include "module.h"
 
-int package_write_header(BPAKPackage *package, bool update_hash)
+int package_write_header_or_raise(BPAKPackage *package, PyObject *exc)
 {
-    int rc = 0;
-
-    if (update_hash) {
-        rc = bpak_pkg_update_hash(&package->pkg, NULL, NULL);
-        if (rc < 0) {
-            return rc;
-        }
-    }
+    int rc;
 
     rc = bpak_pkg_write_header(&package->pkg);
     fflush(package->pkg.fp);
 
-    return rc;
+    if (rc == BPAK_OK) {
+        return 0;
+    }
+
+    if (exc == NULL) {
+        bpak_raise(rc, "could not write header");
+    } else {
+        PyErr_Format(exc, "could not write header: %s", bpak_error_string(rc));
+    }
+
+    return -1;
 }
 
 int package_check_open(BPAKPackage *package)
@@ -403,10 +406,7 @@ static PyObject *package_add_meta(PyObject *self, PyObject *args, PyObject *kwds
         was_unicode = false;
     }
 
-    rc = package_write_header(package, false);
-    if (rc != BPAK_OK) {
-        PyErr_Format(PyExc_IOError, "could not write header: %s",
-                bpak_error_string(rc));
+    if (package_write_header_or_raise(package, PyExc_OSError) < 0) {
         goto err_out;
     }
 
@@ -492,15 +492,12 @@ static PyObject *package_update_hash(PyObject *self, PyObject *Py_UNUSED(args))
 static PyObject *package_write_header_method(PyObject *self,
                                              PyObject *Py_UNUSED(args))
 {
-    int rc;
-
     if (package_check_open((BPAKPackage *)self) < 0) {
         return NULL;
     }
 
-    rc = package_write_header((BPAKPackage *)self, false);
-    if (rc != BPAK_OK) {
-        return bpak_raise(rc, "could not write header");
+    if (package_write_header_or_raise((BPAKPackage *)self, NULL) < 0) {
+        return NULL;
     }
 
     Py_RETURN_NONE;
@@ -539,9 +536,8 @@ static PyObject *package_add_transport_meta(PyObject *self, PyObject *args,
         return bpak_raise(rc, "could not add transport meta data");
     }
 
-    rc = package_write_header(package, false);
-    if (rc != BPAK_OK) {
-        return bpak_raise(rc, "could not write header");
+    if (package_write_header_or_raise(package, NULL) < 0) {
+        return NULL;
     }
 
     Py_RETURN_NONE;
@@ -776,7 +772,6 @@ static int package_set_header_field(PyObject *self, PyObject *value,
     BPAKPackage *package = (BPAKPackage *)self;
     uint8_t *data = (uint8_t *)bpak_pkg_header(&package->pkg) + field->offset;
     unsigned long long new_value;
-    int rc;
 
     if (package_check_open(package) < 0) {
         return -1;
@@ -795,15 +790,7 @@ static int package_set_header_field(PyObject *self, PyObject *value,
         memcpy(data, &value32, sizeof(value32));
     }
 
-    rc = package_write_header(package, false);
-
-    if (rc != BPAK_OK) {
-        PyErr_Format(PyExc_IOError, "could not write header: %s",
-                bpak_error_string(rc));
-        return -1;
-    }
-
-    return 0;
+    return package_write_header_or_raise(package, PyExc_OSError);
 }
 
 static PyObject *package_get_signature(PyObject *self, void *closure)
