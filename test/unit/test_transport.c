@@ -63,44 +63,8 @@ static ssize_t read_origin(off_t offset, uint8_t *buffer, size_t length,
 
 static void init_package(struct bpak_header *h)
 {
-    struct bpak_meta_header *meta;
-    int rc;
-
     bpak_init_header(h);
-    rc = bpak_add_meta(h, BPAK_ID_BPAK_PACKAGE, 0, sizeof(uuid), &meta);
-    assert_int_equal(rc, BPAK_OK);
-    memcpy(bpak_get_meta_ptr(h, meta, uint8_t), uuid, sizeof(uuid));
-}
-
-static struct bpak_part_header *add_part(struct bpak_header *h,
-                                         const char *name, uint64_t size)
-{
-    struct bpak_part_header *part;
-    int rc;
-
-    rc = bpak_add_part(h, bpak_id(name), &part);
-    assert_int_equal(rc, BPAK_OK);
-    part->size = size;
-    return part;
-}
-
-/* bspatch control data: sign and magnitude, little endian */
-static size_t put_ctrl(uint8_t *buf, int64_t diff, int64_t extra,
-                       int64_t adjust)
-{
-    const int64_t values[] = { diff, extra, adjust };
-
-    for (int v = 0; v < 3; v++) {
-        uint64_t magnitude = values[v] < 0 ? -(uint64_t)values[v] : values[v];
-
-        for (int i = 0; i < 8; i++)
-            buf[v * 8 + i] = (magnitude >> (8 * i)) & 0xff;
-
-        if (values[v] < 0)
-            buf[v * 8 + 7] |= 0x80;
-    }
-
-    return 24;
+    test_add_meta_value(h, BPAK_ID_BPAK_PACKAGE, 0, uuid, sizeof(uuid));
 }
 
 /* Decode a one part patch of 'patch_length' bytes against an origin part of
@@ -116,10 +80,10 @@ static int decode_patch_with(uint32_t decoder_id, uint8_t *patch,
     int rc;
 
     init_package(&origin_header);
-    add_part(&origin_header, "fs", PART_SIZE);
+    test_add_part_with_size(&origin_header, "fs", PART_SIZE);
 
     init_package(&patch_header);
-    part = add_part(&patch_header, "fs", part_size);
+    part = test_add_part_with_size(&patch_header, "fs", part_size);
     part->flags = BPAK_FLAG_TRANSPORT;
     part->transport_size = patch_length;
     rc = bpak_add_transport_meta(&patch_header,
@@ -192,7 +156,7 @@ static void test_patch(void **state)
 {
     (void)state;
     uint8_t patch[24 + PART_SIZE] = { 0 };
-    size_t length = put_ctrl(patch, PART_SIZE, 0, 0);
+    size_t length = test_put_ctrl_triple(patch, PART_SIZE, 0, 0);
 
     /* Zero diff bytes, the output is the origin part */
     assert_int_equal(decode_patch(patch, length + PART_SIZE, PART_SIZE),
@@ -204,7 +168,7 @@ static void test_patch_writes_outside_part(void **state)
 {
     (void)state;
     uint8_t patch[24 + 2 * PART_SIZE] = { 0 };
-    size_t length = put_ctrl(patch, 0, 2 * PART_SIZE, 0);
+    size_t length = test_put_ctrl_triple(patch, 0, 2 * PART_SIZE, 0);
 
     assert_int_equal(decode_patch(patch, length + 2 * PART_SIZE, PART_SIZE),
                      -BPAK_PATCH_WRITE_ERROR);
@@ -214,15 +178,15 @@ static void test_patch_reads_outside_origin(void **state)
 {
     (void)state;
     uint8_t patch[24 + 2 * PART_SIZE] = { 0 };
-    size_t length = put_ctrl(patch, 2 * PART_SIZE, 0, 0);
+    size_t length = test_put_ctrl_triple(patch, 2 * PART_SIZE, 0, 0);
 
     /* The output part is large enough, the origin part is not */
     assert_int_equal(decode_patch(patch, length + 2 * PART_SIZE, 2 * PART_SIZE),
                      -BPAK_PATCH_READ_ORIGIN_ERROR);
 
     /* Seek past the end of the origin part */
-    length = put_ctrl(patch, 0, 0, PART_SIZE);
-    length += put_ctrl(&patch[length], 1, 0, 0);
+    length = test_put_ctrl_triple(patch, 0, 0, PART_SIZE);
+    length += test_put_ctrl_triple(&patch[length], 1, 0, 0);
     assert_int_equal(decode_patch(patch, length + 1, PART_SIZE),
                      -BPAK_PATCH_READ_ORIGIN_ERROR);
 }
@@ -238,7 +202,7 @@ static void test_copy_too_much(void **state)
     int rc;
 
     init_package(&h);
-    part = add_part(&h, "fs", PART_SIZE);
+    part = test_add_part_with_size(&h, "fs", PART_SIZE);
     output_limit = HEADER_SIZE + PART_SIZE;
 
     rc = bpak_transport_decode_init(&ctx,
@@ -274,8 +238,8 @@ static int decode_merkle(uint64_t tree_size, uint16_t salt_size, bool root_hash)
     int rc;
 
     init_package(&h);
-    fs = add_part(&h, "fs", 4096);
-    tree = add_part(&h, "fs-hash-tree", tree_size);
+    fs = test_add_part_with_size(&h, "fs", 4096);
+    tree = test_add_part_with_size(&h, "fs-hash-tree", tree_size);
     tree->flags = BPAK_FLAG_TRANSPORT;
 
     rc = bpak_add_meta(&h, BPAK_ID_MERKLE_SALT, fs->id, salt_size, &meta);

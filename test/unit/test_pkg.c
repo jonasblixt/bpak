@@ -52,66 +52,32 @@ static void test_verify_signature_size(void **state)
     free(key);
 }
 
-static unsigned int tagged_allocations;
-
-/* An allocator that tags its allocations, freeing anything else fails */
-static void *tagged_calloc(size_t nmemb, size_t size)
+/* Create an empty package in a temporary file, returns its path */
+static char *create_package(struct bpak_package *pkg)
 {
-    uint32_t *p = calloc(1, nmemb * size + 16);
-
-    assert_non_null(p);
-    *p = 0x62706b61u;
-    tagged_allocations++;
-    return (uint8_t *)p + 16;
-}
-
-static void tagged_free(void *ptr)
-{
-    if (ptr == NULL)
-        return;
-
-    uint32_t *p = (uint32_t *)((uint8_t *)ptr - 16);
-
-    assert_int_equal(*p, 0x62706b61u);
-    tagged_allocations--;
-    *p = 0;
-    free(p);
-}
-
-/* Create an empty package in a temporary file */
-static void create_package(struct bpak_package *pkg, char *path)
-{
-    int fd = mkstemp(path);
+    char *path = test_temp_file(0);
     int rc;
-
-    assert_true(fd >= 0);
-    close(fd);
 
     rc = bpak_pkg_open(pkg, path, "r+b");
     assert_int_equal(rc, BPAK_OK);
     assert_ptr_equal(pkg->filename, path);
+    return path;
 }
 
 static void test_add_key_allocator(void **state)
 {
     (void)state;
     struct bpak_package pkg;
-    char path[] = "/tmp/bpak-test-XXXXXX";
+    char *path = create_package(&pkg);
     int rc;
 
-    create_package(&pkg, path);
-
-    tagged_allocations = 0;
-    assert_int_equal(bpak_set_calloc_free(tagged_calloc, tagged_free), BPAK_OK);
-
+    test_tagged_allocator_begin();
     rc = bpak_pkg_add_key(&pkg, TEST_DATA("secp256r1-pub-key.der"), "key", 0);
-
-    assert_int_equal(bpak_set_calloc_free(calloc, free), BPAK_OK);
+    assert_int_equal(test_tagged_allocator_end(), 0);
     assert_int_equal(rc, BPAK_OK);
-    assert_int_equal(tagged_allocations, 0);
 
     bpak_pkg_close(&pkg);
-    unlink(path);
+    test_remove(path);
 }
 
 static off_t file_size(const char *path)
@@ -122,31 +88,16 @@ static off_t file_size(const char *path)
     return statbuf.st_size;
 }
 
-/* Write 'size' bytes to a temporary file */
-static void create_file(char *path, size_t size)
-{
-    int fd = mkstemp(path);
-
-    assert_true(fd >= 0);
-    for (size_t i = 0; i < size; i++)
-        assert_int_equal(write(fd, "x", 1), 1);
-    close(fd);
-}
-
 /* A failed add leaves the package as it was, in memory and in the file */
 static void test_add_file_failure(void **state)
 {
     (void)state;
     struct bpak_package pkg;
     struct bpak_header before;
-    char path[] = "/tmp/bpak-test-XXXXXX";
-    char data_path[] = "/tmp/bpak-test-XXXXXX";
-    char dir_path[] = "/tmp/bpak-test-XXXXXX";
+    char *path = create_package(&pkg);
+    char *data_path = test_temp_file(1000);
+    char *dir_path = test_temp_dir();
     int rc;
-
-    create_package(&pkg, path);
-    create_file(data_path, 1000);
-    assert_non_null(mkdtemp(dir_path));
 
     rc = bpak_pkg_add_file(&pkg, data_path, "a", 0);
     assert_int_equal(rc, BPAK_OK);
@@ -176,9 +127,9 @@ static void test_add_file_failure(void **state)
     assert_memory_equal(&pkg.header, &before, sizeof(before));
     bpak_pkg_close(&pkg);
 
-    unlink(path);
-    unlink(data_path);
-    rmdir(dir_path);
+    test_remove(path);
+    test_remove(data_path);
+    test_remove(dir_path);
 }
 
 /* Parts added after a transport encoded part are stored after its transport
@@ -189,13 +140,10 @@ static void test_add_file_after_transport_part(void **state)
     struct bpak_package pkg;
     struct bpak_part_header *a;
     struct bpak_part_header *b;
-    char path[] = "/tmp/bpak-test-XXXXXX";
-    char data_path[] = "/tmp/bpak-test-XXXXXX";
+    char *path = create_package(&pkg);
     uint8_t data[1000];
+    char *data_path = test_temp_file(sizeof(data));
     int rc;
-
-    create_package(&pkg, path);
-    create_file(data_path, sizeof(data));
 
     rc = bpak_pkg_add_file(&pkg, data_path, "a", 0);
     assert_int_equal(rc, BPAK_OK);
@@ -225,24 +173,24 @@ static void test_add_file_after_transport_part(void **state)
         assert_int_equal(data[i], 'x');
 
     bpak_pkg_close(&pkg);
-    unlink(path);
-    unlink(data_path);
+    test_remove(path);
+    test_remove(data_path);
 }
 
-/* A package with parts 'a' and 'b' of 1000 bytes and meta data of 'b' */
-static void create_package_ab(struct bpak_package *pkg, char *path,
-                              char *data_path)
+/* A package with parts 'a' and 'b' of 1000 bytes and meta data of 'b',
+ * returns its path */
+static char *create_package_ab(struct bpak_package *pkg)
 {
     struct bpak_meta_header *meta;
+    char *path = create_package(pkg);
+    char *data_path = test_temp_file(1000);
     int rc;
-
-    create_package(pkg, path);
-    create_file(data_path, 1000);
 
     rc = bpak_pkg_add_file(pkg, data_path, "a", 0);
     assert_int_equal(rc, BPAK_OK);
     rc = bpak_pkg_add_file(pkg, data_path, "b", 0);
     assert_int_equal(rc, BPAK_OK);
+    test_remove(data_path);
 
     for (unsigned int i = 0; i < 3; i++) {
         rc = bpak_add_meta(&pkg->header, i + 1, bpak_id("b"), 8, &meta);
@@ -251,6 +199,7 @@ static void create_package_ab(struct bpak_package *pkg, char *path,
 
     rc = bpak_add_meta(&pkg->header, 4, 0, 8, &meta);
     assert_int_equal(rc, BPAK_OK);
+    return path;
 }
 
 static void test_delete_part(void **state)
@@ -259,11 +208,8 @@ static void test_delete_part(void **state)
     struct bpak_package pkg;
     struct bpak_part_header *a;
     struct bpak_meta_header *meta;
-    char path[] = "/tmp/bpak-test-XXXXXX";
-    char data_path[] = "/tmp/bpak-test-XXXXXX";
+    char *path = create_package_ab(&pkg);
     int rc;
-
-    create_package_ab(&pkg, path, data_path);
 
     /* Trailing data after the last part looped forever */
     assert_int_equal(fseeko(pkg.fp, 0, SEEK_END), 0);
@@ -286,8 +232,7 @@ static void test_delete_part(void **state)
     assert_int_equal(rc, -BPAK_NOT_FOUND);
 
     bpak_pkg_close(&pkg);
-    unlink(path);
-    unlink(data_path);
+    test_remove(path);
 }
 
 static void test_delete_part_truncated(void **state)
@@ -295,11 +240,9 @@ static void test_delete_part_truncated(void **state)
     (void)state;
     struct bpak_package pkg;
     struct bpak_header before;
-    char path[] = "/tmp/bpak-test-XXXXXX";
-    char data_path[] = "/tmp/bpak-test-XXXXXX";
+    char *path = create_package_ab(&pkg);
     int rc;
 
-    create_package_ab(&pkg, path, data_path);
     memcpy(&before, &pkg.header, sizeof(before));
 
     /* The file ends in part 'b', the copy looped forever */
@@ -311,8 +254,7 @@ static void test_delete_part_truncated(void **state)
     assert_memory_equal(&pkg.header, &before, sizeof(before));
 
     bpak_pkg_close(&pkg);
-    unlink(path);
-    unlink(data_path);
+    test_remove(path);
 }
 
 /* The offsets of the following parts move by the decoded size of a
@@ -323,13 +265,10 @@ static void test_delete_transport_part(void **state)
     struct bpak_package pkg;
     struct bpak_part_header *a;
     struct bpak_part_header *b;
-    char path[] = "/tmp/bpak-test-XXXXXX";
-    char data_path[] = "/tmp/bpak-test-XXXXXX";
+    char *path = create_package(&pkg);
     uint8_t data[1000];
+    char *data_path = test_temp_file(sizeof(data));
     int rc;
-
-    create_package(&pkg, path);
-    create_file(data_path, sizeof(data));
 
     rc = bpak_pkg_add_file(&pkg, data_path, "a", 0);
     assert_int_equal(rc, BPAK_OK);
@@ -356,8 +295,8 @@ static void test_delete_transport_part(void **state)
         assert_int_equal(data[i], 'x');
 
     bpak_pkg_close(&pkg);
-    unlink(path);
-    unlink(data_path);
+    test_remove(path);
+    test_remove(data_path);
 }
 
 /* A failed open does not leave the file for bpak_pkg_close */
@@ -365,17 +304,15 @@ static void test_open_failure(void **state)
 {
     (void)state;
     struct bpak_package pkg;
-    char path[] = "/tmp/bpak-test-XXXXXX";
+    char *path = test_temp_file(4096);
     int rc;
-
-    create_file(path, 4096);
 
     rc = bpak_pkg_open(&pkg, path, "rb");
     assert_int_equal(rc, -BPAK_BAD_MAGIC);
     assert_null(pkg.fp);
     bpak_pkg_close(&pkg);
 
-    unlink(path);
+    test_remove(path);
 }
 
 static void test_sign(void **state)
@@ -384,10 +321,9 @@ static void test_sign(void **state)
     struct bpak_package pkg;
     struct bpak_header before;
     struct bpak_key *key = NULL;
-    char path[] = "/tmp/bpak-test-XXXXXX";
+    char *path = create_package(&pkg);
     int rc;
 
-    create_package(&pkg, path);
     assert_int_equal(pkg.header.signature_kind, BPAK_SIGN_PRIME256v1);
 
     /* The signature kind is the kind of the key */
@@ -410,7 +346,7 @@ static void test_sign(void **state)
     assert_memory_equal(&pkg.header, &before, sizeof(before));
 
     bpak_pkg_close(&pkg);
-    unlink(path);
+    test_remove(path);
 }
 
 /* The sizes do not wrap around on targets with a 32-bit size_t */

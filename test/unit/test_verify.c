@@ -7,15 +7,11 @@
 
 static void init_test_header(struct bpak_header *h)
 {
-    struct bpak_meta_header *meta;
     struct bpak_part_header *part;
 
     bpak_init_header(h);
-    assert_int_equal(bpak_add_meta(h, bpak_id("bpak-version"), 0, 6, &meta),
-                     BPAK_OK);
-    memcpy(bpak_get_meta_ptr(h, meta, char), "1.0.0", 6);
-    assert_int_equal(bpak_add_part(h, bpak_id("data"), &part), BPAK_OK);
-    part->size = 1000;
+    test_add_meta_value(h, bpak_id("bpak-version"), 0, "1.0.0", 6);
+    part = test_add_part_with_size(h, "data", 1000);
     part->pad_bytes = 24;
     bpak_set_key_id(h, bpak_id("key"));
     bpak_set_keystore_id(h, bpak_id("keystore"));

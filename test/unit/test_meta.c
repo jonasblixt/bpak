@@ -4,20 +4,10 @@
 #include <bpak/id.h>
 #include "test_helpers.h"
 
-static int add_meta_uint32_t(struct bpak_header *header, bpak_id_t id,
-    bpak_id_t part_ref, uint32_t value)
+static void add_meta_uint32_t(struct bpak_header *header, bpak_id_t id,
+                              bpak_id_t part_ref, uint32_t value)
 {
-    struct bpak_meta_header *meta;
-    int rc;
-
-    rc = bpak_add_meta(header, id, part_ref, sizeof(uint32_t), &meta);
-    if (rc != BPAK_OK) {
-        return rc;
-    }
-
-    *bpak_get_meta_ptr(header, meta, uint32_t) = value;
-
-    return rc;
+    test_add_meta_value(header, id, part_ref, &value, sizeof(value));
 }
 
 static int get_meta_uint32_t(struct bpak_header *header, bpak_id_t id,
@@ -60,11 +50,7 @@ static void test_add_meta(void **state)
     rc = bpak_init_header(&h);
     assert_int_equal(rc, BPAK_OK);
 
-    rc = add_meta_uint32_t(&h,
-                           bpak_id("test-meta"),
-                           0,
-                           0x11223344);
-    assert_int_equal(rc, BPAK_OK);
+    add_meta_uint32_t(&h, bpak_id("test-meta"), 0, 0x11223344);
 
     uint32_t out = 0;
 
@@ -73,11 +59,7 @@ static void test_add_meta(void **state)
     assert_int_equal(out, 0x11223344);
 
     /* Add additional meta data with the same id */
-    rc = add_meta_uint32_t(&h,
-                           bpak_id("test-meta"),
-                           1,
-                           0x55667788);
-    assert_int_equal(rc, BPAK_OK);
+    add_meta_uint32_t(&h, bpak_id("test-meta"), 1, 0x55667788);
 
     /* Begin search after the first meta */
     rc = get_meta_uint32_t(&h, bpak_id("test-meta"), 0x1, &out);
@@ -89,19 +71,15 @@ static void test_too_many_meta_headers(void **state)
 {
     (void)state;
     struct bpak_header h;
+    struct bpak_meta_header *meta;
     int rc;
 
     rc = bpak_init_header(&h);
     assert_int_equal(rc, BPAK_OK);
 
     /* Fill all meta data headers*/
-    for (int i = 0; i < BPAK_MAX_META; i++) {
-        rc = add_meta_uint32_t(&h,
-                               bpak_id("test-meta"),
-                               i,
-                               0x11223300 + i);
-        assert_int_equal(rc, BPAK_OK);
-    }
+    for (int i = 0; i < BPAK_MAX_META; i++)
+        add_meta_uint32_t(&h, bpak_id("test-meta"), i, 0x11223300 + i);
 
     uint32_t out = 0;
     int c = 0;
@@ -117,10 +95,7 @@ static void test_too_many_meta_headers(void **state)
 
     assert_int_equal(c, BPAK_MAX_META);
 
-    rc = add_meta_uint32_t(&h,
-                           bpak_id("test-meta"),
-                           0x30,
-                           0x00);
+    rc = bpak_add_meta(&h, bpak_id("test-meta"), 0x30, sizeof(uint32_t), &meta);
     assert_int_equal(rc, -BPAK_NO_SPACE_LEFT);
 }
 
@@ -173,11 +148,7 @@ static void test_delete_meta(void **state)
     rc = bpak_init_header(&h);
     assert_int_equal(rc, BPAK_OK);
 
-    rc = add_meta_uint32_t(&h,
-                           bpak_id("test-meta"),
-                           0x1,
-                           0x11223344);
-    assert_int_equal(rc, BPAK_OK);
+    add_meta_uint32_t(&h, bpak_id("test-meta"), 0x1, 0x11223344);
 
     uint32_t out = 0;
 
@@ -186,11 +157,7 @@ static void test_delete_meta(void **state)
     assert_int_equal(out, 0x11223344);
 
     /* Add additional meta data with the same id */
-    rc = add_meta_uint32_t(&h,
-                           bpak_id("test-meta"),
-                           0x2,
-                           0x55667788);
-    assert_int_equal(rc, BPAK_OK);
+    add_meta_uint32_t(&h, bpak_id("test-meta"), 0x2, 0x55667788);
 
     uint32_t out2 = 0;
 
@@ -262,14 +229,11 @@ static void test_meta_bad_layout(void **state)
 static void build_header(struct bpak_header *h, const uint16_t *sizes, size_t n,
                          size_t skip)
 {
-    struct bpak_part_header *part;
     struct bpak_meta_header *meta;
     int rc;
 
     bpak_init_header(h);
-    rc = bpak_add_part(h, bpak_id("test-part"), &part);
-    assert_int_equal(rc, BPAK_OK);
-    part->size = 512;
+    test_add_part_with_size(h, "test-part", 512);
 
     for (size_t i = 0; i < n; i++) {
         if (i == skip)

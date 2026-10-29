@@ -151,8 +151,11 @@ int main(void)
 ```
 
 `TEST_DATA("file")` expands to the path of a file in `test/data` and
-`test_load_file()` reads a whole file into memory. New test files must be
-added to `UNIT_TESTS` in `test/unit/CMakeLists.txt`.
+`test_load_file()` reads a whole file into memory. `test/unit/test_helpers.h`
+has more helpers, for example for temporary files, headers with meta data
+and parts, bspatch control data and an allocator that checks that the
+library frees what it allocates. New test files must be added to
+`UNIT_TESTS` in `test/unit/CMakeLists.txt`.
 
 ### Tool and python package tests
 

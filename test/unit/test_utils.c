@@ -71,18 +71,6 @@ static void test_uuid_to_string(void **state)
                      -BPAK_SIZE_ERROR);
 }
 
-static struct bpak_meta_header *add_meta(struct bpak_header *h, bpak_id_t id,
-                                         const void *value, uint16_t size)
-{
-    struct bpak_meta_header *meta;
-    int rc;
-
-    rc = bpak_add_meta(h, id, 0, size, &meta);
-    assert_int_equal(rc, BPAK_OK);
-    memcpy(bpak_get_meta_ptr(h, meta, uint8_t), value, size);
-    return meta;
-}
-
 static void test_meta_to_string(void **state)
 {
     (void)state;
@@ -94,18 +82,22 @@ static void test_meta_to_string(void **state)
 
     bpak_init_header(&h);
 
-    meta = add_meta(&h, BPAK_ID_PB_LOAD_ADDR, &load_addr, sizeof(load_addr));
+    meta = test_add_meta_value(&h,
+                               BPAK_ID_PB_LOAD_ADDR,
+                               0,
+                               &load_addr,
+                               sizeof(load_addr));
     rc = bpak_meta_to_string(&h, meta, buf, sizeof(buf));
     assert_int_equal(rc, BPAK_OK);
     assert_string_equal(buf, "Entry: 0x80000000");
 
-    meta = add_meta(&h, BPAK_ID_BPAK_VERSION, "1.2.3", 6);
+    meta = test_add_meta_value(&h, BPAK_ID_BPAK_VERSION, 0, "1.2.3", 6);
     rc = bpak_meta_to_string(&h, meta, buf, sizeof(buf));
     assert_int_equal(rc, BPAK_OK);
     assert_string_equal(buf, "1.2.3");
 
     /* Unknown meta data is an empty string */
-    meta = add_meta(&h, bpak_id("test-meta"), "x", 1);
+    meta = test_add_meta_value(&h, bpak_id("test-meta"), 0, "x", 1);
     memset(buf, 'x', sizeof(buf));
     rc = bpak_meta_to_string(&h, meta, buf, sizeof(buf));
     assert_int_equal(rc, BPAK_OK);
@@ -124,7 +116,7 @@ static void test_meta_to_string_sizes(void **state)
     bpak_init_header(&h);
 
     /* A version without the NUL that fills the buffer is terminated */
-    meta = add_meta(&h, BPAK_ID_BPAK_VERSION, "12345", 5);
+    meta = test_add_meta_value(&h, BPAK_ID_BPAK_VERSION, 0, "12345", 5);
     rc = bpak_meta_to_string(&h, meta, buf, 6);
     assert_int_equal(rc, BPAK_OK);
     assert_string_equal(buf, "12345");
@@ -135,7 +127,7 @@ static void test_meta_to_string_sizes(void **state)
     assert_string_equal(buf, "");
 
     /* The hex string does not fit, the buffer was left uninitialized */
-    meta = add_meta(&h, BPAK_ID_MERKLE_SALT, salt, sizeof(salt));
+    meta = test_add_meta_value(&h, BPAK_ID_MERKLE_SALT, 0, salt, sizeof(salt));
     memset(buf, 'x', sizeof(buf));
     rc = bpak_meta_to_string(&h, meta, buf, 64);
     assert_int_equal(rc, -BPAK_SIZE_ERROR);
@@ -146,19 +138,49 @@ static void test_meta_to_string_sizes(void **state)
     assert_int_equal(strlen(buf), 64);
 
     /* Truncated by snprintf */
-    meta = add_meta(&h, BPAK_ID_KEYSTORE_PROVIDER_ID, salt, 4);
+    meta = test_add_meta_value(&h, BPAK_ID_KEYSTORE_PROVIDER_ID, 0, salt, 4);
     rc = bpak_meta_to_string(&h, meta, buf, 3);
     assert_int_equal(rc, -BPAK_SIZE_ERROR);
     assert_string_equal(buf, "");
 
     /* Meta data smaller than its type */
-    meta = add_meta(&h, BPAK_ID_MERKLE_ROOT_HASH, salt, 8);
+    meta = test_add_meta_value(&h, BPAK_ID_MERKLE_ROOT_HASH, 0, salt, 8);
     rc = bpak_meta_to_string(&h, meta, buf, sizeof(buf));
     assert_int_equal(rc, -BPAK_SIZE_ERROR);
     assert_string_equal(buf, "");
 
     rc = bpak_meta_to_string(&h, meta, buf, 0);
     assert_int_equal(rc, -BPAK_SIZE_ERROR);
+}
+
+static void test_error_codes(void **state)
+{
+    (void)state;
+    const char *unknown = bpak_error_string(1);
+
+    /* Every error code should have a description */
+    for (int i = BPAK_OK; i <= BPAK_EXISTS; i++) {
+        assert_ptr_not_equal(bpak_error_string(-i), unknown);
+    }
+
+    assert_ptr_equal(bpak_error_string(-(BPAK_EXISTS + 1)), unknown);
+}
+
+static void test_error_strings(void **state)
+{
+    (void)state;
+    assert_string_equal(bpak_error_string(BPAK_OK), "OK");
+    assert_string_equal(bpak_error_string(-BPAK_FAILED), "Failed");
+    assert_string_equal(bpak_error_string(-BPAK_NOT_FOUND), "Not found");
+    assert_string_equal(bpak_error_string(-BPAK_SIZE_ERROR), "Size error");
+    assert_string_equal(bpak_error_string(-BPAK_NO_SPACE_LEFT),
+                        "No space left");
+    assert_string_equal(bpak_error_string(-BPAK_BAD_ALIGNMENT),
+                        "Bad alignment");
+    assert_string_equal(bpak_error_string(-BPAK_SEEK_ERROR), "Seek error");
+    assert_string_equal(bpak_error_string(-BPAK_NOT_SUPPORTED),
+                        "Not supported");
+    assert_string_equal(bpak_error_string(-999999), "Unknown");
 }
 
 int main(void)
@@ -170,6 +192,8 @@ int main(void)
         cmocka_unit_test(test_uuid_to_string),
         cmocka_unit_test(test_meta_to_string),
         cmocka_unit_test(test_meta_to_string_sizes),
+        cmocka_unit_test(test_error_codes),
+        cmocka_unit_test(test_error_strings),
     };
 
     return cmocka_run_group_tests(tests, NULL, NULL);

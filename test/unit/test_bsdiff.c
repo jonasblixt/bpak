@@ -248,18 +248,6 @@ static void test_diff_patch_hs_random(void **state)
     check_diff_patch(256 * 1024, 128 * 1024, true, BPAK_COMPRESSION_HS);
 }
 
-/* bspatch control data: sign and magnitude, little endian */
-static void put_ctrl(uint8_t *buf, int64_t value)
-{
-    uint64_t magnitude = value < 0 ? -(uint64_t)value : (uint64_t)value;
-
-    for (int i = 0; i < 8; i++)
-        buf[i] = (magnitude >> (8 * i)) & 0xff;
-
-    if (value < 0)
-        buf[7] |= 0x80;
-}
-
 /* A patch that copies the origin, all diff bytes are zero, and appends
  * the extra bytes */
 static void test_patch_no_comp(void **state)
@@ -277,10 +265,7 @@ static void test_patch_no_comp(void **state)
     assert_non_null(patch);
     fill_random(origin, length, 1);
 
-    /* diff, extra, adjust */
-    put_ctrl(&patch[0], length);
-    put_ctrl(&patch[8], extra_length);
-    put_ctrl(&patch[16], 0);
+    test_put_ctrl_triple(patch, length, extra_length, 0);
     fill_random(extra, extra_length, 2);
 
     uint8_t *output = apply_patch(patch,
@@ -298,54 +283,17 @@ static void test_patch_no_comp(void **state)
     free(origin);
 }
 
-static void test_diff_patch_lzma(void **state)
-{
-    (void)state;
-    check_diff_patch(64 * 1024, 0, false, BPAK_COMPRESSION_LZMA);
-}
-
-/* An allocator that tags its allocations, freeing anything else fails */
-#define ALLOC_TAG 0x62706b61u
-
-static unsigned int tagged_allocations;
-
-static void *tagged_calloc(size_t nmemb, size_t size)
-{
-    uint32_t *p = calloc(1, nmemb * size + 16);
-
-    assert_non_null(p);
-    *p = ALLOC_TAG;
-    tagged_allocations++;
-    return (uint8_t *)p + 16;
-}
-
-static void tagged_free(void *ptr)
-{
-    if (ptr == NULL)
-        return;
-
-    uint32_t *p = (uint32_t *)((uint8_t *)ptr - 16);
-
-    assert_int_equal(*p, ALLOC_TAG);
-    assert_true(tagged_allocations > 0);
-    tagged_allocations--;
-    *p = 0;
-    free(p);
-}
-
 static void test_lzma_allocator(void **state)
 {
     (void)state;
 
-    tagged_allocations = 0;
-    assert_int_equal(bpak_set_calloc_free(tagged_calloc, tagged_free), BPAK_OK);
+    test_tagged_allocator_begin();
 
     /* liblzma allocates with the allocator of the stream when it is
      * initialized */
     check_diff_patch(64 * 1024, 0, false, BPAK_COMPRESSION_LZMA);
 
-    assert_int_equal(bpak_set_calloc_free(calloc, free), BPAK_OK);
-    assert_int_equal(tagged_allocations, 0);
+    assert_int_equal(test_tagged_allocator_end(), 0);
 }
 
 static uint8_t checked_origin[16] = "0123456789abcdef";
@@ -390,10 +338,10 @@ static int apply_ctrl(const int64_t *ctrl, size_t n_ctrl)
 
     /* Control tuples followed by zeroed diff bytes and extra bytes */
     for (size_t i = 0; i < n_ctrl; i += 3) {
-        put_ctrl(&patch[patch_length], ctrl[i]);
-        put_ctrl(&patch[patch_length + 8], ctrl[i + 1]);
-        put_ctrl(&patch[patch_length + 16], ctrl[i + 2]);
-        patch_length += BPAK_BSPATCH_CTRL_BUFFER_LENGTH;
+        patch_length += test_put_ctrl_triple(&patch[patch_length],
+                                             ctrl[i],
+                                             ctrl[i + 1],
+                                             ctrl[i + 2]);
 
         for (int j = 0; j < 2; j++) {
             if (ctrl[i + j] > 0 && ctrl[i + j] < 16)
@@ -466,7 +414,6 @@ int main(void)
         cmocka_unit_test(test_diff_patch_no_comp),
         cmocka_unit_test(test_diff_patch_hs),
         cmocka_unit_test(test_diff_patch_hs_random),
-        cmocka_unit_test(test_diff_patch_lzma),
         cmocka_unit_test(test_patch_bad_ctrl),
         cmocka_unit_test(test_lzma_allocator),
     };
