@@ -34,18 +34,18 @@ set(LIB_SRC_FILES
     mem.c
     utils.c
 )
+set(LIB_LIBS)
 
 # Every .h -file in include/bpak/ is a public header
 file(GLOB_RECURSE LIB_PUBLIC_HEADERS "${PROJECT_SOURCE_DIR}/include/bpak/*.h")
 
-set(LIB_PUBLIC_HEADERS
-    ${LIB_PUBLIC_HEADERS}
+list(APPEND LIB_PUBLIC_HEADERS
     ${LIB_GENERATED_INCLUDE_DIR}/bpak/build_config.h
     ${LIB_GENERATED_INCLUDE_DIR}/bpak/version.h
 )
+
 if (NOT BPAK_BUILD_MINIMAL)
-    set(LIB_SRC_FILES
-        ${LIB_SRC_FILES}
+    list(APPEND LIB_SRC_FILES
         bsdiff.c
         bspatch.c
         merkle.c
@@ -62,7 +62,8 @@ if (NOT BPAK_BUILD_MINIMAL)
         vendor/heatshrink/heatshrink_decoder.c
         vendor/heatshrink/heatshrink_encoder.c
         vendor/sais/sais.c
-)
+    )
+    list(APPEND LIB_LIBS ${LZMA_LIBRARY} ${MBEDCRYPTO_LIBRARY})
 endif()
 
 SET(CMAKE_C_VISIBILITY_PRESET hidden)
@@ -84,12 +85,18 @@ target_compile_definitions(${PROJECT_NAME}-vendor-names INTERFACE
     sais=bpak_sais
 )
 
-add_library(
-    ${PROJECT_NAME} SHARED ${LIB_SRC_FILES}
+# The sources are compiled once for the shared and the static library
+add_library(${PROJECT_NAME}-objects OBJECT ${LIB_SRC_FILES})
+set_target_properties(${PROJECT_NAME}-objects PROPERTIES
+    POSITION_INDEPENDENT_CODE ON
 )
 
 add_library(
-    ${PROJECT_NAME}-static STATIC ${LIB_SRC_FILES}
+    ${PROJECT_NAME} SHARED $<TARGET_OBJECTS:${PROJECT_NAME}-objects>
+)
+
+add_library(
+    ${PROJECT_NAME}-static STATIC $<TARGET_OBJECTS:${PROJECT_NAME}-objects>
 )
 
 set_target_properties(${PROJECT_NAME}
@@ -101,50 +108,42 @@ set_target_properties(${PROJECT_NAME} PROPERTIES VERSION ${PROJECT_VERSION})
 set_target_properties(${PROJECT_NAME} PROPERTIES SOVERSION ${PROJECT_VERSION_MAJOR})
 set_target_properties(${PROJECT_NAME}-static PROPERTIES OUTPUT_NAME ${PROJECT_NAME})
 
-foreach(target ${PROJECT_NAME} ${PROJECT_NAME}-static)
-    target_include_directories(${target} PUBLIC
-        $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
-        $<BUILD_INTERFACE:${LIB_GENERATED_INCLUDE_DIR}>
-    )
-    target_compile_options(${target} PRIVATE -Wextra -pedantic)
-    target_compile_definitions(${target} PRIVATE
-        $<TARGET_PROPERTY:${PROJECT_NAME}-vendor-names,INTERFACE_COMPILE_DEFINITIONS>
-    )
+target_link_libraries(${PROJECT_NAME} ${LIB_LIBS})
 
-    # Coverage of the library when the tests run, see docs/development.md
-    if (BPAK_BUILD_TESTS)
-        target_compile_options(${target} PRIVATE -g -fprofile-arcs -ftest-coverage)
-        target_link_libraries(${target} gcov)
-    endif()
-endforeach()
-
-set(LIB_LIBS)
-
-if (NOT BPAK_BUILD_MINIMAL)
-    set(LIB_LIBS
-        ${LIB_LIBS}
-        ${LZMA_LIBRARY}
-        ${MBEDCRYPTO_LIBRARY}
+# Coverage of the library when the tests run, see docs/development.md
+if (BPAK_BUILD_TESTS)
+    target_compile_options(${PROJECT_NAME}-objects PRIVATE
+        -g -fprofile-arcs -ftest-coverage
     )
+    target_link_libraries(${PROJECT_NAME} gcov)
+    target_link_libraries(${PROJECT_NAME}-static gcov)
 endif()
 
-target_link_libraries(${PROJECT_NAME} ${LIB_LIBS})
+set(LIB_COMPILE_TARGETS ${PROJECT_NAME}-objects)
 
 # Built with the sanitizers of the fuzz targets in test/fuzz
 if (BPAK_BUILD_FUZZERS)
     add_library(${PROJECT_NAME}-fuzz STATIC ${LIB_SRC_FILES})
-    target_include_directories(${PROJECT_NAME}-fuzz PUBLIC
-        ${PROJECT_SOURCE_DIR}/include
-        ${LIB_GENERATED_INCLUDE_DIR}
-    )
     target_compile_options(${PROJECT_NAME}-fuzz PRIVATE
-        -Wextra -pedantic -g -fsanitize=fuzzer-no-link,address,undefined
+        -g -fsanitize=fuzzer-no-link,address,undefined
     )
     target_link_libraries(${PROJECT_NAME}-fuzz ${LIB_LIBS})
-    target_compile_definitions(${PROJECT_NAME}-fuzz PRIVATE
+    list(APPEND LIB_COMPILE_TARGETS ${PROJECT_NAME}-fuzz)
+endif()
+
+foreach(target ${LIB_COMPILE_TARGETS})
+    target_compile_options(${target} PRIVATE -Wextra -pedantic)
+    target_compile_definitions(${target} PRIVATE
         $<TARGET_PROPERTY:${PROJECT_NAME}-vendor-names,INTERFACE_COMPILE_DEFINITIONS>
     )
-endif()
+endforeach()
+
+foreach(target ${LIB_COMPILE_TARGETS} ${PROJECT_NAME} ${PROJECT_NAME}-static)
+    target_include_directories(${target} PUBLIC
+        $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
+        $<BUILD_INTERFACE:${LIB_GENERATED_INCLUDE_DIR}>
+    )
+endforeach()
 
 install(
     FILES ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}.pc
