@@ -116,15 +116,30 @@ process_more:
                     ctx->adjust,
                     bytes_available);
 
+        /* The patch is not authenticated, the lengths passed to the
+         * callbacks must never exceed the buffers and the origin position
+         * must stay positive. offtin() values are within +-(2^63 - 1), with
+         * a negative adjust the position check is
+         * origin_position + diff_count + adjust < 0 without overflow. */
+        if (ctx->diff_count < 0 || ctx->extra_count < 0 ||
+            (ctx->adjust < 0 &&
+             ctx->origin_position < -ctx->adjust - ctx->diff_count)) {
+            bpak_printf(0, "Error: Bad patch control data\n");
+            ctx->state = BPAK_PATCH_STATE_ERROR;
+            rc = -BPAK_SIZE_ERROR;
+            break;
+        }
+
         ctx->state = BPAK_PATCH_STATE_APPLY_DIFF;
 
         if (bytes_available)
             goto process_more;
     } break;
     case BPAK_PATCH_STATE_APPLY_DIFF: {
-        ssize_t data_to_process = BPAK_MIN(
-            BPAK_MIN((ssize_t)bytes_available, (ssize_t)ctx->diff_count),
-            (ssize_t)ctx->patch_buffer_length);
+        /* Unsigned, a 64-bit count does not fit ssize_t on 32-bit */
+        ssize_t data_to_process = (ssize_t)BPAK_MIN(
+            BPAK_MIN((uint64_t)bytes_available, (uint64_t)ctx->diff_count),
+            (uint64_t)ctx->patch_buffer_length);
 
         ctx->diff_count -= data_to_process;
         bytes_available -= data_to_process;
@@ -150,7 +165,7 @@ process_more:
 
         ctx->origin_position += nread;
 
-        for (int i = 0; i < data_to_process; i++) {
+        for (ssize_t i = 0; i < data_to_process; i++) {
             ctx->patch_buffer[i] += pp[i];
         }
 
@@ -190,8 +205,8 @@ process_more:
         }
     } break;
     case BPAK_PATCH_STATE_APPLY_EXTRA: {
-        ssize_t data_to_process =
-            BPAK_MIN((ssize_t)bytes_available, (ssize_t)ctx->extra_count);
+        ssize_t data_to_process = (ssize_t)BPAK_MIN((uint64_t)bytes_available,
+                                                    (uint64_t)ctx->extra_count);
         ctx->extra_count -= data_to_process;
         bytes_available -= data_to_process;
 

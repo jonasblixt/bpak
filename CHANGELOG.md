@@ -39,6 +39,9 @@ tool. The package format and the library ABI stay compatible, see
   `bpak_pkg_write_raw_signature` could overflow the signature field.
 - Memory leaks when loading keys with mbedtls, and compiler warnings in 32-bit
   builds.
+- A patch with negative lengths in its control data overflowed buffers when
+  it was applied, for example with `bpak transport --decode`. Such patches
+  fail with `BPAK_SIZE_ERROR`, as do patches that seek before the origin.
 - Python package: crashes when opening a file that is not a package, when
   using a closed package and after the log callback was released, reference
   leaks in `Package.parts` and `Package.meta`, meta data larger than the

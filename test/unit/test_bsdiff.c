@@ -240,6 +240,120 @@ static void test_diff_patch_lzma(void **state)
     check_diff_patch(64 * 1024, BPAK_COMPRESSION_LZMA);
 }
 
+/* bspatch control data: sign and magnitude, little endian */
+static void put_ctrl(uint8_t *buf, int64_t value)
+{
+    uint64_t magnitude = value < 0 ? -(uint64_t)value : (uint64_t)value;
+
+    for (int i = 0; i < 8; i++)
+        buf[i] = (magnitude >> (8 * i)) & 0xff;
+
+    if (value < 0)
+        buf[7] |= 0x80;
+}
+
+static uint8_t checked_origin[16] = "0123456789abcdef";
+static uint8_t checked_output[64];
+
+/* Fail the test on lengths larger than the bspatch buffers */
+static ssize_t checked_read_origin(off_t offset, uint8_t *buffer, size_t length,
+                                   void *user_priv)
+{
+    (void)user_priv;
+    assert_true(offset >= 0);
+    assert_true(length <= BPAK_CHUNK_BUFFER_LENGTH / 2);
+
+    if ((size_t)offset + length > sizeof(checked_origin))
+        return -BPAK_READ_ERROR;
+
+    memcpy(buffer, &checked_origin[offset], length);
+    return length;
+}
+
+static ssize_t checked_write_output(off_t offset, uint8_t *buffer,
+                                    size_t length, void *user_priv)
+{
+    (void)user_priv;
+    assert_true(offset >= 0);
+    assert_true(length <= BPAK_CHUNK_BUFFER_LENGTH);
+
+    if ((size_t)offset + length > sizeof(checked_output))
+        return -BPAK_WRITE_ERROR;
+
+    memcpy(&checked_output[offset], buffer, length);
+    return length;
+}
+
+static int apply_ctrl(const int64_t *ctrl, size_t n_ctrl)
+{
+    struct bpak_bspatch_context bspatch;
+    uint8_t decode_buffer[BPAK_CHUNK_BUFFER_LENGTH];
+    uint8_t patch[4 * BPAK_BSPATCH_CTRL_BUFFER_LENGTH + 64] = { 0 };
+    size_t patch_length = 0;
+    int rc;
+
+    /* Control tuples followed by zeroed diff bytes and extra bytes */
+    for (size_t i = 0; i < n_ctrl; i += 3) {
+        put_ctrl(&patch[patch_length], ctrl[i]);
+        put_ctrl(&patch[patch_length + 8], ctrl[i + 1]);
+        put_ctrl(&patch[patch_length + 16], ctrl[i + 2]);
+        patch_length += BPAK_BSPATCH_CTRL_BUFFER_LENGTH;
+
+        for (int j = 0; j < 2; j++) {
+            if (ctrl[i + j] > 0 && ctrl[i + j] < 16)
+                patch_length += ctrl[i + j];
+        }
+    }
+
+    memset(checked_output, 0, sizeof(checked_output));
+
+    rc = bpak_bspatch_init(&bspatch,
+                           decode_buffer,
+                           sizeof(decode_buffer),
+                           patch_length,
+                           checked_read_origin,
+                           0,
+                           checked_write_output,
+                           0,
+                           BPAK_COMPRESSION_NONE,
+                           NULL);
+    assert_int_equal(rc, BPAK_OK);
+
+    rc = bpak_bspatch_write(&bspatch, patch, patch_length);
+
+    if (rc == BPAK_OK)
+        rc = bpak_bspatch_final(&bspatch);
+
+    bpak_bspatch_free(&bspatch);
+    return rc;
+}
+
+static void test_patch_bad_ctrl(void **state)
+{
+    (void)state;
+
+    /* diff, extra, adjust */
+    const int64_t negative_diff[] = { -16, 0, 0 };
+    const int64_t negative_extra[] = { 0, -16, 0 };
+    const int64_t huge_diff[] = { INT64_MAX, 0, INT64_MAX };
+    const int64_t before_origin[] = { 0, 0, -1 };
+    const int64_t before_origin_after_diff[] = { 4, 0, -5 };
+    const int64_t back_to_start[] = { 4, 0, -4, 4, 2, 0 };
+
+    assert_int_equal(apply_ctrl(negative_diff, 3), -BPAK_SIZE_ERROR);
+    assert_int_equal(apply_ctrl(negative_extra, 3), -BPAK_SIZE_ERROR);
+    assert_int_equal(apply_ctrl(before_origin, 3), -BPAK_SIZE_ERROR);
+    assert_int_equal(apply_ctrl(before_origin_after_diff, 3), -BPAK_SIZE_ERROR);
+
+    /* Runs out of patch data in the diff, which is not an error until the
+     * caller compares the output size */
+    assert_int_equal(apply_ctrl(huge_diff, 3), 0);
+
+    /* Seeking back to the start of the origin is valid */
+    assert_int_equal(apply_ctrl(back_to_start, 6), 10);
+    assert_memory_equal(checked_output, "01230123\0\0", 10);
+}
+
 int main(void)
 {
     const struct CMUnitTest tests[] = {
@@ -249,6 +363,7 @@ int main(void)
         cmocka_unit_test(test_diff_patch_no_comp),
         cmocka_unit_test(test_diff_patch_hs),
         cmocka_unit_test(test_diff_patch_lzma),
+        cmocka_unit_test(test_patch_bad_ctrl),
     };
 
     return cmocka_run_group_tests(tests, NULL, NULL);
