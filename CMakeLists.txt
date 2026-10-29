@@ -20,7 +20,7 @@ project(bpak VERSION ${BPAK_VERSION}
 enable_testing()
 set(CMAKE_C_STANDARD 99)
 
-option(BPAK_BUILD_MINIMAL "Build a minial version of the library" OFF)
+option(BPAK_BUILD_MINIMAL "Build a minimal version of the library" OFF)
 option(BPAK_BUILD_TESTS "Build test cases" OFF)
 option(BPAK_WERROR "Treat compiler warnings as errors" ON)
 option(BPAK_BUILD_FUZZERS "Build the libFuzzer targets, requires clang" OFF)
