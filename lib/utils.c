@@ -16,8 +16,6 @@
 #include <bpak/pkg.h>
 #include <bpak/id.h>
 
-#include "uuid.h"
-
 BPAK_EXPORT int bpak_bin2hex(uint8_t *data, size_t data_sz, char *buf,
                              size_t buf_sz)
 {
@@ -42,7 +40,19 @@ BPAK_EXPORT int bpak_uuid_to_string(const uint8_t *data, char *buf, size_t size)
     if (size < 37)
         return -BPAK_SIZE_ERROR;
 
-    uuid_unparse(data, buf);
+    static const char hex[] = "0123456789abcdef";
+    char *p = buf;
+
+    /* The 16 bytes in order as 8-4-4-4-12 lower case hex digits */
+    for (int i = 0; i < 16; i++) {
+        if (i == 4 || i == 6 || i == 8 || i == 10)
+            *p++ = '-';
+
+        *p++ = hex[(data[i] >> 4) & 0x0F];
+        *p++ = hex[data[i] & 0x0F];
+    }
+
+    *p = 0;
 
     return BPAK_OK;
 }

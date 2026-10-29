@@ -31,7 +31,7 @@ The python package is built with scikit-build-core from the CMake build
 changing dependencies.
 
 Tests require the full build (`BPAK_BUILD_MINIMAL=OFF`) and libmbedtls-dev,
-liblzma-dev, uuid-dev, libcmocka-dev, python3-dev, python3-pytest,
+liblzma-dev, libcmocka-dev, python3-dev, python3-pytest,
 python3-click and openssl. Instead of python3-pytest and python3-click, `uv sync`
 and configure with `.venv` activated.
 If the dev packages are missing locally, build and test in a Debian or Ubuntu

@@ -7,12 +7,12 @@ can be installed with:
 
 ```
 $ sudo apt install build-essential cmake pkg-config \
-      libmbedtls-dev liblzma-dev uuid-dev \
+      libmbedtls-dev liblzma-dev \
       libcmocka-dev python3-dev python3-pytest python3-click openssl lcov
 ```
 
 Other distributions provide the same libraries under similar names: mbedtls,
-liblzma, libuuid, cmocka, click and the python3 development headers. Python
+liblzma, cmocka, click and the python3 development headers. Python
 3.10 or later is required.
 
 The python package is developed with [uv](https://docs.astral.sh/uv).

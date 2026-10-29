@@ -57,12 +57,27 @@ static void test_hash_tree_id(void **state)
                      0);
 }
 
+static void test_uuid_to_string(void **state)
+{
+    (void)state;
+    const uint8_t uuid[16] = { 0x08, 0x88, 0xb0, 0xfa, 0x9c, 0x48, 0x45, 0x24,
+                               0x98, 0x45, 0x06, 0xa6, 0x41, 0xb6, 0x1e, 0xdd };
+    char buf[37];
+
+    assert_int_equal(bpak_uuid_to_string(uuid, buf, sizeof(buf)), BPAK_OK);
+    assert_string_equal(buf, "0888b0fa-9c48-4524-9845-06a641b61edd");
+
+    assert_int_equal(bpak_uuid_to_string(uuid, buf, sizeof(buf) - 1),
+                     -BPAK_SIZE_ERROR);
+}
+
 int main(void)
 {
     const struct CMUnitTest tests[] = {
         cmocka_unit_test(test_bin2hex),
         cmocka_unit_test(test_bin2hex_buffer_too_small),
         cmocka_unit_test(test_hash_tree_id),
+        cmocka_unit_test(test_uuid_to_string),
     };
 
     return cmocka_run_group_tests(tests, NULL, NULL);
