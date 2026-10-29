@@ -12,6 +12,21 @@ move it to **Done** with the commit that resolved it.
 - [ ] `bpak generate keystore` writes a line with only spaces after the last
       byte of a key whose size is a multiple of 8, for example a secp384r1
       key (120 bytes), `generate_keystore` in `tools/bpak/cli.py`.
+- [ ] `bpak_transport_encode` dereferences NULL when the origin or the
+      input package has no `bpak-package` meta data: `bpak_get_meta_ptr` is
+      called before `rc` is checked, and the size is not checked against
+      the 16 bytes that are compared (`lib/transport_encode.c:375-396`).
+      `transport_decode.c` does the same check correctly.
+- [ ] Deleting an int attribute of the python wrapper segfaults, for
+      example `del pkg.key_id`: the setters in `tools/_bpak/package.c`,
+      `part.c` and `meta.c` call `PyLong_Check(value)` on NULL. They also
+      truncate values that do not fit, `pkg.hash_kind = 256` reads back as
+      0 and `pkg.key_id = 2**32 + 5` as 5; the `(uint32_t)x != x` checks in
+      `part.c` and `meta.c` can never fail.
+- [ ] Python wrapper details: `sign()` reports argument errors as
+      `verify()` (`"O&:verify"` in `package.c`), `uuid_ctor` is not checked
+      for NULL in `meta.c` and the docstring of `Package.meta` says "List of
+      all parts".
 
 ## Release
 
