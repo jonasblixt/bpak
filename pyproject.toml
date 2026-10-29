@@ -49,7 +49,7 @@ install.components = ["python"]
 wheel.packages = ["python/bpak"]
 sdist.exclude = [
     ".github", "docs", "examples", "test",
-    "CLAUDE.md", "todo.md", ".clang-format", ".vimrc",
+    "CLAUDE.md", "todo.md", ".clang-format",
 ]
 metadata.version.provider = "scikit_build_core.metadata.regex"
 metadata.version.input = "version.txt"

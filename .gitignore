@@ -1,25 +1,18 @@
 /build/
-Makefile
-config.h
 coverage_report
 *~
 *.html
 *.log
 *.o
-*.la
 *.so*
 *.a
-.deps
 *.tar*
 *.zip
-*.lo
 *.gcno
 *.gcda
-/*.sh
 *.bpak
 # Golden sample packages are part of the tests
 !test/golden/**/*.bpak
-template*
 *.bak
 cov-int/
 __pycache__

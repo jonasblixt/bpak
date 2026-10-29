@@ -30,9 +30,6 @@ if (BPAK_WERROR)
 endif()
 include_directories(include/)
 
-# TODO: Choice option for BPAK_CRYPTO_BACKEND
-#   Select between a pre-defined set of options
-
 if (NOT BPAK_BUILD_MINIMAL)
     set(BPAK_CONFIG_MERKLE 1)
     set(BPAK_CONFIG_LZMA 1)
@@ -48,7 +45,7 @@ endif()
 if (BPAK_BUILD_TESTS)
     add_subdirectory("python")
     add_subdirectory("test")
-    add_compile_options(-g -fprofile-arcs -ftest-coverage -fstack-usage)
+    add_compile_options(-g -fprofile-arcs -ftest-coverage)
     link_libraries(gcov)
 endif()
 
