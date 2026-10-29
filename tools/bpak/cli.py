@@ -123,6 +123,12 @@ BPAK_ID = BpakIdType()
 PATH = click.Path(dir_okay=False, path_type=pathlib.Path)
 EXISTING_PATH = click.Path(exists=True, dir_okay=False, path_type=pathlib.Path)
 
+part_ref_option = click.option(
+    "-r", "--part-ref", type=BPAK_ID, default=0, help="Part that the meta data belongs to."
+)
+
+PARTS_HEADER = "    ID         Size         Z-pad  Flags          Transport Size"
+
 
 class CommandError(click.ClickException):
     """A library error, exits with the negated error code like the C tool."""
@@ -319,9 +325,7 @@ def create(filename: pathlib.Path, force: bool, hash_kind: str, signature_kind: 
     multiple=True,
     help="Set a flag on the part. dont-hash excludes the part from the payload hash.",
 )
-@click.option(
-    "-r", "--part-ref", type=BPAK_ID, default=0, help="Part that the meta data belongs to."
-)
+@part_ref_option
 def add(
     filename: pathlib.Path,
     part_name: str | None,
@@ -625,7 +629,7 @@ def _show_package(filename: pathlib.Path, pkg: bpak.Package) -> None:
         click.echo(f"    {_meta_line(meta)} {part_ref}   {_describe(meta)}")
 
     click.echo("\nParts:")
-    click.echo("    ID         Size         Z-pad  Flags          Transport Size")
+    click.echo(PARTS_HEADER)
     for part in pkg.parts:
         click.echo(f"    {_part_line(part)}")
 
@@ -652,9 +656,7 @@ def _show_package(filename: pathlib.Path, pkg: bpak.Package) -> None:
     type=click.Choice(["integer", "id"]),
     help="Encode the value as a 64 bit integer or a bpak id.",
 )
-@click.option(
-    "-r", "--part-ref", type=BPAK_ID, default=0, help="Part that the meta data belongs to."
-)
+@part_ref_option
 @click.option("-k", "--key-id", type=BPAK_ID, help="Set the key id.")
 @click.option("-i", "--keystore-id", type=BPAK_ID, help="Set the keystore id.")
 def set_(
@@ -816,7 +818,7 @@ def compare(first: pathlib.Path, second: pathlib.Path) -> None:
             _compare_line("+", f"{_meta_line(meta)} {_describe(meta)}")
 
         click.echo("\nParts:")
-        click.echo("    ID         Size         Z-pad  Flags          Transport Size")
+        click.echo(PARTS_HEADER)
 
         parts2 = {p.id: p for p in pkg2.parts}
         for part in pkg1.parts:
@@ -867,9 +869,7 @@ def _same_part(
 @click.argument("filename", type=PATH)
 @click.option("-m", "--meta", "meta_id", type=BPAK_ID, help="Extract meta data.")
 @click.option("-p", "--part", "part_id", type=BPAK_ID, help="Extract a part.")
-@click.option(
-    "-r", "--part-ref", type=BPAK_ID, default=0, help="Part that the meta data belongs to."
-)
+@part_ref_option
 @click.option("-o", "--output", type=PATH, help="Output file (default: stdout).")
 def extract(
     filename: pathlib.Path,
