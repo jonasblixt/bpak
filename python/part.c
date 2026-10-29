@@ -64,6 +64,10 @@ static int part_set_id(PyObject *self, PyObject *value, void *closure)
     struct bpak_header *h = bpak_pkg_header(&part->package->pkg);
     struct bpak_part_header *p;
 
+    if (package_check_open(part->package) < 0) {
+        return -1;
+    }
+
     if (!PyLong_Check(value)) {
         PyErr_SetString(PyExc_TypeError, "type mismatch");
 	    return -1;
@@ -196,6 +200,10 @@ static PyObject *part_read_data(PyObject *self, PyObject *Py_UNUSED(ignored))
     PyObject *bytes;
     int rc = 0;
 
+    if (package_check_open(part->package) < 0) {
+        return NULL;
+    }
+
     rc = bpak_get_part(h, part->part_id, &p);
     if (rc != BPAK_OK) {
         return PyErr_Format(PyExc_KeyError, "failed to get partition: %s",
@@ -237,6 +245,10 @@ static PyObject *part_delete(PyObject *self, PyObject *args, PyObject *kwds)
     BPAKPart *part = (BPAKPart *)self;
     int remove_meta = 1;
     int rc;
+
+    if (package_check_open(part->package) < 0) {
+        return NULL;
+    }
 
     rc = PyArg_ParseTupleAndKeywords(args,
                                      kwds,

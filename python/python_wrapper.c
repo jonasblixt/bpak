@@ -90,6 +90,11 @@ static PyObject *m_transport_encode(PyObject *self, PyObject *args,
         return NULL;
     }
 
+    if (package_check_open(input) < 0 || package_check_open(output) < 0 ||
+        (origin && package_check_open(origin) < 0)) {
+        return NULL;
+    }
+
     rc = bpak_pkg_transport_encode(&input->pkg,
                                    &output->pkg,
                                    origin ? &origin->pkg : NULL);
@@ -122,6 +127,11 @@ static PyObject *m_transport_decode(PyObject *self, PyObject *args,
                                      &BPAKPackageType,
                                      &origin);
     if (!rc) {
+        return NULL;
+    }
+
+    if (package_check_open(input) < 0 || package_check_open(output) < 0 ||
+        (origin && package_check_open(origin) < 0)) {
         return NULL;
     }
 

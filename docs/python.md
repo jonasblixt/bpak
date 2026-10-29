@@ -75,6 +75,8 @@ API with types.
 to read, `"rb+"` to modify an existing package and `"wb+"` to create a new
 one. A package is a context manager and is closed at the end of the `with`
 block, or with `close()`. Changes are written to the file when they are made.
+Operations that read or write the file raise `ValueError` once the package is
+closed, also through its parts and meta data.
 
 | Attribute                     | Description                                           |
 |-------------------------------|-------------------------------------------------------|

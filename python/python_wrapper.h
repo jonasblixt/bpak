@@ -32,6 +32,9 @@ extern PyObject *BPAKPackageError;
 
 int package_write_header(BPAKPackage *package, bool update_hash);
 
+/* Raise ValueError and return -1 if the package is closed */
+int package_check_open(BPAKPackage *package);
+
 PyObject *part_allocate(BPAKPackage *package, bpak_id_t part_id);
 PyObject *meta_allocate(BPAKPackage *package, bpak_id_t meta_id, bpak_id_t part_ref);
 

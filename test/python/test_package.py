@@ -180,6 +180,55 @@ def test_list_references(pybpak, tmp_path):
         assert sys.getrefcount(p) == before
 
 
+def test_closed_package(pybpak, tmp_path):
+    """Using a closed package raises ValueError, it dereferenced the closed
+    file and crashed"""
+    path = tmp_path / "test.bpak"
+    create_package_with_parts(pybpak, path)
+
+    with pybpak.Package(path, "rb+") as p:
+        part = p.get_part(bpak_id("kernel"))
+        meta = p.get_meta(pybpak.id("bpak-package"))
+
+    def set_key_id():
+        p.key_id = 1
+
+    def set_signature():
+        p.signature = bytes(8)
+
+    def set_raw_data():
+        meta.raw_data = bytes(8)
+
+    operations = [
+        p.write_header,
+        p.update_hash,
+        lambda: p.digest,
+        set_key_id,
+        set_signature,
+        lambda: p.add_meta(pybpak.id("py-test"), data="Hello"),
+        lambda: p.add_file("test", KERNEL),
+        lambda: p.add_key("test", KEY),
+        lambda: p.verify(DEFAULT_VERIFY_KEY),
+        lambda: p.sign(DEFAULT_SIGN_KEY),
+        lambda: p.part_sha256(bpak_id("kernel")),
+        lambda: p.extract_file(bpak_id("kernel"), tmp_path / "kernel"),
+        lambda: p.delete_part(bpak_id("kernel")),
+        p.delete_all_parts,
+        part.read_data,
+        part.delete,
+        set_raw_data,
+        meta.delete,
+        lambda: pybpak.transport_encode(p, p),
+    ]
+
+    for operation in operations:
+        with pytest.raises(ValueError, match="closed package"):
+            operation()
+
+    # Closing again is fine
+    p.close()
+
+
 def test_signature_too_large(pybpak, tmp_path):
     with pybpak.Package(tmp_path / "test.bpak", "wb+") as p:
         with pytest.raises(pybpak.SizeError):

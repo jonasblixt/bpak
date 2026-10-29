@@ -27,6 +27,17 @@ int package_write_header(BPAKPackage *package, bool update_hash)
     return rc;
 }
 
+int package_check_open(BPAKPackage *package)
+{
+    /* close() and a failed open clear the package */
+    if (package->pkg.fp == NULL) {
+        PyErr_SetString(PyExc_ValueError, "I/O operation on closed package");
+        return -1;
+    }
+
+    return 0;
+}
+
 static PyObject *package_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 {
     (void)args;
@@ -104,6 +115,10 @@ static PyObject *package_verify(BPAKPackage *self, PyObject *args,
     struct bpak_header *h = bpak_pkg_header(&self->pkg);
     static char *kwlist[] = { "verify_key_path", "keystore_path", NULL };
 
+    if (package_check_open(self) < 0) {
+        return NULL;
+    }
+
     rc = PyArg_ParseTupleAndKeywords(args,
                                      kwds,
                                      "|O&$O&:verify",
@@ -166,6 +181,10 @@ static PyObject *package_sign(PyObject *self, PyObject *args, PyObject *kwds)
     static char *kwlist[] = {"sign_key_path", NULL};
     BPAKPackage *package = (BPAKPackage *)self;
 
+    if (package_check_open(package) < 0) {
+        return NULL;
+    }
+
     rc = PyArg_ParseTupleAndKeywords(args,
                                      kwds,
                                      "O&:verify",
@@ -205,6 +224,10 @@ static PyObject *package_add_file(PyObject *self, PyObject *args, PyObject *kwds
     PyObject *filename;
     int with_merkle_tree = 0;
     unsigned char flags = 0;
+
+    if (package_check_open(package) < 0) {
+        return NULL;
+    }
 
     rc = PyArg_ParseTupleAndKeywords(args,
                                      kwds,
@@ -261,6 +284,10 @@ static PyObject *package_add_key(PyObject *self, PyObject *args, PyObject *kwds)
     PyObject *filename;
     unsigned char flags = 0;
 
+    if (package_check_open(package) < 0) {
+        return NULL;
+    }
+
     rc = PyArg_ParseTupleAndKeywords(args,
                                      kwds,
                                      "sO&|b:add_key",
@@ -307,6 +334,10 @@ static PyObject *package_add_meta(PyObject *self, PyObject *args, PyObject *kwds
     bpak_id_t part_ref = 0;
     PyObject *data = NULL;
     Py_ssize_t size = -1;
+
+    if (package_check_open(package) < 0) {
+        return NULL;
+    }
 
     rc = PyArg_ParseTupleAndKeywords(args,
                                      kwds,
@@ -470,6 +501,10 @@ static PyObject *package_update_hash(PyObject *self, PyObject *Py_UNUSED(args))
     size_t hash_size = sizeof(digest_data);
     BPAKPackage *package = (BPAKPackage *)self;
 
+    if (package_check_open(package) < 0) {
+        return NULL;
+    }
+
     rc = bpak_pkg_update_hash(&package->pkg, digest_data, &hash_size);
     if (rc != BPAK_OK) {
         return bpak_raise(rc, "could not compute hash");
@@ -482,6 +517,10 @@ static PyObject *package_write_header_method(PyObject *self,
                                              PyObject *Py_UNUSED(args))
 {
     int rc;
+
+    if (package_check_open((BPAKPackage *)self) < 0) {
+        return NULL;
+    }
 
     rc = package_write_header((BPAKPackage *)self, false);
     if (rc != BPAK_OK) {
@@ -500,6 +539,10 @@ static PyObject *package_add_transport_meta(PyObject *self, PyObject *args,
     bpak_id_t part_id;
     bpak_id_t encoder_id;
     bpak_id_t decoder_id;
+
+    if (package_check_open(package) < 0) {
+        return NULL;
+    }
 
     rc = PyArg_ParseTupleAndKeywords(args,
                                      kwds,
@@ -537,6 +580,10 @@ static PyObject *package_delete_part(PyObject *self, PyObject *args,
     bpak_id_t part_id;
     int remove_meta = 1;
 
+    if (package_check_open(package) < 0) {
+        return NULL;
+    }
+
     rc = PyArg_ParseTupleAndKeywords(args,
                                      kwds,
                                      "I|p:delete_part",
@@ -562,6 +609,10 @@ static PyObject *package_delete_all_parts(PyObject *self, PyObject *args,
     BPAKPackage *package = (BPAKPackage *)self;
     int rc;
     int remove_meta = 1;
+
+    if (package_check_open(package) < 0) {
+        return NULL;
+    }
 
     rc = PyArg_ParseTupleAndKeywords(args,
                                      kwds,
@@ -589,6 +640,10 @@ static PyObject *package_part_sha256(PyObject *self, PyObject *args,
     bpak_id_t part_id;
     uint8_t hash[32];
 
+    if (package_check_open(package) < 0) {
+        return NULL;
+    }
+
     rc = PyArg_ParseTupleAndKeywords(args,
                                      kwds,
                                      "I:part_sha256",
@@ -614,6 +669,10 @@ static PyObject *package_extract_file(PyObject *self, PyObject *args,
     int rc;
     bpak_id_t part_id;
     PyObject *filename;
+
+    if (package_check_open(package) < 0) {
+        return NULL;
+    }
 
     rc = PyArg_ParseTupleAndKeywords(args,
                                      kwds,
@@ -665,6 +724,10 @@ static PyObject *package_get_digest(PyObject *self, void *closure)
 
     size_t hash_size = sizeof(digest_data);
 
+    if (package_check_open(package) < 0) {
+        return NULL;
+    }
+
     if (bpak_pkg_update_hash(&package->pkg, digest_data, &hash_size) != BPAK_OK)
         Py_RETURN_NONE;
 
@@ -710,6 +773,10 @@ static int package_set_hash_kind(PyObject *self, PyObject *value, void *closure)
     BPAKPackage *package = (BPAKPackage *)self;
     struct bpak_header *h = bpak_pkg_header(&package->pkg);
 
+    if (package_check_open(package) < 0) {
+        return -1;
+    }
+
     if (!PyLong_Check(value)) {
         PyErr_SetString(PyExc_TypeError, "type mismatch");
 	    return -1;
@@ -750,6 +817,10 @@ static int package_set_key_id(PyObject *self, PyObject *value, void *closure)
     BPAKPackage *package = (BPAKPackage *)self;
     struct bpak_header *h = bpak_pkg_header(&package->pkg);
 
+    if (package_check_open(package) < 0) {
+        return -1;
+    }
+
     if (!PyLong_Check(value)) {
         PyErr_SetString(PyExc_TypeError, "type mismatch");
 	    return -1;
@@ -789,6 +860,10 @@ static int package_set_keystore_id(PyObject *self, PyObject *value, void *closur
     int keystore_id;
     BPAKPackage *package = (BPAKPackage *)self;
     struct bpak_header *h = bpak_pkg_header(&package->pkg);
+
+    if (package_check_open(package) < 0) {
+        return -1;
+    }
 
     if (!PyLong_Check(value)) {
         PyErr_SetString(PyExc_TypeError, "type mismatch");
@@ -833,6 +908,10 @@ static int package_set_signature(PyObject *self, PyObject *value,
     uint8_t *signature_data;
     Py_ssize_t signature_sz;
     BPAKPackage *package = (BPAKPackage *)self;
+
+    if (package_check_open(package) < 0) {
+        return -1;
+    }
 
     /* Handle clearing / del */
     if (value == NULL || value == Py_None) {
@@ -885,6 +964,10 @@ static int package_set_signature_kind(PyObject *self, PyObject *value, void *clo
     int signature_kind;
     BPAKPackage *package = (BPAKPackage *)self;
     struct bpak_header *h = bpak_pkg_header(&package->pkg);
+
+    if (package_check_open(package) < 0) {
+        return -1;
+    }
 
     if (!PyLong_Check(value)) {
         PyErr_SetString(PyExc_TypeError, "type mismatch");

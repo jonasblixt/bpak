@@ -66,6 +66,10 @@ static int meta_set_id(PyObject *self, PyObject *value, void *closure)
     struct bpak_header *h = bpak_pkg_header(&meta->package->pkg);
     struct bpak_meta_header *m;
 
+    if (package_check_open(meta->package) < 0) {
+        return -1;
+    }
+
     if (!PyLong_Check(value)) {
         PyErr_SetString(PyExc_TypeError, "type mismatch");
 	    return -1;
@@ -116,6 +120,10 @@ static int meta_set_part_id_ref(PyObject *self, PyObject *value, void *closure)
     BPAKMeta *meta = (BPAKMeta *)self;
     struct bpak_header *h = bpak_pkg_header(&meta->package->pkg);
     struct bpak_meta_header *m;
+
+    if (package_check_open(meta->package) < 0) {
+        return -1;
+    }
 
     if (value != Py_None) {
         if (!PyLong_Check(value)) {
@@ -194,6 +202,10 @@ static int meta_set_rawdata(PyObject *self, PyObject *value, void* closure)
     struct bpak_header *h = bpak_pkg_header(&meta->package->pkg);
     struct bpak_meta_header *m;
     int rc = 0;
+
+    if (package_check_open(meta->package) < 0) {
+        return -1;
+    }
 
     rc = bpak_get_meta(h, meta->meta_id, meta->part_ref, &m);
     if (rc != BPAK_OK) {
@@ -383,6 +395,10 @@ static PyObject *meta_delete(PyObject *self, PyObject *Py_UNUSED(ignored))
     struct bpak_header *h = bpak_pkg_header(&meta->package->pkg);
     struct bpak_meta_header *m;
     int rc = 0;
+
+    if (package_check_open(meta->package) < 0) {
+        return NULL;
+    }
 
     rc = bpak_get_meta(h, meta->meta_id, meta->part_ref, &m);
     if (rc != BPAK_OK) {
