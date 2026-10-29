@@ -115,6 +115,8 @@ tool. The package format and the library ABI stay compatible, see
   with another size of `off_t` than the library fail to compile, see
   [the C library](docs/c-library.md), and `bpak/bpak.h` compiles with
   `-std=c99`.
+- The static library defined the functions of heatshrink and sais without a
+  prefix, which clashed with programs that use heatshrink themselves.
 - Python package: crashes when opening a file that is not a package, when
   using a closed package and after the log callback was released, reference
   leaks in `Package.parts` and `Package.meta`, meta data larger than the

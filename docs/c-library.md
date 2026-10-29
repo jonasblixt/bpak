@@ -99,6 +99,11 @@ provide two headers in the include path:
   and `BPAK_CONFIG_MBEDTLS` to 0 or 1, and optionally `BPAK_SIZEOF_OFF_T`
 - `bpak/version.h`, see [`lib/version.h.in`](../lib/version.h.in)
 
+The CMake build prefixes the functions of heatshrink and sais in `lib/vendor/`
+with `bpak_`, see `bpak-vendor-names` in
+[`lib/CMakeLists.txt`](../lib/CMakeLists.txt). Projects that also use
+heatshrink define the same names.
+
 Without mbedtls, register a hash and signature implementation with
 `bpak_hash_setup()` and `bpak_crypto_setup()` from `crypto.h`, for example one
 that uses a hardware crypto accelerator. Without LZMA, `bsdiff-lzma` and

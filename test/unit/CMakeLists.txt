@@ -30,6 +30,7 @@ foreach(unit_test IN LISTS UNIT_TESTS)
     # Link statically so tests can reach internal symbols (e.g. heatshrink)
     target_link_libraries(${unit_test} PRIVATE
         ${PROJECT_NAME}-static
+        ${PROJECT_NAME}-vendor-names
         ${MBEDCRYPTO_LIBRARY}
         ${LZMA_LIBRARY}
         PkgConfig::CMOCKA

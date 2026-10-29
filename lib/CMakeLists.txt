@@ -67,6 +67,23 @@ endif()
 
 SET(CMAKE_C_VISIBILITY_PRESET hidden)
 
+# The functions of the third-party code are prefixed with bpak_, so that the
+# static library does not clash with programs that use heatshrink or sais
+# themselves. Code that calls them directly, like the unit tests, links this
+# target.
+add_library(${PROJECT_NAME}-vendor-names INTERFACE)
+target_compile_definitions(${PROJECT_NAME}-vendor-names INTERFACE
+    heatshrink_decoder_finish=bpak_heatshrink_decoder_finish
+    heatshrink_decoder_poll=bpak_heatshrink_decoder_poll
+    heatshrink_decoder_reset=bpak_heatshrink_decoder_reset
+    heatshrink_decoder_sink=bpak_heatshrink_decoder_sink
+    heatshrink_encoder_finish=bpak_heatshrink_encoder_finish
+    heatshrink_encoder_poll=bpak_heatshrink_encoder_poll
+    heatshrink_encoder_reset=bpak_heatshrink_encoder_reset
+    heatshrink_encoder_sink=bpak_heatshrink_encoder_sink
+    sais=bpak_sais
+)
+
 add_library(
     ${PROJECT_NAME} SHARED ${LIB_SRC_FILES}
 )
@@ -90,6 +107,9 @@ foreach(target ${PROJECT_NAME} ${PROJECT_NAME}-static)
         $<BUILD_INTERFACE:${LIB_GENERATED_INCLUDE_DIR}>
     )
     target_compile_options(${target} PRIVATE -Wextra -pedantic)
+    target_compile_definitions(${target} PRIVATE
+        $<TARGET_PROPERTY:${PROJECT_NAME}-vendor-names,INTERFACE_COMPILE_DEFINITIONS>
+    )
 
     # Coverage of the library when the tests run, see docs/development.md
     if (BPAK_BUILD_TESTS)
@@ -121,6 +141,9 @@ if (BPAK_BUILD_FUZZERS)
         -Wextra -pedantic -g -fsanitize=fuzzer-no-link,address,undefined
     )
     target_link_libraries(${PROJECT_NAME}-fuzz ${LIB_LIBS})
+    target_compile_definitions(${PROJECT_NAME}-fuzz PRIVATE
+        $<TARGET_PROPERTY:${PROJECT_NAME}-vendor-names,INTERFACE_COMPILE_DEFINITIONS>
+    )
 endif()
 
 install(
