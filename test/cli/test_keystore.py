@@ -6,7 +6,8 @@ import subprocess
 
 import pytest
 
-from bpaktest import (DATA_DIR, SOURCE_DIR, BpakError, Header, bpak_id)
+from bpaktest import (DATA_DIR, HEADER_SIZE, SOURCE_DIR, BpakError, Header,
+                      bpak_id, corrupt)
 
 KEYSTORE_ID = "pb-internal"
 
@@ -72,7 +73,18 @@ def test_verify_with_keystore_unknown_key(bpak, keystore):
                               keystore_id=KEYSTORE_ID)
 
     bpak.fails("verify", pkg, "--keystore", keystore,
-               error=BpakError.NOT_FOUND)
+               error=BpakError.KEY_NOT_FOUND)
+
+
+def test_verify_with_keystore_corrupted(bpak, keystore):
+    """The keystore is not signed, its payload hash is verified"""
+    pkg = bpak.create_package("test.bpak",
+                              key_id="pb-development",
+                              keystore_id=KEYSTORE_ID)
+    corrupt(keystore, HEADER_SIZE)
+
+    bpak.fails("verify", pkg, "--keystore", keystore,
+               error=BpakError.BAD_PAYLOAD_HASH)
 
 
 def test_verify_with_keystore_wrong_keystore_id(bpak, keystore):

@@ -102,6 +102,12 @@ tool. The package format and the library ABI stay compatible, see
   cleared signature, and the private key was not cleared before it was
   freed. It sets the signature kind of the header to the kind of the key,
   which was not checked.
+- `bpak_keystore_load_key_from_file` verifies the payload hash of the
+  keystore and fails with `BPAK_BAD_PAYLOAD_HASH` when it is corrupted, it
+  read `keystore-provider-id` regardless of its size, and returns
+  `BPAK_KEY_NOT_FOUND` instead of `BPAK_NOT_FOUND` when the keystore does
+  not contain the key. `bpak verify --keystore` exits with the code of
+  `BPAK_KEY_NOT_FOUND` (228) for an unknown key instead of 254.
 - Python package: crashes when opening a file that is not a package, when
   using a closed package and after the log callback was released, reference
   leaks in `Package.parts` and `Package.meta`, meta data larger than the

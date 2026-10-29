@@ -7,12 +7,24 @@
  *
  */
 
+#include <string.h>
 #include <bpak/bpak.h>
 #include <bpak/pkg.h>
 #include <bpak/keystore.h>
 #include <bpak/id.h>
 #include <bpak/crypto.h>
+#include <bpak/verify.h>
 
+static ssize_t read_payload(off_t offset, uint8_t *buffer, size_t length,
+                            void *user)
+{
+    FILE *fp = (FILE *)user;
+
+    if (fseeko(fp, offset, SEEK_SET) != 0)
+        return -BPAK_SEEK_ERROR;
+
+    return fread(buffer, 1, length, fp);
+}
 
 BPAK_EXPORT int bpak_keystore_load_key_from_file(const char *filename,
                                                  uint32_t keystore_id,
@@ -27,12 +39,22 @@ BPAK_EXPORT int bpak_keystore_load_key_from_file(const char *filename,
     struct bpak_part_header *key_part = NULL;
     struct bpak_meta_header *meta = NULL;
     size_t key_length;
-    bpak_id_t *keystore_provider_id = NULL;
+    bpak_id_t keystore_provider_id;
 
     rc = bpak_pkg_open(&pkg, filename, "rb");
 
     if (rc != BPAK_OK)
         return rc;
+
+    /* The keystore is not signed, its payload hash detects a keystore that
+     * is corrupted or truncated */
+    rc = bpak_verify_payload(&pkg.header,
+                             read_payload,
+                             sizeof(struct bpak_header),
+                             pkg.fp);
+
+    if (rc != BPAK_OK)
+        goto err_close_pkg_out;
 
     /* Optionally verify other meta data in the header */
     if (check_header != NULL) {
@@ -47,17 +69,26 @@ BPAK_EXPORT int bpak_keystore_load_key_from_file(const char *filename,
     if (rc != BPAK_OK)
         goto err_close_pkg_out;
 
-    keystore_provider_id = bpak_get_meta_ptr(&pkg.header, meta, bpak_id_t);
+    if (meta->size < sizeof(keystore_provider_id)) {
+        rc = -BPAK_SIZE_ERROR;
+        goto err_close_pkg_out;
+    }
 
-    if (*keystore_provider_id != keystore_id) {
+    memcpy(&keystore_provider_id,
+           bpak_get_meta_ptr(&pkg.header, meta, uint8_t),
+           sizeof(keystore_provider_id));
+
+    if (keystore_provider_id != keystore_id) {
         rc = -BPAK_KEYSTORE_ID_MISMATCH;
         goto err_close_pkg_out;
     }
 
     rc = bpak_get_part(&pkg.header, key_id, &key_part);
 
-    if (rc != BPAK_OK)
+    if (rc != BPAK_OK) {
+        rc = -BPAK_KEY_NOT_FOUND;
         goto err_close_pkg_out;
+    }
 
     key_length = bpak_part_size_wo_pad(key_part);
 
@@ -66,7 +97,8 @@ BPAK_EXPORT int bpak_keystore_load_key_from_file(const char *filename,
         goto err_close_pkg_out;
     }
 
-    if (fseek(pkg.fp, bpak_part_offset(&pkg.header, key_part), SEEK_SET) != 0) {
+    if (fseeko(pkg.fp, bpak_part_offset(&pkg.header, key_part), SEEK_SET) !=
+        0) {
         rc = -BPAK_SEEK_ERROR;
         goto err_close_pkg_out;
     }

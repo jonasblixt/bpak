@@ -51,7 +51,11 @@ int bpak_keystore_get(struct bpak_keystore *ks, uint32_t id,
  * NOTE: bpak_keystore_load_key_from_file allocates a key struct and
  *  the user must free this memory.
  *
- * Returns BPAK_OK on success or a negative number.
+ * The payload hash of the keystore is verified, the keystore is not signed.
+ *
+ * Returns BPAK_OK on success, -BPAK_BAD_PAYLOAD_HASH if the keystore is
+ *  corrupted, -BPAK_KEYSTORE_ID_MISMATCH, -BPAK_KEY_NOT_FOUND if it does not
+ *  contain the key or a negative number.
  */
 int bpak_keystore_load_key_from_file(const char *filename,
                                      uint32_t keystore_id,
