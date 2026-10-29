@@ -13,7 +13,6 @@
 #include <bpak/bpak.h>
 #include <bpak/utils.h>
 #include <bpak/crc.h>
-#include <bpak/pkg.h>
 #include <bpak/id.h>
 #include <bpak/merkle.h>
 

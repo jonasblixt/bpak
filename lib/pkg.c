@@ -12,12 +12,9 @@
 #include <errno.h>
 #include <unistd.h>
 #include <string.h>
-#include <sys/mman.h>
 #include <sys/types.h>
-#include <sys/stat.h>
 #include <bpak/bpak.h>
 #include <bpak/verify.h>
-#include <bpak/crc.h>
 #include <bpak/pkg.h>
 #include <bpak/utils.h>
 #include <bpak/transport.h>

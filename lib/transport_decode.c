@@ -10,7 +10,6 @@
 #include <inttypes.h>
 #include <string.h>
 #include <bpak/bpak.h>
-#include <bpak/crc.h>
 #include <bpak/transport.h>
 #include <bpak/bspatch.h>
 #include <bpak/merkle.h>

@@ -8,19 +8,14 @@
  */
 
 #include <stdio.h>
-#include <stdlib.h>
 #include <errno.h>
 #include <unistd.h>
 #include <string.h>
 #include <sys/mman.h>
 #include <sys/types.h>
-#include <sys/stat.h>
 
 #include <bpak/bpak.h>
-#include <bpak/crc.h>
-#include <bpak/utils.h>
 #include <bpak/id.h>
-#include <bpak/merkle.h>
 #include <bpak/bsdiff.h>
 #include <bpak/transport.h>
 

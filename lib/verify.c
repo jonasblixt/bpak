@@ -11,7 +11,6 @@
 
 #include <bpak/bpak.h>
 #include <bpak/id.h>
-#include <bpak/crc.h>
 #include <bpak/verify.h>
 #include <bpak/merkle.h>
 #include <bpak/crypto.h>

@@ -19,7 +19,6 @@
 #include <bpak/utils.h>
 #include <bpak/id.h>
 #include <bpak/merkle.h>
-#include <bpak/crc.h>
 #include <bpak/crypto.h>
 
 #include "internal.h"
