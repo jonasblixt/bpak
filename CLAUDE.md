@@ -49,7 +49,8 @@ container instead.
 - `test/golden/` golden sample packages created by released versions and
   `test/abi/` the exported symbols, see "Compatibility" below.
   `test/bpaktest.py` helpers and `test/conftest.py` fixtures, `test/data/`
-  keys and reference files.
+  keys and reference files. Generate large test data with `random_bytes()`
+  or the `random_data` fixture instead of committing it.
 - `examples/` are built and run as tests, label `examples`.
 - `test/fuzz/` libFuzzer targets for the code that parses untrusted input
   (`BPAK_BUILD_FUZZERS`, clang), test builds run their corpus in
@@ -98,12 +99,16 @@ change. Releases: update `version.txt` and the release heading in
 - C code follows `.clang-format`, only format the code you change. Keep the
   copyright notices in third-party code and its license in `LICENSES/`. Python
   code in `tools/bpak` follows ruff and strict mypy (`pyproject.toml`).
-- New error codes need an exception in `tools/_bpak/exceptions.c`,
-  `tools/bpak/__init__.py` and `tools/bpak/_bpak.pyi`. Changes to the C
-  extension API must be reflected in the stub `tools/bpak/_bpak.pyi`.
+- New error codes need an exception in `tools/_bpak/exceptions.c` and
+  `tools/bpak/_bpak.pyi`, `tools/bpak/__init__.py` re-exports the names of
+  the extension. Changes to the C extension API must be reflected in the
+  stub `tools/bpak/_bpak.pyi`.
 - Documentation is plain Markdown, the C API is documented in the public
   headers. Update `docs/` in the same commit as the change it describes and
   keep the commands and their output in `docs/user-guide.md` in sync with the
   tool.
 - Library functions log through `bpak_printf`, which is a weak symbol in
   `lib/bpak.c` that the python extension and the unit tests override.
+- Helpers shared by the library sources go in `lib/internal.h`, they are not
+  exported. Check it before writing another file read loop or meta data
+  lookup.
