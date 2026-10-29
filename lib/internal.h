@@ -97,4 +97,11 @@ int bpak_file_feed(FILE *fp, uint64_t length, bpak_consume_t consume,
  */
 int bpak_file_copy(FILE *in_fp, FILE *out_fp, uint64_t length);
 
+#if BPAK_CONFIG_LZMA == 1
+#include <lzma.h>
+
+/** liblzma allocator that allocates with bpak_calloc() and bpak_free() */
+extern const lzma_allocator bpak_lzma_allocator;
+#endif
+
 #endif // BPAK_LIB_INTERNAL_H

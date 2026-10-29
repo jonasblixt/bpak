@@ -32,9 +32,9 @@
 #include <bpak/bspatch.h>
 #include <bpak/heatshrink_decoder.h>
 
-#if BPAK_CONFIG_LZMA == 1
-#include <lzma.h>
+#include "internal.h"
 
+#if BPAK_CONFIG_LZMA == 1
 static void *lzma_alloc_wrap(void *opaque, size_t nmemb, size_t size)
 {
     (void)opaque;
@@ -47,31 +47,19 @@ static void lzma_free_wrap(void *opaque, void *ptr)
     bpak_free(ptr);
 }
 
-static const lzma_allocator lzma_alloc = {
+const lzma_allocator bpak_lzma_allocator = {
     .alloc = lzma_alloc_wrap,
     .free = lzma_free_wrap,
 };
 #endif
 
+/* Sign and magnitude, little endian */
 static int64_t offtin(uint8_t *buf)
 {
-    int64_t y;
+    int64_t y = buf[7] & 0x7F;
 
-    y = buf[7] & 0x7F;
-    y = y * 256;
-    y += buf[6];
-    y = y * 256;
-    y += buf[5];
-    y = y * 256;
-    y += buf[4];
-    y = y * 256;
-    y += buf[3];
-    y = y * 256;
-    y += buf[2];
-    y = y * 256;
-    y += buf[1];
-    y = y * 256;
-    y += buf[0];
+    for (int i = 6; i >= 0; i--)
+        y = y * 256 + buf[i];
 
     if (buf[7] & 0x80)
         y = -y;
@@ -274,7 +262,6 @@ process_more:
     case BPAK_PATCH_STATE_ERROR:
         bpak_printf(0, "bspatch error\n");
         return -BPAK_FAILED;
-        break;
     default:
         return -BPAK_FAILED;
     }
@@ -295,7 +282,7 @@ static int decompressor_init(struct bpak_bspatch_context *ctx)
         lzma_stream *strm = &ctx->decompressor.lzma_stream;
 
         /* liblzma allocates the decoder with the allocator of the stream */
-        strm->allocator = &lzma_alloc;
+        strm->allocator = &bpak_lzma_allocator;
 
         lzma_ret ret = lzma_stream_decoder(strm,
                                            BPAK_BSPATCH_LZMA_MEMLIMIT,
@@ -312,24 +299,6 @@ static int decompressor_init(struct bpak_bspatch_context *ctx)
     }
 
     return BPAK_OK;
-}
-
-static void decompressor_free(struct bpak_bspatch_context *ctx)
-{
-
-    switch (ctx->compression) {
-    case BPAK_COMPRESSION_NONE:
-        break;
-    case BPAK_COMPRESSION_HS:
-        break;
-#if BPAK_CONFIG_LZMA == 1
-    case BPAK_COMPRESSION_LZMA:
-        lzma_end(&ctx->decompressor.lzma_stream);
-        break;
-#endif
-    default:
-        return;
-    }
 }
 
 #if BPAK_CONFIG_LZMA == 1
@@ -458,8 +427,6 @@ BPAK_EXPORT int bpak_bspatch_init(struct bpak_bspatch_context *ctx,
                                   enum bpak_compression compression,
                                   void *user_priv)
 {
-    int rc;
-
     memset(ctx, 0, sizeof(*ctx));
 
     if (buffer_length % 2 != 0)
@@ -478,37 +445,24 @@ BPAK_EXPORT int bpak_bspatch_init(struct bpak_bspatch_context *ctx,
     ctx->output_offset = output_offset;
     ctx->origin_offset = origin_offset;
 
-    rc = decompressor_init(ctx);
-
-    if (rc != BPAK_OK) {
-        return rc;
-    }
-
-    return BPAK_OK;
+    return decompressor_init(ctx);
 }
 
 BPAK_EXPORT int bpak_bspatch_write(struct bpak_bspatch_context *ctx,
                                    uint8_t *buffer, size_t length)
 {
-    int rc;
     switch (ctx->compression) {
     case BPAK_COMPRESSION_NONE:
-        rc = bspatch_write(ctx, buffer, length);
-        return rc;
-        break;
+        return bspatch_write(ctx, buffer, length);
     case BPAK_COMPRESSION_HS:
         return bspatch_hs_write(ctx, buffer, length);
-        break;
 #if BPAK_CONFIG_LZMA == 1
     case BPAK_COMPRESSION_LZMA:
         return bspatch_lzma_write(ctx, buffer, length);
-        break;
 #endif
     default:
         return -BPAK_NOT_SUPPORTED;
     }
-
-    return BPAK_OK;
 }
 
 BPAK_EXPORT ssize_t bpak_bspatch_final(struct bpak_bspatch_context *ctx)
@@ -539,5 +493,10 @@ BPAK_EXPORT ssize_t bpak_bspatch_final(struct bpak_bspatch_context *ctx)
 
 BPAK_EXPORT void bpak_bspatch_free(struct bpak_bspatch_context *ctx)
 {
-    decompressor_free(ctx);
+#if BPAK_CONFIG_LZMA == 1
+    if (ctx->compression == BPAK_COMPRESSION_LZMA)
+        lzma_end(&ctx->decompressor.lzma_stream);
+#else
+    (void)ctx;
+#endif
 }
