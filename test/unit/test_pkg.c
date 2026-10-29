@@ -413,6 +413,30 @@ static void test_sign(void **state)
     unlink(path);
 }
 
+/* The sizes do not wrap around on targets with a 32-bit size_t */
+static void test_package_size(void **state)
+{
+    (void)state;
+    struct bpak_package pkg;
+    struct bpak_part_header *p;
+
+    memset(&pkg, 0, sizeof(pkg));
+    bpak_init_header(&pkg.header);
+    assert_int_equal(bpak_add_part(&pkg.header, bpak_id("a"), &p), BPAK_OK);
+    p->size = 1000;
+    p->pad_bytes = 24;
+    assert_int_equal(bpak_pkg_installed_size(&pkg), 1024);
+    assert_int_equal(bpak_pkg_size(&pkg), sizeof(struct bpak_header) + 1000);
+
+    /* Two parts of 2^63 bytes */
+    p->size = (uint64_t)1 << 63;
+    p->pad_bytes = 0;
+    assert_int_equal(bpak_add_part(&pkg.header, bpak_id("b"), &p), BPAK_OK);
+    p->size = (uint64_t)1 << 63;
+    assert_true(bpak_pkg_installed_size(&pkg) == SIZE_MAX);
+    assert_true(bpak_pkg_size(&pkg) == SIZE_MAX);
+}
+
 int main(void)
 {
     const struct CMUnitTest tests[] = {
@@ -426,6 +450,7 @@ int main(void)
         cmocka_unit_test(test_delete_transport_part),
         cmocka_unit_test(test_open_failure),
         cmocka_unit_test(test_sign),
+        cmocka_unit_test(test_package_size),
     };
 
     return cmocka_run_group_tests(tests, NULL, NULL);

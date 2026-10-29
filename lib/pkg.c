@@ -148,6 +148,12 @@ BPAK_EXPORT int bpak_pkg_update_hash(struct bpak_package *pkg, char *output,
     return BPAK_OK;
 }
 
+/* 'a' + 'b', or SIZE_MAX when the sum does not fit size_t */
+static size_t add_size(size_t a, uint64_t b)
+{
+    return (b > SIZE_MAX - a) ? SIZE_MAX : a + (size_t)b;
+}
+
 BPAK_EXPORT size_t bpak_pkg_installed_size(struct bpak_package *pkg)
 {
     size_t installed_size = 0;
@@ -156,7 +162,7 @@ BPAK_EXPORT size_t bpak_pkg_installed_size(struct bpak_package *pkg)
         if (!p->id)
             break;
 
-        installed_size += p->size + p->pad_bytes;
+        installed_size = add_size(installed_size, p->size + p->pad_bytes);
     }
 
     return installed_size;
@@ -164,19 +170,17 @@ BPAK_EXPORT size_t bpak_pkg_installed_size(struct bpak_package *pkg)
 
 BPAK_EXPORT size_t bpak_pkg_size(struct bpak_package *pkg)
 {
-    size_t transport_size = 0;
+    size_t transport_size = sizeof(struct bpak_header);
 
     bpak_foreach_part (&pkg->header, p) {
         if (!p->id)
             break;
 
         if (p->flags & BPAK_FLAG_TRANSPORT)
-            transport_size += p->transport_size;
+            transport_size = add_size(transport_size, p->transport_size);
         else
-            transport_size += p->size;
+            transport_size = add_size(transport_size, p->size);
     }
-
-    transport_size += sizeof(struct bpak_header);
 
     return transport_size;
 }

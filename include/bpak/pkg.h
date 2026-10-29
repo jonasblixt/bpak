@@ -71,7 +71,7 @@ int bpak_pkg_update_hash(struct bpak_package *pkg, char *output, size_t *size);
  *
  * @param[in] pkg Package pointer
  *
- * @return Size in bytes
+ * @return Size in bytes, SIZE_MAX if it does not fit size_t
  */
 size_t bpak_pkg_installed_size(struct bpak_package *pkg);
 
@@ -80,7 +80,7 @@ size_t bpak_pkg_installed_size(struct bpak_package *pkg);
  *
  * @param[in] pkg Package pointer
  *
- * @return Size in bytes
+ * @return Size in bytes, SIZE_MAX if it does not fit size_t
  */
 size_t bpak_pkg_size(struct bpak_package *pkg);
 
