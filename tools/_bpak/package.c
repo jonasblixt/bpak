@@ -756,108 +756,68 @@ static PyObject *package_get_payload_hash(PyObject *self, void *closure)
     return Py_BuildValue("y#", h->payload_hash, hash_size);
 }
 
-static PyObject *package_get_hash_kind(PyObject *self, void *closure)
-{
-    (void)closure;
-    BPAKPackage *package = (BPAKPackage *)self;
-    struct bpak_header *h = bpak_pkg_header(&package->pkg);
+/* Integer fields of the header, the closure of their getters and setters */
+struct header_field {
+    const char *name;
+    size_t offset;
+    size_t size;
+};
 
-    return PyLong_FromLong(h->hash_kind);
+#define HEADER_FIELD(field)                                                    \
+    {                                                                          \
+        #field, offsetof(struct bpak_header, field),                           \
+            sizeof(((struct bpak_header *)0)->field)                           \
+    }
+
+/* The getter and setter handle 8 and 32 bit fields */
+static const struct header_field hash_kind_field = HEADER_FIELD(hash_kind);
+static const struct header_field signature_kind_field =
+    HEADER_FIELD(signature_kind);
+static const struct header_field key_id_field = HEADER_FIELD(key_id);
+static const struct header_field keystore_id_field = HEADER_FIELD(keystore_id);
+
+static PyObject *package_get_header_field(PyObject *self, void *closure)
+{
+    const struct header_field *field = closure;
+    BPAKPackage *package = (BPAKPackage *)self;
+    const uint8_t *data =
+        (const uint8_t *)bpak_pkg_header(&package->pkg) + field->offset;
+
+    if (field->size == sizeof(uint8_t)) {
+        return PyLong_FromUnsignedLong(*data);
+    }
+
+    /* The header is packed */
+    uint32_t value;
+    memcpy(&value, data, sizeof(value));
+    return PyLong_FromUnsignedLong(value);
 }
 
-static int package_set_hash_kind(PyObject *self, PyObject *value, void *closure)
+static int package_set_header_field(PyObject *self, PyObject *value,
+                                    void *closure)
 {
-    (void)closure;
-    int rc;
-    unsigned long long hash_kind;
+    const struct header_field *field = closure;
     BPAKPackage *package = (BPAKPackage *)self;
-    struct bpak_header *h = bpak_pkg_header(&package->pkg);
+    uint8_t *data = (uint8_t *)bpak_pkg_header(&package->pkg) + field->offset;
+    unsigned long long new_value;
+    int rc;
 
     if (package_check_open(package) < 0) {
         return -1;
     }
 
-    if (py_to_uint(value, UINT8_MAX, "hash_kind", &hash_kind) < 0) {
-        return -1;
+    if (field->size == sizeof(uint8_t)) {
+        if (py_to_uint(value, UINT8_MAX, field->name, &new_value) < 0) {
+            return -1;
+        }
+        *data = (uint8_t)new_value;
+    } else {
+        if (py_to_uint(value, UINT32_MAX, field->name, &new_value) < 0) {
+            return -1;
+        }
+        uint32_t value32 = (uint32_t)new_value;
+        memcpy(data, &value32, sizeof(value32));
     }
-
-    h->hash_kind = (uint8_t)hash_kind;
-
-    rc = package_write_header(package, false);
-
-    if (rc != BPAK_OK) {
-        PyErr_Format(PyExc_IOError, "could not write header: %s",
-                bpak_error_string(rc));
-        return -1;
-    }
-
-    return 0;
-}
-
-static PyObject *package_get_key_id(PyObject *self, void *closure)
-{
-    (void)closure;
-    BPAKPackage *package = (BPAKPackage *)self;
-    struct bpak_header *h = bpak_pkg_header(&package->pkg);
-
-    return PyLong_FromUnsignedLong(h->key_id);
-}
-
-static int package_set_key_id(PyObject *self, PyObject *value, void *closure)
-{
-    (void)closure;
-    int rc;
-    unsigned long long key_id;
-    BPAKPackage *package = (BPAKPackage *)self;
-    struct bpak_header *h = bpak_pkg_header(&package->pkg);
-
-    if (package_check_open(package) < 0) {
-        return -1;
-    }
-
-    if (py_to_uint(value, UINT32_MAX, "key_id", &key_id) < 0) {
-        return -1;
-    }
-
-    h->key_id = (uint32_t)key_id;
-
-    rc = package_write_header(package, false);
-
-    if (rc != BPAK_OK) {
-        PyErr_Format(PyExc_IOError, "could not write header: %s",
-                bpak_error_string(rc));
-        return -1;
-    }
-
-    return 0;
-}
-
-static PyObject *package_get_keystore_id(PyObject *self, void *closure)
-{
-    (void)closure;
-    BPAKPackage *package = (BPAKPackage *)self;
-    struct bpak_header *h = bpak_pkg_header(&package->pkg);
-
-    return PyLong_FromUnsignedLong(h->keystore_id);
-}
-
-static int package_set_keystore_id(PyObject *self, PyObject *value, void *closure)
-{
-    (void)closure;
-    int rc;
-    unsigned long long keystore_id;
-    BPAKPackage *package = (BPAKPackage *)self;
-    struct bpak_header *h = bpak_pkg_header(&package->pkg);
-
-    if (package_check_open(package) < 0) {
-        return -1;
-    }
-
-    if (py_to_uint(value, UINT32_MAX, "keystore_id", &keystore_id) < 0) {
-        return -1;
-    }
-
-    h->keystore_id = (uint32_t)keystore_id;
 
     rc = package_write_header(package, false);
 
@@ -928,44 +888,6 @@ static int package_set_signature(PyObject *self, PyObject *value,
 
     if (rc != BPAK_OK) {
         bpak_raise(rc, "failed to set signature data");
-        return -1;
-    }
-
-    return 0;
-}
-
-static PyObject *package_get_signature_kind(PyObject *self, void *closure)
-{
-    (void)closure;
-    BPAKPackage *package = (BPAKPackage *)self;
-    struct bpak_header *h = bpak_pkg_header(&package->pkg);
-
-    return PyLong_FromLong(h->signature_kind);
-}
-
-static int package_set_signature_kind(PyObject *self, PyObject *value, void *closure)
-{
-    (void)closure;
-    int rc;
-    unsigned long long signature_kind;
-    BPAKPackage *package = (BPAKPackage *)self;
-    struct bpak_header *h = bpak_pkg_header(&package->pkg);
-
-    if (package_check_open(package) < 0) {
-        return -1;
-    }
-
-    if (py_to_uint(value, UINT8_MAX, "signature_kind", &signature_kind) < 0) {
-        return -1;
-    }
-
-    h->signature_kind = (uint8_t)signature_kind;
-
-    rc = package_write_header(package, false);
-
-    if (rc != BPAK_OK) {
-        PyErr_Format(PyExc_IOError, "could not write header: %s",
-                bpak_error_string(rc));
         return -1;
     }
 
@@ -1172,10 +1094,10 @@ static PyGetSetDef package_getset[] = {
       NULL },
 
     { "hash_kind",
-      (getter)package_get_hash_kind,
-      (setter)package_set_hash_kind,
+      (getter)package_get_header_field,
+      (setter)package_set_header_field,
       "Package hash kind (one of HASH_ constants)",
-      NULL },
+      (void *)&hash_kind_field },
 
     { "installed_size",
       (getter)package_get_installed_size,
@@ -1184,16 +1106,16 @@ static PyGetSetDef package_getset[] = {
       NULL },
 
     { "key_id",
-      (getter)package_get_key_id,
-      (setter)package_set_key_id,
+      (getter)package_get_header_field,
+      (setter)package_set_header_field,
       "Key ID used for signing/verification",
-      NULL },
+      (void *)&key_id_field },
 
     { "keystore_id",
-      (getter)package_get_keystore_id,
-      (setter)package_set_keystore_id,
+      (getter)package_get_header_field,
+      (setter)package_set_header_field,
       "Keystore ID used for signing",
-      NULL },
+      (void *)&keystore_id_field },
 
     { "signature",
       (getter)package_get_signature,
@@ -1202,10 +1124,10 @@ static PyGetSetDef package_getset[] = {
       NULL },
 
     { "signature_kind",
-      (getter)package_get_signature_kind,
-      (setter)package_set_signature_kind,
+      (getter)package_get_header_field,
+      (setter)package_set_header_field,
       "Package signature kind (one of SIGN_ constants)",
-      NULL },
+      (void *)&signature_kind_field },
 
     { "size",
       (getter)package_get_size,
