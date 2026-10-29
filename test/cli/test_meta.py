@@ -4,7 +4,7 @@ import os
 
 import pytest
 
-from bpaktest import Part
+from bpaktest import BpakError, Part
 
 
 @pytest.fixture
@@ -70,3 +70,12 @@ def test_extract_part(bpak, make_data, tmp_path):
     bpak("extract", pkg, "--part", "fs", "--output", "dump.bin")
 
     assert (tmp_path / "dump.bin").read_bytes() == data.read_bytes()
+
+
+def test_show_meta_too_small(bpak, pkg):
+    """Known meta data that is smaller than its type is shown as invalid"""
+    bpak("add", pkg, "--meta", "merkle-salt", "--from-string", "abc")
+
+    assert "<invalid>" in bpak.output("show", pkg).decode()
+    bpak.fails("show", pkg, "--meta", "merkle-salt",
+               error=BpakError.SIZE_ERROR)

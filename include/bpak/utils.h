@@ -51,7 +51,8 @@ int bpak_uuid_to_string(const uint8_t *data, char *buf, size_t size);
  * @param[out] buf Output buffer, null terminated
  * @param[in] size Size of output buffer in bytes
  *
- * @return BPAK_OK on success
+ * @return BPAK_OK on success, -BPAK_SIZE_ERROR and an empty string if the
+ *         buffer is too small or the meta data is smaller than its type
  */
 int bpak_meta_to_string(struct bpak_header *h, struct bpak_meta_header *m,
                         char *buf, size_t size);

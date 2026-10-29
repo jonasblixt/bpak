@@ -64,6 +64,10 @@ tool. The package format and the library ABI stay compatible, see
   most 64 MiB (`BPAK_BSPATCH_LZMA_MEMLIMIT`), it had no limit.
 - `bpak_pkg_add_key` and the python package freed keys with `free` instead
   of `bpak_free`.
+- `bpak_meta_to_string` did not terminate a `bpak-version` that filled the
+  buffer, left the buffer uninitialized when it was too small for a hash and
+  read the values of known meta data regardless of their size. `bpak show`
+  prints `<invalid>` for values that are too small for their type.
 - Python package: crashes when opening a file that is not a package, when
   using a closed package and after the log callback was released, reference
   leaks in `Package.parts` and `Package.meta`, meta data larger than the

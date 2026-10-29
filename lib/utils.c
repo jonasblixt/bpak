@@ -57,56 +57,93 @@ BPAK_EXPORT int bpak_uuid_to_string(const uint8_t *data, char *buf, size_t size)
     return BPAK_OK;
 }
 
+/* Size of the value of known meta data, 0 for strings and unknown ids */
+static size_t meta_value_size(bpak_id_t id)
+{
+    switch (id) {
+    case BPAK_ID_BPAK_KEY_ID:
+    case BPAK_ID_BPAK_KEY_STORE:
+    case BPAK_ID_KEYSTORE_PROVIDER_ID:
+        return sizeof(bpak_id_t);
+    case BPAK_ID_BPAK_PACKAGE:
+        return 16;
+    case BPAK_ID_BPAK_TRANSPORT:
+        return sizeof(struct bpak_transport_meta);
+    case BPAK_ID_MERKLE_SALT:
+    case BPAK_ID_MERKLE_ROOT_HASH:
+        return 32;
+    case BPAK_ID_PB_LOAD_ADDR:
+        return sizeof(uint64_t);
+    default:
+        return 0;
+    }
+}
+
 BPAK_EXPORT int bpak_meta_to_string(struct bpak_header *h,
                                     struct bpak_meta_header *m, char *buf,
                                     size_t size)
 {
-    bpak_id_t *id_ptr = NULL;
-    uint8_t *byte_ptr = NULL;
+    uint8_t *byte_ptr = bpak_get_meta_ptr(h, m, uint8_t);
+    bpak_id_t id_value;
+    uint64_t u64_value;
+    struct bpak_transport_meta transport_meta;
+    int n = 0;
+    int rc = BPAK_OK;
 
-    if (m->id == BPAK_ID_BPAK_KEY_ID) {
-        id_ptr = bpak_get_meta_ptr(h, m, bpak_id_t);
-        snprintf(buf, size, "%" PRIx32, *id_ptr);
-    } else if (m->id == BPAK_ID_BPAK_KEY_STORE) {
-        id_ptr = bpak_get_meta_ptr(h, m, bpak_id_t);
-        snprintf(buf, size, "%" PRIx32, *id_ptr);
+    if (size == 0)
+        return -BPAK_SIZE_ERROR;
+
+    *buf = 0;
+
+    if (m->size < meta_value_size(m->id))
+        return -BPAK_SIZE_ERROR;
+
+    /* The values are copied, they may not be aligned for their type */
+    if (m->id == BPAK_ID_BPAK_KEY_ID || m->id == BPAK_ID_BPAK_KEY_STORE) {
+        memcpy(&id_value, byte_ptr, sizeof(id_value));
+        n = snprintf(buf, size, "%" PRIx32, id_value);
     } else if (m->id == BPAK_ID_BPAK_PACKAGE) {
-        byte_ptr = bpak_get_meta_ptr(h, m, uint8_t);
-        bpak_uuid_to_string(byte_ptr, buf, size);
+        rc = bpak_uuid_to_string(byte_ptr, buf, size);
     } else if (m->id == BPAK_ID_BPAK_TRANSPORT) {
-        struct bpak_transport_meta *transport_meta =
-            bpak_get_meta_ptr(h, m, struct bpak_transport_meta);
-
-        snprintf(buf,
-                 size,
-                 "Encode: %8.8" PRIx32 ", Decode: %8.8" PRIx32,
-                 transport_meta->alg_id_encode,
-                 transport_meta->alg_id_decode);
-    } else if (m->id == BPAK_ID_MERKLE_SALT) {
-        byte_ptr = bpak_get_meta_ptr(h, m, uint8_t);
-        bpak_bin2hex(byte_ptr, 32, buf, size);
-    } else if (m->id == BPAK_ID_MERKLE_ROOT_HASH) {
-        byte_ptr = bpak_get_meta_ptr(h, m, uint8_t);
-        bpak_bin2hex(byte_ptr, 32, buf, size);
+        memcpy(&transport_meta, byte_ptr, sizeof(transport_meta));
+        n = snprintf(buf,
+                     size,
+                     "Encode: %8.8" PRIx32 ", Decode: %8.8" PRIx32,
+                     transport_meta.alg_id_encode,
+                     transport_meta.alg_id_decode);
+    } else if (m->id == BPAK_ID_MERKLE_SALT ||
+               m->id == BPAK_ID_MERKLE_ROOT_HASH) {
+        rc = bpak_bin2hex(byte_ptr, 32, buf, size) == BPAK_OK
+                 ? BPAK_OK
+                 : -BPAK_SIZE_ERROR;
     } else if (m->id == BPAK_ID_PB_LOAD_ADDR) {
-        uint64_t *entry_addr = bpak_get_meta_ptr(h, m, uint64_t);
-        snprintf(buf, size, "Entry: 0x%08" PRIX64, *entry_addr);
+        memcpy(&u64_value, byte_ptr, sizeof(u64_value));
+        n = snprintf(buf, size, "Entry: 0x%08" PRIX64, u64_value);
     } else if (m->id == BPAK_ID_BPAK_VERSION) {
-        byte_ptr = bpak_get_meta_ptr(h, m, uint8_t);
+        /* Stored with a NUL, which a package may leave out */
+        size_t length = m->size;
 
-        if (m->size > size)
+        if (length > 0 && byte_ptr[length - 1] == 0)
+            length--;
+
+        if (length >= size)
             return -BPAK_SIZE_ERROR;
 
-        memcpy(buf, byte_ptr, m->size);
+        memcpy(buf, byte_ptr, length);
+        buf[length] = 0;
     } else if (m->id == BPAK_ID_KEYSTORE_PROVIDER_ID) {
-        id_ptr = bpak_get_meta_ptr(h, m, bpak_id_t);
-        snprintf(buf, size, "0x%" PRIx32, *id_ptr);
-    } else {
-        if (size)
-            *buf = 0;
+        memcpy(&id_value, byte_ptr, sizeof(id_value));
+        n = snprintf(buf, size, "0x%" PRIx32, id_value);
     }
 
-    return BPAK_OK;
+    /* snprintf truncated the string */
+    if (n < 0 || (size_t)n >= size)
+        rc = -BPAK_SIZE_ERROR;
+
+    if (rc != BPAK_OK)
+        *buf = 0;
+
+    return rc;
 }
 
 BPAK_EXPORT bpak_id_t bpak_part_name_to_hash_tree_id(const char *part_name)

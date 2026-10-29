@@ -71,6 +71,96 @@ static void test_uuid_to_string(void **state)
                      -BPAK_SIZE_ERROR);
 }
 
+static struct bpak_meta_header *add_meta(struct bpak_header *h, bpak_id_t id,
+                                         const void *value, uint16_t size)
+{
+    struct bpak_meta_header *meta;
+    int rc;
+
+    rc = bpak_add_meta(h, id, 0, size, &meta);
+    assert_int_equal(rc, BPAK_OK);
+    memcpy(bpak_get_meta_ptr(h, meta, uint8_t), value, size);
+    return meta;
+}
+
+static void test_meta_to_string(void **state)
+{
+    (void)state;
+    struct bpak_header h;
+    struct bpak_meta_header *meta;
+    const uint64_t load_addr = 0x80000000;
+    char buf[128];
+    int rc;
+
+    bpak_init_header(&h);
+
+    meta = add_meta(&h, BPAK_ID_PB_LOAD_ADDR, &load_addr, sizeof(load_addr));
+    rc = bpak_meta_to_string(&h, meta, buf, sizeof(buf));
+    assert_int_equal(rc, BPAK_OK);
+    assert_string_equal(buf, "Entry: 0x80000000");
+
+    meta = add_meta(&h, BPAK_ID_BPAK_VERSION, "1.2.3", 6);
+    rc = bpak_meta_to_string(&h, meta, buf, sizeof(buf));
+    assert_int_equal(rc, BPAK_OK);
+    assert_string_equal(buf, "1.2.3");
+
+    /* Unknown meta data is an empty string */
+    meta = add_meta(&h, bpak_id("test-meta"), "x", 1);
+    memset(buf, 'x', sizeof(buf));
+    rc = bpak_meta_to_string(&h, meta, buf, sizeof(buf));
+    assert_int_equal(rc, BPAK_OK);
+    assert_string_equal(buf, "");
+}
+
+static void test_meta_to_string_sizes(void **state)
+{
+    (void)state;
+    struct bpak_header h;
+    struct bpak_meta_header *meta;
+    uint8_t salt[32] = { 0 };
+    char buf[128];
+    int rc;
+
+    bpak_init_header(&h);
+
+    /* A version without the NUL that fills the buffer is terminated */
+    meta = add_meta(&h, BPAK_ID_BPAK_VERSION, "12345", 5);
+    rc = bpak_meta_to_string(&h, meta, buf, 6);
+    assert_int_equal(rc, BPAK_OK);
+    assert_string_equal(buf, "12345");
+
+    memset(buf, 'x', sizeof(buf));
+    rc = bpak_meta_to_string(&h, meta, buf, 5);
+    assert_int_equal(rc, -BPAK_SIZE_ERROR);
+    assert_string_equal(buf, "");
+
+    /* The hex string does not fit, the buffer was left uninitialized */
+    meta = add_meta(&h, BPAK_ID_MERKLE_SALT, salt, sizeof(salt));
+    memset(buf, 'x', sizeof(buf));
+    rc = bpak_meta_to_string(&h, meta, buf, 64);
+    assert_int_equal(rc, -BPAK_SIZE_ERROR);
+    assert_string_equal(buf, "");
+
+    rc = bpak_meta_to_string(&h, meta, buf, 65);
+    assert_int_equal(rc, BPAK_OK);
+    assert_int_equal(strlen(buf), 64);
+
+    /* Truncated by snprintf */
+    meta = add_meta(&h, BPAK_ID_KEYSTORE_PROVIDER_ID, salt, 4);
+    rc = bpak_meta_to_string(&h, meta, buf, 3);
+    assert_int_equal(rc, -BPAK_SIZE_ERROR);
+    assert_string_equal(buf, "");
+
+    /* Meta data smaller than its type */
+    meta = add_meta(&h, BPAK_ID_MERKLE_ROOT_HASH, salt, 8);
+    rc = bpak_meta_to_string(&h, meta, buf, sizeof(buf));
+    assert_int_equal(rc, -BPAK_SIZE_ERROR);
+    assert_string_equal(buf, "");
+
+    rc = bpak_meta_to_string(&h, meta, buf, 0);
+    assert_int_equal(rc, -BPAK_SIZE_ERROR);
+}
+
 int main(void)
 {
     const struct CMUnitTest tests[] = {
@@ -78,6 +168,8 @@ int main(void)
         cmocka_unit_test(test_bin2hex_buffer_too_small),
         cmocka_unit_test(test_hash_tree_id),
         cmocka_unit_test(test_uuid_to_string),
+        cmocka_unit_test(test_meta_to_string),
+        cmocka_unit_test(test_meta_to_string_sizes),
     };
 
     return cmocka_run_group_tests(tests, NULL, NULL);

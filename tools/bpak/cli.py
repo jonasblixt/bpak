@@ -221,6 +221,15 @@ def _meta_line(meta: bpak.Meta) -> str:
     return f"{meta.id:08x}   {meta.size:<3}    {bpak.id_to_string(meta.id):<20}"
 
 
+# Values that are too small for their type are shown as invalid instead of
+# failing the command
+def _describe(meta: bpak.Meta) -> str:
+    try:
+        return meta.describe()
+    except bpak.SizeError:
+        return "<invalid>"
+
+
 def _print_version(ctx: click.Context, _param: click.Parameter, value: bool) -> None:
     if value and not ctx.resilient_parsing:
         click.echo(f"BitPacker {bpak.version()}")
@@ -618,7 +627,7 @@ def _show_package(filename: pathlib.Path, pkg: bpak.Package) -> None:
     click.echo("    ID         Size   Meta ID              Part Ref   Data")
     for meta in pkg.meta:
         part_ref = f"{meta.part_id_ref:08x}" if meta.part_id_ref else " " * 8
-        click.echo(f"    {_meta_line(meta)} {part_ref}   {meta.describe()}")
+        click.echo(f"    {_meta_line(meta)} {part_ref}   {_describe(meta)}")
 
     click.echo("\nParts:")
     click.echo("    ID         Size         Z-pad  Flags          Transport Size")
@@ -807,10 +816,10 @@ def compare(first: pathlib.Path, second: pathlib.Path) -> None:
                 mark = "*"
             else:
                 mark = "="
-            _compare_line(mark, f"{_meta_line(meta)} {meta.describe()}")
+            _compare_line(mark, f"{_meta_line(meta)} {_describe(meta)}")
 
         for meta in meta2.values():
-            _compare_line("+", f"{_meta_line(meta)} {meta.describe()}")
+            _compare_line("+", f"{_meta_line(meta)} {_describe(meta)}")
 
         click.echo("\nParts:")
         click.echo("    ID         Size         Z-pad  Flags          Transport Size")
