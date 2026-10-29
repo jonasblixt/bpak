@@ -56,6 +56,8 @@ tool. The package format and the library ABI stay compatible, see
 - `bpak_bin2hex` and `bpak show` could overflow a buffer.
 - Extracting a transport encoded part truncated it.
 - `bpak transport` used an uninitialized origin without `--origin`.
+- `bpak generate keystore` wrote trailing spaces, and a line with only spaces
+  after keys whose size is a multiple of 8, for example secp384r1 keys.
 - `bpak_verify_compute_header_hash` ignored errors.
 - A failed `bpak_add_meta` left a meta data entry in the header, and
   `bpak_pkg_write_raw_signature` could overflow the signature field.

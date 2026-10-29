@@ -78,6 +78,9 @@ def test_generate_keystore(bpak, bpak_build_dir, keystore, tmp_path):
     source = tmp_path / "keystore.c"
     source.write_bytes(
         bpak.output("generate", "keystore", keystore, "--name", "test"))
+    # The secp384r1 key, 120 bytes, ends a line of 8 bytes
+    assert not [line for line in source.read_text().splitlines()
+                if line.endswith(" ")]
     main = tmp_path / "main.c"
     main.write_text(GENERATED_KEYSTORE_TEST)
     program = tmp_path / "keystore"

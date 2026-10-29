@@ -748,8 +748,6 @@ def generate_keystore(filename: pathlib.Path, name: str, decorate: bool) -> None
     name = name.replace("-", "_")
     key_section = '__attribute__((section (".keystore_key"))) ' if decorate else ""
     header_section = '__attribute__((section (".keystore_header"))) ' if decorate else ""
-    indent = "\n            "
-
     code = [
         f"/* Automatically generated with bpak {bpak.version()} */\n",
         "#include <bpak/bpak.h>\n",
@@ -758,8 +756,9 @@ def generate_keystore(filename: pathlib.Path, name: str, decorate: bool) -> None
     ]
 
     for index, (key_id, kind, data) in enumerate(keys):
-        key_bytes = "".join(
-            f"0x{byte:02x}, " + (indent if (i + 1) % 8 == 0 else "") for i, byte in enumerate(data)
+        key_lines = (
+            "            " + " ".join(f"0x{byte:02x}," for byte in data[i : i + 8]) + "\n"
+            for i in range(0, len(data), 8)
         )
         code += [
             f"const struct bpak_key keystore_{name}_key{index} {key_section}=\n",
@@ -768,10 +767,9 @@ def generate_keystore(filename: pathlib.Path, name: str, decorate: bool) -> None
             f"    .size = {len(data)},\n",
             f"    .kind = {KEY_KINDS[kind]},\n",
             "    .data =\n",
-            "    {",
-            indent,
-            key_bytes,
-            "\n    },\n",
+            "    {\n",
+            *key_lines,
+            "    },\n",
             "};\n\n",
         ]
 
