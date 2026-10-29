@@ -391,19 +391,24 @@ def _add_meta(
     # Encoders interpret the input as a string
     text = os.fsdecode(data.split(b"\0", 1)[0])
 
-    if encoder == "uuid":
-        try:
-            data = uuid.UUID(text).bytes
-        except ValueError:
-            msg = f"'{text}' is not a UUID"
-            raise click.BadParameter(msg, param_hint=param_hint) from None
-    elif encoder == "integer":
-        data = _parse_integer(text, param_hint).to_bytes(INTEGER_SIZE, "little")
-    elif encoder == "id":
-        data = bpak.id(text).to_bytes(ID_SIZE, "little")
+    if encoder is not None:
+        data = _encode(encoder, text, param_hint)
 
     _verbose(f"Adding meta data {meta_id:08x}, {len(data)} bytes")
     pkg.add_meta(meta_id, part_ref, data=data)
+
+
+def _encode(encoder: str, text: str, param_hint: str) -> bytes:
+    """Encode a string with the uuid, integer or id encoder."""
+    if encoder == "uuid":
+        try:
+            return uuid.UUID(text).bytes
+        except ValueError:
+            msg = f"'{text}' is not a UUID"
+            raise click.BadParameter(msg, param_hint=param_hint) from None
+    if encoder == "integer":
+        return _parse_integer(text, param_hint).to_bytes(INTEGER_SIZE, "little")
+    return bpak.id(text).to_bytes(ID_SIZE, "little")
 
 
 def _add_part(
@@ -685,17 +690,12 @@ def set_(
 
             if encoder is None:
                 meta.raw_data = _string_data(from_string)
-            elif encoder == "integer":
-                if meta.size != INTEGER_SIZE:
-                    msg = f"Meta data {meta_id:08x} is {meta.size} bytes, not an integer"
-                    raise bpak.SizeError(msg)
-                value = _parse_integer(from_string, "--from-string")
-                meta.raw_data = value.to_bytes(INTEGER_SIZE, "little")
             else:
-                if meta.size != ID_SIZE:
-                    msg = f"Meta data {meta_id:08x} is {meta.size} bytes, not an id"
+                size = INTEGER_SIZE if encoder == "integer" else ID_SIZE
+                if meta.size != size:
+                    msg = f"Meta data {meta_id:08x} is {meta.size} bytes, not an {encoder}"
                     raise bpak.SizeError(msg)
-                meta.raw_data = bpak.id(from_string).to_bytes(ID_SIZE, "little")
+                meta.raw_data = _encode(encoder, from_string, "--from-string")
 
         if key_id is not None:
             _verbose(f"Setting key-id to       0x{key_id:08x}")
