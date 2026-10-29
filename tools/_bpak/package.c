@@ -836,87 +836,67 @@ static PyObject *package_get_installed_size(PyObject *self, void *closure)
     return PyLong_FromSize_t(bpak_pkg_installed_size(&package->pkg));
 }
 
-static PyObject *package_get_parts(PyObject *self, void *closure)
+/* Append 'item' to 'list' and release it, 'item' may be NULL after a failed
+ * allocation */
+static int list_append_new(PyObject *list, PyObject *item)
 {
-    (void)closure;
-    BPAKPackage *package = (BPAKPackage *)self;
-    struct bpak_header *hdr = bpak_pkg_header(&package->pkg);
-
-    PyObject *list = NULL;
-    PyObject *part = NULL;
     int rc;
 
-    list = PyList_New(0);
-    if (!list) {
+    if (item == NULL) {
+        return -1;
+    }
+
+    rc = PyList_Append(list, item);
+    Py_DECREF(item);
+    return rc;
+}
+
+static PyObject *package_get_parts(PyObject *self, void *Py_UNUSED(closure))
+{
+    BPAKPackage *package = (BPAKPackage *)self;
+    struct bpak_header *hdr = bpak_pkg_header(&package->pkg);
+    PyObject *list = PyList_New(0);
+
+    if (list == NULL) {
         return NULL;
     }
 
-    unsigned int idx = 0;
     bpak_foreach_part(hdr, p) {
         if (!p->id) {
             break;
         }
 
-        part = part_allocate(package, p->id);
-        if (!part) {
+        PyObject *part = part_allocate(package, p->id);
+        if (list_append_new(list, part) < 0) {
             Py_DECREF(list);
-
-            return PyErr_NoMemory();
-        }
-
-        /* The list holds its own reference */
-        rc = PyList_Append(list, part);
-        Py_DECREF(part);
-        if (rc < 0) {
-            Py_DECREF(list);
-
             return NULL;
         }
-
-        idx++;
     }
 
     return list;
 }
 
-static PyObject *package_get_meta_list(PyObject *self, void *closure)
+static PyObject *package_get_meta_list(PyObject *self,
+                                       void *Py_UNUSED(closure))
 {
-    (void)closure;
     BPAKPackage *package = (BPAKPackage *)self;
     struct bpak_header *hdr = bpak_pkg_header(&package->pkg);
+    PyObject *list = PyList_New(0);
 
-    PyObject *list = NULL;
-    PyObject *meta = NULL;
-    int rc;
-
-    list = PyList_New(0);
-    if (!list) {
+    if (list == NULL) {
         return NULL;
     }
 
-    unsigned int idx = 0;
     bpak_foreach_meta(hdr, m) {
         if (!m->id) {
             break;
         }
 
-        meta = meta_allocate(package, m->id, m->part_id_ref);
-        if (!meta) {
+        PyObject *meta = meta_allocate(package, m->id, m->part_id_ref);
+        if (list_append_new(list, meta) < 0) {
             Py_DECREF(list);
-
-            return PyErr_NoMemory();
-        }
-
-        /* The list holds its own reference */
-        rc = PyList_Append(list, meta);
-        Py_DECREF(meta);
-        if (rc < 0) {
-            Py_DECREF(list);
-
             return NULL;
         }
-
-        idx++;
     }
 
     return list;
