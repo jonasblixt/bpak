@@ -17,17 +17,6 @@
 
 #include "internal.h"
 
-static ssize_t read_payload(off_t offset, uint8_t *buffer, size_t length,
-                            void *user)
-{
-    FILE *fp = (FILE *)user;
-
-    if (fseeko(fp, offset, SEEK_SET) != 0)
-        return -BPAK_SEEK_ERROR;
-
-    return fread(buffer, 1, length, fp);
-}
-
 BPAK_EXPORT int bpak_keystore_load_key_from_file(const char *filename,
                                                  uint32_t keystore_id,
                                                  uint32_t key_id,
@@ -51,7 +40,7 @@ BPAK_EXPORT int bpak_keystore_load_key_from_file(const char *filename,
     /* The keystore is not signed, its payload hash detects a keystore that
      * is corrupted or truncated */
     rc = bpak_verify_payload(&pkg.header,
-                             read_payload,
+                             bpak_file_read,
                              sizeof(struct bpak_header),
                              pkg.fp);
 

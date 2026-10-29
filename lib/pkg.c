@@ -22,6 +22,8 @@
 #include <bpak/utils.h>
 #include <bpak/transport.h>
 
+#include "internal.h"
+
 BPAK_EXPORT int bpak_pkg_open(struct bpak_package *pkg, const char *filename,
                               const char *mode)
 {
@@ -106,18 +108,25 @@ BPAK_EXPORT int bpak_pkg_close(struct bpak_package *pkg)
     return BPAK_OK;
 }
 
-static ssize_t pkg_read_payload(off_t offset, uint8_t *buf, size_t length,
-                                void *user)
+ssize_t bpak_file_read(off_t offset, uint8_t *buffer, size_t length, void *user)
 {
     FILE *fp = (FILE *)user;
+
     if (fseeko(fp, offset, SEEK_SET) != 0)
         return -BPAK_SEEK_ERROR;
-    size_t read_bytes = fread(buf, 1, length, fp);
 
-    if (read_bytes != length)
-        return -BPAK_READ_ERROR;
+    return fread(buffer, 1, length, fp);
+}
 
-    return read_bytes;
+ssize_t bpak_file_write(off_t offset, uint8_t *buffer, size_t length,
+                        void *user)
+{
+    FILE *fp = (FILE *)user;
+
+    if (fseeko(fp, offset, SEEK_SET) != 0)
+        return -BPAK_SEEK_ERROR;
+
+    return fwrite(buffer, 1, length, fp);
 }
 
 BPAK_EXPORT int bpak_pkg_update_hash(struct bpak_package *pkg, char *output,
@@ -128,7 +137,7 @@ BPAK_EXPORT int bpak_pkg_update_hash(struct bpak_package *pkg, char *output,
     size_t hash_size = sizeof(pkg->header.payload_hash);
 
     rc = bpak_verify_compute_payload_hash(&pkg->header,
-                                          pkg_read_payload,
+                                          bpak_file_read,
                                           sizeof(struct bpak_header),
                                           (void *)pkg->fp,
                                           pkg->header.payload_hash,
@@ -230,56 +239,26 @@ struct decode_private {
     FILE *origin_fp;
 };
 
+/* The decoder writes the header at offset 0 with write_output_header */
 static ssize_t decode_write_output(off_t offset, uint8_t *buffer, size_t length,
                                    void *user)
 {
     struct decode_private *priv = (struct decode_private *)user;
-
-    if (fseeko(priv->output_fp, offset, SEEK_SET) != 0) {
-        return -BPAK_SEEK_ERROR;
-    }
-
-    return fwrite(buffer, 1, length, priv->output_fp);
+    return bpak_file_write(offset, buffer, length, priv->output_fp);
 }
 
 static ssize_t decode_read_output(off_t offset, uint8_t *buffer, size_t length,
                                   void *user)
 {
     struct decode_private *priv = (struct decode_private *)user;
-
-    if (fseeko(priv->output_fp, offset, SEEK_SET) != 0) {
-        return -BPAK_SEEK_ERROR;
-    }
-
-    return fread(buffer, 1, length, priv->output_fp);
-}
-
-static ssize_t decode_write_output_header(off_t offset, uint8_t *buffer,
-                                          size_t length, void *user)
-{
-    struct decode_private *priv = (struct decode_private *)user;
-    (void)offset;
-
-    if (length != sizeof(struct bpak_header))
-        return -BPAK_SIZE_ERROR;
-
-    if (fseeko(priv->output_fp, 0, SEEK_SET) != 0) {
-        return -BPAK_SEEK_ERROR;
-    }
-
-    return fwrite(buffer, 1, length, priv->output_fp);
+    return bpak_file_read(offset, buffer, length, priv->output_fp);
 }
 
 static ssize_t decode_read_origin(off_t offset, uint8_t *buffer, size_t length,
                                   void *user)
 {
     struct decode_private *priv = (struct decode_private *)user;
-
-    if (fseeko(priv->origin_fp, offset, SEEK_SET) != 0) {
-        return -BPAK_SEEK_ERROR;
-    }
-
-    return fread(buffer, 1, length, priv->origin_fp);
+    return bpak_file_read(offset, buffer, length, priv->origin_fp);
 }
 
 BPAK_EXPORT int bpak_pkg_transport_decode(struct bpak_package *input,
@@ -314,7 +293,7 @@ BPAK_EXPORT int bpak_pkg_transport_decode(struct bpak_package *input,
                                     decode_write_output,
                                     decode_read_output,
                                     sizeof(struct bpak_header),
-                                    decode_write_output_header,
+                                    decode_write_output,
                                     &decode_private);
 
     if (rc != BPAK_OK) {

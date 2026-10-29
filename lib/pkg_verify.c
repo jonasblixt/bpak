@@ -17,21 +17,7 @@
 #include <bpak/verify.h>
 #include <bpak/keystore.h>
 
-static ssize_t verify_payload_read(off_t offset, uint8_t *buf, size_t size,
-                                   void *user)
-{
-    FILE *fp = (FILE *)user;
-
-    if (fseeko(fp, offset, SEEK_SET) != 0)
-        return -BPAK_SEEK_ERROR;
-
-    size_t read_bytes = fread(buf, 1, size, fp);
-
-    if (read_bytes != size)
-        return -BPAK_READ_ERROR;
-
-    return read_bytes;
-}
+#include "internal.h"
 
 BPAK_EXPORT int bpak_pkg_verify(struct bpak_package *pkg,
                                 struct bpak_key *key)
@@ -66,7 +52,7 @@ BPAK_EXPORT int bpak_pkg_verify(struct bpak_package *pkg,
     }
 
     rc = bpak_verify_payload(&pkg->header,
-                             verify_payload_read,
+                             bpak_file_read,
                              sizeof(struct bpak_header),
                              pkg->fp);
 

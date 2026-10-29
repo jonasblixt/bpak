@@ -35,4 +35,16 @@ int bpak_get_meta_value(struct bpak_header *hdr, bpak_id_t id,
  */
 int bpak_same_package_uuid(struct bpak_header *a, struct bpak_header *b);
 
+/**
+ * bpak_io_t callbacks that read and write 'length' bytes at 'offset' of the
+ * FILE * in 'user'.
+ *
+ * @return The number of bytes, a short read or write is checked by the
+ *         caller, or -BPAK_SEEK_ERROR
+ */
+ssize_t bpak_file_read(off_t offset, uint8_t *buffer, size_t length,
+                       void *user);
+ssize_t bpak_file_write(off_t offset, uint8_t *buffer, size_t length,
+                        void *user);
+
 #endif // BPAK_LIB_INTERNAL_H
