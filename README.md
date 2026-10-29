@@ -88,5 +88,5 @@ under other licenses, see [LICENSES](LICENSES):
 
 - binary diff and patch (`lib/bsdiff.c`, `lib/bspatch.c`), based on bsdiff
   by Colin Percival and Matthew Endsley: BSD-2-Clause
-- heatshrink compression by Scott Vokes: ISC
-- sais-lite suffix array construction by Yuta Mori: MIT
+- heatshrink compression by Scott Vokes (`lib/vendor/heatshrink`): ISC
+- sais-lite suffix array construction by Yuta Mori (`lib/vendor/sais`): MIT

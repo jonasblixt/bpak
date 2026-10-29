@@ -3,7 +3,7 @@
 #include <bpak/crypto.h>
 
 #if BPAK_CONFIG_MBEDTLS == 1
-#include "mbedtls_wrapper.h"
+#include "crypto_mbedtls.h"
 static bpak_hash_init_func_t _hash_init = bpak_mbed_hash_init;
 static bpak_hash_update_func_t _hash_update = bpak_mbed_hash_update;
 static bpak_hash_final_func_t _hash_final = bpak_mbed_hash_final;

@@ -9,7 +9,7 @@
 #include <mbedtls/entropy.h>
 #include <mbedtls/ctr_drbg.h>
 
-#include "mbedtls_wrapper.h"
+#include "crypto_mbedtls.h"
 
 int bpak_mbed_hash_init(struct bpak_hash_context *ctx)
 {

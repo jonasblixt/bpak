@@ -1,8 +1,9 @@
 # bpak
 
-Bitpacker: a C library (`lib/`, public headers in `include/bpak/`) and a
-python package (`python/bpak/`) with the `bpak` command line tool
-(`python/bpak/__main__.py`, click) for signed firmware archives. The package
+Bitpacker: a C library (`lib/`, public headers in `include/bpak/`,
+third-party code in `lib/vendor/`) and a python package (`python/bpak/`)
+with the `bpak` command line tool (`python/bpak/__main__.py`, click) for
+signed firmware archives. The package
 wraps the C extension `_bpak` (`python/*.c`). Documentation is Markdown in
 `README.md` and `docs/`, developer documentation in `docs/development.md`.
 
@@ -85,7 +86,8 @@ version number anywhere else. Releases: update `version.txt`, commit as
 - Bug fix commits are additionally prefixed with `bugfix:`, for example
   `bugfix: lib/mbedtls: Fix memory leaks when loading keys`. Keep bug fixes in
   separate commits from other changes.
-- C code follows `.clang-format`, only format the code you change. Python
+- C code follows `.clang-format`, only format the code you change. Keep the
+  copyright notices in third-party code and its license in `LICENSES/`. Python
   code in `python/bpak` follows ruff and strict mypy (`pyproject.toml`).
 - New error codes need an exception in `python/exceptions.c`,
   `python/bpak/__init__.py` and `python/bpak/_bpak.pyi`. Changes to the C

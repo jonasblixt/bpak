@@ -79,8 +79,8 @@ change it.
 ### Building the library into another project
 
 Bootloaders and other projects that do not use CMake can compile the sources
-in `lib/` directly. Define `BPAK_HAVE_USER_SETTINGS` and provide two headers
-in the include path:
+in `lib/` and `lib/vendor/` directly. Define `BPAK_HAVE_USER_SETTINGS` and
+provide two headers in the include path:
 
 - `bpak_user_settings.h`, which replaces the generated
   `bpak/build_config.h` and defines `BPAK_CONFIG_MERKLE`, `BPAK_CONFIG_LZMA`

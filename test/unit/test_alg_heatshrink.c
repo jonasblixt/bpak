@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "heatshrink/heatshrink_encoder.h"
+#include "vendor/heatshrink/heatshrink_encoder.h"
 #include <bpak/heatshrink_decoder.h>
 
 #include "test_helpers.h"

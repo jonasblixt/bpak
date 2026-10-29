@@ -37,8 +37,8 @@
 #include <bpak/bpak.h>
 #include <bpak/bsdiff.h>
 
-#include "sais.h"
-#include "heatshrink/heatshrink_encoder.h"
+#include "vendor/sais/sais.h"
+#include "vendor/heatshrink/heatshrink_encoder.h"
 
 #if BPAK_CONFIG_LZMA == 1
 #include <lzma.h>

@@ -1,5 +1,5 @@
-#ifndef BPAK_MBEDTLS_WRAPPER_H
-#define BPAK_MBEDTLS_WRAPPER_H
+#ifndef BPAK_CRYPTO_MBEDTLS_H
+#define BPAK_CRYPTO_MBEDTLS_H
 
 int bpak_mbed_hash_init(struct bpak_hash_context *ctx);
 

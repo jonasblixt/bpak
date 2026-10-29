@@ -9,7 +9,7 @@ configure_file(version.h.in
 
 set(LIB_SRC_FILES
     bpak.c
-    bpakcrc.c
+    crc.c
     id.c
     keystore.c
     mem.c
@@ -34,15 +34,15 @@ if (NOT BPAK_BUILD_MINIMAL)
         pkg_create.c
         pkg_sign.c
         pkg_verify.c
-        sais.c
         transport_decode.c
         transport_encode.c
         verify.c
-        heatshrink/heatshrink_decoder.c
-        heatshrink/heatshrink_encoder.c
         crypto.c
-        mbedtls_wrapper.c
-        keystore_load_from_file.c
+        crypto_mbedtls.c
+        keystore_file.c
+        vendor/heatshrink/heatshrink_decoder.c
+        vendor/heatshrink/heatshrink_encoder.c
+        vendor/sais/sais.c
 )
 endif()
 

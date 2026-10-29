@@ -215,7 +215,8 @@ $ genhtml coverage.info --output-directory coverage_report
 ## Code style
 
 C code is formatted with clang-format using the `.clang-format` file in the
-repository root. Only format the code you change.
+repository root. Only format the code you change. Third-party code is kept
+in `lib/vendor/`, one directory per project, its license is in `LICENSES/`.
 
 The python package is checked with [ruff](https://docs.astral.sh/ruff) and
 [mypy](https://mypy-lang.org), configured in `pyproject.toml`. stubtest
