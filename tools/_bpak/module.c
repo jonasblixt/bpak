@@ -89,12 +89,12 @@ out_of_range:
 }
 
 /* MODULE DEFINITION */
-static PyObject *m_generate_id(PyObject *module, PyObject *args, PyObject *kwds)
+static PyObject *m_generate_id(PyObject *Py_UNUSED(module), PyObject *args,
+                               PyObject *kwds)
 {
     int rc;
     static char *kwlist[] = {"string", NULL};
     char *input_string = NULL;
-    (void)module;
 
     rc = PyArg_ParseTupleAndKeywords(args, kwds, "s:id", kwlist, &input_string);
     if (!rc) {
@@ -104,13 +104,12 @@ static PyObject *m_generate_id(PyObject *module, PyObject *args, PyObject *kwds)
     return PyLong_FromUnsignedLong(bpak_id(input_string));
 }
 
-static PyObject *m_set_log_func(PyObject *module, PyObject *args,
+static PyObject *m_set_log_func(PyObject *Py_UNUSED(module), PyObject *args,
                                 PyObject *kwds)
 {
     int rc;
     static char *kwlist[] = {"log_func", NULL};
     PyObject *func = NULL;
-    (void)module;
 
     rc = PyArg_ParseTupleAndKeywords(args, kwds, "O", kwlist, &func);
     if (!rc) {
@@ -119,9 +118,7 @@ static PyObject *m_set_log_func(PyObject *module, PyObject *args,
 
     /* Keep a reference, the callback may otherwise be garbage collected */
     Py_INCREF(func);
-    if (log_func != Py_None)
-        Py_DECREF(log_func);
-    log_func = func;
+    Py_SETREF(log_func, func);
 
     Py_RETURN_NONE;
 }
@@ -212,20 +209,18 @@ static PyObject *m_transport_decode(PyObject *Py_UNUSED(module),
                      "Transport decoding failed");
 }
 
-static PyObject *m_version(PyObject *module, PyObject *Py_UNUSED(args))
+static PyObject *m_version(PyObject *Py_UNUSED(module),
+                           PyObject *Py_UNUSED(args))
 {
-    (void)module;
-
     return PyUnicode_FromString(bpak_version());
 }
 
-static PyObject *m_id_to_string(PyObject *module, PyObject *args,
+static PyObject *m_id_to_string(PyObject *Py_UNUSED(module), PyObject *args,
                                 PyObject *kwds)
 {
     int rc;
     static char *kwlist[] = { "id", NULL };
     bpak_id_t id;
-    (void)module;
 
     rc = PyArg_ParseTupleAndKeywords(args, kwds, "I:id_to_string", kwlist, &id);
     if (!rc) {
@@ -235,13 +230,12 @@ static PyObject *m_id_to_string(PyObject *module, PyObject *args,
     return PyUnicode_FromString(bpak_id_to_string(id));
 }
 
-static PyObject *m_hash_kind_to_string(PyObject *module, PyObject *args,
-                                       PyObject *kwds)
+static PyObject *m_hash_kind_to_string(PyObject *Py_UNUSED(module),
+                                       PyObject *args, PyObject *kwds)
 {
     int rc;
     static char *kwlist[] = { "kind", NULL };
     unsigned char kind;
-    (void)module;
 
     rc = PyArg_ParseTupleAndKeywords(args,
                                      kwds,
@@ -255,13 +249,12 @@ static PyObject *m_hash_kind_to_string(PyObject *module, PyObject *args,
     return PyUnicode_FromString(bpak_hash_kind(kind));
 }
 
-static PyObject *m_signature_kind_to_string(PyObject *module, PyObject *args,
-                                            PyObject *kwds)
+static PyObject *m_signature_kind_to_string(PyObject *Py_UNUSED(module),
+                                            PyObject *args, PyObject *kwds)
 {
     int rc;
     static char *kwlist[] = { "kind", NULL };
     unsigned char kind;
-    (void)module;
 
     rc = PyArg_ParseTupleAndKeywords(args,
                                      kwds,
@@ -275,7 +268,7 @@ static PyObject *m_signature_kind_to_string(PyObject *module, PyObject *args,
     return PyUnicode_FromString(bpak_signature_kind(kind));
 }
 
-static PyObject *m_parse_public_key(PyObject *module, PyObject *args,
+static PyObject *m_parse_public_key(PyObject *Py_UNUSED(module), PyObject *args,
                                     PyObject *kwds)
 {
     int rc;
@@ -284,7 +277,6 @@ static PyObject *m_parse_public_key(PyObject *module, PyObject *args,
     Py_ssize_t size;
     struct bpak_key *key = NULL;
     PyObject *result;
-    (void)module;
 
     rc = PyArg_ParseTupleAndKeywords(args,
                                      kwds,
@@ -308,52 +300,49 @@ static PyObject *m_parse_public_key(PyObject *module, PyObject *args,
 }
 
 static PyMethodDef module_methods[] = {
-    { "version",
-      (PyCFunction)(void (*)(void))m_version,
-      METH_NOARGS,
-      "Version of the bpak library" },
+    { "version", m_version, METH_NOARGS, "Version of the bpak library" },
 
     { "id_to_string",
-      (PyCFunction)(void (*)(void))m_id_to_string,
+      KWARGS_METHOD(m_id_to_string),
       METH_VARARGS | METH_KEYWORDS,
       "Name of a well known bpak id, or an empty string" },
 
     { "hash_kind_to_string",
-      (PyCFunction)(void (*)(void))m_hash_kind_to_string,
+      KWARGS_METHOD(m_hash_kind_to_string),
       METH_VARARGS | METH_KEYWORDS,
       "Name of a hash kind (one of HASH_ constants)" },
 
     { "signature_kind_to_string",
-      (PyCFunction)(void (*)(void))m_signature_kind_to_string,
+      KWARGS_METHOD(m_signature_kind_to_string),
       METH_VARARGS | METH_KEYWORDS,
       "Name of a signature kind (one of SIGN_ constants)" },
 
     { "parse_public_key",
-      (PyCFunction)(void (*)(void))m_parse_public_key,
+      KWARGS_METHOD(m_parse_public_key),
       METH_VARARGS | METH_KEYWORDS,
       "Parse a DER encoded public key, returns (KEY_ kind, DER data)" },
 
     { "id",
-      (PyCFunction)(void (*)(void))m_generate_id,
+      KWARGS_METHOD(m_generate_id),
       METH_VARARGS | METH_KEYWORDS,
       "Convert string to bpak id" },
 
     { "set_log_func",
-      (PyCFunction)(void (*)(void))m_set_log_func,
+      KWARGS_METHOD(m_set_log_func),
       METH_VARARGS | METH_KEYWORDS,
       "Set logging function callback" },
 
     { "transport_encode",
-      (PyCFunction)(void (*)(void))m_transport_encode,
+      KWARGS_METHOD(m_transport_encode),
       METH_VARARGS | METH_KEYWORDS,
       "Transport encode from input to output, using origin for diff origin" },
 
     { "transport_decode",
-      (PyCFunction)(void (*)(void))m_transport_decode,
+      KWARGS_METHOD(m_transport_decode),
       METH_VARARGS | METH_KEYWORDS,
       "Transport decode from input to output, using origin for diff origin" },
 
-    { NULL }
+    { NULL, NULL, 0, NULL },
 };
 
 static PyModuleDef module = { PyModuleDef_HEAD_INIT,
@@ -400,6 +389,9 @@ PyMODINIT_FUNC PyInit__bpak(void)
     if (m_p == NULL) {
         return NULL;
     }
+
+    /* The reference of log_func */
+    Py_INCREF(log_func);
 
     if (bpak_exceptions_init(m_p) < 0) {
         goto err_out;

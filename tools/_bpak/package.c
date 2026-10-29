@@ -41,10 +41,9 @@ int package_check_open(BPAKPackage *package)
     return 0;
 }
 
-static PyObject *package_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
+static PyObject *package_new(PyTypeObject *type, PyObject *Py_UNUSED(args),
+                             PyObject *Py_UNUSED(kwds))
 {
-    (void)args;
-    (void)kwds;
     BPAKPackage *self;
 
     self = (BPAKPackage *)type->tp_alloc(type, 0);
@@ -80,11 +79,9 @@ static int package_init(BPAKPackage *self, PyObject *args, PyObject *kwds)
         return -1;
     }
 
-    PyObject *filename_bytes = filename;
+    rc = bpak_pkg_open(&self->pkg, PyBytes_AsString(filename), mode);
 
-    rc = bpak_pkg_open(&self->pkg, PyBytes_AsString(filename_bytes), mode);
-
-    Py_DECREF(filename_bytes);
+    Py_DECREF(filename);
 
     if (rc != BPAK_OK) {
         /* bpak_pkg_open closes the file on errors but leaves 'fp' set, the
@@ -199,11 +196,9 @@ static PyObject *package_sign(PyObject *self, PyObject *args, PyObject *kwds)
         return NULL;
     }
 
-    PyObject *filename_bytes = sign_key_filename;
+    rc = bpak_pkg_sign(&package->pkg, PyBytes_AsString(sign_key_filename));
 
-    rc = bpak_pkg_sign(&package->pkg, PyBytes_AsString(filename_bytes));
-
-    Py_DECREF(filename_bytes);
+    Py_DECREF(sign_key_filename);
 
     if (rc != BPAK_OK) {
         return bpak_raise(rc, "signing failed");
@@ -244,22 +239,19 @@ static PyObject *package_add_file(PyObject *self, PyObject *args, PyObject *kwds
         return NULL;
     }
 
-    PyObject *filename_bytes = filename;
-
     if (with_merkle_tree) {
-        rc =
-            bpak_pkg_add_file_with_merkle_tree(&package->pkg,
-                                               PyBytes_AsString(filename_bytes),
-                                               part_name,
-                                               flags);
+        rc = bpak_pkg_add_file_with_merkle_tree(&package->pkg,
+                                                PyBytes_AsString(filename),
+                                                part_name,
+                                                flags);
     } else {
         rc = bpak_pkg_add_file(&package->pkg,
-                               PyBytes_AsString(filename_bytes),
+                               PyBytes_AsString(filename),
                                part_name,
                                flags);
     }
 
-    Py_DECREF(filename_bytes);
+    Py_DECREF(filename);
 
     if (rc != BPAK_OK) {
         return bpak_raise(rc, "Failed to add file to package");
@@ -294,14 +286,12 @@ static PyObject *package_add_key(PyObject *self, PyObject *args, PyObject *kwds)
         return NULL;
     }
 
-    PyObject *filename_bytes = filename;
-
     rc = bpak_pkg_add_key(&package->pkg,
-                          PyBytes_AsString(filename_bytes),
+                          PyBytes_AsString(filename),
                           part_name,
                           flags);
 
-    Py_DECREF(filename_bytes);
+    Py_DECREF(filename);
 
     if (rc != BPAK_OK) {
         return bpak_raise(rc, "failed to add key to package");
@@ -635,13 +625,11 @@ static PyObject *package_extract_file(PyObject *self, PyObject *args,
         return NULL;
     }
 
-    PyObject *filename_bytes = filename;
-
     rc = bpak_pkg_extract_file(&package->pkg,
                                part_id,
-                               PyBytes_AsString(filename_bytes));
+                               PyBytes_AsString(filename));
 
-    Py_DECREF(filename_bytes);
+    Py_DECREF(filename);
 
     if (rc != BPAK_OK) {
         return bpak_raise(rc, "could not extract part");
@@ -671,9 +659,9 @@ static PyObject *package_get_digest(PyObject *self, void *Py_UNUSED(closure))
     return package_update_hash(self, NULL);
 }
 
-static PyObject *package_get_payload_hash(PyObject *self, void *closure)
+static PyObject *package_get_payload_hash(PyObject *self,
+                                          void *Py_UNUSED(closure))
 {
-    (void)closure;
     BPAKPackage *package = (BPAKPackage *)self;
     struct bpak_header *h = bpak_pkg_header(&package->pkg);
     Py_ssize_t hash_size;
@@ -758,9 +746,8 @@ static int package_set_header_field(PyObject *self, PyObject *value,
     return package_write_header_or_raise(package, PyExc_OSError);
 }
 
-static PyObject *package_get_signature(PyObject *self, void *closure)
+static PyObject *package_get_signature(PyObject *self, void *Py_UNUSED(closure))
 {
-    (void)closure;
     BPAKPackage *package = (BPAKPackage *)self;
 
     return Py_BuildValue("y#",
@@ -769,10 +756,8 @@ static PyObject *package_get_signature(PyObject *self, void *closure)
 }
 
 static int package_set_signature(PyObject *self, PyObject *value,
-                                 void *closure)
+                                 void *Py_UNUSED(closure))
 {
-    (void)closure;
-
     int rc;
     static const uint8_t empty_signature[1] = {0};
     uint8_t *signature_data;
@@ -822,16 +807,15 @@ static int package_set_signature(PyObject *self, PyObject *value,
     return 0;
 }
 
-static PyObject *package_get_size(PyObject *self, void *closure)
+static PyObject *package_get_size(PyObject *self, void *Py_UNUSED(closure))
 {
-    (void)closure;
     BPAKPackage *package = (BPAKPackage *)self;
     return PyLong_FromSize_t(bpak_pkg_size(&package->pkg));
 }
 
-static PyObject *package_get_installed_size(PyObject *self, void *closure)
+static PyObject *package_get_installed_size(PyObject *self,
+                                            void *Py_UNUSED(closure))
 {
-    (void)closure;
     BPAKPackage *package = (BPAKPackage *)self;
     return PyLong_FromSize_t(bpak_pkg_installed_size(&package->pkg));
 }
@@ -903,89 +887,83 @@ static PyObject *package_get_meta_list(PyObject *self,
 }
 
 static PyMethodDef package_methods[] = {
-    { "close",
-      (PyCFunction)(void (*)(void))package_close,
-      METH_NOARGS,
-      "Close package" },
+    { "close", package_close, METH_NOARGS, "Close package" },
 
     { "verify",
-      (PyCFunction)(void (*)(void))package_verify,
+      KWARGS_METHOD(package_verify),
       METH_VARARGS | METH_KEYWORDS,
       "Verify package using a public key" },
 
     { "sign",
-      (PyCFunction)(void (*)(void))package_sign,
+      KWARGS_METHOD(package_sign),
       METH_VARARGS | METH_KEYWORDS,
       "Sign package using a private key" },
 
     { "add_file",
-      (PyCFunction)(void (*)(void))package_add_file,
+      KWARGS_METHOD(package_add_file),
       METH_VARARGS | METH_KEYWORDS,
       "Create a new part object from a file" },
 
     { "add_key",
-      (PyCFunction)(void (*)(void))package_add_key,
+      KWARGS_METHOD(package_add_key),
       METH_VARARGS | METH_KEYWORDS,
       "Create a new part object from a key file" },
 
     { "add_meta",
-      (PyCFunction)(void (*)(void))package_add_meta,
+      KWARGS_METHOD(package_add_meta),
       METH_VARARGS | METH_KEYWORDS,
       "Create a new metadata object" },
 
     { "get_part",
-      (PyCFunction)(void (*)(void))package_get_part,
+      KWARGS_METHOD(package_get_part),
       METH_VARARGS | METH_KEYWORDS,
       "Get a reference to a specific part object" },
 
     { "get_meta",
-      (PyCFunction)(void (*)(void))package_get_meta,
+      KWARGS_METHOD(package_get_meta),
       METH_VARARGS | METH_KEYWORDS,
       "Get a reference to a specific metadata object" },
 
     { "update_hash",
-      (PyCFunction)(void (*)(void))package_update_hash,
+      package_update_hash,
       METH_NOARGS,
       "Compute the payload hash and return the header hash" },
 
     { "write_header",
-      (PyCFunction)(void (*)(void))package_write_header_method,
+      package_write_header_method,
       METH_NOARGS,
       "Write the header to the file" },
 
     { "add_transport_meta",
-      (PyCFunction)(void (*)(void))package_add_transport_meta,
+      KWARGS_METHOD(package_add_transport_meta),
       METH_VARARGS | METH_KEYWORDS,
       "Add a transport encoder and decoder for a part" },
 
     { "delete_part",
-      (PyCFunction)(void (*)(void))package_delete_part,
+      KWARGS_METHOD(package_delete_part),
       METH_VARARGS | METH_KEYWORDS,
       "Delete a part and, unless remove_meta is false, its meta data" },
 
     { "delete_all_parts",
-      (PyCFunction)(void (*)(void))package_delete_all_parts,
+      KWARGS_METHOD(package_delete_all_parts),
       METH_VARARGS | METH_KEYWORDS,
       "Delete all parts and, unless remove_meta is false, their meta data" },
 
     { "part_sha256",
-      (PyCFunction)(void (*)(void))package_part_sha256,
+      KWARGS_METHOD(package_part_sha256),
       METH_VARARGS | METH_KEYWORDS,
       "SHA-256 hash of a part" },
 
     { "extract_file",
-      (PyCFunction)(void (*)(void))package_extract_file,
+      KWARGS_METHOD(package_extract_file),
       METH_VARARGS | METH_KEYWORDS,
       "Write the data of a part to a file" },
 
     /* For context manager use */
-    { "__enter__",
-      (PyCFunction)(void (*)(void))package_enter,
-      METH_VARARGS,
-      "" },
-    { "__exit__", (PyCFunction)(void (*)(void))package_exit, METH_VARARGS, "" },
+    { "__enter__", package_enter, METH_NOARGS, "" },
+    { "__exit__", package_exit, METH_VARARGS, "" },
 
-    { NULL },
+    { NULL, NULL, 0, NULL },
 };
 
 static PyGetSetDef package_getset[] = {
@@ -1055,7 +1033,7 @@ static PyGetSetDef package_getset[] = {
       "List of all meta data in package",
       NULL },
 
-    { NULL },
+    { NULL, NULL, NULL, NULL, NULL },
 };
 
 PyTypeObject BPAKPackageType = {

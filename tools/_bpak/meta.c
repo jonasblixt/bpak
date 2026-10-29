@@ -97,25 +97,22 @@ static PyObject *meta_repr(PyObject *self)
             meta->meta_id, meta->part_ref, m->size);
 }
 
-static PyObject *meta_get_id(PyObject *self, void *closure)
+static PyObject *meta_get_id(PyObject *self, void *Py_UNUSED(closure))
 {
-    (void)closure;
     BPAKMeta *meta = (BPAKMeta *)self;
 
     return PyLong_FromUnsignedLong(meta->meta_id);
 }
 
-static PyObject *meta_get_part_id_ref(PyObject *self, void *closure)
+static PyObject *meta_get_part_id_ref(PyObject *self, void *Py_UNUSED(closure))
 {
-    (void)closure;
     BPAKMeta *meta = (BPAKMeta *)self;
 
     return PyLong_FromUnsignedLong(meta->part_ref);
 }
 
-static PyObject *meta_get_size(PyObject *self, void* closure)
+static PyObject *meta_get_size(PyObject *self, void *Py_UNUSED(closure))
 {
-    (void)closure;
     BPAKMeta *meta = (BPAKMeta *)self;
     struct bpak_meta_header *m;
 
@@ -127,9 +124,8 @@ static PyObject *meta_get_size(PyObject *self, void* closure)
     return PyLong_FromLong(m->size);
 }
 
-static PyObject *meta_get_rawdata(PyObject *self, void* closure)
+static PyObject *meta_get_rawdata(PyObject *self, void *Py_UNUSED(closure))
 {
-    (void)closure;
     BPAKMeta *meta = (BPAKMeta *)self;
     struct bpak_header *h = bpak_pkg_header(&meta->package->pkg);
     struct bpak_meta_header *m;
@@ -142,9 +138,9 @@ static PyObject *meta_get_rawdata(PyObject *self, void* closure)
     return PyBytes_FromStringAndSize(bpak_get_meta_ptr(h, m, void), m->size);
 }
 
-static int meta_set_rawdata(PyObject *self, PyObject *value, void* closure)
+static int meta_set_rawdata(PyObject *self, PyObject *value,
+                            void *Py_UNUSED(closure))
 {
-    (void)closure;
     BPAKMeta *meta = (BPAKMeta *)self;
     struct bpak_header *h = bpak_pkg_header(&meta->package->pkg);
     struct bpak_meta_header *m;
@@ -333,55 +329,44 @@ static PyObject *meta_delete(PyObject *self, PyObject *Py_UNUSED(ignored))
 
 static PyMethodDef meta_methods[] = {
     { "as_uuid",
-      (PyCFunction)(void (*)(void))meta_as_uuid,
+      meta_as_uuid,
       METH_NOARGS,
       "Interpret the data as a UUID object" },
 
     { "as_string",
-      (PyCFunction)(void (*)(void))meta_as_string,
+      meta_as_string,
       METH_NOARGS,
       "Interpret the data as a string object" },
 
     { "describe",
-      (PyCFunction)(void (*)(void))meta_describe,
+      meta_describe,
       METH_NOARGS,
       "Human readable data of well known meta data, empty for other meta "
       "data" },
 
-    { "delete",
-      (PyCFunction)(void (*)(void))meta_delete,
-      METH_NOARGS,
-      "Delete metadata from package" },
+    { "delete", meta_delete, METH_NOARGS, "Delete metadata from package" },
 
-    { NULL }
+    { NULL, NULL, 0, NULL },
 };
 
 static PyGetSetDef meta_getset[] = {
-    {"id",
-     (getter)meta_get_id,
-     (setter)NULL,
-     "Metadata ID (32-bit)",
-     NULL},
+    { "id", (getter)meta_get_id, (setter)NULL, "Metadata ID (32-bit)", NULL },
 
-    {"part_id_ref",
-     (getter)meta_get_part_id_ref,
-     (setter)NULL,
-     "Reference to a part ID (or 0)",
-     NULL},
+    { "part_id_ref",
+      (getter)meta_get_part_id_ref,
+      (setter)NULL,
+      "Reference to a part ID (or 0)",
+      NULL },
 
-    {"size",
-     (getter)meta_get_size,
-     (setter)NULL,
-     "Size in bytes",
-     NULL},
+    { "size", (getter)meta_get_size, (setter)NULL, "Size in bytes", NULL },
 
-    {"raw_data",
-     (getter)meta_get_rawdata,
-     (setter)meta_set_rawdata,
-     "Raw metadata as bytes",
-     NULL},
+    { "raw_data",
+      (getter)meta_get_rawdata,
+      (setter)meta_set_rawdata,
+      "Raw metadata as bytes",
+      NULL },
 
-    {NULL}
+    { NULL, NULL, NULL, NULL, NULL },
 };
 
 PyTypeObject BPAKMetaType = {

@@ -68,9 +68,8 @@ static PyObject *part_repr(PyObject *self)
             bpak_part_size(p));
 }
 
-static PyObject *part_get_id(PyObject *self, void *closure)
+static PyObject *part_get_id(PyObject *self, void *Py_UNUSED(closure))
 {
-    (void)closure;
     BPAKPart *part = (BPAKPart *)self;
 
     return PyLong_FromUnsignedLong(part->part_id);
@@ -197,24 +196,20 @@ static PyObject *part_delete(PyObject *self, PyObject *args, PyObject *kwds)
 
 static PyMethodDef part_methods[] = {
     { "read_data",
-      (PyCFunction)(void (*)(void))part_read_data,
+      part_read_data,
       METH_NOARGS,
       "Read all the data into a buffer" },
 
     { "delete",
-      (PyCFunction)(void (*)(void))part_delete,
+      KWARGS_METHOD(part_delete),
       METH_VARARGS | METH_KEYWORDS,
       "Delete part and, unless remove_meta is false, its meta data" },
 
-    { NULL }
+    { NULL, NULL, 0, NULL },
 };
 
 static PyGetSetDef part_getset[] = {
-    { "id",
-      (getter)part_get_id,
-      (setter)NULL,
-      "Part ID (32-bit)",
-      NULL },
+    { "id", (getter)part_get_id, (setter)NULL, "Part ID (32-bit)", NULL },
 
     { "size",
       (getter)part_get_field,
@@ -259,7 +254,7 @@ static PyGetSetDef part_getset[] = {
       "If part is transport encoded",
       (void *)PART_IS_TRANSPORT_ENCODED },
 
-    { NULL }
+    { NULL, NULL, NULL, NULL, NULL },
 };
 
 PyTypeObject BPAKPartType = {

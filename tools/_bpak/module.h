@@ -5,6 +5,9 @@
 
 #define membersof(arr) (sizeof(arr) / sizeof((arr)[0]))
 
+/* PyMethodDef stores functions with METH_KEYWORDS as PyCFunction */
+#define KWARGS_METHOD(func) ((PyCFunction)(void (*)(void))(func))
+
 typedef struct {
     PyObject_HEAD
     struct bpak_package pkg;
