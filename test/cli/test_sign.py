@@ -6,44 +6,32 @@ import subprocess
 import pytest
 
 from bpaktest import (DATA_DIR, DEFAULT_SIGN_KEY, DEFAULT_VERIFY_KEY,
-                      HEADER_SIZE, SIGNATURE_OFFSET, BpakError, Part, corrupt)
+                      HEADER_SIZE, KEYS, SIGNATURE_OFFSET, BpakError, Part,
+                      corrupt)
 
 requires_openssl = pytest.mark.skipif(shutil.which("openssl") is None,
                                       reason="openssl not found")
 
 
-@pytest.mark.parametrize("hash_kind, signature_kind, sign_key, verify_key", [
-    ("sha256", "prime256v1", "secp256r1-key-pair.pem", "secp256r1-pub-key.der"),
-    ("sha384", "secp384r1", "secp384r1-key-pair.pem", "secp384r1-pub-key.der"),
-    ("sha512", "secp521r1", "secp521r1-key-pair.pem", "secp521r1-pub-key.der"),
-    ("sha256", "rsa4096", "dev_rsa_private.pem", "dev_rsa_public.der"),
-])
-def test_sign_verify(bpak, hash_kind, signature_kind, sign_key, verify_key):
+@pytest.mark.parametrize("key_name", KEYS)
+def test_sign_verify(bpak, keystore, key_name):
+    key = KEYS[key_name]
     pkg = bpak.create_package("test.bpak",
-                              hash_kind=hash_kind,
-                              signature_kind=signature_kind,
-                              sign_key=DATA_DIR / sign_key)
+                              hash_kind=key.hash_kind,
+                              signature_kind=key.signature_kind,
+                              sign_key=DATA_DIR / key.private_key,
+                              key_id=key_name)
 
-    bpak("show", pkg)
-    bpak("verify", pkg, "--key", DATA_DIR / verify_key)
+    bpak("verify", pkg, "--key", DATA_DIR / key.public_key)
+    bpak("verify", pkg, "--keystore", keystore)
 
-
-@pytest.mark.parametrize("hash_kind, sign_key, digest_size", [
-    ("sha256", "secp256r1-key-pair.pem", 32),
-    ("sha384", "secp384r1-key-pair.pem", 48),
-    ("sha512", "secp521r1-key-pair.pem", 64),
-])
-def test_show_hash(bpak, hash_kind, sign_key, digest_size):
-    """The header hash is what gets signed, 'show' prints it in different
-    formats"""
-    pkg = bpak.create_package("test.bpak", hash_kind=hash_kind,
-                              sign_key=DATA_DIR / sign_key)
-
+    # The header hash is what gets signed, 'show' prints it in different
+    # formats
     digest = bpak.output("show", pkg, "--binary-hash")
-    assert len(digest) == digest_size
-
+    assert len(digest) == key.digest_size
     assert bpak.output("show", pkg, "--hash").decode().strip() == digest.hex()
-    assert f"Header hash:  {digest.hex()}\n" in bpak.output("show", pkg).decode()
+    assert f"Header hash:  {digest.hex()}\n" in \
+        bpak.output("show", pkg).decode()
 
 
 def test_verify_wrong_key(bpak):

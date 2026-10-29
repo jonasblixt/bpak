@@ -10,6 +10,7 @@ import sys
 import zlib
 from dataclasses import dataclass
 from pathlib import Path
+from typing import NamedTuple
 
 DATA_DIR = Path(__file__).parent / "data"
 SOURCE_DIR = Path(__file__).parent.parent
@@ -20,6 +21,33 @@ DEFAULT_VERIFY_KEY = DATA_DIR / "secp256r1-pub-key.der"
 
 # A keystore created by a released version, see the keystore fixture
 GOLDEN_KEYSTORE = SOURCE_DIR / "test" / "golden" / "0.9.3" / "keystore.bpak"
+KEYSTORE_ID = "pb-internal"
+
+
+class Key(NamedTuple):
+    """A key pair, the keys are file names in DATA_DIR"""
+
+    hash_kind: str
+    signature_kind: str
+    private_key: str
+    public_key: str
+
+    @property
+    def digest_size(self) -> int:
+        return {"sha256": 32, "sha384": 48, "sha512": 64}[self.hash_kind]
+
+
+# The keys in GOLDEN_KEYSTORE by their name
+KEYS = {
+    "pb-development": Key("sha256", "prime256v1", "secp256r1-key-pair.pem",
+                          "secp256r1-pub-key.der"),
+    "pb-development-384": Key("sha384", "secp384r1", "secp384r1-key-pair.pem",
+                              "secp384r1-pub-key.der"),
+    "pb-development-521": Key("sha512", "secp521r1", "secp521r1-key-pair.pem",
+                              "secp521r1-pub-key.der"),
+    "pb-development-rsa": Key("sha256", "rsa4096", "dev_rsa_private.pem",
+                              "dev_rsa_public.der"),
+}
 
 
 class BpakError(enum.IntEnum):
@@ -157,7 +185,7 @@ class Bpak:
                        hash_kind=None, signature_kind=None,
                        sign_key=DEFAULT_SIGN_KEY, package_uuid=PKG_UUID,
                        key_id="pb-development",
-                       keystore_id="pb-internal") -> Path:
+                       keystore_id=KEYSTORE_ID) -> Path:
         """Create a package the way most tests need it.
 
         Sets the package UUID, adds transport rules and parts, sets key-id

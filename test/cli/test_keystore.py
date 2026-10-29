@@ -4,38 +4,8 @@ import os
 import shlex
 import subprocess
 
-import pytest
-
-from bpaktest import (DATA_DIR, HEADER_SIZE, SOURCE_DIR, BpakError, bpak_id,
-                      corrupt)
-
-KEYSTORE_ID = "pb-internal"
-
-# Key name in the keystore fixture: (hash kind, signature kind, private
-# key, public key)
-KEYS = {
-    "pb-development": ("sha256", "prime256v1", "secp256r1-key-pair.pem",
-                       "secp256r1-pub-key.der"),
-    "pb-development-384": ("sha384", "secp384r1", "secp384r1-key-pair.pem",
-                           "secp384r1-pub-key.der"),
-    "pb-development-521": ("sha512", "secp521r1", "secp521r1-key-pair.pem",
-                           "secp521r1-pub-key.der"),
-    "pb-development-rsa": ("sha256", "rsa4096", "dev_rsa_private.pem",
-                           "dev_rsa_public.der"),
-}
-
-
-@pytest.mark.parametrize("key_name", KEYS)
-def test_verify_with_keystore(bpak, keystore, key_name):
-    hash_kind, signature_kind, private_key, _ = KEYS[key_name]
-    pkg = bpak.create_package("test.bpak",
-                              hash_kind=hash_kind,
-                              signature_kind=signature_kind,
-                              sign_key=DATA_DIR / private_key,
-                              key_id=key_name,
-                              keystore_id=KEYSTORE_ID)
-
-    bpak("verify", pkg, "--keystore", keystore)
+from bpaktest import (DATA_DIR, HEADER_SIZE, KEYS, KEYSTORE_ID, SOURCE_DIR,
+                      BpakError, bpak_id, corrupt)
 
 
 def test_verify_with_keystore_wrong_key(bpak, keystore):
