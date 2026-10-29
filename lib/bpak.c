@@ -384,6 +384,12 @@ BPAK_EXPORT off_t bpak_part_offset(struct bpak_header *h,
     return offset;
 }
 
+off_t bpak_part_data_offset(struct bpak_header *h,
+                            struct bpak_part_header *part, off_t data_offset)
+{
+    return bpak_part_offset(h, part) - (off_t)sizeof(*h) + data_offset;
+}
+
 BPAK_EXPORT size_t bpak_part_size(struct bpak_part_header *part)
 {
     if (part->flags & BPAK_FLAG_TRANSPORT)

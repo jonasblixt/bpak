@@ -37,6 +37,13 @@ int bpak_get_meta_value(struct bpak_header *hdr, bpak_id_t id,
 int bpak_same_package_uuid(struct bpak_header *a, struct bpak_header *b);
 
 /**
+ * Offset of the data of 'part' in a stream that has the data of the first
+ * part at 'data_offset', a stream without the header for example.
+ */
+off_t bpak_part_data_offset(struct bpak_header *h,
+                            struct bpak_part_header *part, off_t data_offset);
+
+/**
  * bpak_io_t callbacks that read and write 'length' bytes at 'offset' of the
  * FILE * in 'user'.
  *

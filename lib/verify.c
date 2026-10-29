@@ -309,10 +309,9 @@ BPAK_EXPORT int bpak_verify_payload(struct bpak_header *header,
         }
 
         /* Compute part data and tree offsets relative input 'data_offset' */
-        off_t part_data_offset = bpak_part_offset(header, p) -
-                                 sizeof(struct bpak_header) + data_offset;
-        off_t part_tree_offset = bpak_part_offset(header, merkle_tree_part) -
-                                 sizeof(struct bpak_header) + data_offset;
+        off_t part_data_offset = bpak_part_data_offset(header, p, data_offset);
+        off_t part_tree_offset =
+            bpak_part_data_offset(header, merkle_tree_part, data_offset);
 
         /* Verify this data/merkle tree and compare the root hash */
         rc = bpak_verify_merkle_tree(read_payload,
