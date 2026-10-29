@@ -139,6 +139,8 @@ tool. The package format and the library ABI stay compatible, see
   crashed when the origin or the input package had no `bpak-package` meta
   data, and read past a `bpak-package` that is smaller than a UUID. It fails
   with `BPAK_NOT_FOUND` and `BPAK_SIZE_ERROR` like transport decoding.
+- Log messages of the library used printf formats that do not match their
+  arguments, they printed wrong values, for example in 32-bit builds.
 - Python package: crashes when opening a file that is not a package, when
   using a closed package and after the log callback was released, reference
   leaks in `Package.parts` and `Package.meta`, meta data larger than the

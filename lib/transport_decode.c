@@ -7,6 +7,7 @@
  *
  */
 
+#include <inttypes.h>
 #include <string.h>
 #include <bpak/bpak.h>
 #include <bpak/crc.h>
@@ -493,8 +494,8 @@ BPAK_EXPORT int bpak_transport_decode_finish(struct bpak_transport_decode *ctx)
     if (output_length != (ssize_t)(ctx->part->size + ctx->part->pad_bytes)) {
         bpak_printf(0,
                     "Error: Decoded part size does not match the expected size "
-                    "%zu != %zu\n",
-                    (ctx->part->size + ctx->part->pad_bytes),
+                    "%" PRIu64 " != %zd\n",
+                    ctx->part->size + ctx->part->pad_bytes,
                     output_length);
         return -BPAK_SIZE_ERROR;
     }

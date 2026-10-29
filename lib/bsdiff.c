@@ -25,6 +25,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <inttypes.h>
 #include <stdio.h>
 #include <errno.h>
 #include <stdlib.h>
@@ -422,7 +423,7 @@ static int compressor_write(struct bpak_bsdiff_context *ctx, uint8_t *buffer,
 
         if (bytes_written != (ssize_t)length) {
             bpak_printf(0,
-                        "Error: Write error (%i != %li)\n",
+                        "Error: Write error (%zd != %zu)\n",
                         bytes_written,
                         length);
             return -BPAK_WRITE_ERROR;
@@ -577,7 +578,7 @@ static int write_diff_extra_and_adjustment(struct bpak_bsdiff_context *ctx)
 
     /* Write control data*/
     bpak_printf(2,
-                "diff: %10li %10li %10li\n",
+                "diff: %10" PRIi64 " %10" PRIi64 " %10" PRIi64 "\n",
                 diff_size,
                 extra_size,
                 (ctx->pos - lenb) - (last_pos + diff_size));

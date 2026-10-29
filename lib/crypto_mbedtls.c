@@ -398,7 +398,7 @@ int bpak_mbed_load_private_key(const char *filename, struct bpak_key **output)
             break;
         default:
             bpak_printf(0,
-                        "Unknown bit-length (%li)\n",
+                        "Unknown bit-length (%zu)\n",
                         mbedtls_pk_get_bitlen(&ctx));
             rc = -BPAK_KEY_DECODE;
             goto err_free_key_out;
@@ -408,7 +408,7 @@ int bpak_mbed_load_private_key(const char *filename, struct bpak_key **output)
             key->kind = BPAK_KEY_PRI_RSA4096;
         } else {
             bpak_printf(0,
-                        "Unknown bit-length (%li)\n",
+                        "Unknown bit-length (%zu)\n",
                         mbedtls_pk_get_bitlen(&ctx));
             rc = -BPAK_KEY_DECODE;
             goto err_free_key_out;

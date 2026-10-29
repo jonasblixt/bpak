@@ -91,10 +91,10 @@ BPAK_EXPORT int bpak_merkle_init(struct bpak_merkle_context *ctx,
         ctx->level_offset[i] = tree_level_offset;
 
         bpak_printf(2,
-                    "Level %i, length: %zu, offset: %li\n",
+                    "Level %u, length: %zu, offset: %lld\n",
                     i,
                     ctx->level_length[i],
-                    ctx->level_offset[i]);
+                    (long long)ctx->level_offset[i]);
     }
 
     /* Zero fill output tree */
@@ -229,7 +229,7 @@ BPAK_EXPORT int bpak_merkle_finish(struct bpak_merkle_context *ctx,
         output_offset = ctx->level_offset[i];
 
         for (int n = 0; n < input_block_count; n++) {
-            bpak_printf(2, "Computing block %i on level %i\n", n, i);
+            bpak_printf(2, "Computing block %i on level %u\n", n, i);
             rc = bpak_hash_init(&ctx->running_hash, BPAK_HASH_SHA256);
             if (rc != BPAK_OK)
                 return rc;

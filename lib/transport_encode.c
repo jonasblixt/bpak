@@ -201,18 +201,18 @@ static ssize_t transport_bsdiff(FILE *target, off_t target_offset,
                           &priv);
 
     if (rc != BPAK_OK) {
-        bpak_printf(0, "Error: bpak_bsdiff_init failed (%i)\n", rc);
+        bpak_printf(0, "Error: bpak_bsdiff_init failed (%zd)\n", rc);
         goto err_munmap_origin;
     }
 
     rc = bpak_bsdiff(&bsdiff);
 
     if (rc < 0) {
-        bpak_printf(0, "Error: bpak_bsdiff failed (%i)\n", rc);
+        bpak_printf(0, "Error: bpak_bsdiff failed (%zd)\n", rc);
         goto err_bsdiff_free;
     }
 
-    bpak_printf(1, "bsdiff completed, output size = %zu\n", rc);
+    bpak_printf(1, "bsdiff completed, output size = %zd\n", rc);
 
 err_bsdiff_free:
     bpak_bsdiff_free(&bsdiff);
@@ -272,7 +272,7 @@ transport_encode_part(struct bpak_transport_meta *tm, uint32_t part_ref_id,
         return BPAK_OK;
 
     bpak_printf(1,
-                "Initializing alg, input size %li bytes\n",
+                "Initializing alg, input size %zu bytes\n",
                 bpak_part_size(input_part));
 
     if (origin_header != NULL && origin_fp != NULL) {
@@ -343,12 +343,12 @@ transport_encode_part(struct bpak_transport_meta *tm, uint32_t part_ref_id,
     }
 
     if (output_size < 0) {
-        bpak_printf(0, "Error: processing of part failed (%i)\n", output_size);
+        bpak_printf(0, "Error: processing of part failed (%zd)\n", output_size);
         rc = output_size;
         goto err_out;
     }
 
-    bpak_printf(1, "Done processing, output size %li bytes\n", output_size);
+    bpak_printf(1, "Done processing, output size %zd bytes\n", output_size);
 
     /* Update part header to indicate that the part has been coded */
     output_part->transport_size = output_size;
