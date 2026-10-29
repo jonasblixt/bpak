@@ -9,6 +9,19 @@
 #include <mbedtls/platform.h>
 #include <mbedtls/sha256.h>
 #include <mbedtls/sha512.h>
+
+#if defined(BPAK_SIZEOF_MBEDTLS_SHA256_CONTEXT) && \
+    defined(BPAK_SIZEOF_MBEDTLS_SHA512_CONTEXT)
+/* struct bpak_hash_context contains mbedtls contexts and is part of the ABI,
+ * a program must use the mbedtls headers that the library was built with.
+ * The array has a negative size, and the compilation fails, when the contexts
+ * have other sizes. */
+typedef char bpak_mbedtls_has_the_contexts_of_the_library
+    [(sizeof(mbedtls_sha256_context) == BPAK_SIZEOF_MBEDTLS_SHA256_CONTEXT &&
+      sizeof(mbedtls_sha512_context) == BPAK_SIZEOF_MBEDTLS_SHA512_CONTEXT)
+         ? 1
+         : -1];
+#endif
 #endif
 
 #ifdef __cplusplus

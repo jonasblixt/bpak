@@ -8,6 +8,14 @@ configure_file(${PROJECT_NAME}.pc.in ${PROJECT_NAME}.pc @ONLY)
 include(CheckTypeSize)
 set(CMAKE_EXTRA_INCLUDE_FILES sys/types.h)
 check_type_size(off_t BPAK_SIZEOF_OFF_T)
+
+# The mbedtls contexts in struct bpak_hash_context are part of the ABI as
+# well, crypto.h checks their sizes
+if (BPAK_CONFIG_MBEDTLS)
+    set(CMAKE_EXTRA_INCLUDE_FILES mbedtls/sha256.h mbedtls/sha512.h)
+    check_type_size(mbedtls_sha256_context BPAK_SIZEOF_MBEDTLS_SHA256_CONTEXT)
+    check_type_size(mbedtls_sha512_context BPAK_SIZEOF_MBEDTLS_SHA512_CONTEXT)
+endif()
 unset(CMAKE_EXTRA_INCLUDE_FILES)
 
 # Generated public headers, next to the public headers in include/bpak/ when

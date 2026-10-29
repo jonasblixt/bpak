@@ -22,6 +22,8 @@ tool. The package format and the library ABI stay compatible, see
 - `version.txt` holds the version.
 - The python package declares and ships the licenses of the third-party
   code, see `LICENSES/`.
+- Programs that are compiled with other mbedtls headers than the library
+  fail to compile, `struct bpak_hash_context` contains the mbedtls contexts.
 
 ### Fixed
 

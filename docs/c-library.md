@@ -83,7 +83,10 @@ the compiler command line to change them.
 `off_t` is part of the API, its size depends on `_FILE_OFFSET_BITS` on 32-bit
 targets. Programs must use the `_FILE_OFFSET_BITS` that the library was built
 with, `bpak/build_config.h` records the size of `off_t` and `bpak/bpak.h` fails
-to compile when it is different.
+to compile when it is different. In the same way `struct bpak_hash_context`
+contains the mbedtls hash contexts, programs must use the mbedtls headers of
+the library and `bpak/crypto.h` fails to compile when the contexts have other
+sizes.
 
 ### Building the library into another project
 

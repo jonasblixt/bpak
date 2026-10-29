@@ -8,4 +8,8 @@
 /* Size of off_t when the library was built */
 #define BPAK_SIZEOF_OFF_T @BPAK_SIZEOF_OFF_T@
 
+/* Sizes of the mbedtls contexts when the library was built */
+#cmakedefine BPAK_SIZEOF_MBEDTLS_SHA256_CONTEXT @BPAK_SIZEOF_MBEDTLS_SHA256_CONTEXT@
+#cmakedefine BPAK_SIZEOF_MBEDTLS_SHA512_CONTEXT @BPAK_SIZEOF_MBEDTLS_SHA512_CONTEXT@
+
 #endif
