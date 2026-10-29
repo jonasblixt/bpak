@@ -137,7 +137,16 @@ BPAK_EXPORT int bpak_transport_decode_init(
     bpak_io_t read_output, off_t output_offset, bpak_io_t write_output_header,
     void *user)
 {
+    int rc;
+
     memset(ctx, 0, sizeof(*ctx));
+
+    /* The header of a transport encoded package can not be verified before
+     * it is decoded */
+    rc = bpak_valid_header(patch_header);
+
+    if (rc != BPAK_OK)
+        return rc;
 
     ctx->buffer = buffer;
     ctx->buffer_length = buffer_length;
@@ -161,6 +170,11 @@ bpak_transport_decode_set_origin(struct bpak_transport_decode *ctx,
     uint8_t *origin_package_uuid;
     uint8_t *patch_package_uuid;
 
+    rc = bpak_valid_header(origin_header);
+
+    if (rc != BPAK_OK)
+        return rc;
+
     ctx->origin_header = origin_header;
     ctx->read_origin = read_origin;
     ctx->origin_offset = origin_offset;
@@ -174,6 +188,9 @@ bpak_transport_decode_set_origin(struct bpak_transport_decode *ctx,
     if (rc != BPAK_OK)
         return rc;
 
+    if (meta->size < 16)
+        return -BPAK_SIZE_ERROR;
+
     origin_package_uuid = bpak_get_meta_ptr(origin_header, meta, uint8_t);
 
     rc = bpak_get_meta(ctx->patch_header,
@@ -183,6 +200,9 @@ bpak_transport_decode_set_origin(struct bpak_transport_decode *ctx,
 
     if (rc != BPAK_OK)
         return rc;
+
+    if (meta->size < 16)
+        return -BPAK_SIZE_ERROR;
 
     patch_package_uuid = bpak_get_meta_ptr(ctx->patch_header, meta, uint8_t);
 

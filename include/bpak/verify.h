@@ -46,7 +46,8 @@ int bpak_verify_compute_header_hash(struct bpak_header *header,
  * @param[in,out] output_hash_buffer_length Length of hash buffer / result
  *                                          bytes
  *
- * @return BPAK_OK on success
+ * @return BPAK_OK on success, the error of bpak_valid_header() when the
+ *         header is not valid or a negative error code
  */
 int bpak_verify_compute_payload_hash(struct bpak_header *header,
                                      bpak_io_t read_payload, off_t data_offset,

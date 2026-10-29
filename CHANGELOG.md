@@ -47,6 +47,11 @@ tool. The package format and the library ABI stay compatible, see
 - Deleting meta data, for example with `bpak delete --part`, corrupted the
   value of the following meta data when it was larger than the deleted one,
   and with 32 meta data entries it cleared the first part header.
+- `bpak_valid_header` accepted parts and meta data after an empty slot, which
+  the lookups find, unaligned meta data, part sizes that overflow and
+  signature sizes larger than the signature field. The payload hash and
+  transport decoding did not validate the header. Lookups of id 0 found
+  empty slots.
 - Python package: crashes when opening a file that is not a package, when
   using a closed package and after the log callback was released, reference
   leaks in `Package.parts` and `Package.meta`, meta data larger than the

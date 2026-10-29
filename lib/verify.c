@@ -65,6 +65,12 @@ BPAK_EXPORT int bpak_verify_compute_payload_hash(struct bpak_header *header,
     int rc;
     struct bpak_hash_context hash_ctx;
 
+    /* The part sizes and offsets are used before the header is verified */
+    rc = bpak_valid_header(header);
+
+    if (rc != BPAK_OK)
+        return rc;
+
     rc = bpak_hash_init(&hash_ctx, header->hash_kind);
 
     if (rc != BPAK_OK)

@@ -311,7 +311,8 @@ struct bpak_header {
  * @param[in] part_id_ref Part reference identifier, or 0 for no reference
  * @param[out] meta Pointer to the metadata header
  *
- * @return BPAK_OK on success -BPAK_NOT_FOUND if the metadata is missing
+ * @return BPAK_OK on success -BPAK_NOT_FOUND if the metadata is missing or
+ *         'id' is 0
  *
  **/
 int bpak_get_meta(struct bpak_header *hdr, bpak_id_t id, bpak_id_t part_id_ref,
@@ -325,7 +326,8 @@ int bpak_get_meta(struct bpak_header *hdr, bpak_id_t id, bpak_id_t part_id_ref,
  * @param[in] id Meta data identifier
  * @param[out] meta Pointer to the metadata header
  *
- * @return BPAK_OK on success -BPAK_NOT_FOUND if the metadata is missing
+ * @return BPAK_OK on success -BPAK_NOT_FOUND if the metadata is missing or
+ *         'id' is 0
  *
  **/
 int bpak_get_meta_anyref(struct bpak_header *hdr, bpak_id_t id,
@@ -370,7 +372,8 @@ void bpak_del_meta(struct bpak_header *hdr,
  * @param[in] id ID of part
  * @param[out] part Pointer to the part header
  *
- * @return BPAK_OK on success, -BPAK_NOT_FOUND if the part is missing
+ * @return BPAK_OK on success, -BPAK_NOT_FOUND if the part is missing or 'id'
+ *         is 0
  *
  **/
 
@@ -405,12 +408,17 @@ void bpak_del_part(struct bpak_header *hdr,
                    struct bpak_part_header *part);
 
 /**
- * Check magic numbers in the header and check that all parts have the correct
- *  alignment.
+ * Check that a header that is not verified yet can be used: the magic number,
+ *  that the parts and meta data follow each other without empty slots, the
+ *  alignment of the parts and the meta data values, that the meta data is
+ *  within the meta data array, that the part sizes and offsets fit size_t and
+ *  off_t and the signature size. The part offsets are not checked.
  *
  *  @param[in] hdr BPAK Header
  *
- *  @return BPAK_OK on success
+ *  @return BPAK_OK on success, -BPAK_BAD_MAGIC, -BPAK_BAD_ALIGNMENT,
+ *          -BPAK_SIZE_ERROR or -BPAK_NOT_SUPPORTED for empty slots between
+ *          parts or meta data and an invalid hash kind
  */
 
 int bpak_valid_header(struct bpak_header *hdr);

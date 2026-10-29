@@ -219,6 +219,44 @@ static void test_delete_meta(void **state)
     assert_int_equal(out, 0x55667788);
 }
 
+static void test_meta_bad_layout(void **state)
+{
+    (void)state;
+    struct bpak_header h;
+    struct bpak_meta_header *meta;
+    int rc;
+
+    /* Lookups search all slots, meta data after an empty slot is rejected */
+    bpak_init_header(&h);
+    h.meta[1].id = bpak_id("test-meta");
+    h.meta[1].offset = 1900;
+    h.meta[1].size = 0xffff;
+
+    rc = bpak_valid_header(&h);
+    assert_int_equal(rc, -BPAK_NOT_SUPPORTED);
+
+    /* Values are aligned */
+    bpak_init_header(&h);
+    rc = bpak_add_meta(&h, bpak_id("test-meta"), 0, 4, &meta);
+    assert_int_equal(rc, BPAK_OK);
+    meta->offset = 4;
+
+    rc = bpak_valid_header(&h);
+    assert_int_equal(rc, -BPAK_BAD_ALIGNMENT);
+
+    meta->offset = BPAK_METADATA_BYTES - 8;
+    meta->size = 9;
+
+    rc = bpak_valid_header(&h);
+    assert_int_equal(rc, -BPAK_SIZE_ERROR);
+
+    /* Id 0 is an empty slot, not meta data */
+    rc = bpak_get_meta(&h, 0, 0, &meta);
+    assert_int_equal(rc, -BPAK_NOT_FOUND);
+    rc = bpak_get_meta_anyref(&h, 0, &meta);
+    assert_int_equal(rc, -BPAK_NOT_FOUND);
+}
+
 /* Header with a part and meta data i of 'sizes[i]' bytes filled with i + 1,
  * leaving out 'skip' */
 static void build_header(struct bpak_header *h, const uint16_t *sizes, size_t n,
@@ -316,6 +354,7 @@ int main(void)
         cmocka_unit_test(test_delete_meta),
         cmocka_unit_test(test_delete_meta_layout),
         cmocka_unit_test(test_delete_meta_full),
+        cmocka_unit_test(test_meta_bad_layout),
         cmocka_unit_test(test_meta_align),
     };
 

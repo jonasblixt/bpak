@@ -65,7 +65,8 @@ struct bpak_transport_decode {
  * @param[in] write_output_header Callback for writing the output header
  * @param[in] user User pointer for io callbacks
  *
- * @return BPAK_OK on success or a negative number on failure
+ * @return BPAK_OK on success, the error of bpak_valid_header() when the patch
+ *         header is not valid or a negative number on failure
  */
 int bpak_transport_decode_init(struct bpak_transport_decode *ctx,
                                uint8_t *buffer, size_t buffer_length,
@@ -83,7 +84,8 @@ int bpak_transport_decode_init(struct bpak_transport_decode *ctx,
  * @param[in] read_origin Callback for reading origin data
  * @param[in] origin_offset Offset where origin data block starts
  *
- * @return BPAK_OK on success or a negative number on failure
+ * @return BPAK_OK on success, the error of bpak_valid_header() when the origin
+ *         header is not valid or a negative number on failure
  */
 int bpak_transport_decode_set_origin(struct bpak_transport_decode *ctx,
                                      struct bpak_header *origin_header,

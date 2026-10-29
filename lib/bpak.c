@@ -18,6 +18,12 @@ static int bpak_get_meta_int(struct bpak_header *hdr, bpak_id_t id,
                              bpak_id_t part_id_ref, bool match_partref,
                              struct bpak_meta_header **meta)
 {
+    /* Id 0 is an empty slot */
+    if (!id) {
+        *meta = NULL;
+        return -BPAK_NOT_FOUND;
+    }
+
     bpak_foreach_meta (hdr, m) {
         if (m->id == id) {
             if (match_partref) {
@@ -121,6 +127,10 @@ BPAK_EXPORT void bpak_del_meta(struct bpak_header *hdr,
 BPAK_EXPORT int bpak_get_part(struct bpak_header *hdr, bpak_id_t id,
                               struct bpak_part_header **part)
 {
+    /* Id 0 is an empty slot */
+    if (!id)
+        return -BPAK_NOT_FOUND;
+
     bpak_foreach_part (hdr, p) {
         if (p->id == id) {
             (*part) = p;
@@ -244,27 +254,70 @@ BPAK_EXPORT const char *bpak_error_string(int code)
 
 BPAK_EXPORT int bpak_valid_header(struct bpak_header *hdr)
 {
+    /* Largest offset and size that off_t and size_t can hold */
+    const uint64_t off_max = ((uint64_t)1 << (sizeof(off_t) * 8 - 1)) - 1;
+    const uint64_t size_max = BPAK_MIN((uint64_t)SIZE_MAX, off_max);
+    uint64_t stored_end = sizeof(*hdr);
+    uint64_t decoded_end = sizeof(*hdr);
+    bool empty = false;
+
     if (hdr->magic != BPAK_HEADER_MAGIC)
         return -BPAK_BAD_MAGIC;
 
-    /* Check alignment of part data blocks */
+    /* The parts follow each other without empty slots between them, the
+     * lookups search all slots. The sizes and offsets must fit the API
+     * types. */
     bpak_foreach_part (hdr, p) {
-        if (!p->id)
-            break;
+        if (!p->id) {
+            empty = true;
+            continue;
+        }
 
-        if (((p->size + p->pad_bytes) % BPAK_PART_ALIGN) != 0)
+        if (empty)
+            return -BPAK_NOT_SUPPORTED;
+
+        if (p->pad_bytes >= BPAK_PART_ALIGN ||
+            ((p->size + p->pad_bytes) % BPAK_PART_ALIGN) != 0)
             return -BPAK_BAD_ALIGNMENT;
+
+        if (p->size > size_max - p->pad_bytes || p->transport_size > size_max)
+            return -BPAK_SIZE_ERROR;
+
+        uint64_t stored_size = (p->flags & BPAK_FLAG_TRANSPORT)
+                                   ? p->transport_size
+                                   : p->size + p->pad_bytes;
+
+        if (stored_size > off_max - stored_end ||
+            p->size + p->pad_bytes > off_max - decoded_end)
+            return -BPAK_SIZE_ERROR;
+
+        stored_end += stored_size;
+        decoded_end += p->size + p->pad_bytes;
     }
 
-    /* Check for out-of-bounds metadata */
+    /* The meta data values are aligned and within the meta data array */
+    empty = false;
+
     bpak_foreach_meta (hdr, m) {
-        if (!m->id)
-            break;
+        if (!m->id) {
+            empty = true;
+            continue;
+        }
+
+        if (empty)
+            return -BPAK_NOT_SUPPORTED;
+
+        if (m->offset % BPAK_META_ALIGN)
+            return -BPAK_BAD_ALIGNMENT;
 
         if ((m->size + m->offset) > BPAK_METADATA_BYTES) {
             return -BPAK_SIZE_ERROR;
         }
     }
+
+    /* Not covered by the header hash */
+    if (hdr->signature_sz > sizeof(hdr->signature))
+        return -BPAK_SIZE_ERROR;
 
     if (!hdr->hash_kind)
         return -BPAK_NOT_SUPPORTED;
