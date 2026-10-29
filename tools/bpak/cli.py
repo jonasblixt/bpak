@@ -165,6 +165,9 @@ class BpakGroup(click.Group):
             return super().invoke(ctx)
         except bpak.Error as e:
             raise CommandError(e) from e
+        except BrokenPipeError:
+            # The reader of the output exited, click exits quietly
+            raise
         except OSError as e:
             # Files the tool reads or writes itself, the C tool failed with
             # BPAK_FAILED

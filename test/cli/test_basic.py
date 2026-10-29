@@ -3,6 +3,8 @@
 import hashlib
 import os
 import re
+import subprocess
+import sys
 import uuid
 
 import pytest
@@ -137,6 +139,24 @@ def test_extract_write_error(bpak, make_data):
     stderr = bpak.run(*args, check=False).stderr.decode()
     assert stderr.startswith("Error: ")
     assert "Traceback" not in stderr
+
+
+@pytest.mark.parametrize("args", [["show"], ["extract", "--part", "fs"]])
+def test_closed_output_pipe(bpak, make_data, args):
+    """Output into a pipe whose reader has exited, like 'bpak show | head',
+    exits without an error message"""
+    data = make_data("data.bin", 4)
+    pkg = bpak.create_package("test.bpak", parts=[Part("fs", data)])
+
+    read_fd, write_fd = os.pipe()
+    os.close(read_fd)
+    with os.fdopen(write_fd, "wb") as stdout:
+        result = subprocess.run(
+            [sys.executable, "-m", "bpak", args[0], pkg, *args[1:]],
+            cwd=bpak.cwd, env=bpak.env, stdout=stdout, stderr=subprocess.PIPE)
+
+    assert result.returncode == 1
+    assert result.stderr == b""
 
 
 def test_show_part_hash(bpak, make_data):
