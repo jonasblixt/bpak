@@ -81,6 +81,12 @@ tool. The package format and the library ABI stay compatible, see
   it came from `random()`, which was never seeded.
 - Transport decoding leaked the lzma decoder when a patch failed in the
   middle of a part, `bpak_transport_decode_free` frees it now.
+- Adding a part: a file that could not be read, for example a directory,
+  or that changed size made `bpak_pkg_add_file` loop forever, a part added
+  after a transport encoded part was written at the wrong offset, and a
+  failed add left the part in the package. `bpak add --encoder merkle`
+  computed the hash tree from the file instead of the added data, which
+  overflowed a buffer when the file grew.
 - Python package: crashes when opening a file that is not a package, when
   using a closed package and after the log callback was released, reference
   leaks in `Package.parts` and `Package.meta`, meta data larger than the

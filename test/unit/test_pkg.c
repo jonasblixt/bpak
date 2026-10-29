@@ -1,6 +1,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/stat.h>
+#include <bpak/id.h>
 #include <bpak/bpak.h>
 #include <bpak/crypto.h>
 #include <bpak/pkg.h>
@@ -111,12 +113,129 @@ static void test_add_key_allocator(void **state)
     unlink(path);
 }
 
+static off_t file_size(const char *path)
+{
+    struct stat statbuf;
+
+    assert_int_equal(stat(path, &statbuf), 0);
+    return statbuf.st_size;
+}
+
+/* Write 'size' bytes to a temporary file */
+static void create_file(char *path, size_t size)
+{
+    int fd = mkstemp(path);
+
+    assert_true(fd >= 0);
+    for (size_t i = 0; i < size; i++)
+        assert_int_equal(write(fd, "x", 1), 1);
+    close(fd);
+}
+
+/* A failed add leaves the package as it was, in memory and in the file */
+static void test_add_file_failure(void **state)
+{
+    (void)state;
+    struct bpak_package pkg;
+    struct bpak_header before;
+    char path[] = "/tmp/bpak-test-XXXXXX";
+    char data_path[] = "/tmp/bpak-test-XXXXXX";
+    char dir_path[] = "/tmp/bpak-test-XXXXXX";
+    int rc;
+
+    create_package(&pkg, path);
+    create_file(data_path, 1000);
+    assert_non_null(mkdtemp(dir_path));
+
+    rc = bpak_pkg_add_file(&pkg, data_path, "a", 0);
+    assert_int_equal(rc, BPAK_OK);
+    memcpy(&before, &pkg.header, sizeof(before));
+    off_t size_before = file_size(path);
+
+    /* fread fails, it returned 0 and the copy looped forever */
+    rc = bpak_pkg_add_file(&pkg, dir_path, "b", 0);
+    assert_int_equal(rc, -BPAK_READ_ERROR);
+    assert_memory_equal(&pkg.header, &before, sizeof(before));
+
+    rc = bpak_pkg_add_file(&pkg, "/nonexistent", "b", 0);
+    assert_int_equal(rc, -BPAK_FILE_NOT_FOUND);
+
+    /* The merkle tree needs a multiple of 4 KiB, the data part was left in
+     * the package */
+    rc = bpak_pkg_add_file_with_merkle_tree(&pkg, data_path, "fs", 0);
+    assert_int_equal(rc, -BPAK_BAD_ALIGNMENT);
+    assert_memory_equal(&pkg.header, &before, sizeof(before));
+    assert_int_equal(file_size(path), size_before);
+
+    bpak_pkg_close(&pkg);
+
+    /* And in the file */
+    rc = bpak_pkg_open(&pkg, path, "rb");
+    assert_int_equal(rc, BPAK_OK);
+    assert_memory_equal(&pkg.header, &before, sizeof(before));
+    bpak_pkg_close(&pkg);
+
+    unlink(path);
+    unlink(data_path);
+    rmdir(dir_path);
+}
+
+/* Parts added after a transport encoded part are stored after its transport
+ * size, their offset is the offset in the decoded package */
+static void test_add_file_after_transport_part(void **state)
+{
+    (void)state;
+    struct bpak_package pkg;
+    struct bpak_part_header *a;
+    struct bpak_part_header *b;
+    char path[] = "/tmp/bpak-test-XXXXXX";
+    char data_path[] = "/tmp/bpak-test-XXXXXX";
+    uint8_t data[1000];
+    int rc;
+
+    create_package(&pkg, path);
+    create_file(data_path, sizeof(data));
+
+    rc = bpak_pkg_add_file(&pkg, data_path, "a", 0);
+    assert_int_equal(rc, BPAK_OK);
+
+    /* Part 'a' as transport encoded to 100 bytes */
+    rc = bpak_get_part(&pkg.header, bpak_id("a"), &a);
+    assert_int_equal(rc, BPAK_OK);
+    a->flags |= BPAK_FLAG_TRANSPORT;
+    a->transport_size = 100;
+    rc = ftruncate(fileno(pkg.fp), sizeof(struct bpak_header) + 100);
+    assert_int_equal(rc, 0);
+
+    rc = bpak_pkg_add_file(&pkg, data_path, "b", 0);
+    assert_int_equal(rc, BPAK_OK);
+
+    rc = bpak_get_part(&pkg.header, bpak_id("b"), &b);
+    assert_int_equal(rc, BPAK_OK);
+    assert_int_equal(b->offset, sizeof(struct bpak_header) + 1024);
+    assert_int_equal(bpak_part_offset(&pkg.header, b),
+                     sizeof(struct bpak_header) + 100);
+    assert_int_equal(file_size(path), sizeof(struct bpak_header) + 100 + 1024);
+
+    assert_int_equal(fseeko(pkg.fp, bpak_part_offset(&pkg.header, b), SEEK_SET),
+                     0);
+    assert_int_equal(fread(data, 1, sizeof(data), pkg.fp), sizeof(data));
+    for (size_t i = 0; i < sizeof(data); i++)
+        assert_int_equal(data[i], 'x');
+
+    bpak_pkg_close(&pkg);
+    unlink(path);
+    unlink(data_path);
+}
+
 int main(void)
 {
     const struct CMUnitTest tests[] = {
         cmocka_unit_test(test_signature_too_large),
         cmocka_unit_test(test_verify_signature_size),
         cmocka_unit_test(test_add_key_allocator),
+        cmocka_unit_test(test_add_file_failure),
+        cmocka_unit_test(test_add_file_after_transport_part),
     };
 
     return cmocka_run_group_tests(tests, NULL, NULL);
