@@ -215,7 +215,6 @@ move it to **Done** with the commit that resolved it.
 - [x] `bpak show | head` printed a `BrokenPipeError` (5a6f6e6)
 - [x] `bpak generate keystore` wrote trailing spaces and a line with only
       spaces after keys whose size is a multiple of 8 (9c66947)
-- [x] The SONAME would have changed to `libbpak.so.1` with 1.0.0 (ddc7dcb)
 - [x] Compare the full ABI with the last release with abidiff, CI job `abi`
       (6faff92)
 - [x] Golden sample tests for the python package (734353e)

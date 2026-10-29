@@ -271,7 +271,7 @@ tests guard this:
   headers and the values of all enums, constants and predefined ids.
 - `test/abi/libbpak.symbols` lists the functions that the shared library
   exports, `test/abi/test_symbols.py` checks that it still exports them and
-  nothing that is not listed, and that the SONAME stays `libbpak.so.0`.
+  nothing that is not listed.
 - `test/abi/abidiff.sh` builds the last release and the working tree and
   compares the ABI of the shared libraries with `abidiff` from libabigail,
   including the function signatures and all types they use. It fails for
@@ -374,8 +374,7 @@ the repository root holds the version in the form `MAJOR.MINOR.PATCH` and is
 the only place where it is defined. It is used for:
 
 - the CMake project version, the shared library version and the pkg-config
-  file. The SONAME is `libbpak.so.0` for all versions, see
-  [Compatibility](#compatibility)
+  file
 - `bpak/version.h` (`BPAK_VERSION_MAJOR`, `BPAK_VERSION_STRING`, ...), which
   is generated into the build directory
 - the python package version, read by scikit-build-core, see
