@@ -56,42 +56,6 @@ static PyObject *part_get_id(PyObject *self, void *closure)
     return PyLong_FromUnsignedLong(part->part_id);
 }
 
-static int part_set_id(PyObject *self, PyObject *value, void *closure)
-{
-    (void)closure;
-    int rc = 0;
-    unsigned long long part_id;
-    BPAKPart *part = (BPAKPart *)self;
-    struct bpak_header *h = bpak_pkg_header(&part->package->pkg);
-    struct bpak_part_header *p;
-
-    if (package_check_open(part->package) < 0) {
-        return -1;
-    }
-
-    if (py_to_uint(value, UINT32_MAX, "id", &part_id) < 0) {
-        return -1;
-    }
-
-    rc = bpak_get_part(h, part->part_id, &p);
-    if (rc != BPAK_OK) {
-        PyErr_Format(PyExc_KeyError, "failed to get partition: %s",
-                bpak_error_string(rc));
-        return -1;
-    }
-
-    p->id = (bpak_id_t)part_id;
-    part->part_id = (bpak_id_t)part_id;
-
-    rc = package_write_header(part->package, false);
-    if (rc != BPAK_OK) {
-        PyErr_SetString(PyExc_IOError, "could not write header");
-        return -1;
-    }
-
-    return 0;
-}
-
 static PyObject *part_get_size(PyObject *self, void *closure)
 {
     (void)closure;
@@ -279,7 +243,7 @@ static PyMethodDef part_methods[] = {
 static PyGetSetDef part_getset[] = {
     { "id",
       (getter)part_get_id,
-      (setter)part_set_id,
+      (setter)NULL,
       "Part ID (32-bit)",
       NULL },
 

@@ -65,7 +65,8 @@ class ExistsError(Error): ...
 
 @final
 class Part:
-    id: int
+    @property
+    def id(self) -> int: ...
     @property
     # Size in the package, with padding, or the transport size if encoded.
     def size(self) -> int: ...
@@ -88,11 +89,10 @@ class Part:
 
 @final
 class Meta:
-    id: int
+    @property
+    def id(self) -> int: ...
     @property
     def part_id_ref(self) -> int: ...
-    @part_id_ref.setter
-    def part_id_ref(self, value: int | None) -> None: ...
     @property
     def size(self) -> int: ...
     @property

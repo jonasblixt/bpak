@@ -103,17 +103,15 @@ def test_add_meta_read_only(pybpak, origin_pkg):
 
 
 def test_meta_attribute_values(pybpak, tmp_path):
-    """The meta data attributes reject values that do not fit and deleting
-    them raises TypeError, it crashed"""
+    """The ids are read-only and deleting raw_data raises TypeError,
+    deleting them crashed"""
     with pybpak.Package(tmp_path / "test.bpak", "wb+") as p:
         meta = p.add_meta(pybpak.id("py-test"), data="Hello")
 
         for name in ("id", "part_id_ref"):
-            with pytest.raises(OverflowError):
-                setattr(meta, name, 2**32)
-            with pytest.raises(OverflowError):
-                setattr(meta, name, -1)
-            with pytest.raises(TypeError, match="cannot delete"):
+            with pytest.raises(AttributeError):
+                setattr(meta, name, 1)
+            with pytest.raises(AttributeError):
                 delattr(meta, name)
         with pytest.raises(TypeError, match="cannot delete"):
             del meta.raw_data

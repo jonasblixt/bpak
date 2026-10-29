@@ -342,15 +342,14 @@ def test_header_field_values(pybpak, tmp_path, name, bits):
         assert getattr(p, name) == 2**bits - 1
 
 
-def test_part_id_values(pybpak, tmp_path):
-    """Part.id rejects values that do not fit and deleting it raises
-    TypeError, it crashed"""
+def test_part_id_read_only(pybpak, tmp_path):
+    """Part.id is read-only, deleting it crashed"""
     with pybpak.Package(tmp_path / "test.bpak", "wb+") as p:
         part = p.add_file("kernel", KERNEL)
 
-        with pytest.raises(OverflowError):
-            part.id = 2**32
-        with pytest.raises(TypeError, match="cannot delete"):
+        with pytest.raises(AttributeError):
+            part.id = 1
+        with pytest.raises(AttributeError):
             del part.id
 
         assert part.id == bpak_id("kernel")

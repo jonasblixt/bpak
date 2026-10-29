@@ -118,13 +118,15 @@ its signature, see [Keystores](format.md#keystores).
 
 ### Part and Meta
 
-`Part` has the attributes `id`, `size`, `installed_size`, `transport_size`,
-`pad_bytes`, `flags`, `offset` and `is_transport_encoded`, and the methods
-`read_data()` and `delete(remove_meta=True)`.
+`Part` has the read-only attributes `id`, `size`, `installed_size`,
+`transport_size`, `pad_bytes`, `flags`, `offset` and
+`is_transport_encoded`, and the methods `read_data()` and
+`delete(remove_meta=True)`.
 
-`Meta` has the attributes `id`, `part_id_ref`, `size` and `raw_data`, and
-the methods `as_uuid()`, `as_string()`, `describe()` and `delete()`. Setting
-`raw_data` changes the value, and strings are stored with a terminating NUL.
+`Meta` has the read-only attributes `id`, `part_id_ref` and `size`, the
+attribute `raw_data` and the methods `as_uuid()`, `as_string()`,
+`describe()` and `delete()`. Setting `raw_data` changes the value, and
+strings are stored with a terminating NUL.
 
 ### Errors
 

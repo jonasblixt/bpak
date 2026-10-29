@@ -57,87 +57,12 @@ static PyObject *meta_get_id(PyObject *self, void *closure)
     return PyLong_FromUnsignedLong(meta->meta_id);
 }
 
-static int meta_set_id(PyObject *self, PyObject *value, void *closure)
-{
-    (void)closure;
-    int rc = 0;
-    unsigned long long meta_id;
-    BPAKMeta *meta = (BPAKMeta *)self;
-    struct bpak_header *h = bpak_pkg_header(&meta->package->pkg);
-    struct bpak_meta_header *m;
-
-    if (package_check_open(meta->package) < 0) {
-        return -1;
-    }
-
-    if (py_to_uint(value, UINT32_MAX, "id", &meta_id) < 0) {
-        return -1;
-    }
-
-    rc = bpak_get_meta(h, meta->meta_id, meta->part_ref, &m);
-    if (rc != BPAK_OK) {
-        PyErr_Format(PyExc_KeyError, "failed to get meta: %s",
-                bpak_error_string(rc));
-        return -1;
-    }
-
-    m->id = (bpak_id_t)meta_id;
-    meta->meta_id = (bpak_id_t)meta_id;
-
-    rc = package_write_header(meta->package, false);
-    if (rc != BPAK_OK) {
-        PyErr_Format(PyExc_IOError, "could not write header: %s",
-                bpak_error_string(rc));
-        return -1;
-    }
-
-    return 0;
-}
-
 static PyObject *meta_get_part_id_ref(PyObject *self, void *closure)
 {
     (void)closure;
     BPAKMeta *meta = (BPAKMeta *)self;
 
     return PyLong_FromUnsignedLong(meta->part_ref);
-}
-
-static int meta_set_part_id_ref(PyObject *self, PyObject *value, void *closure)
-{
-    (void)closure;
-    int rc = 0;
-    unsigned long long part_ref = 0;
-    BPAKMeta *meta = (BPAKMeta *)self;
-    struct bpak_header *h = bpak_pkg_header(&meta->package->pkg);
-    struct bpak_meta_header *m;
-
-    if (package_check_open(meta->package) < 0) {
-        return -1;
-    }
-
-    if (value != Py_None &&
-        py_to_uint(value, UINT32_MAX, "part_id_ref", &part_ref) < 0) {
-        return -1;
-    }
-
-    rc = bpak_get_meta(h, meta->meta_id, meta->part_ref, &m);
-    if (rc != BPAK_OK) {
-        PyErr_Format(PyExc_KeyError, "failed to get meta: %s",
-                bpak_error_string(rc));
-        return -1;
-    }
-
-    m->part_id_ref = (bpak_id_t)part_ref;
-    meta->part_ref = (bpak_id_t)part_ref;
-
-    rc = package_write_header(meta->package, false);
-    if (rc != BPAK_OK) {
-        PyErr_Format(PyExc_IOError, "could not write header: %s",
-                bpak_error_string(rc));
-        return -1;
-    }
-
-    return 0;
 }
 
 static PyObject *meta_get_size(PyObject *self, void* closure)
@@ -430,13 +355,13 @@ static PyMethodDef meta_methods[] = {
 static PyGetSetDef meta_getset[] = {
     {"id",
      (getter)meta_get_id,
-     (setter)meta_set_id,
+     (setter)NULL,
      "Metadata ID (32-bit)",
      NULL},
 
     {"part_id_ref",
      (getter)meta_get_part_id_ref,
-     (setter)meta_set_part_id_ref,
+     (setter)NULL,
      "Reference to a part ID (or 0)",
      NULL},
 

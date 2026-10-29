@@ -38,6 +38,8 @@ tool. The package format and the library ABI stay compatible, see
   `struct bpak_bspatch_context` embeds. The declarations of the heatshrink
   functions, which the library does not export, and `HEATSHRINK_USE_INDEX`
   are removed.
+- `Part.id`, `Meta.id` and `Meta.part_id_ref` of the python package are
+  read-only. Add the part or meta data again to change its id.
 
 ### Fixed
 
