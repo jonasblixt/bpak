@@ -2,6 +2,7 @@
  *  when parsing arguments */
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
+#include <errno.h>
 #include <bpak/bpak.h>
 #include <bpak/pkg.h>
 
@@ -221,8 +222,9 @@ static PyObject *part_read_data(PyObject *self, PyObject *Py_UNUSED(ignored))
 
     if (fseek(fp, bpak_part_offset(h, p), SEEK_SET) < 0) {
         Py_DECREF(bytes);
-        return PyErr_Format(PyExc_IOError, "failed to seek: %s",
-                strerror(ferror(fp)));
+        return PyErr_Format(PyExc_IOError,
+                            "failed to seek: %s",
+                            strerror(errno));
     }
 
     /* fread returns 0 for empty parts */
@@ -232,8 +234,11 @@ static PyObject *part_read_data(PyObject *self, PyObject *Py_UNUSED(ignored))
     }
     if (read_size != 1) {
         Py_DECREF(bytes);
-        return PyErr_Format(PyExc_IOError, "failed to read: %s",
-                strerror(ferror(fp)));
+        /* ferror returns a flag, not an errno */
+        return PyErr_Format(PyExc_IOError,
+                            "failed to read: %s",
+                            ferror(fp) ? strerror(errno)
+                                       : "unexpected end of file");
     }
 
     return bytes;

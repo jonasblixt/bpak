@@ -166,6 +166,23 @@ def test_log_non_utf8_path(pybpak, set_log_func, tmp_path):
     assert any("\\xff.bpak" in m for m in messages)
 
 
+def test_read_truncated_part(pybpak, tmp_path):
+    """A part that is cut short reports the end of the file, the message
+    was 'Success'"""
+    path = tmp_path / "test.bpak"
+    create_package_with_parts(pybpak, path)
+    with pybpak.Package(path, "rb") as p:
+        kernel = p.get_part(bpak_id("kernel"))
+        end = kernel.offset + kernel.installed_size
+
+    with path.open("rb+") as f:
+        f.truncate(end - 1)
+
+    with pybpak.Package(path, "rb") as p:
+        with pytest.raises(OSError, match="unexpected end of file"):
+            p.get_part(bpak_id("kernel")).read_data()
+
+
 def test_part_fields(pybpak, tmp_path):
     path = tmp_path / "test.bpak"
 
