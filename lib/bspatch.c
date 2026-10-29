@@ -25,6 +25,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <inttypes.h>
 #include <stdio.h>
 #include <string.h>
 #include <bpak/bpak.h>
@@ -124,7 +125,7 @@ process_more:
         ctx->adjust = offtin(&ctx->ctrl_buf[16]);
 
         bpak_printf(2,
-                    "Patch: %10li %10li %10li %li\n",
+                    "Patch: %10" PRIi64 " %10" PRIi64 " %10" PRIi64 " %zu\n",
                     ctx->diff_count,
                     ctx->extra_count,
                     ctx->adjust,
@@ -183,7 +184,7 @@ process_more:
 
         if (nread != data_to_process) {
             bpak_printf(0,
-                        "Could not read %li bytes from origin\n",
+                        "Could not read %zd bytes from origin\n",
                         data_to_process);
             ctx->state = BPAK_PATCH_STATE_ERROR;
             if (nread < 0)
@@ -272,10 +273,10 @@ process_more:
     } break;
     case BPAK_PATCH_STATE_ERROR:
         bpak_printf(0, "bspatch error\n");
-        return -1;
+        return -BPAK_FAILED;
         break;
     default:
-        return -1;
+        return -BPAK_FAILED;
     }
 
     return rc;
@@ -401,10 +402,8 @@ static int bspatch_hs_write(struct bpak_bspatch_context *ctx, uint8_t *buffer,
     heatshrink_decoder *hsd = &ctx->decompressor.hsd;
 
     if (ctx->input_position >= ctx->input_length) {
-        bpak_printf(0,
-                    "Error: Tried to write %lu extra bytes, ignoring\n",
-                    length);
-        return -1;
+        bpak_printf(0, "Error: Tried to write %zu extra bytes\n", length);
+        return -BPAK_SIZE_ERROR;
     }
 
     do {
@@ -516,7 +515,7 @@ BPAK_EXPORT ssize_t bpak_bspatch_final(struct bpak_bspatch_context *ctx)
 {
 
     if (ctx->state == BPAK_PATCH_STATE_ERROR)
-        return -1;
+        return -BPAK_FAILED;
 
     switch (ctx->compression) {
     case BPAK_COMPRESSION_NONE:
