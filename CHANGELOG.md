@@ -144,6 +144,11 @@ tool. The package format and the library ABI stay compatible, see
 - The public headers were not installed when the library is built as a
   CMake subproject with `add_subdirectory`.
 - `bpak/key.h` did not compile unless `bpak/bpak.h` was included first.
+- `bpak_transport_encode` returned -1 instead of an error code when a seek
+  or the header write failed and for an unknown encoder, which is
+  `BPAK_NOT_SUPPORTED` now: `bpak transport --encode` exits with 249 instead
+  of 255 for an encoder that `bpak transport --add` added but that does not
+  exist.
 - Python package: crashes when opening a file that is not a package, when
   using a closed package and after the log callback was released, reference
   leaks in `Package.parts` and `Package.meta`, meta data larger than the

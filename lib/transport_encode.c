@@ -101,10 +101,6 @@ static ssize_t bsdiff_write_output(off_t offset, uint8_t *buffer, size_t length,
 
     ssize_t bytes_written = write(priv->fd, buffer, length);
 
-    if (bytes_written < 0) {
-        return bytes_written;
-    }
-
     if (bytes_written != (ssize_t)length) {
         bpak_printf(0, "Error: bsdiff_write_output write\n");
         return -BPAK_WRITE_ERROR;
@@ -282,15 +278,15 @@ transport_encode_part(struct bpak_transport_meta *tm, uint32_t part_ref_id,
 
         if (rc != 0) {
             bpak_printf(0, "%s: Error, could not seek origin stream", __func__);
-            return rc;
+            return -BPAK_SEEK_ERROR;
         }
     }
 
     rc = fseeko(input_fp, bpak_part_offset(input_header, input_part), SEEK_SET);
 
-    if (rc != BPAK_OK) {
+    if (rc != 0) {
         bpak_printf(0, "%s: Error, could not seek input stream", __func__);
-        return rc;
+        return -BPAK_SEEK_ERROR;
     }
 
     rc = fseeko(output_fp,
@@ -299,7 +295,7 @@ transport_encode_part(struct bpak_transport_meta *tm, uint32_t part_ref_id,
 
     if (rc != 0) {
         bpak_printf(0, "%s: Error, could not seek output stream", __func__);
-        return rc;
+        return -BPAK_SEEK_ERROR;
     }
 
     switch (alg_id) {
@@ -338,7 +334,7 @@ transport_encode_part(struct bpak_transport_meta *tm, uint32_t part_ref_id,
         break;
     default:
         bpak_printf(0, "Error, unknown alg 0x%x\n", alg_id);
-        rc = -1;
+        rc = -BPAK_NOT_SUPPORTED;
         goto err_out;
     }
 
@@ -459,7 +455,7 @@ bpak_transport_encode(FILE *input_fp, struct bpak_header *input_header,
 
     if (written != sizeof(*output_header)) {
         bpak_printf(0, "Error: could not write header");
-        rc = -1;
+        rc = -BPAK_WRITE_ERROR;
     }
 
 err_out:

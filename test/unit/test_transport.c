@@ -350,6 +350,34 @@ static void test_encode_without_package_uuid(void **state)
     fclose(fp);
 }
 
+/* An unknown encoder is a bpak error code, not -1 */
+static void test_encode_unknown_encoder(void **state)
+{
+    (void)state;
+    static struct bpak_header input_header;
+    static struct bpak_header output_header;
+    FILE *fp = tmpfile();
+
+    assert_non_null(fp);
+
+    init_package(&input_header);
+    test_add_part_with_size(&input_header, "fs", PART_SIZE);
+    assert_int_equal(bpak_add_transport_meta(&input_header,
+                                             bpak_id("fs"),
+                                             0x12345678,
+                                             0x12345678),
+                     BPAK_OK);
+    assert_int_equal(bpak_transport_encode(fp,
+                                           &input_header,
+                                           fp,
+                                           &output_header,
+                                           NULL,
+                                           NULL),
+                     -BPAK_NOT_SUPPORTED);
+
+    fclose(fp);
+}
+
 int main(void)
 {
     const struct CMUnitTest tests[] = {
@@ -361,6 +389,7 @@ int main(void)
         cmocka_unit_test(test_merkle_tree_too_small),
         cmocka_unit_test(test_merkle_bad_meta),
         cmocka_unit_test(test_encode_without_package_uuid),
+        cmocka_unit_test(test_encode_unknown_encoder),
     };
 
     return cmocka_run_group_tests(tests, NULL, NULL);
