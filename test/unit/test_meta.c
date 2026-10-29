@@ -219,6 +219,29 @@ static void test_delete_meta(void **state)
     assert_int_equal(out, 0x55667788);
 }
 
+static void check_ptr_alignment(void *p)
+{
+    assert_int_equal(((uintptr_t)p) % 8, 0);
+}
+
+static void test_meta_align(void **state)
+{
+    (void)state;
+    struct bpak_header h;
+    struct bpak_meta_header *meta;
+    const size_t sizes[] = {8, 4, 2, 1, 8};
+    int rc;
+
+    rc = bpak_init_header(&h);
+    assert_int_equal(rc, BPAK_OK);
+
+    for (size_t i = 0; i < sizeof(sizes) / sizeof(sizes[0]); i++) {
+        rc = bpak_add_meta(&h, bpak_id("test-meta") + i, 0, sizes[i], &meta);
+        assert_int_equal(rc, BPAK_OK);
+        check_ptr_alignment(bpak_get_meta_ptr(&h, meta, void));
+    }
+}
+
 int main(void)
 {
     const struct CMUnitTest tests[] = {
@@ -227,6 +250,7 @@ int main(void)
         cmocka_unit_test(test_too_many_meta_headers),
         cmocka_unit_test(test_too_much_metadata),
         cmocka_unit_test(test_delete_meta),
+        cmocka_unit_test(test_meta_align),
     };
 
     return cmocka_run_group_tests(tests, NULL, NULL);

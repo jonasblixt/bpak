@@ -3,13 +3,14 @@ pkg_check_modules(CMOCKA REQUIRED IMPORTED_TARGET cmocka)
 
 set(UNIT_TESTS
     test_abi
-    test_alg_heatshrink
     test_bsdiff
-    test_core_meta
-    test_core_part
     test_crypto
+    test_errors
+    test_heatshrink
     test_merkle
-    test_misc
+    test_meta
+    test_part
+    test_pkg
     test_utils
     test_verify
 )

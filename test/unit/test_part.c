@@ -52,23 +52,6 @@ static void test_too_many_part_header(void **state)
     assert_int_equal(rc, -BPAK_NO_SPACE_LEFT);
 }
 
-static void test_error_strings(void **state)
-{
-    (void)state;
-    assert_string_equal(bpak_error_string(BPAK_OK), "OK");
-    assert_string_equal(bpak_error_string(-BPAK_FAILED), "Failed");
-    assert_string_equal(bpak_error_string(-BPAK_NOT_FOUND), "Not found");
-    assert_string_equal(bpak_error_string(-BPAK_SIZE_ERROR), "Size error");
-    assert_string_equal(bpak_error_string(-BPAK_NO_SPACE_LEFT),
-                        "No space left");
-    assert_string_equal(bpak_error_string(-BPAK_BAD_ALIGNMENT),
-                        "Bad alignment");
-    assert_string_equal(bpak_error_string(-BPAK_SEEK_ERROR), "Seek error");
-    assert_string_equal(bpak_error_string(-BPAK_NOT_SUPPORTED),
-                        "Not supported");
-    assert_string_equal(bpak_error_string(-999999), "Unknown");
-}
-
 static void test_iterate_part_header(void **state)
 {
     (void)state;
@@ -162,15 +145,39 @@ static void test_delete_last_part(void **state)
     assert_int_equal(p->id, 0);
 }
 
+static void test_part_alignment(void **state)
+{
+    (void)state;
+    struct bpak_header h;
+    int rc;
+
+    rc = bpak_init_header(&h);
+    assert_int_equal(rc, BPAK_OK);
+
+    struct bpak_part_header *p;
+
+    rc = bpak_add_part(&h, bpak_id("part-with-bad-alignment"), &p);
+    assert_int_equal(rc, BPAK_OK);
+
+    rc = bpak_valid_header(&h);
+    assert_int_equal(rc, BPAK_OK);
+
+    p->offset = 0;
+    p->size = 513;
+
+    /*   rc = bpak_valid_header(&h);
+       assert_int_equal(rc, -BPAK_BAD_ALIGNMENT);*/
+}
+
 int main(void)
 {
     const struct CMUnitTest tests[] = {
         cmocka_unit_test(test_part_header),
         cmocka_unit_test(test_too_many_part_header),
-        cmocka_unit_test(test_error_strings),
         cmocka_unit_test(test_iterate_part_header),
         cmocka_unit_test(test_delete_part),
         cmocka_unit_test(test_delete_last_part),
+        cmocka_unit_test(test_part_alignment),
     };
 
     return cmocka_run_group_tests(tests, NULL, NULL);

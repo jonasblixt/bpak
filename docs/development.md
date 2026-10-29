@@ -77,13 +77,14 @@ $ ctest --test-dir build --output-on-failure -j$(nproc)
 Every C unit test binary and every pytest file is a separate CTest test. The
 tests are labeled by group, use `ctest -L <label>` to run one group:
 
-| Label    | Description                                  | Location      |
-|----------|----------------------------------------------|---------------|
-| `unit`   | C unit tests of the library (cmocka)         | `test/unit`   |
-| `cli`    | Tests of the bpak tool (pytest)              | `test/cli`    |
-| `python` | Tests of the python package (pytest)         | `test/python` |
-| `golden` | Golden sample packages and exported symbols  | `test/golden` |
-| `examples` | Build and run the examples                 | `examples`    |
+| Label      | Description                                     | Location      |
+|------------|-------------------------------------------------|---------------|
+| `unit`     | C unit tests of the library (cmocka)            | `test/unit`   |
+| `cli`      | Tests of the bpak tool (pytest)                 | `test/cli`    |
+| `python`   | Tests of the python package (pytest)            | `test/python` |
+| `golden`   | Golden sample packages                          | `test/golden` |
+| `abi`      | Functions exported by the shared library        | `test/abi`    |
+| `examples` | Build and run the examples                      | `examples`    |
 
 The pytest based tests can be run directly against a build directory, which
 gives access to all pytest options:
@@ -179,17 +180,19 @@ them. New test files must be added to `PYTEST_FILES` in
 Packages, patches and keystores live for a long time. Devices in the field
 run old versions of bpak, bootloaders are rarely updated and patches are
 created by newer versions than the ones that apply them. The package format
-and the ABI of the library must never change in an incompatible way. Two
-groups of tests guard this:
+and the ABI of the library must never change in an incompatible way. These
+tests guard this:
 
 - `test/unit/test_abi.c` checks the layout of the structs in the public
   headers and the values of all enums, constants and predefined ids.
+- `test/abi/libbpak.symbols` lists the functions that the shared library
+  exports, `test/abi/test_symbols.py` checks that it still exports them and
+  nothing that is not listed.
 - `test/golden` holds golden sample packages. Every directory holds
   packages, patches and a keystore that were created by a release, together
   with the input files and the commands that created them. All later
   versions must read, verify and decode them, and must create identical
-  packages and patches from the same commands. `libbpak.symbols` lists the
-  functions that the shared library exports.
+  packages and patches from the same commands.
 
 Never change an expected value or a golden set to make these tests pass.
 When a release adds to the format, for example a new encoder or a new kind of
@@ -201,7 +204,7 @@ $ test/golden/generate.py --bpak-build-dir build
 ```
 
 New functions that the library exports are added to
-`test/golden/libbpak.symbols`.
+`test/abi/libbpak.symbols`.
 
 ## Coverage
 

@@ -28,6 +28,7 @@ endforeach()
 # Each file is registered as a separate CTest test so 'ctest -j' runs them
 # in parallel.
 set(PYTEST_FILES
+    abi/test_symbols.py
     cli/test_basic.py
     cli/test_corruption.py
     cli/test_delete.py
@@ -36,7 +37,6 @@ set(PYTEST_FILES
     cli/test_sign.py
     cli/test_transport.py
     golden/test_packages.py
-    golden/test_symbols.py
     python/test_meta.py
     python/test_package.py
     python/test_sign.py

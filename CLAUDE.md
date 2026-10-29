@@ -16,7 +16,7 @@ them to Done, with the commit hash, when they are resolved.
 cmake -B build -DBPAK_BUILD_TESTS=1
 cmake --build build -j$(nproc)
 ctest --test-dir build --output-on-failure -j$(nproc)
-ctest --test-dir build -L unit                     # or: cli, python, golden, examples
+ctest --test-dir build -L unit                     # or: cli, python, golden, abi, examples
 pytest test --bpak-build-dir build -k <pattern>    # tool/python tests directly
 PYTHONPATH=build/python python3 -m bpak           # run the tool from the build
 
@@ -46,9 +46,11 @@ container instead.
 - `test/cli/` pytest tests of the `bpak` tool, `test/python/` pytest tests of
   the python package. Register new files in `PYTEST_FILES` in
   `test/CMakeLists.txt`.
-- `test/golden/` golden sample packages created by released versions, see
-  "Compatibility" below. `test/bpaktest.py` helpers and `test/conftest.py`
-  fixtures, `test/data/` keys and reference files.
+- `test/golden/` golden sample packages created by released versions and
+  `test/abi/` the exported symbols, see "Compatibility" below.
+  `test/bpaktest.py` helpers and `test/conftest.py` fixtures, `test/data/`
+  keys and reference files.
+- `examples/` are built and run as tests, label `examples`.
 
 Things that are easy to get wrong in the pytest tests:
 
@@ -65,12 +67,13 @@ Things that are easy to get wrong in the pytest tests:
 The package format and the library ABI must never break: old packages,
 patches and keystores must keep working with new versions and new patches
 must work with old decoders. The options of the `bpak` tool must stay
-compatible, `test/golden` replays recorded command lines. `test/unit/test_abi.c` checks struct layouts,
-enums and ids, `test/golden/` checks committed packages from earlier
-releases and the exported symbols (`libbpak.symbols`). Never update expected
-values or golden sets to make these tests pass. Add a new golden set with
-`test/golden/generate.py` when a release extends the format, and add new
-exported functions to `test/golden/libbpak.symbols`.
+compatible, `test/golden` replays recorded command lines.
+`test/unit/test_abi.c` checks struct layouts, enums and ids, `test/golden/`
+checks committed packages from earlier releases and `test/abi/` the exported
+symbols (`libbpak.symbols`). Never update expected values or golden sets to
+make these tests pass. Add a new golden set with `test/golden/generate.py`
+when a release extends the format, and add new exported functions to
+`test/abi/libbpak.symbols`.
 
 ## Version
 
