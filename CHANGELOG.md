@@ -62,6 +62,8 @@ tool. The package format and the library ABI stay compatible, see
 - With an allocator from `bpak_set_calloc_free`, the lzma encoder and
   decoder freed memory from `malloc` with it. The lzma decoder may use at
   most 64 MiB (`BPAK_BSPATCH_LZMA_MEMLIMIT`), it had no limit.
+- `bpak_pkg_add_key` and the python package freed keys with `free` instead
+  of `bpak_free`.
 - Python package: crashes when opening a file that is not a package, when
   using a closed package and after the log callback was released, reference
   leaks in `Package.parts` and `Package.meta`, meta data larger than the

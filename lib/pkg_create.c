@@ -360,6 +360,6 @@ BPAK_EXPORT int bpak_pkg_add_key(struct bpak_package *pkg, const char *filename,
         goto err_free_key_out;
 
 err_free_key_out:
-    free(key);
+    bpak_free(key);
     return rc;
 }

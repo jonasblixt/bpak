@@ -253,7 +253,7 @@ static PyObject *m_parse_public_key(PyObject *module, PyObject *args,
 
     result =
         Py_BuildValue("(iy#)", key->kind, key->data, (Py_ssize_t)key->size);
-    free(key);
+    bpak_free(key);
     return result;
 }
 

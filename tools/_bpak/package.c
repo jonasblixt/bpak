@@ -165,7 +165,7 @@ static PyObject *package_verify(BPAKPackage *self, PyObject *args,
 
     rc = bpak_pkg_verify(&self->pkg, key);
 
-    free(key);
+    bpak_free(key);
 
     if (rc != BPAK_OK) {
         return bpak_raise(rc, "verification failed");
