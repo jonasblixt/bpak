@@ -364,3 +364,15 @@ def test_wrapper_details(pybpak, tmp_path):
             p.sign()
 
     assert "meta data" in pybpak.Package.meta.__doc__
+
+
+def test_unsigned_values(pybpak, tmp_path):
+    """Ids and sizes are unsigned, they were converted through long, which
+    is 32 bits on 32-bit targets, and the repr of a part formatted its size
+    as int"""
+    with pybpak.Package(tmp_path / "test.bpak", "wb+") as p:
+        part = p.add_file("kernel", KERNEL)
+        p.key_id = 0xffffffff
+
+        assert p.key_id == 0xffffffff
+        assert repr(part) == f"<bpak.Part '0x{part.id:08x}' ({part.size} bytes)>"

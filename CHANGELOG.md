@@ -172,3 +172,6 @@ tool. The package format and the library ABI stay compatible, see
 - Python package: `Package.sign()` reported argument errors as `verify()`,
   `Meta.as_uuid()` did not check that the `uuid` module has `UUID`, and the
   docstring of `Package.meta` described the parts.
+- Python package: ids from `0x80000000` and sizes from 2 GiB were negative
+  or wrong on targets with a 32-bit `long`, and `repr()` of a part passed
+  its size as `int`.

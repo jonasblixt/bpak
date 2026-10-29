@@ -44,7 +44,7 @@ static PyObject *part_repr(PyObject *self)
                 bpak_error_string(rc));
     }
 
-    return PyUnicode_FromFormat("<bpak.Part '0x%08x' (%d bytes)>", part->part_id,
+    return PyUnicode_FromFormat("<bpak.Part '0x%08x' (%zu bytes)>", part->part_id,
             bpak_part_size(p));
 }
 
@@ -53,7 +53,7 @@ static PyObject *part_get_id(PyObject *self, void *closure)
     (void)closure;
     BPAKPart *part = (BPAKPart *)self;
 
-    return PyLong_FromLong(part->part_id);
+    return PyLong_FromUnsignedLong(part->part_id);
 }
 
 static int part_set_id(PyObject *self, PyObject *value, void *closure)
@@ -106,7 +106,7 @@ static PyObject *part_get_size(PyObject *self, void *closure)
                 bpak_error_string(rc));
     }
 
-    return PyLong_FromLong(bpak_part_size(p));
+    return PyLong_FromSize_t(bpak_part_size(p));
 }
 
 static PyObject *part_get_offset(PyObject *self, void *closure)
@@ -123,7 +123,7 @@ static PyObject *part_get_offset(PyObject *self, void *closure)
                 bpak_error_string(rc));
     }
 
-    return PyLong_FromLong(bpak_part_offset(h, p));
+    return PyLong_FromLongLong(bpak_part_offset(h, p));
 }
 
 /* Fields of the part header, returned by the getters below */

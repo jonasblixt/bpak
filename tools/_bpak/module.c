@@ -101,7 +101,7 @@ static PyObject *m_generate_id(PyObject *module, PyObject *args, PyObject *kwds)
         return NULL;
     }
 
-    return PyLong_FromLong(bpak_id(input_string));
+    return PyLong_FromUnsignedLong(bpak_id(input_string));
 }
 
 static PyObject *m_set_log_func(PyObject *module, PyObject *args,

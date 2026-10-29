@@ -800,7 +800,7 @@ static PyObject *package_get_key_id(PyObject *self, void *closure)
     BPAKPackage *package = (BPAKPackage *)self;
     struct bpak_header *h = bpak_pkg_header(&package->pkg);
 
-    return PyLong_FromLong(h->key_id);
+    return PyLong_FromUnsignedLong(h->key_id);
 }
 
 static int package_set_key_id(PyObject *self, PyObject *value, void *closure)
@@ -838,7 +838,7 @@ static PyObject *package_get_keystore_id(PyObject *self, void *closure)
     BPAKPackage *package = (BPAKPackage *)self;
     struct bpak_header *h = bpak_pkg_header(&package->pkg);
 
-    return PyLong_FromLong(h->keystore_id);
+    return PyLong_FromUnsignedLong(h->keystore_id);
 }
 
 static int package_set_keystore_id(PyObject *self, PyObject *value, void *closure)
@@ -976,14 +976,14 @@ static PyObject *package_get_size(PyObject *self, void *closure)
 {
     (void)closure;
     BPAKPackage *package = (BPAKPackage *)self;
-    return PyLong_FromLong(bpak_pkg_size(&package->pkg));
+    return PyLong_FromSize_t(bpak_pkg_size(&package->pkg));
 }
 
 static PyObject *package_get_installed_size(PyObject *self, void *closure)
 {
     (void)closure;
     BPAKPackage *package = (BPAKPackage *)self;
-    return PyLong_FromLong(bpak_pkg_installed_size(&package->pkg));
+    return PyLong_FromSize_t(bpak_pkg_installed_size(&package->pkg));
 }
 
 static PyObject *package_get_parts(PyObject *self, void *closure)

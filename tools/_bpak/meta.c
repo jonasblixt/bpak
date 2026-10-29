@@ -54,7 +54,7 @@ static PyObject *meta_get_id(PyObject *self, void *closure)
     (void)closure;
     BPAKMeta *meta = (BPAKMeta *)self;
 
-    return PyLong_FromLong(meta->meta_id);
+    return PyLong_FromUnsignedLong(meta->meta_id);
 }
 
 static int meta_set_id(PyObject *self, PyObject *value, void *closure)
@@ -99,7 +99,7 @@ static PyObject *meta_get_part_id_ref(PyObject *self, void *closure)
     (void)closure;
     BPAKMeta *meta = (BPAKMeta *)self;
 
-    return PyLong_FromLong(meta->part_ref);
+    return PyLong_FromUnsignedLong(meta->part_ref);
 }
 
 static int meta_set_part_id_ref(PyObject *self, PyObject *value, void *closure)
