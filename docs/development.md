@@ -85,6 +85,7 @@ tests are labeled by group, use `ctest -L <label>` to run one group:
 | `golden`   | Golden sample packages                          | `test/golden` |
 | `abi`      | Functions exported by the shared library        | `test/abi`    |
 | `examples` | Build and run the examples                      | `examples`    |
+| `fuzz`     | Seed corpus and reproducers of the fuzz targets | `test/fuzz`   |
 
 The pytest based tests can be run directly against a build directory, which
 gives access to all pytest options:
@@ -174,6 +175,50 @@ temporary directory. Shared helpers are in `test/bpaktest.py` and fixtures in
 Parametrize tests that only differ in their input instead of duplicating
 them. New test files must be added to `PYTEST_FILES` in
 `test/CMakeLists.txt`.
+
+### Fuzz targets
+
+The code that parses untrusted input has [libFuzzer](https://llvm.org/docs/LibFuzzer.html)
+targets in `test/fuzz`, one file per target:
+
+| Target      | Input                                                        |
+|-------------|--------------------------------------------------------------|
+| `header`    | A header, checked with `bpak_valid_header` and then used with the meta data and part functions |
+| `bspatch`   | Compression, chunk length and a patch for a fixed origin     |
+| `verify`    | A package, verified with `bpak_pkg_verify` and `bpak_verify_payload` |
+| `transport` | A transport encoded package, decoded against `test/golden/0.9.3/origin.bpak` |
+
+The targets abort when the library breaks a contract, for example when a
+callback gets a length larger than the buffer, and AddressSanitizer and
+UndefinedBehaviorSanitizer report memory errors.
+
+Test builds run every file in `test/fuzz/corpus/<target>` through the target,
+label `fuzz`, with `test/fuzz/driver.c` instead of libFuzzer. Add the
+reproducer of every bug a fuzzer finds to the corpus. Set
+`BPAK_FUZZ_VERBOSE=2` to see the log of the library:
+
+```
+$ BPAK_FUZZ_VERBOSE=2 build/test/fuzz/fuzz_bspatch_corpus crash-file
+```
+
+The fuzzers need clang, configure a separate build directory with
+`BPAK_BUILD_FUZZERS`, which also builds the library with the sanitizers:
+
+```
+$ cmake -B build-fuzz -DCMAKE_C_COMPILER=clang -DBPAK_BUILD_FUZZERS=ON
+$ cmake --build build-fuzz -j$(nproc)
+$ mkdir -p corpus && cp test/fuzz/corpus/bspatch/* corpus/
+$ build-fuzz/test/fuzz/fuzz_bspatch -max_total_time=600 corpus
+```
+
+On Debian and Ubuntu install `clang` and `libclang-rt-dev`, or run the
+commands in a container:
+
+```
+$ docker run --rm -it -v $PWD:/src -w /src debian:trixie sh -c \
+    'apt-get update && apt-get install -y clang libclang-rt-dev cmake \
+     pkg-config libmbedtls-dev liblzma-dev && sh'
+```
 
 ## Compatibility
 

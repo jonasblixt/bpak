@@ -16,7 +16,7 @@ them to Done, with the commit hash, when they are resolved.
 cmake -B build -DBPAK_BUILD_TESTS=1
 cmake --build build -j$(nproc)
 ctest --test-dir build --output-on-failure -j$(nproc)
-ctest --test-dir build -L unit                     # or: cli, python, golden, abi, examples
+ctest --test-dir build -L unit                     # or: cli, python, golden, abi, examples, fuzz
 pytest test --bpak-build-dir build -k <pattern>    # tool/python tests directly
 PYTHONPATH=build/tools python3 -m bpak            # run the tool from the build
 
@@ -51,6 +51,10 @@ container instead.
   `test/bpaktest.py` helpers and `test/conftest.py` fixtures, `test/data/`
   keys and reference files.
 - `examples/` are built and run as tests, label `examples`.
+- `test/fuzz/` libFuzzer targets for the code that parses untrusted input
+  (`BPAK_BUILD_FUZZERS`, clang), test builds run their corpus in
+  `test/fuzz/corpus/<target>`, label `fuzz`. Add reproducers of fixed bugs
+  to the corpus.
 
 Things that are easy to get wrong in the pytest tests:
 

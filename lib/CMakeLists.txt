@@ -95,6 +95,19 @@ endif()
 
 target_link_libraries(${PROJECT_NAME} ${LIB_LIBS})
 
+# Built with the sanitizers of the fuzz targets in test/fuzz
+if (BPAK_BUILD_FUZZERS)
+    add_library(${PROJECT_NAME}-fuzz STATIC ${LIB_SRC_FILES})
+    target_include_directories(${PROJECT_NAME}-fuzz PUBLIC
+        ${PROJECT_SOURCE_DIR}/include
+        ${LIB_GENERATED_INCLUDE_DIR}
+    )
+    target_compile_options(${PROJECT_NAME}-fuzz PRIVATE
+        -Wextra -pedantic -g -fsanitize=fuzzer-no-link,address,undefined
+    )
+    target_link_libraries(${PROJECT_NAME}-fuzz ${LIB_LIBS})
+endif()
+
 install(
     FILES ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}.pc
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig
