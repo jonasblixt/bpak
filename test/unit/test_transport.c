@@ -105,7 +105,8 @@ static size_t put_ctrl(uint8_t *buf, int64_t diff, int64_t extra,
 
 /* Decode a one part patch of 'patch_length' bytes against an origin part of
  * PART_SIZE bytes */
-static int decode_patch(uint8_t *patch, size_t patch_length, uint64_t part_size)
+static int decode_patch_with(uint32_t decoder_id, uint8_t *patch,
+                             size_t patch_length, uint64_t part_size)
 {
     struct bpak_header patch_header;
     struct bpak_header origin_header;
@@ -124,7 +125,7 @@ static int decode_patch(uint8_t *patch, size_t patch_length, uint64_t part_size)
     rc = bpak_add_transport_meta(&patch_header,
                                  part->id,
                                  BPAK_ID_BSDIFF_NO_COMP,
-                                 BPAK_ID_BSPATCH_NO_COMP);
+                                 decoder_id);
     assert_int_equal(rc, BPAK_OK);
 
     memset(output, 0, sizeof(output));
@@ -161,6 +162,30 @@ static int decode_patch(uint8_t *patch, size_t patch_length, uint64_t part_size)
 
     bpak_transport_decode_free(&ctx);
     return rc;
+}
+
+static int decode_patch(uint8_t *patch, size_t patch_length, uint64_t part_size)
+{
+    return decode_patch_with(BPAK_ID_BSPATCH_NO_COMP,
+                             patch,
+                             patch_length,
+                             part_size);
+}
+
+/* The decoder state is freed when decoding stops in the middle of a part,
+ * LeakSanitizer reports the lzma decoder otherwise */
+static void test_patch_error_frees_decoder(void **state)
+{
+    (void)state;
+    uint8_t patch[64];
+
+    memset(patch, 0xa5, sizeof(patch));
+
+    assert_int_equal(decode_patch_with(BPAK_ID_BSPATCH_LZMA,
+                                       patch,
+                                       sizeof(patch),
+                                       PART_SIZE),
+                     -BPAK_DECOMPRESSOR_ERROR);
 }
 
 static void test_patch(void **state)
@@ -315,6 +340,7 @@ int main(void)
     const struct CMUnitTest tests[] = {
         cmocka_unit_test(test_patch),
         cmocka_unit_test(test_patch_writes_outside_part),
+        cmocka_unit_test(test_patch_error_frees_decoder),
         cmocka_unit_test(test_patch_reads_outside_origin),
         cmocka_unit_test(test_copy_too_much),
         cmocka_unit_test(test_merkle_tree_too_small),

@@ -327,7 +327,8 @@ BPAK_EXPORT int bpak_pkg_transport_decode(struct bpak_package *input,
 
     if (fseek(input->fp, sizeof(struct bpak_header), SEEK_SET) != 0) {
         bpak_printf(0, "%s: Error, could not seek input stream", __func__);
-        return -BPAK_SEEK_ERROR;
+        rc = -BPAK_SEEK_ERROR;
+        goto err_out;
     }
 
     bpak_foreach_part (patch_header, part) {
@@ -366,7 +367,8 @@ BPAK_EXPORT int bpak_pkg_transport_decode(struct bpak_package *input,
 
             if (bytes_read != chunk_length) {
                 bpak_printf(0, "%s: bytes_read != chunk_length\n", __func__);
-                return -BPAK_READ_ERROR;
+                rc = -BPAK_READ_ERROR;
+                goto err_out;
             }
 
             rc = bpak_transport_decode_write_chunk(&decode_ctx,

@@ -296,6 +296,23 @@ bpak_transport_decode_set_origin(struct bpak_transport_decode *ctx,
     return BPAK_OK;
 }
 
+/* Free the state of the decoder of the current part. bspatch can be freed
+ * more than once. */
+static void decoder_free(struct bpak_transport_decode *ctx)
+{
+    switch (ctx->decoder_id) {
+    case BPAK_ID_BSPATCH_NO_COMP:
+    case BPAK_ID_BSPATCH_LZMA:
+    case BPAK_ID_BSPATCH:
+        bpak_bspatch_free(&ctx->decoders.bspatch);
+        break;
+    default:
+        break;
+    }
+
+    ctx->decoder_id = 0;
+}
+
 BPAK_EXPORT int bpak_transport_decode_start(struct bpak_transport_decode *ctx,
                                             struct bpak_part_header *part)
 {
@@ -313,8 +330,10 @@ BPAK_EXPORT int bpak_transport_decode_start(struct bpak_transport_decode *ctx,
     if (bytes_written != sizeof(struct bpak_header))
         return -BPAK_WRITE_ERROR;
 
+    /* A previous part that was not finished */
+    decoder_free(ctx);
+
     ctx->part = part;
-    ctx->decoder_id = 0;
 
     /* Check if there is any transport meta data for this part in the header */
     if (part->flags & BPAK_FLAG_TRANSPORT) {
@@ -498,6 +517,6 @@ BPAK_EXPORT int bpak_transport_decode_finish(struct bpak_transport_decode *ctx)
 
 BPAK_EXPORT void bpak_transport_decode_free(struct bpak_transport_decode *ctx)
 {
-    /* Nothing to implement so far */
-    (void)ctx;
+    /* Decoding stopped in the middle of a part */
+    decoder_free(ctx);
 }

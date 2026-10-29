@@ -79,6 +79,8 @@ tool. The package format and the library ABI stay compatible, see
   more data than the tree was created for, it fails with `BPAK_SIZE_ERROR`.
 - Every package created with `--encoder merkle` had the same merkle salt,
   it came from `random()`, which was never seeded.
+- Transport decoding leaked the lzma decoder when a patch failed in the
+  middle of a part, `bpak_transport_decode_free` frees it now.
 - Python package: crashes when opening a file that is not a package, when
   using a closed package and after the log callback was released, reference
   leaks in `Package.parts` and `Package.meta`, meta data larger than the

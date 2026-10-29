@@ -134,7 +134,8 @@ int bpak_transport_decode_write_chunk(struct bpak_transport_decode *ctx,
 int bpak_transport_decode_finish(struct bpak_transport_decode *ctx);
 
 /**
- * Frees the decoder context
+ * Frees the decoder context, also when decoding stopped before
+ *  bpak_transport_decode_finish()
  *
  * @param[in] ctx Pointer to a transport decode context
  *
