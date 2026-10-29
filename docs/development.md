@@ -254,7 +254,7 @@ tests guard this:
   headers and the values of all enums, constants and predefined ids.
 - `test/abi/libbpak.symbols` lists the functions that the shared library
   exports, `test/abi/test_symbols.py` checks that it still exports them and
-  nothing that is not listed.
+  nothing that is not listed, and that the SONAME stays `libbpak.so.0`.
 - `test/golden` holds golden sample packages. Every directory holds
   packages, patches and a keystore that were created by a release, together
   with the input files and the commands that created them. All later
@@ -346,7 +346,8 @@ the repository root holds the version in the form `MAJOR.MINOR.PATCH` and is
 the only place where it is defined. It is used for:
 
 - the CMake project version, the shared library version and the pkg-config
-  file
+  file. The SONAME is `libbpak.so.0` for all versions, see
+  [Compatibility](#compatibility)
 - `bpak/version.h` (`BPAK_VERSION_MAJOR`, `BPAK_VERSION_STRING`, ...), which
   is generated into the build directory
 - the python package version, read by scikit-build-core, see

@@ -105,7 +105,9 @@ set_target_properties(${PROJECT_NAME}
 )
 
 set_target_properties(${PROJECT_NAME} PROPERTIES VERSION ${PROJECT_VERSION})
-set_target_properties(${PROJECT_NAME} PROPERTIES SOVERSION ${PROJECT_VERSION_MAJOR})
+# The ABI never breaks, programs linked against libbpak.so.0 must keep
+# working with every later version. Never change the SONAME.
+set_target_properties(${PROJECT_NAME} PROPERTIES SOVERSION 0)
 set_target_properties(${PROJECT_NAME}-static PROPERTIES OUTPUT_NAME ${PROJECT_NAME})
 
 target_link_libraries(${PROJECT_NAME} ${LIB_LIBS})

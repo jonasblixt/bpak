@@ -34,6 +34,18 @@ def test_symbols_are_exported(libbpak):
     assert not missing, f"no longer exported: {missing}"
 
 
+@pytest.mark.skipif(shutil.which("objdump") is None,
+                    reason="objdump not found")
+def test_soname(libbpak):
+    """Programs that are linked against libbpak load it by its SONAME, a new
+    SONAME makes them fail to start"""
+    output = subprocess.run(["objdump", "-p", str(libbpak)], check=True,
+                            capture_output=True, text=True).stdout
+    sonames = [line.split()[1] for line in output.splitlines()
+               if line.split()[:1] == ["SONAME"]]
+    assert sonames == ["libbpak.so.0"]
+
+
 @pytest.mark.skipif(shutil.which("nm") is None, reason="nm not found")
 def test_new_symbols_are_listed(libbpak):
     output = subprocess.run(["nm", "-D", "--defined-only", str(libbpak)],
