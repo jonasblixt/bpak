@@ -219,6 +219,70 @@ static void test_delete_meta(void **state)
     assert_int_equal(out, 0x55667788);
 }
 
+/* Header with a part and meta data i of 'sizes[i]' bytes filled with i + 1,
+ * leaving out 'skip' */
+static void build_header(struct bpak_header *h, const uint16_t *sizes, size_t n,
+                         size_t skip)
+{
+    struct bpak_part_header *part;
+    struct bpak_meta_header *meta;
+    int rc;
+
+    bpak_init_header(h);
+    rc = bpak_add_part(h, bpak_id("test-part"), &part);
+    assert_int_equal(rc, BPAK_OK);
+    part->size = 512;
+
+    for (size_t i = 0; i < n; i++) {
+        if (i == skip)
+            continue;
+
+        rc = bpak_add_meta(h, i + 1, 0, sizes[i], &meta);
+        assert_int_equal(rc, BPAK_OK);
+        memset(bpak_get_meta_ptr(h, meta, uint8_t), i + 1, sizes[i]);
+    }
+}
+
+/* Deleting meta data must give the header without it */
+static void check_delete_meta(const uint16_t *sizes, size_t n, size_t index)
+{
+    struct bpak_header h, expected;
+    struct bpak_meta_header *meta;
+    int rc;
+
+    build_header(&h, sizes, n, n);
+    build_header(&expected, sizes, n, index);
+
+    rc = bpak_get_meta(&h, index + 1, 0, &meta);
+    assert_int_equal(rc, BPAK_OK);
+    bpak_del_meta(&h, meta);
+
+    assert_memory_equal(&h, &expected, sizeof(h));
+}
+
+static void test_delete_meta_layout(void **state)
+{
+    (void)state;
+    const uint16_t sizes[] = { 8, 16, 3, 8, 32, 1 };
+    const size_t n = sizeof(sizes) / sizeof(sizes[0]);
+
+    for (size_t i = 0; i < n; i++)
+        check_delete_meta(sizes, n, i);
+}
+
+static void test_delete_meta_full(void **state)
+{
+    (void)state;
+    uint16_t sizes[BPAK_MAX_META];
+
+    for (size_t i = 0; i < BPAK_MAX_META; i++)
+        sizes[i] = 8 + (i % 3) * 4;
+
+    check_delete_meta(sizes, BPAK_MAX_META, 0);
+    check_delete_meta(sizes, BPAK_MAX_META, 5);
+    check_delete_meta(sizes, BPAK_MAX_META, BPAK_MAX_META - 1);
+}
+
 static void check_ptr_alignment(void *p)
 {
     assert_int_equal(((uintptr_t)p) % 8, 0);
@@ -250,6 +314,8 @@ int main(void)
         cmocka_unit_test(test_too_many_meta_headers),
         cmocka_unit_test(test_too_much_metadata),
         cmocka_unit_test(test_delete_meta),
+        cmocka_unit_test(test_delete_meta_layout),
+        cmocka_unit_test(test_delete_meta_full),
         cmocka_unit_test(test_meta_align),
     };
 

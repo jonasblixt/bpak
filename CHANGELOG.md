@@ -44,6 +44,9 @@ tool. The package format and the library ABI stay compatible, see
   fail with `BPAK_SIZE_ERROR`, as do patches that seek before the origin.
 - `bpak_pkg_verify` read past the signature field when the signature size in
   the header was larger than the field, it fails with `BPAK_SIZE_ERROR`.
+- Deleting meta data, for example with `bpak delete --part`, corrupted the
+  value of the following meta data when it was larger than the deleted one,
+  and with 32 meta data entries it cleared the first part header.
 - Python package: crashes when opening a file that is not a package, when
   using a closed package and after the log callback was released, reference
   leaks in `Package.parts` and `Package.meta`, meta data larger than the

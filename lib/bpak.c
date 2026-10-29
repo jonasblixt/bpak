@@ -82,30 +82,40 @@ BPAK_EXPORT int bpak_add_meta(struct bpak_header *hdr, bpak_id_t id,
 BPAK_EXPORT void bpak_del_meta(struct bpak_header *hdr,
                                struct bpak_meta_header *meta)
 {
-    struct bpak_meta_header *next_meta = meta + 1;
-    uint16_t offset_adjust = meta->size;
+    struct bpak_meta_header *last = &hdr->meta[BPAK_MAX_META - 1];
+    struct bpak_meta_header *m = meta;
+    /* The values are stored in order at aligned offsets, see bpak_add_meta */
+    size_t start = meta->offset;
+    size_t end = meta->offset + meta->size;
+    uint16_t offset_adjust = BPAK_META_ALIGN_SIZE(meta->size);
 
-    offset_adjust = BPAK_META_ALIGN_SIZE(offset_adjust);
+    /* Move the following meta data headers one step down */
+    for (; m != last; m++) {
+        memcpy(m, m + 1, sizeof(*m));
 
-    while(meta != &(hdr->meta[BPAK_MAX_META - 1])) {
-        if (next_meta->id != 0) {
-            memmove(&(hdr->metadata[next_meta->offset - offset_adjust]),
-                    &(hdr->metadata[next_meta->offset]),
-                    next_meta->size);
-            memset(&(hdr->metadata[next_meta->offset]), 0, next_meta->size);
-
-            next_meta->offset -= offset_adjust;
-        }
-
-        memcpy(meta, next_meta, sizeof(*meta));
-
-        if (!meta->id)
+        if (!m->id)
             break;
 
-        meta = next_meta++;
+        if ((size_t)m->offset + m->size > end)
+            end = (size_t)m->offset + m->size;
+
+        m->offset -= offset_adjust;
     }
 
-    memset(next_meta, 0, sizeof(*next_meta));
+    /* The last header was copied, or deleted when it is 'meta' */
+    if (m == last)
+        memset(last, 0, sizeof(*last));
+
+    /* Move the following values down in one block, which keeps the zero
+     * padding between them, and zero the end */
+    end = BPAK_MIN(end, (size_t)BPAK_METADATA_BYTES);
+
+    if (start < end) {
+        size_t src = BPAK_MIN(start + offset_adjust, end);
+
+        memmove(&hdr->metadata[start], &hdr->metadata[src], end - src);
+        memset(&hdr->metadata[start + end - src], 0, src - start);
+    }
 }
 
 BPAK_EXPORT int bpak_get_part(struct bpak_header *hdr, bpak_id_t id,
