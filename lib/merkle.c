@@ -120,7 +120,6 @@ BPAK_EXPORT int bpak_merkle_init(struct bpak_merkle_context *ctx,
 
     /* Zero fill output tree */
     if (zero_fill_output) {
-        bpak_printf(2, "Zero filling tree\n");
         size_t zero_fill_bytes = ctx->hash_tree_length;
         off_t output_offset = offset;
         while (zero_fill_bytes > 0) {
@@ -135,7 +134,6 @@ BPAK_EXPORT int bpak_merkle_init(struct bpak_merkle_context *ctx,
             output_offset += n_written;
             zero_fill_bytes -= sizeof(ctx->buffer);
         }
-        bpak_printf(2, "Zero fill done\n");
     }
 
     return BPAK_OK;
@@ -210,7 +208,6 @@ BPAK_EXPORT int bpak_merkle_write_chunk(struct bpak_merkle_context *ctx,
             ctx->input_chunk_counter += bytes_written;
 
             if (ctx->input_data_length == BPAK_MERKLE_BLOCK_SZ) {
-                bpak_printf(2, "Early out\n");
                 /* Special case when total input bytes == 4096. In this
                  * case the root hash will be the hash of the first and only
                  * input block. */
@@ -249,7 +246,6 @@ BPAK_EXPORT int bpak_merkle_finish(struct bpak_merkle_context *ctx,
         output_offset = ctx->level_offset[i];
 
         for (int n = 0; n < input_block_count; n++) {
-            bpak_printf(2, "Computing block %i on level %u\n", n, i);
             rc = merkle_hash_init(ctx);
 
             if (rc != BPAK_OK)

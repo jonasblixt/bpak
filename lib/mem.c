@@ -33,8 +33,6 @@ BPAK_EXPORT void *bpak_calloc(size_t nmemb, size_t size)
         result = calloc(nmemb, size);
     }
 
-    // bpak_printf(2, "<%p> = bpak_calloc(%zu, %zu)\n", result, nmemb, size);
-
     return result;
 }
 
@@ -45,6 +43,4 @@ BPAK_EXPORT void bpak_free(void *ptr)
     } else {
         free(ptr);
     }
-
-    // bpak_printf(2, "bpak_free(%p)\n", ptr);
 }

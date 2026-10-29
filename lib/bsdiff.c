@@ -25,7 +25,6 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <inttypes.h>
 #include <string.h>
 #include <bpak/bpak.h>
 #include <bpak/bsdiff.h>
@@ -447,12 +446,6 @@ static int write_diff_extra_and_adjustment(struct bpak_bsdiff_context *ctx)
     extra_size = (ctx->scan - lenb - extra_pos);
 
     /* Write control data*/
-    bpak_printf(2,
-                "diff: %10" PRIi64 " %10" PRIi64 " %10" PRIi64 "\n",
-                diff_size,
-                extra_size,
-                (ctx->pos - lenb) - (last_pos + diff_size));
-
     offtout(diff_size, &buffer[0]);
     offtout(extra_size, &buffer[8]);
     offtout((ctx->pos - lenb) - (last_pos + diff_size), &buffer[16]);
@@ -534,12 +527,6 @@ BPAK_EXPORT int bpak_bsdiff_init(struct bpak_bsdiff_context *ctx,
         goto err_free_compressor_out;
     }
 
-    bpak_printf(2,
-                "Initializing sais array: %p %p %zu\n",
-                (void *)ctx->origin_data,
-                (void *)ctx->suffix_array,
-                origin_length);
-
     rc = sais(ctx->origin_data, ctx->suffix_array, origin_length);
 
     if (rc != 0) {
@@ -548,7 +535,6 @@ BPAK_EXPORT int bpak_bsdiff_init(struct bpak_bsdiff_context *ctx,
         goto err_free_suffix_array_out;
     }
 
-    bpak_printf(2, "Init done\n");
     return BPAK_OK;
 
 err_free_suffix_array_out:

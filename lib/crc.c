@@ -48,46 +48,6 @@
 #include <bpak/bpak.h>
 #include <bpak/crc.h>
 
-/*
- * A function that calculates the CRC-32 based on the table above is
- * given below for documentation purposes. An equivalent implementation
- * of this function that's actually used in the kernel can be found
- * in sys/libkern.h, where it can be inlined.
- *
- *    u32
- *    crc32(const void *buf, size_t size)
- *    {
- *        const u8 *p = buf;
- *        u32 crc;
- *
- *        crc = ~0U;
- *        while (size--)
- *            crc = crc32_tab[(crc ^ *p++) & 0xFF] ^ (crc >> 8);
- *        return crc ^ ~0U;
- *    }
- */
-
-/* CRC32C routines, these use a different polynomial */
-/*****************************************************************/
-/*                                                               */
-/* CRC LOOKUP TABLE                                              */
-/* ================                                              */
-/* The following CRC lookup table was generated automagically    */
-/* by the Rocksoft^tm Model CRC Algorithm Table Generation       */
-/* Program V1.0 using the following model parameters:            */
-/*                                                               */
-/*    Width   : 4 bytes.                                         */
-/*    Poly    : 0x1EDC6F41L                                      */
-/*    Reverse : TRUE.                                            */
-/*                                                               */
-/* For more information on the Rocksoft^tm Model CRC Algorithm,  */
-/* see the document titled "A Painless Guide to CRC Error        */
-/* Detection Algorithms" by Ross Williams                        */
-/* (ross@guest.adelaide.edu.au.). This document is likely to be  */
-/* in the FTP archive "ftp.adelaide.edu.au/pub/rocksoft".        */
-/*                                                               */
-/*****************************************************************/
-
 static const uint32_t crc32Table[256] = {
     0x00000000L, 0x77073096L, 0xee0e612cL, 0x990951baL, 0x076dc419L,
     0x706af48fL, 0xe963a535L, 0x9e6495a3L, 0x0edb8832L, 0x79dcb8a4L,

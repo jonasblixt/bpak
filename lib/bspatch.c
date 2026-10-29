@@ -25,7 +25,6 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <inttypes.h>
 #include <stdio.h>
 #include <string.h>
 #include <bpak/bpak.h>
@@ -111,13 +110,6 @@ process_more:
         ctx->diff_count = offtin(&ctx->ctrl_buf[0]);
         ctx->extra_count = offtin(&ctx->ctrl_buf[8]);
         ctx->adjust = offtin(&ctx->ctrl_buf[16]);
-
-        bpak_printf(2,
-                    "Patch: %10" PRIi64 " %10" PRIi64 " %10" PRIi64 " %zu\n",
-                    ctx->diff_count,
-                    ctx->extra_count,
-                    ctx->adjust,
-                    bytes_available);
 
         /* The patch is not authenticated, the lengths passed to the
          * callbacks must never exceed the buffers and the origin position
