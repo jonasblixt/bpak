@@ -98,6 +98,10 @@ tool. The package format and the library ABI stay compatible, see
   parsing key files, did not check an allocation when it loaded a public
   key, leaked the key when verification could not parse it and left the
   private key in a stack buffer.
+- `bpak_pkg_sign` signed directly into the header, a failure left it with a
+  cleared signature, and the private key was not cleared before it was
+  freed. It sets the signature kind of the header to the kind of the key,
+  which was not checked.
 - Python package: crashes when opening a file that is not a package, when
   using a closed package and after the log callback was released, reference
   leaks in `Package.parts` and `Package.meta`, meta data larger than the

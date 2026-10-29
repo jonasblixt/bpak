@@ -378,6 +378,41 @@ static void test_open_failure(void **state)
     unlink(path);
 }
 
+static void test_sign(void **state)
+{
+    (void)state;
+    struct bpak_package pkg;
+    struct bpak_header before;
+    struct bpak_key *key = NULL;
+    char path[] = "/tmp/bpak-test-XXXXXX";
+    int rc;
+
+    create_package(&pkg, path);
+    assert_int_equal(pkg.header.signature_kind, BPAK_SIGN_PRIME256v1);
+
+    /* The signature kind is the kind of the key */
+    rc = bpak_pkg_sign(&pkg, TEST_DATA("secp384r1-key-pair.pem"));
+    assert_int_equal(rc, BPAK_OK);
+    assert_int_equal(pkg.header.signature_kind, BPAK_SIGN_SECP384r1);
+
+    rc = bpak_crypto_load_public_key(TEST_DATA("secp384r1-pub-key.der"), &key);
+    assert_int_equal(rc, BPAK_OK);
+    rc = bpak_pkg_verify(&pkg, key);
+    assert_int_equal(rc, BPAK_OK);
+    bpak_free(key);
+
+    /* A failed sign leaves the header as it was */
+    pkg.header.hash_kind = 99;
+    memcpy(&before, &pkg.header, sizeof(before));
+
+    rc = bpak_pkg_sign(&pkg, TEST_DATA("secp256r1-key-pair.pem"));
+    assert_int_equal(rc, -BPAK_UNSUPPORTED_HASH_ALG);
+    assert_memory_equal(&pkg.header, &before, sizeof(before));
+
+    bpak_pkg_close(&pkg);
+    unlink(path);
+}
+
 int main(void)
 {
     const struct CMUnitTest tests[] = {
@@ -390,6 +425,7 @@ int main(void)
         cmocka_unit_test(test_delete_part_truncated),
         cmocka_unit_test(test_delete_transport_part),
         cmocka_unit_test(test_open_failure),
+        cmocka_unit_test(test_sign),
     };
 
     return cmocka_run_group_tests(tests, NULL, NULL);
