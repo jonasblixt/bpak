@@ -245,6 +245,36 @@ BPAK_EXPORT int bpak_pkg_write_header(struct bpak_package *pkg)
     return BPAK_OK;
 }
 
+int bpak_pkg_write_hashed_header(struct bpak_package *pkg)
+{
+    int rc = bpak_pkg_update_hash(pkg, NULL, NULL);
+
+    if (rc != BPAK_OK) {
+        bpak_printf(0, "Error: Could not update payload hash\n");
+        return rc;
+    }
+
+    rc = bpak_pkg_write_header(pkg);
+
+    if (rc != BPAK_OK)
+        bpak_printf(0, "Error: Could not write header\n");
+
+    return rc;
+}
+
+/* Remove the data after 'size' bytes from the package file */
+static int pkg_truncate(struct bpak_package *pkg, off_t size)
+{
+    fflush(pkg->fp);
+
+    if (ftruncate(fileno(pkg->fp), size) != 0) {
+        bpak_printf(0, "Error: Couldn't truncate file: %s\n", strerror(errno));
+        return -BPAK_WRITE_ERROR;
+    }
+
+    return BPAK_OK;
+}
+
 BPAK_EXPORT int bpak_pkg_write_raw_signature(struct bpak_package *pkg,
                                              const uint8_t *signature,
                                              size_t size)
@@ -316,8 +346,6 @@ BPAK_EXPORT int bpak_pkg_transport_decode(struct bpak_package *input,
     decode_private.output_fp = output->fp;
     if (origin != NULL)
         decode_private.origin_fp = origin->fp;
-    else
-        decode_private.origin_fp = NULL;
 
     rc = bpak_transport_decode_init(&decode_ctx,
                                     decode_buffer,
@@ -564,27 +592,12 @@ static int delete_part(struct bpak_package *pkg, bpak_id_t part_id,
         write_offset += chunk_length;
     }
 
-    rc = bpak_pkg_update_hash(pkg, NULL, NULL);
-    if (rc != BPAK_OK) {
-        bpak_printf(0, "%s: Error: Could not update payload hash\n", __func__);
+    rc = bpak_pkg_write_hashed_header(pkg);
+
+    if (rc != BPAK_OK)
         goto err_restore_out;
-    }
 
-    rc = bpak_pkg_write_header(pkg);
-    if (rc != BPAK_OK) {
-        bpak_printf(0, "%s: Error: Could not write header\n", __func__);
-        goto err_restore_out;
-    }
-
-    fflush(pkg->fp);
-
-    if (ftruncate(fileno(pkg->fp), (off_t)write_offset) != 0) {
-        bpak_printf(0, "%s: Error: Couldn't truncate file: %s\n",
-                    __func__, strerror(errno));
-        return -BPAK_WRITE_ERROR;
-    }
-
-    return BPAK_OK;
+    return pkg_truncate(pkg, (off_t)write_offset);
 
 err_restore_out:
     /* The header in the file is unchanged, the data after the part may have
@@ -624,25 +637,10 @@ BPAK_EXPORT int bpak_pkg_delete_all_parts(struct bpak_package *pkg, bool remove_
     if (remove_meta)
         delete_part_meta(h, 0);
 
-    rc = bpak_pkg_update_hash(pkg, NULL, NULL);
-    if (rc != BPAK_OK) {
-        bpak_printf(0, "%s: Error: Could not update payload hash\n", __func__);
+    rc = bpak_pkg_write_hashed_header(pkg);
+
+    if (rc != BPAK_OK)
         return rc;
-    }
 
-    rc = bpak_pkg_write_header(pkg);
-    if (rc != BPAK_OK) {
-        bpak_printf(0, "%s: Error: Could not write header\n", __func__);
-        return rc;
-    }
-
-    fflush(pkg->fp);
-
-    if (ftruncate(fileno(pkg->fp), sizeof(struct bpak_header)) != 0) {
-        bpak_printf(0, "%s: Error: Couldn't truncate file: %s\n",
-                    __func__, strerror(errno));
-        return -BPAK_WRITE_ERROR;
-    }
-
-    return BPAK_OK;
+    return pkg_truncate(pkg, sizeof(struct bpak_header));
 }

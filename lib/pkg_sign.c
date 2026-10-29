@@ -91,11 +91,7 @@ BPAK_EXPORT int bpak_pkg_sign(struct bpak_package *pkg,
         goto err_restore_out;
 
     /* The header is changed when the signature exists */
-    memset(pkg->header.signature, 0, sizeof(pkg->header.signature));
-    memcpy(pkg->header.signature, signature, signature_length);
-    pkg->header.signature_sz = (uint16_t)signature_length;
-
-    rc = bpak_pkg_write_header(pkg);
+    rc = bpak_pkg_write_raw_signature(pkg, signature, signature_length);
     goto err_free_key_out;
 
 err_restore_out:

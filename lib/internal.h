@@ -15,6 +15,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <bpak/bpak.h>
+#include <bpak/pkg.h>
 
 /** Iterate over the parts in use, they end at the first empty slot */
 #define bpak_foreach_used_part(_hdr, _var)                                     \
@@ -67,6 +68,14 @@ ssize_t bpak_file_read(off_t offset, uint8_t *buffer, size_t length,
                        void *user);
 ssize_t bpak_file_write(off_t offset, uint8_t *buffer, size_t length,
                         void *user);
+
+/**
+ * Update the payload hash of the package and write its header.
+ *
+ * @return BPAK_OK or the error of bpak_pkg_update_hash() or
+ *         bpak_pkg_write_header()
+ */
+int bpak_pkg_write_hashed_header(struct bpak_package *pkg);
 
 /** Consumer of the data of bpak_file_feed(), returns BPAK_OK or an error */
 typedef int (*bpak_consume_t)(void *priv, uint8_t *buffer, size_t length);

@@ -105,19 +105,10 @@ static int pkg_add_part_start(struct bpak_package *pkg, bpak_id_t id,
 static int pkg_add_part_finish(struct bpak_package *pkg,
                                struct bpak_part_header *p)
 {
-    int rc;
-
     if (fwrite(zeros, 1, p->pad_bytes, pkg->fp) != p->pad_bytes)
         return -BPAK_WRITE_ERROR;
 
-    rc = bpak_pkg_update_hash(pkg, NULL, NULL);
-
-    if (rc != BPAK_OK) {
-        bpak_printf(0, "Error: Could not update payload hash\n");
-        return rc;
-    }
-
-    return bpak_pkg_write_header(pkg);
+    return bpak_pkg_write_hashed_header(pkg);
 }
 
 #if BPAK_CONFIG_MERKLE == 1
