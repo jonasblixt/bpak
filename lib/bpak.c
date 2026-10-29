@@ -56,13 +56,15 @@ BPAK_EXPORT int bpak_add_meta(struct bpak_header *hdr, bpak_id_t id,
 
     bpak_foreach_meta (hdr, m) {
         if (!m->id) {
+            /* Check the space first, a failed add must leave the header as
+             * it was */
+            if ((new_offset + size) > BPAK_METADATA_BYTES)
+                return -BPAK_NO_SPACE_LEFT;
+
             m->id = id;
             m->offset = new_offset;
             m->size = size;
             m->part_id_ref = part_ref_id;
-            if ((m->offset + m->size) > BPAK_METADATA_BYTES)
-                return -BPAK_NO_SPACE_LEFT;
-
             *meta = m;
             return BPAK_OK;
         } else if (m->id == id && m->part_id_ref == part_ref_id) {

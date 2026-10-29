@@ -145,6 +145,12 @@ static void test_too_much_metadata(void **state)
     rc = bpak_add_meta(&h, bpak_id("test-meta"), 0x1, 1, &meta);
     assert_int_equal(rc, -BPAK_NO_SPACE_LEFT);
 
+    /* A failed add leaves no meta data entry behind */
+    assert_int_equal(h.meta[1].id, 0);
+    assert_int_equal(h.meta[1].offset, 0);
+    assert_int_equal(h.meta[1].size, 0);
+    assert_int_equal(h.meta[1].part_id_ref, 0);
+
     /* Fill header array and meta data */
     rc = bpak_init_header(&h);
     assert_int_equal(rc, BPAK_OK);
