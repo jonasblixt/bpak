@@ -126,25 +126,52 @@ static PyObject *m_set_log_func(PyObject *module, PyObject *args,
     Py_RETURN_NONE;
 }
 
-static PyObject *m_transport_encode(PyObject *self, PyObject *args,
-                                    PyObject *kwds)
+/* O& converter for an optional package, None is no package */
+static int convert_optional_package(PyObject *obj, void *result)
 {
-    (void)self;
+    BPAKPackage **package = result;
+
+    if (obj == Py_None) {
+        *package = NULL;
+        return 1;
+    }
+
+    if (!PyObject_TypeCheck(obj, &BPAKPackageType)) {
+        PyErr_Format(PyExc_TypeError,
+                     "origin must be bpak.Package or None, not %.200s",
+                     Py_TYPE(obj)->tp_name);
+        return 0;
+    }
+
+    *package = (BPAKPackage *)obj;
+    return 1;
+}
+
+typedef int (*transport_func)(struct bpak_package *input,
+                              struct bpak_package *output,
+                              struct bpak_package *origin);
+
+static PyObject *transport(PyObject *args,
+                           PyObject *kwds,
+                           const char *format,
+                           transport_func func,
+                           const char *error)
+{
     int rc;
-    static char *kwlist[] = {"input", "output", "origin", NULL};
+    static char *kwlist[] = { "input", "output", "origin", NULL };
     BPAKPackage *input = NULL;
     BPAKPackage *origin = NULL;
     BPAKPackage *output = NULL;
 
     rc = PyArg_ParseTupleAndKeywords(args,
                                      kwds,
-                                     "O!O!|O!:transport_encode",
+                                     format,
                                      kwlist,
                                      &BPAKPackageType,
                                      &input,
                                      &BPAKPackageType,
                                      &output,
-                                     &BPAKPackageType,
+                                     convert_optional_package,
                                      &origin);
     if (!rc) {
         return NULL;
@@ -155,55 +182,34 @@ static PyObject *m_transport_encode(PyObject *self, PyObject *args,
         return NULL;
     }
 
-    rc = bpak_pkg_transport_encode(&input->pkg,
-                                   &output->pkg,
-                                   origin ? &origin->pkg : NULL);
-
+    rc = func(&input->pkg, &output->pkg, origin ? &origin->pkg : NULL);
     if (rc != BPAK_OK) {
-        return bpak_raise(rc, "Transport encoding failed");
+        return bpak_raise(rc, "%s", error);
     }
 
     Py_RETURN_NONE;
 }
 
-static PyObject *m_transport_decode(PyObject *self, PyObject *args,
-                                          PyObject *kwds)
+static PyObject *m_transport_encode(PyObject *Py_UNUSED(module),
+                                    PyObject *args,
+                                    PyObject *kwds)
 {
-    (void)self;
-    int rc;
-    static char *kwlist[] = {"input", "output", "origin", NULL};
-    BPAKPackage *input = NULL;
-    BPAKPackage *origin = NULL;
-    BPAKPackage *output = NULL;
+    return transport(args,
+                     kwds,
+                     "O!O!|O&:transport_encode",
+                     bpak_pkg_transport_encode,
+                     "Transport encoding failed");
+}
 
-    rc = PyArg_ParseTupleAndKeywords(args,
-                                     kwds,
-                                     "O!O!|O!:transport_decode",
-                                     kwlist,
-                                     &BPAKPackageType,
-                                     &input,
-                                     &BPAKPackageType,
-                                     &output,
-                                     &BPAKPackageType,
-                                     &origin);
-    if (!rc) {
-        return NULL;
-    }
-
-    if (package_check_open(input) < 0 || package_check_open(output) < 0 ||
-        (origin && package_check_open(origin) < 0)) {
-        return NULL;
-    }
-
-    rc = bpak_pkg_transport_decode(&input->pkg,
-                                   &output->pkg,
-                                   origin ? &origin->pkg : NULL);
-
-    if (rc != BPAK_OK) {
-        return bpak_raise(rc, "Transport decoding failed");
-    }
-
-    Py_RETURN_NONE;
+static PyObject *m_transport_decode(PyObject *Py_UNUSED(module),
+                                    PyObject *args,
+                                    PyObject *kwds)
+{
+    return transport(args,
+                     kwds,
+                     "O!O!|O&:transport_decode",
+                     bpak_pkg_transport_decode,
+                     "Transport decoding failed");
 }
 
 static PyObject *m_version(PyObject *module, PyObject *Py_UNUSED(args))

@@ -8,6 +8,7 @@ BPAK_FAILED and usage errors with 2.
 
 from __future__ import annotations
 
+import contextlib
 import io
 import os
 import pathlib
@@ -500,18 +501,15 @@ def transport(
         msg = "--encode and --decode require --output"
         raise click.UsageError(msg)
 
-    with bpak.Package(filename, "rb+") as input_pkg:
-        origin_pkg = bpak.Package(origin, "rb+") if origin is not None else None
-        try:
-            with bpak.Package(output, "wb+") as output_pkg:
-                func = bpak.transport_encode if encode else bpak.transport_decode
-                if origin_pkg is not None:
-                    func(input_pkg, output_pkg, origin_pkg)
-                else:
-                    func(input_pkg, output_pkg)
-        finally:
-            if origin_pkg is not None:
-                origin_pkg.close()
+    func = bpak.transport_encode if encode else bpak.transport_decode
+    with (
+        bpak.Package(filename, "rb+") as input_pkg,
+        bpak.Package(origin, "rb+")
+        if origin is not None
+        else contextlib.nullcontext() as origin_pkg,
+        bpak.Package(output, "wb+") as output_pkg,
+    ):
+        func(input_pkg, output_pkg, origin_pkg)
 
 
 @cli.command()

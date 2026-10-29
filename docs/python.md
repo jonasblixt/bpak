@@ -57,16 +57,16 @@ API with types.
 |--------------------------------------------|-----------------------------------------------------|
 | `id(name)`                                 | The id of a name, see [IDs](format.md#ids)          |
 | `id_to_string(id)`                         | The name of a known meta data id, or `""`           |
-| `transport_encode(input, output, origin)`  | Transport encode `input` into `output`, with diffs against `origin` |
-| `transport_decode(input, output, origin)`  | Decode the transport encoded `input` into `output`, `origin` is the installed version |
+| `transport_encode(input, output, origin=None)` | Transport encode `input` into `output`, with diffs against `origin` |
+| `transport_decode(input, output, origin=None)` | Decode the transport encoded `input` into `output`, `origin` is the installed version |
 | `parse_public_key(data)`                   | Parse a DER encoded public key, returns `(KEY_* kind, DER data)` |
 | `hash_kind_to_string(kind)`, `signature_kind_to_string(kind)` | Names of the `HASH_*` and `SIGN_*` constants |
 | `set_log_func(func)`                       | Receive the log messages of the library as `func(level, message)`, `None` disables logging |
 | `version()`                                | Version of the library                              |
 
-`origin` can be left out when no part uses a diff based encoder. After
-`transport_encode` and `transport_decode`, `output` describes the encoded or
-decoded package, and `input` is unchanged.
+`origin` can be left out or `None` when no part uses a diff based encoder.
+After `transport_encode` and `transport_decode`, `output` describes the
+encoded or decoded package, and `input` is unchanged.
 
 Constants:
 

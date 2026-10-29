@@ -375,3 +375,18 @@ def test_unsigned_values(pybpak, tmp_path):
 
         assert p.key_id == 0xffffffff
         assert repr(part) == f"<bpak.Part '0x{part.id:08x}' ({part.size} bytes)>"
+
+
+def test_transport_without_origin(pybpak, tmp_path):
+    """origin can be None when no part is diff encoded"""
+    create_package_with_parts(pybpak, tmp_path / "test.bpak")
+
+    with pybpak.Package(tmp_path / "test.bpak", "rb+") as p, \
+            pybpak.Package(tmp_path / "encoded.bpak", "wb+") as encoded:
+        pybpak.transport_encode(p, encoded, None)
+        with pytest.raises(TypeError, match="origin"):
+            pybpak.transport_encode(p, encoded, "origin.bpak")
+
+        with pybpak.Package(tmp_path / "decoded.bpak", "wb+") as decoded:
+            pybpak.transport_decode(encoded, decoded, origin=None)
+            assert decoded.digest == p.digest

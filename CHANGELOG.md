@@ -13,6 +13,8 @@ tool. The package format and the library ABI stay compatible, see
   reference.
 - `bpak_id_to_string` knows `bpak-key-id` and `bpak-key-store`, which
   `bpak show` prints as the names of such meta data.
+- `bpak.transport_encode` and `bpak.transport_decode` accept `origin=None`
+  for packages without diff based encoders.
 
 ### Changed
 
