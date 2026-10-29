@@ -15,11 +15,11 @@ add_test(NAME examples.package
         ${PROJECT_SOURCE_DIR}/test/data/secp256r1-pub-key.der
 )
 
-set_tests_properties(examples.c_example examples.package PROPERTIES
-    LABELS examples
-)
+set_tests_properties(examples.c_example PROPERTIES LABELS examples)
+
 # package.py works in a temporary directory that it leaves for inspection
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/tmp)
 set_tests_properties(examples.package PROPERTIES
+    LABELS examples
     ENVIRONMENT "PYTHONPATH=${PROJECT_BINARY_DIR}/tools;TMPDIR=${CMAKE_CURRENT_BINARY_DIR}/tmp"
 )
