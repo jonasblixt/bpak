@@ -1,3 +1,4 @@
+import sys
 import uuid
 
 import pytest
@@ -151,6 +152,21 @@ def test_delete_part_meta(pybpak, tmp_path, remove_meta):
 
         assert p.parts == []
         assert len(p.meta) == (0 if remove_meta else 1)
+
+
+def test_list_references(pybpak, tmp_path):
+    """Listing the parts and meta data does not leak references to them or
+    to the package"""
+    path = tmp_path / "test.bpak"
+    create_package_with_parts(pybpak, path)
+
+    with pybpak.Package(path, "rb") as p:
+        before = sys.getrefcount(p)
+        # Every part and meta data object holds a reference to the package
+        for _ in range(10):
+            assert len(p.parts) == 4
+            assert len(p.meta) > 0
+        assert sys.getrefcount(p) == before
 
 
 def test_signature_too_large(pybpak, tmp_path):

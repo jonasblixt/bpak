@@ -951,7 +951,9 @@ static PyObject *package_get_parts(PyObject *self, void *closure)
             return PyErr_NoMemory();
         }
 
+        /* The list holds its own reference */
         rc = PyList_Append(list, part);
+        Py_DECREF(part);
         if (rc < 0) {
             Py_DECREF(list);
 
@@ -992,7 +994,9 @@ static PyObject *package_get_meta_list(PyObject *self, void *closure)
             return PyErr_NoMemory();
         }
 
+        /* The list holds its own reference */
         rc = PyList_Append(list, meta);
+        Py_DECREF(meta);
         if (rc < 0) {
             Py_DECREF(list);
 
