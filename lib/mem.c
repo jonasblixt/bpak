@@ -23,7 +23,7 @@ BPAK_EXPORT int bpak_set_calloc_free(bpak_calloc_t calloc_func,
     return BPAK_OK;
 }
 
-void *bpak_calloc(size_t nmemb, size_t size)
+BPAK_EXPORT void *bpak_calloc(size_t nmemb, size_t size)
 {
     void *result = NULL;
 
@@ -38,7 +38,7 @@ void *bpak_calloc(size_t nmemb, size_t size)
     return result;
 }
 
-void bpak_free(void *ptr)
+BPAK_EXPORT void bpak_free(void *ptr)
 {
     if (_free_func != NULL) {
         _free_func(ptr);

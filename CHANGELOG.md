@@ -57,6 +57,8 @@ tool. The package format and the library ABI stay compatible, see
 - Transport decoding wrote past the part that it decoded and read past the
   origin part when the patch, the copied data or the merkle hash tree was
   larger than the part.
+- `bpak_calloc`, `bpak_free` and `bpak_transport_encode` were declared in
+  the public headers but not exported by the shared library.
 - Python package: crashes when opening a file that is not a package, when
   using a closed package and after the log callback was released, reference
   leaks in `Package.parts` and `Package.meta`, meta data larger than the

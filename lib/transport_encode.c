@@ -349,9 +349,10 @@ err_out:
     return rc;
 }
 
-int bpak_transport_encode(FILE *input_fp, struct bpak_header *input_header,
-                          FILE *output_fp, struct bpak_header *output_header,
-                          FILE *origin_fp, struct bpak_header *origin_header)
+BPAK_EXPORT int
+bpak_transport_encode(FILE *input_fp, struct bpak_header *input_header,
+                      FILE *output_fp, struct bpak_header *output_header,
+                      FILE *origin_fp, struct bpak_header *origin_header)
 {
     int rc = BPAK_OK;
     struct bpak_meta_header *meta = NULL;

@@ -11,6 +11,7 @@ bpak_bspatch_final
 bpak_bspatch_free
 bpak_bspatch_init
 bpak_bspatch_write
+bpak_calloc
 bpak_copyz_signature
 bpak_crc32
 bpak_crypto_load_private_key
@@ -22,6 +23,7 @@ bpak_crypto_verify
 bpak_del_meta
 bpak_del_part
 bpak_error_string
+bpak_free
 bpak_get_meta
 bpak_get_meta_anyref
 bpak_get_part
@@ -78,6 +80,7 @@ bpak_transport_decode_init
 bpak_transport_decode_set_origin
 bpak_transport_decode_start
 bpak_transport_decode_write_chunk
+bpak_transport_encode
 bpak_uuid_to_string
 bpak_valid_header
 bpak_verify_compute_header_hash
