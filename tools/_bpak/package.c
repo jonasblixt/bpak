@@ -447,6 +447,7 @@ static PyObject *package_get_meta(PyObject *self, PyObject *args, PyObject *kwds
     return meta_allocate(package, meta_id, part_ref);
 }
 
+/* Compute the payload hash and return the header hash */
 static PyObject *package_update_hash(PyObject *self, PyObject *Py_UNUSED(args))
 {
     int rc;
@@ -665,22 +666,9 @@ static PyObject *package_exit(PyObject *self, PyObject *args)
 
 /* Getters and setters */
 
-static PyObject *package_get_digest(PyObject *self, void *closure)
+static PyObject *package_get_digest(PyObject *self, void *Py_UNUSED(closure))
 {
-    (void)closure;
-    char digest_data[128];
-    BPAKPackage *package = (BPAKPackage *)self;
-
-    size_t hash_size = sizeof(digest_data);
-
-    if (package_check_open(package) < 0) {
-        return NULL;
-    }
-
-    if (bpak_pkg_update_hash(&package->pkg, digest_data, &hash_size) != BPAK_OK)
-        Py_RETURN_NONE;
-
-    return Py_BuildValue("y#", digest_data, hash_size);
+    return package_update_hash(self, NULL);
 }
 
 static PyObject *package_get_payload_hash(PyObject *self, void *closure)

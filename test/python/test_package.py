@@ -390,3 +390,14 @@ def test_transport_without_origin(pybpak, tmp_path):
         with pybpak.Package(tmp_path / "decoded.bpak", "wb+") as decoded:
             pybpak.transport_decode(encoded, decoded, origin=None)
             assert decoded.digest == p.digest
+
+
+def test_digest_error(pybpak, tmp_path):
+    """digest raises the error of update_hash, it returned None"""
+    with pybpak.Package(tmp_path / "test.bpak", "wb+") as p:
+        p.hash_kind = 0xff
+
+        with pytest.raises(pybpak.Error) as update_hash_error:
+            p.update_hash()
+        with pytest.raises(type(update_hash_error.value)):
+            p.digest

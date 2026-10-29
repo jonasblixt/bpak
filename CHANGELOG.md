@@ -42,6 +42,8 @@ tool. The package format and the library ABI stay compatible, see
   are removed.
 - `Part.id`, `Meta.id` and `Meta.part_id_ref` of the python package are
   read-only. Add the part or meta data again to change its id.
+- `Package.digest` raises the error of `Package.update_hash()` instead of
+  returning `None`.
 
 ### Fixed
 

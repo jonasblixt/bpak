@@ -93,7 +93,7 @@ raise `ValueError`, also through its parts and meta data.
 | `key_id`, `keystore_id`       | Ids that select the verification key                  |
 | `parts`, `meta`               | Lists of `Part` and `Meta` objects                    |
 | `signature`                   | The signature, can be set to a signature created elsewhere or to `None` to clear it |
-| `digest`                      | The header hash                                       |
+| `digest`                      | The header hash, updates the payload hash like `update_hash()` |
 | `payload_hash`                | The payload hash stored in the header                 |
 | `size`                        | Size of the package file, with transport encoded parts at their encoded size |
 | `installed_size`              | Size of the part data when it is installed            |
