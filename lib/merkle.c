@@ -12,27 +12,57 @@
 #include <bpak/merkle.h>
 #include <bpak/crypto.h>
 
-BPAK_EXPORT ssize_t bpak_merkle_compute_size(size_t input_data_length)
+/* Compute the length of each level of the hash tree, from the hashes of the
+ * data blocks up to the level of one block. Returns the number of levels. */
+static int merkle_levels(size_t input_data_length,
+                         size_t level_length[BPAK_MERKLE_MAX_LEVELS])
 {
-    size_t level_length = input_data_length;
-    unsigned int level = 0;
-    size_t pad_bytes;
-    size_t result = 0;
+    size_t length = input_data_length;
+    int level = 0;
 
     if (input_data_length % BPAK_MERKLE_BLOCK_SZ != 0)
         return -BPAK_BAD_ALIGNMENT;
 
     do {
-        level_length = (level_length >> BPAK_MERKLE_BLOCK_BITS) * 32;
-        pad_bytes = (~level_length + 1) & (BPAK_MERKLE_BLOCK_SZ - 1);
-        level_length += pad_bytes;
-        result += level_length;
-        level = level + 1;
-
-        if (level > BPAK_MERKLE_MAX_LEVELS)
+        if (level >= BPAK_MERKLE_MAX_LEVELS)
             return -BPAK_NO_SPACE_LEFT;
 
-    } while (level_length != BPAK_MERKLE_BLOCK_SZ);
+        /* One hash per block, padded to a block */
+        length = (length >> BPAK_MERKLE_BLOCK_BITS) * BPAK_MERKLE_HASH_BYTES;
+        length += (~length + 1) & (BPAK_MERKLE_BLOCK_SZ - 1);
+        level_length[level++] = length;
+    } while (length != BPAK_MERKLE_BLOCK_SZ);
+
+    return level;
+}
+
+/* Start the hash of a block, which begins with the salt */
+static int merkle_hash_init(struct bpak_merkle_context *ctx)
+{
+    int rc = bpak_hash_init(&ctx->running_hash, BPAK_HASH_SHA256);
+
+    if (rc != BPAK_OK)
+        return rc;
+
+    rc = bpak_hash_update(&ctx->running_hash, ctx->salt, ctx->salt_length);
+
+    if (rc != BPAK_OK)
+        bpak_hash_free(&ctx->running_hash);
+
+    return rc;
+}
+
+BPAK_EXPORT ssize_t bpak_merkle_compute_size(size_t input_data_length)
+{
+    size_t level_length[BPAK_MERKLE_MAX_LEVELS];
+    int levels = merkle_levels(input_data_length, level_length);
+    size_t result = 0;
+
+    if (levels < 0)
+        return levels;
+
+    for (int i = 0; i < levels; i++)
+        result += level_length[i];
 
     return result;
 }
@@ -43,9 +73,7 @@ BPAK_EXPORT int bpak_merkle_init(struct bpak_merkle_context *ctx,
                                  off_t offset, bool zero_fill_output,
                                  void *priv)
 {
-    unsigned int level = 0;
-    size_t level_length = 0;
-    size_t pad_bytes = 0;
+    int levels;
 
     bpak_printf(2, "%s: input length: %zu\n", __func__, input_data_length);
 
@@ -67,22 +95,15 @@ BPAK_EXPORT int bpak_merkle_init(struct bpak_merkle_context *ctx,
     memcpy(ctx->salt, salt, salt_length);
 
     /* Compute the length of each level and the total length of the hash tree */
-    level_length = input_data_length;
-    do {
-        /* Up to BPAK_MERKLE_MAX_LEVELS levels, like
-         * bpak_merkle_compute_size */
-        if (level >= BPAK_MERKLE_MAX_LEVELS)
-            return -BPAK_NO_SPACE_LEFT;
+    levels = merkle_levels(input_data_length, ctx->level_length);
 
-        level_length = (level_length >> BPAK_MERKLE_BLOCK_BITS) * 32;
-        pad_bytes = (~level_length + 1) & (BPAK_MERKLE_BLOCK_SZ - 1);
-        level_length += pad_bytes;
-        ctx->level_length[level] = level_length;
-        ctx->hash_tree_length += level_length;
-        level = level + 1;
-    } while (level_length != BPAK_MERKLE_BLOCK_SZ);
+    if (levels < 0)
+        return levels;
 
-    ctx->no_of_levels = level;
+    ctx->no_of_levels = levels;
+
+    for (int i = 0; i < levels; i++)
+        ctx->hash_tree_length += ctx->level_length[i];
 
     /* Compute offsets for each level */
     off_t tree_level_offset = ctx->hash_tree_length;
@@ -144,14 +165,10 @@ BPAK_EXPORT int bpak_merkle_write_chunk(struct bpak_merkle_context *ctx,
                 ctx->input_data_length / BPAK_MERKLE_BLOCK_SZ)
                 return -BPAK_SIZE_ERROR;
 
-            rc = bpak_hash_init(&ctx->running_hash, BPAK_HASH_SHA256);
+            rc = merkle_hash_init(ctx);
+
             if (rc != BPAK_OK)
                 return rc;
-            rc = bpak_hash_update(&ctx->running_hash,
-                                  ctx->salt,
-                                  ctx->salt_length);
-            if (rc != BPAK_OK)
-                goto err_free_hash_ctx_out;
         }
 
         chunk_length = BPAK_MIN(ctx->block_byte_counter, data_to_process);
@@ -168,7 +185,10 @@ BPAK_EXPORT int bpak_merkle_write_chunk(struct bpak_merkle_context *ctx,
         if (ctx->block_byte_counter == 0) {
             ctx->block_byte_counter = BPAK_MERKLE_BLOCK_SZ;
 
-            rc = bpak_hash_final(&ctx->running_hash, ctx->buffer, 32, NULL);
+            rc = bpak_hash_final(&ctx->running_hash,
+                                 ctx->buffer,
+                                 sizeof(ctx->buffer),
+                                 NULL);
 
             if (rc != BPAK_OK)
                 goto err_free_hash_ctx_out;
@@ -218,7 +238,7 @@ BPAK_EXPORT int bpak_merkle_finish(struct bpak_merkle_context *ctx,
     ssize_t n_written;
 
     if (ctx->finished) {
-        memcpy(roothash, ctx->buffer, 32);
+        memcpy(roothash, ctx->buffer, BPAK_MERKLE_HASH_BYTES);
         return BPAK_OK;
     }
 
@@ -230,15 +250,10 @@ BPAK_EXPORT int bpak_merkle_finish(struct bpak_merkle_context *ctx,
 
         for (int n = 0; n < input_block_count; n++) {
             bpak_printf(2, "Computing block %i on level %u\n", n, i);
-            rc = bpak_hash_init(&ctx->running_hash, BPAK_HASH_SHA256);
+            rc = merkle_hash_init(ctx);
+
             if (rc != BPAK_OK)
                 return rc;
-
-            rc = bpak_hash_update(&ctx->running_hash,
-                                  ctx->salt,
-                                  ctx->salt_length);
-            if (rc != BPAK_OK)
-                goto err_free_hash_ctx_out;
 
             /* Read sizof(ctx->buffer) sized chunks and update hash for block
              *  n */
@@ -265,7 +280,10 @@ BPAK_EXPORT int bpak_merkle_finish(struct bpak_merkle_context *ctx,
                     goto err_free_hash_ctx_out;
             }
 
-            rc = bpak_hash_final(&ctx->running_hash, ctx->buffer, 32, NULL);
+            rc = bpak_hash_final(&ctx->running_hash,
+                                 ctx->buffer,
+                                 sizeof(ctx->buffer),
+                                 NULL);
 
             if (rc != BPAK_OK)
                 goto err_free_hash_ctx_out;
@@ -292,15 +310,10 @@ BPAK_EXPORT int bpak_merkle_finish(struct bpak_merkle_context *ctx,
     bpak_hash_free(&ctx->running_hash);
     /* Compute the root hash, which is the hash of the top level */
     bpak_printf(2, "Computing root hash\n");
-    rc = bpak_hash_init(&ctx->running_hash, BPAK_HASH_SHA256);
+    rc = merkle_hash_init(ctx);
 
     if (rc != BPAK_OK)
         return rc;
-
-    rc = bpak_hash_update(&ctx->running_hash, ctx->salt, ctx->salt_length);
-
-    if (rc != BPAK_OK)
-        goto err_free_hash_ctx_out;
 
     bytes_to_process = ctx->level_length[ctx->no_of_levels - 1];
     input_offset = ctx->level_offset[ctx->no_of_levels - 1];
@@ -327,7 +340,10 @@ BPAK_EXPORT int bpak_merkle_finish(struct bpak_merkle_context *ctx,
         input_offset += chunk_length;
     }
 
-    rc = bpak_hash_final(&ctx->running_hash, roothash, 32, NULL);
+    rc = bpak_hash_final(&ctx->running_hash,
+                         roothash,
+                         BPAK_MERKLE_HASH_BYTES,
+                         NULL);
     ctx->finished = true;
 
 err_free_hash_ctx_out:

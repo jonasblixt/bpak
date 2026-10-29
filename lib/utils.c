@@ -15,6 +15,7 @@
 #include <bpak/crc.h>
 #include <bpak/pkg.h>
 #include <bpak/id.h>
+#include <bpak/merkle.h>
 
 #include "internal.h"
 
@@ -73,7 +74,7 @@ static size_t meta_value_size(bpak_id_t id)
         return sizeof(struct bpak_transport_meta);
     case BPAK_ID_MERKLE_SALT:
     case BPAK_ID_MERKLE_ROOT_HASH:
-        return 32;
+        return BPAK_MERKLE_HASH_BYTES;
     case BPAK_ID_PB_LOAD_ADDR:
         return sizeof(uint64_t);
     default:
@@ -115,9 +116,10 @@ BPAK_EXPORT int bpak_meta_to_string(struct bpak_header *h,
                      transport_meta.alg_id_decode);
     } else if (m->id == BPAK_ID_MERKLE_SALT ||
                m->id == BPAK_ID_MERKLE_ROOT_HASH) {
-        rc = bpak_bin2hex(byte_ptr, 32, buf, size) == BPAK_OK
-                 ? BPAK_OK
-                 : -BPAK_SIZE_ERROR;
+        rc =
+            bpak_bin2hex(byte_ptr, BPAK_MERKLE_HASH_BYTES, buf, size) == BPAK_OK
+                ? BPAK_OK
+                : -BPAK_SIZE_ERROR;
     } else if (m->id == BPAK_ID_PB_LOAD_ADDR) {
         memcpy(&u64_value, byte_ptr, sizeof(u64_value));
         n = snprintf(buf, size, "Entry: 0x%08" PRIX64, u64_value);
