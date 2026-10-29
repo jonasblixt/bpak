@@ -7,8 +7,9 @@
 # from the working tree with debug information and compares them with
 # abidiff from libabigail. Both are built with the same compiler and mbedtls
 # headers, so that struct bpak_hash_context, which embeds the mbedtls
-# contexts, is compared too. Added functions are reported but do not fail,
-# removed or changed functions and types and a changed SONAME do.
+# contexts, is compared too. Added functions and a new SONAME, which comes
+# with a new major version, are reported but do not fail, removed or changed
+# functions and types do.
 
 set -eu
 
@@ -50,12 +51,13 @@ dump "$WORK_DIR/old" "$WORK_DIR/old-build"
 build "$SOURCE_DIR" "$WORK_DIR/new-build"
 dump "$SOURCE_DIR" "$WORK_DIR/new-build"
 
-# Report all changes, but only fail for changes other than added functions.
-# abidiff sets bit 3 of the exit status only for removed functions and a
-# changed SONAME, type changes set bit 2 like added functions do.
+# Report all changes, but only fail for changes other than added functions
+# and the SONAME. abidiff sets bit 3 of the exit status only for removed
+# functions and a changed SONAME, type changes set bit 2 like added
+# functions do.
 abidiff "$WORK_DIR/old-build.abi" "$WORK_DIR/new-build.abi" || true
 
-if ! abidiff --no-added-syms "$WORK_DIR/old-build.abi" \
+if ! abidiff --no-added-syms --ignore-soname "$WORK_DIR/old-build.abi" \
         "$WORK_DIR/new-build.abi" > /dev/null; then
     echo "The ABI is not compatible with $REF" >&2
     exit 1

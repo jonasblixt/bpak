@@ -275,8 +275,8 @@ tests guard this:
 - `test/abi/abidiff.sh` builds the last release and the working tree and
   compares the ABI of the shared libraries with `abidiff` from libabigail,
   including the function signatures and all types they use. It fails for
-  everything but added functions. CI runs it, locally it needs
-  `abigail-tools`:
+  everything but added functions and a new SONAME. CI runs it, locally it
+  needs `abigail-tools`:
 
   ```
   $ test/abi/abidiff.sh          # the last release tag before HEAD
