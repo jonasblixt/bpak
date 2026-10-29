@@ -60,7 +60,7 @@ static const lzma_allocator lzma_alloc = {
 };
 #endif
 
-static int32_t matchlen(uint8_t *from_p, int64_t from_size, uint8_t *to_p,
+static int64_t matchlen(uint8_t *from_p, int64_t from_size, uint8_t *to_p,
                         int64_t to_size)
 {
     int64_t i;
