@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <sys/random.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -71,13 +72,11 @@ BPAK_EXPORT int bpak_pkg_add_file_with_merkle_tree(struct bpak_package *pkg,
     bpak_printf(1, "Allocated %li bytes for merkle tree\n", merkle_sz);
 
     bpak_merkle_hash_t salt;
-    memset(salt, 0, 32);
 
-    uint32_t *salt_ptr = (uint32_t *)salt;
-
-    for (unsigned int i = 0; i < sizeof(salt) / sizeof(uint32_t); i++) {
-        (*salt_ptr) = random() & 0xFFFFFFFF;
-        salt_ptr++;
+    if (getentropy(salt, sizeof(salt)) != 0) {
+        bpak_printf(0, "Error: Could not create a random salt\n");
+        rc = -BPAK_FAILED;
+        goto err_free_buf_out;
     }
 
     rc = bpak_merkle_init(&ctx,

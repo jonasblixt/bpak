@@ -77,6 +77,8 @@ tool. The package format and the library ABI stay compatible, see
   `--encoder merkle` crashed. Earlier versions can not verify these
   packages. `bpak_merkle_write_chunk` wrote past the hash tree when it got
   more data than the tree was created for, it fails with `BPAK_SIZE_ERROR`.
+- Every package created with `--encoder merkle` had the same merkle salt,
+  it came from `random()`, which was never seeded.
 - Python package: crashes when opening a file that is not a package, when
   using a closed package and after the log callback was released, reference
   leaks in `Package.parts` and `Package.meta`, meta data larger than the

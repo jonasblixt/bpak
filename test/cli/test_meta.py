@@ -79,3 +79,15 @@ def test_show_meta_too_small(bpak, pkg):
     assert "<invalid>" in bpak.output("show", pkg).decode()
     bpak.fails("show", pkg, "--meta", "merkle-salt",
                error=BpakError.SIZE_ERROR)
+
+
+def test_merkle_salt_is_random(bpak, make_data):
+    data = make_data("data.bin", 16)
+    salts = set()
+
+    for name in ("a.bpak", "b.bpak"):
+        pkg = bpak.create_package(name, parts=[Part("fs", data, merkle=True)])
+        salts.add(bpak.output("extract", pkg, "--meta", "merkle-salt",
+                              "--part-ref", "fs"))
+
+    assert len(salts) == 2
