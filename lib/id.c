@@ -34,6 +34,10 @@ BPAK_EXPORT const char *bpak_id_to_string(uint32_t id)
         return "bpak-version";
     case BPAK_ID_KEYSTORE_PROVIDER_ID:
         return "keystore-provider-id";
+    case BPAK_ID_BPAK_KEY_ID:
+        return "bpak-key-id";
+    case BPAK_ID_BPAK_KEY_STORE:
+        return "bpak-key-store";
     default:
         return "";
     }

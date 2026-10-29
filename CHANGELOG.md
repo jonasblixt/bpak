@@ -11,6 +11,8 @@ tool. The package format and the library ABI stay compatible, see
 - `bpak set --part-ref` changes meta data that refers to a part, for
   example `pb-load-addr`. `set` could only change meta data without a part
   reference.
+- `bpak_id_to_string` knows `bpak-key-id` and `bpak-key-store`, which
+  `bpak show` prints as the names of such meta data.
 
 ### Changed
 
