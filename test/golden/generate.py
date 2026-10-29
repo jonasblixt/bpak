@@ -25,12 +25,9 @@ from pathlib import Path
 GOLDEN_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(GOLDEN_DIR.parent))
 
-from bpaktest import (DATA_DIR, SOURCE_DIR, Bpak, Header,  # noqa: E402
-                      hash_tree_id, python_path)
-
-PACKAGE_UUID = "0888b0fa-9c48-4524-9845-06a641b61edd"
-KEYSTORE_UUID = "5df103ef-e774-450b-95c5-1fef51ceec28"
-KEYSTORE_ID = "pb-internal"
+from bpaktest import (DATA_DIR, KEYS, KEYSTORE_ID,  # noqa: E402
+                      KEYSTORE_UUID, PKG_UUID, SOURCE_DIR, Bpak, Header,
+                      python_path)
 
 KEY_FILES = [
     "secp256r1-key-pair.pem", "secp256r1-pub-key.der",
@@ -38,18 +35,6 @@ KEY_FILES = [
     "secp521r1-key-pair.pem", "secp521r1-pub-key.der",
     "dev_rsa_private.pem", "dev_rsa_public.der",
 ]
-
-# Key name: (hash kind, signature kind, private key, public key)
-KEYS = {
-    "pb-development": ("sha256", "prime256v1", "secp256r1-key-pair.pem",
-                       "secp256r1-pub-key.der"),
-    "pb-development-384": ("sha384", "secp384r1", "secp384r1-key-pair.pem",
-                           "secp384r1-pub-key.der"),
-    "pb-development-521": ("sha512", "secp521r1", "secp521r1-key-pair.pem",
-                           "secp521r1-pub-key.der"),
-    "pb-development-rsa": ("sha256", "rsa4096", "dev_rsa_private.pem",
-                           "dev_rsa_public.der"),
-}
 
 
 def modified(data: bytes, rng: random.Random, size: int) -> bytes:
@@ -120,7 +105,7 @@ def package_commands(name, *, key, meta=(), parts=(), transport=(),
 
 
 MERKLE = ["--set-flag", "dont-hash", "--encoder", "merkle"]
-PACKAGE_META = ("bpak-package", PACKAGE_UUID, "uuid")
+PACKAGE_META = ("bpak-package", PKG_UUID, "uuid")
 
 TRANSPORT = [
     ("fs", "bsdiff", "bspatch"),

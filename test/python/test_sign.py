@@ -2,7 +2,7 @@ import uuid
 
 import pytest
 
-from bpaktest import DATA_DIR, PKG_UUID
+from bpaktest import DATA_DIR, KEYSTORE_ID, KEYSTORE_UUID, PKG_UUID
 
 
 def test_verify_and_resign(pybpak, bpak, origin_pkg):
@@ -39,9 +39,9 @@ def test_verify_with_keystore(pybpak, tmp_path, origin_pkg):
     keystore = tmp_path / "keystore.bpak"
     with pybpak.Package(keystore, "wb+") as p:
         p.add_meta(pybpak.id("bpak-package"),
-                   data=uuid.UUID("5df103ef-e774-450b-95c5-1fef51ceec28").bytes)
+                   data=uuid.UUID(KEYSTORE_UUID).bytes)
         p.add_meta(pybpak.id("keystore-provider-id"),
-                   data=pybpak.id("pb-internal").to_bytes(4, "little"))
+                   data=pybpak.id(KEYSTORE_ID).to_bytes(4, "little"))
         p.add_key("pb-development", DATA_DIR / "secp256r1-pub-key.der")
 
     # origin_pkg has key-id 'pb-development' and keystore-id 'pb-internal'

@@ -16,6 +16,9 @@ DATA_DIR = Path(__file__).parent / "data"
 SOURCE_DIR = Path(__file__).parent.parent
 
 PKG_UUID = "0888b0fa-9c48-4524-9845-06a641b61edd"
+# Another package, packages with different UUIDs can not be patched
+OTHER_PKG_UUID = "e8ba8bde-6d4a-4cbd-9cd5-f3c8d0e5d9a3"
+KEYSTORE_UUID = "5df103ef-e774-450b-95c5-1fef51ceec28"
 DEFAULT_SIGN_KEY = DATA_DIR / "secp256r1-key-pair.pem"
 DEFAULT_VERIFY_KEY = DATA_DIR / "secp256r1-pub-key.der"
 
@@ -37,7 +40,8 @@ class Key(NamedTuple):
         return {"sha256": 32, "sha384": 48, "sha512": 64}[self.hash_kind]
 
 
-# The keys in GOLDEN_KEYSTORE by their name
+# The keys in GOLDEN_KEYSTORE by their name, generate.py creates the
+# keystores of the golden sets with them
 KEYS = {
     "pb-development": Key("sha256", "prime256v1", "secp256r1-key-pair.pem",
                           "secp256r1-pub-key.der"),
@@ -120,6 +124,19 @@ class Transport:
     part: str
     encoder: str
     decoder: str
+
+
+def bsdiff(part: str) -> Transport:
+    return Transport(part, "bsdiff", "bspatch")
+
+
+def bsdiff_lzma(part: str) -> Transport:
+    return Transport(part, "bsdiff-lzma", "bspatch-lzma")
+
+
+def merkle_tree(part: str) -> Transport:
+    """The hash tree is dropped from the patch and regenerated on decode"""
+    return Transport(f"{part}-hash-tree", "remove-data", "merkle-generate")
 
 
 def random_bytes(size: int, seed: int = 0) -> bytes:
@@ -257,11 +274,9 @@ PAYLOAD_HASH_OFFSET = ALIGNMENT_OFFSET + 2
 KEY_ID_OFFSET = PAYLOAD_HASH_OFFSET + 64
 KEYSTORE_ID_OFFSET = KEY_ID_OFFSET + 4
 SIGNATURE_OFFSET = KEYSTORE_ID_OFFSET + 4 + 42
-SIGNATURE_SIZE = 512
-SIGNATURE_SZ_OFFSET = SIGNATURE_OFFSET + SIGNATURE_SIZE
-assert SIGNATURE_SZ_OFFSET + 2 == HEADER_SIZE
+# The 512 byte signature and its 16 bit size end the header
+assert SIGNATURE_OFFSET + 512 + 2 == HEADER_SIZE
 
-FLAG_EXCLUDE_FROM_HASH = 1 << 0
 FLAG_TRANSPORT = 1 << 1
 
 
@@ -296,7 +311,6 @@ class Header:
     def __init__(self, data: bytes):
         data = data[:HEADER_SIZE]
         self.raw = data
-        self.magic, = struct.unpack_from("<I", data, 0)
 
         self.meta = []
         for i in range(MAX_META):
@@ -312,15 +326,6 @@ class Header:
             if part.id:
                 self.parts.append(part)
 
-        (self.hash_kind, self.signature_kind,
-         self.alignment) = struct.unpack_from("<BBH", data, HASH_KIND_OFFSET)
-        self.payload_hash = data[PAYLOAD_HASH_OFFSET:KEY_ID_OFFSET]
-        self.key_id, self.keystore_id = struct.unpack_from(
-            "<II", data, KEY_ID_OFFSET)
-        self.signature_sz, = struct.unpack_from("<H", data,
-                                                SIGNATURE_SZ_OFFSET)
-        self.signature = data[SIGNATURE_OFFSET:
-                              SIGNATURE_OFFSET + self.signature_sz]
 
     @classmethod
     def read(cls, path: Path) -> "Header":

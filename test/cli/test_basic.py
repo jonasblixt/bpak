@@ -7,8 +7,8 @@ import uuid
 
 import pytest
 
-from bpaktest import (DEFAULT_SIGN_KEY, DEFAULT_VERIFY_KEY, PKG_UUID, SOURCE_DIR,
-                      BpakError, Part, bpak_id)
+from bpaktest import (DEFAULT_SIGN_KEY, DEFAULT_VERIFY_KEY, OTHER_PKG_UUID,
+                      PKG_UUID, SOURCE_DIR, BpakError, Part, bpak_id)
 
 
 @pytest.mark.parametrize("command", [
@@ -153,7 +153,7 @@ def test_compare(bpak, make_data):
         "first.bpak", parts=[Part("same", data), Part("removed", data)])
     second = bpak.create_package(
         "second.bpak", parts=[Part("same", data), Part("added", data)],
-        package_uuid="e8ba8bde-6d4a-4cbd-9cd5-f3c8d0e5d9a3")
+        package_uuid=OTHER_PKG_UUID)
     bpak("add", second, "--meta", "bpak-version", "--from-string", "1.0.0")
 
     output = bpak.output("compare", first, second).decode()

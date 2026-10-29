@@ -3,7 +3,7 @@ import sys
 
 import pytest
 
-from bpaktest import Part, Transport
+from bpaktest import Part, bsdiff, merkle_tree
 
 
 @pytest.fixture(scope="session")
@@ -31,9 +31,7 @@ def create_merkle_package(bpak, path, source):
     """Signed package with a bsdiff encoded part that has a merkle tree"""
     return bpak.create_package(
         path,
-        transport=[Transport("fs", "bsdiff", "bspatch"),
-                   Transport("fs-hash-tree", "remove-data",
-                             "merkle-generate")],
+        transport=[bsdiff("fs"), merkle_tree("fs")],
         parts=[Part("fs", source, merkle=True)])
 
 

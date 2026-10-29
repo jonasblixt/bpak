@@ -9,20 +9,8 @@ from pathlib import Path
 
 import pytest
 
-from bpaktest import DATA_DIR, BpakError, Header, Part, Transport, bpak_id
-
-
-def bsdiff(part):
-    return Transport(part, "bsdiff", "bspatch")
-
-
-def bsdiff_lzma(part):
-    return Transport(part, "bsdiff-lzma", "bspatch-lzma")
-
-
-def merkle_tree(part):
-    """The hash tree is dropped from the patch and regenerated on decode"""
-    return Transport(f"{part}-hash-tree", "remove-data", "merkle-generate")
+from bpaktest import (DATA_DIR, OTHER_PKG_UUID, BpakError, Header, Part,
+                      Transport, bpak_id, bsdiff, bsdiff_lzma, merkle_tree)
 
 
 # '{}' in part sources is replaced with 'origin' or 'target'. RANDOM is
@@ -144,7 +132,7 @@ def test_origin_from_another_package(bpak):
     other = bpak.create_package(
         "other.bpak", transport=transport,
         parts=[part.for_version("origin") for part in parts],
-        package_uuid="e8ba8bde-6d4a-4cbd-9cd5-f3c8d0e5d9a3")
+        package_uuid=OTHER_PKG_UUID)
     patch = bpak.cwd / "patch.bpak"
 
     bpak.fails("transport", target, "--encode", "--origin", other,
