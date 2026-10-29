@@ -23,7 +23,8 @@ BPAK_EXPORT int bpak_verify_compute_header_hash(struct bpak_header *header,
                                                 uint8_t *output, size_t *size)
 {
     int rc;
-    uint8_t zero = 0;
+    static const uint8_t
+        zeros[sizeof(header->signature) + sizeof(header->signature_sz)];
     struct bpak_hash_context hash_ctx;
 
     /* Compute header hash */
@@ -41,14 +42,10 @@ BPAK_EXPORT int bpak_verify_compute_header_hash(struct bpak_header *header,
         goto err_free_hash_ctx_out;
 
     /* Additional update to hash zeroes for signature/signature_sz */
-    bytes_to_hash = sizeof(header->signature) + sizeof(header->signature_sz);
+    rc = bpak_hash_update(&hash_ctx, zeros, sizeof(zeros));
 
-    for (size_t i = 0; i < bytes_to_hash; i++) {
-        rc = bpak_hash_update(&hash_ctx, &zero, 1);
-
-        if (rc != BPAK_OK)
-            goto err_free_hash_ctx_out;
-    }
+    if (rc != BPAK_OK)
+        goto err_free_hash_ctx_out;
 
     rc = bpak_hash_final(&hash_ctx, output, *size, size);
 
@@ -109,9 +106,6 @@ BPAK_EXPORT int bpak_verify_compute_payload_hash(struct bpak_header *header,
     }
 
     rc = bpak_hash_final(&hash_ctx, output, *size, size);
-
-    if (rc != BPAK_OK)
-        goto err_free_hash_ctx_out;
 
 err_free_hash_ctx_out:
     bpak_hash_free(&hash_ctx);
