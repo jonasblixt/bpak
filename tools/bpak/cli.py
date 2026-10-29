@@ -15,9 +15,8 @@ import pathlib
 import re
 import sys
 import uuid
-from collections.abc import Callable
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, TypeVar
+from typing import TYPE_CHECKING, Any
 
 import click
 
@@ -54,8 +53,6 @@ ID_SIZE = 4
 _INTEGER_RE = re.compile(r"\s*([+-]?)(0[xX][0-9a-fA-F]+|0[0-7]*|[1-9][0-9]*)\s*")
 _HEX_ID_RE = re.compile(r"0x([0-9a-fA-F]+)")
 
-F = TypeVar("F", bound=Callable[..., Any])
-
 
 @dataclass
 class _Settings:
@@ -79,16 +76,15 @@ def _add_verbosity(ctx: click.Context, _param: click.Parameter, value: int) -> N
     ctx.ensure_object(_Settings).verbosity += value
 
 
-def verbose_option(f: F) -> F:
+def _verbose_option() -> click.Option:
     """-v for every command, it can be given before or after the command."""
-    return click.option(
-        "-v",
-        "--verbose",
+    return click.Option(
+        ["-v", "--verbose"],
         count=True,
         expose_value=False,
         callback=_add_verbosity,
         help="Verbose output, repeat for more details.",
-    )(f)
+    )
 
 
 # click.ParamType is generic since click 8.2
@@ -138,7 +134,24 @@ class CommandError(click.ClickException):
 
 
 class BpakGroup(click.Group):
-    """Command group that turns library and file errors into command errors."""
+    """Command group that turns library and file errors into command errors.
+
+    Its commands and groups get the -v option.
+    """
+
+    # Groups of the group are BpakGroups
+    group_class = type
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:  # noqa: ANN401
+        """Create a group with the -v option."""
+        super().__init__(*args, **kwargs)
+        self.params.append(_verbose_option())
+
+    def add_command(self, cmd: click.Command, name: str | None = None) -> None:
+        """Add a command, commands that are not BpakGroups get the -v option."""
+        if not isinstance(cmd, BpakGroup):
+            cmd.params.append(_verbose_option())
+        super().add_command(cmd, name)
 
     def invoke(self, ctx: click.Context) -> Any:  # noqa: ANN401
         """Invoke the command, library errors exit with their error code."""
@@ -247,7 +260,6 @@ def _print_version(ctx: click.Context, _param: click.Parameter, value: bool) -> 
     callback=_print_version,
     help="Display version and exit.",
 )
-@verbose_option
 @click.pass_context
 def cli(ctx: click.Context) -> None:
     """BitPacker, create, sign, inspect and transport encode bpak packages.
@@ -280,7 +292,6 @@ def cli(ctx: click.Context) -> None:
     show_default=True,
     help="Signature algorithm.",
 )
-@verbose_option
 def create(filename: pathlib.Path, force: bool, hash_kind: str, signature_kind: str) -> None:
     """Create an empty package."""
     if filename.exists() and not force:
@@ -319,7 +330,6 @@ def create(filename: pathlib.Path, force: bool, hash_kind: str, signature_kind: 
 @click.option(
     "-r", "--part-ref", type=BPAK_ID, default=0, help="Part that the meta data belongs to."
 )
-@verbose_option
 def add(
     filename: pathlib.Path,
     part_name: str | None,
@@ -422,7 +432,6 @@ def _add_part(
 @click.option(
     "-k", "--keep-meta", is_flag=True, help="Keep the meta data that belongs to the parts."
 )
-@verbose_option
 def delete(filename: pathlib.Path, part_id: int | None, delete_all: bool, keep_meta: bool) -> None:
     """Delete parts from a package.
 
@@ -463,7 +472,6 @@ def delete(filename: pathlib.Path, part_id: int | None, delete_all: bool, keep_m
     help="Package that the encoder diffs against and the decoder patches.",
 )
 @click.option("-o", "--output", type=PATH, help="Output package of --encode and --decode.")
-@verbose_option
 def transport(
     filename: pathlib.Path,
     add_rule: bool,
@@ -521,7 +529,6 @@ def transport(
     type=EXISTING_PATH,
     help="Write a signature that was created elsewhere, see 'show --binary-hash'.",
 )
-@verbose_option
 def sign(filename: pathlib.Path, key: pathlib.Path | None, signature: pathlib.Path | None) -> None:
     """Sign a package."""
     if (key is None) == (signature is None):
@@ -546,7 +553,6 @@ def sign(filename: pathlib.Path, key: pathlib.Path | None, signature: pathlib.Pa
     type=EXISTING_PATH,
     help="Verify with the key from a keystore that the key-id of the package selects.",
 )
-@verbose_option
 def verify(filename: pathlib.Path, key: pathlib.Path | None, keystore: pathlib.Path | None) -> None:
     """Verify the signature and the payload of a package."""
     if (key is None) == (keystore is None):
@@ -576,7 +582,6 @@ def verify(filename: pathlib.Path, key: pathlib.Path | None, keystore: pathlib.P
     is_flag=True,
     help="Write the binary package hash to stdout, this is what gets signed.",
 )
-@verbose_option
 def show(
     filename: pathlib.Path,
     meta_id: int | None,
@@ -660,7 +665,6 @@ def _show_package(filename: pathlib.Path, pkg: bpak.Package) -> None:
 )
 @click.option("-k", "--key-id", type=BPAK_ID, help="Set the key id.")
 @click.option("-i", "--keystore-id", type=BPAK_ID, help="Set the keystore id.")
-@verbose_option
 def set_(
     filename: pathlib.Path,
     meta_id: int | None,
@@ -708,14 +712,12 @@ def set_(
 
 
 @cli.group(context_settings=CONTEXT_SETTINGS)
-@verbose_option
 def generate() -> None:
     """Generate ids and keystore code."""
 
 
 @generate.command("id")
 @click.argument("string")
-@verbose_option
 def generate_id(string: str) -> None:
     """Translate a string to a bpak id."""
     click.echo(f'id("{string}") = 0x{bpak.id(string):08x}')
@@ -730,7 +732,6 @@ def generate_id(string: str) -> None:
     is_flag=True,
     help="Place the keystore and the keys in the .keystore_header and .keystore_key sections.",
 )
-@verbose_option
 def generate_keystore(filename: pathlib.Path, name: str, decorate: bool) -> None:
     """Generate C code for a keystore package."""
     with bpak.Package(filename, "rb") as pkg:
@@ -795,7 +796,6 @@ def generate_keystore(filename: pathlib.Path, name: str, decorate: bool) -> None
 @cli.command()
 @click.argument("first", type=PATH)
 @click.argument("second", type=PATH)
-@verbose_option
 def compare(first: pathlib.Path, second: pathlib.Path) -> None:
     """Compare the meta data and parts of two packages."""
     click.echo(f"BPAK comparison between:\n1: '{first}'\n2: '{second}'")
@@ -879,7 +879,6 @@ def _same_part(
     "-r", "--part-ref", type=BPAK_ID, default=0, help="Part that the meta data belongs to."
 )
 @click.option("-o", "--output", type=PATH, help="Output file (default: stdout).")
-@verbose_option
 def extract(
     filename: pathlib.Path,
     meta_id: int | None,
