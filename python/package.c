@@ -915,7 +915,11 @@ static int package_set_signature(PyObject *self, PyObject *value,
 
     /* Handle clearing / del */
     if (value == NULL || value == Py_None) {
-        bpak_pkg_write_raw_signature(&package->pkg, empty_signature, 0);
+        rc = bpak_pkg_write_raw_signature(&package->pkg, empty_signature, 0);
+        if (rc != BPAK_OK) {
+            bpak_raise(rc, "failed to clear signature data");
+            return -1;
+        }
         return 0;
     }
 

@@ -287,6 +287,19 @@ def test_signature_too_large(pybpak, tmp_path):
         p.signature = bytes(pybpak.SIGNATURE_MAX_BYTES)
 
 
+@pytest.mark.parametrize("signature", [bytes(8), None],
+                         ids=["set", "clear"])
+def test_signature_write_error(pybpak, tmp_path, signature):
+    """Setting and clearing the signature report a failed header write, a
+    failed clear was ignored"""
+    path = tmp_path / "test.bpak"
+    create_package_with_parts(pybpak, path)
+
+    with pybpak.Package(path, "rb") as p:
+        with pytest.raises(pybpak.WriteError):
+            p.signature = signature
+
+
 def test_update_hash(pybpak, tmp_path):
     """update_hash computes the payload hash and returns the header hash,
     the digest that gets signed"""
