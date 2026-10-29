@@ -357,6 +357,15 @@ static PyObject *package_add_meta(PyObject *self, PyObject *args, PyObject *kwds
         }
     }
 
+    /* bpak_add_meta takes the size as uint16_t */
+    if (size > BPAK_METADATA_BYTES) {
+        bpak_raise(-BPAK_SIZE_ERROR,
+                   "meta data is %zd bytes, the maximum is %d",
+                   size,
+                   BPAK_METADATA_BYTES);
+        goto err_out;
+    }
+
     rc = bpak_add_meta(h, meta_id, part_ref, size, &meta);
     if (rc != BPAK_OK) {
         bpak_raise(rc, "failed to add metadata");

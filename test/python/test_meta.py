@@ -66,6 +66,32 @@ def test_grow_meta(pybpak, tmp_path):
         assert first.as_string() == "one"
 
 
+def test_meta_too_large(pybpak, tmp_path):
+    """Meta data larger than the meta data area is rejected. Sizes above
+    65535 were truncated and the data was copied past the header."""
+    too_large = 0x10000 + 8
+
+    with pybpak.Package(tmp_path / "test.bpak", "wb+") as p:
+        meta = p.add_meta(pybpak.id("first"), data=bytes(8))
+
+        with pytest.raises(pybpak.SizeError):
+            meta.raw_data = bytes(too_large)
+        with pytest.raises(pybpak.SizeError):
+            meta.raw_data = "x" * pybpak.METADATA_BYTES
+        assert meta.raw_data == bytes(8)
+
+        with pytest.raises(pybpak.SizeError):
+            p.add_meta(pybpak.id("second"), data=bytes(too_large))
+        with pytest.raises(pybpak.SizeError):
+            p.add_meta(pybpak.id("second"), size=too_large)
+        with pytest.raises(pybpak.SizeError):
+            p.add_meta(pybpak.id("second"), data="x" * pybpak.METADATA_BYTES)
+        assert len(p.meta) == 1
+
+        meta.raw_data = bytes(pybpak.METADATA_BYTES)
+        assert meta.size == pybpak.METADATA_BYTES
+
+
 def test_add_meta_read_only(pybpak, origin_pkg):
     """Adding meta data fails when the header can not be written. This
     released the string data twice and corrupted the heap."""

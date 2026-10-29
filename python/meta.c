@@ -230,6 +230,15 @@ static int meta_set_rawdata(PyObject *self, PyObject *value, void* closure)
         new_size++;
     }
 
+    if (new_size > BPAK_METADATA_BYTES) {
+        bpak_raise(-BPAK_SIZE_ERROR,
+                   "meta data is %zd bytes, the maximum is %d",
+                   new_size,
+                   BPAK_METADATA_BYTES);
+        rc = -1;
+        goto return_out;
+    }
+
     uint8_t *meta_data = bpak_get_meta_ptr(h, m, uint8_t);
 
     if (new_size > m->size) {
