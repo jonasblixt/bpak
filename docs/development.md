@@ -284,5 +284,6 @@ the only place where it is defined. It is used for:
 Builds that do not use CMake (`BPAK_HAVE_USER_SETTINGS`) must provide their
 own `bpak/version.h`, see `lib/version.h.in`.
 
-To make a release, update `version.txt`, commit it as `Version X.Y.Z` and
-tag the commit `vX.Y.Z`.
+To make a release, update `version.txt` and the heading of the release in
+`CHANGELOG.md`, commit them as `Version X.Y.Z` and tag the commit `vX.Y.Z`.
+Add changes that affect users to `CHANGELOG.md` when they are made.

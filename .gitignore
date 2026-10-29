@@ -1,21 +1,20 @@
-/build/
-coverage_report
-*~
-*.html
-*.log
-*.o
-*.so*
-*.a
-*.tar*
-*.zip
-*.gcno
-*.gcda
-*.bpak
-# Golden sample packages are part of the tests
-!test/golden/**/*.bpak
-*.bak
-cov-int/
-__pycache__
-tags
-.venv/
+# Build directories, e.g. build/ and build-minimal/
+/build*/
 /dist/
+.venv/
+__pycache__/
+
+# Coverage report, see docs/development.md
+/coverage.info
+/coverage_report/
+
+# Coverity Scan, see .github/workflows/build.yml
+/cov-int/
+
+# Packages created when trying the tool in the repository root
+/*.bpak
+
+# Editors
+*~
+*.bak
+tags

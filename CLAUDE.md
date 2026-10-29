@@ -79,8 +79,10 @@ when a release extends the format, and add new exported functions to
 
 `version.txt` is the single source of the version. `bpak/version.h` is
 generated from `lib/version.h.in` into the build directory, never add a
-version number anywhere else. Releases: update `version.txt`, commit as
-`Version X.Y.Z` and tag `vX.Y.Z`.
+version number anywhere else, except the release headings in
+`CHANGELOG.md`. Add changes that affect users to `CHANGELOG.md` with the
+change. Releases: update `version.txt` and the release heading in
+`CHANGELOG.md`, commit as `Version X.Y.Z` and tag `vX.Y.Z`.
 
 ## Conventions
 
