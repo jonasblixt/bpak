@@ -2,31 +2,26 @@
 #include <bpak/bpak.h>
 #include <bpak/crypto.h>
 
+/* The functions of the mbedtls backend, or none without it */
 #if BPAK_CONFIG_MBEDTLS == 1
 #include "crypto_mbedtls.h"
-static bpak_hash_init_func_t _hash_init = bpak_mbed_hash_init;
-static bpak_hash_update_func_t _hash_update = bpak_mbed_hash_update;
-static bpak_hash_final_func_t _hash_final = bpak_mbed_hash_final;
-static bpak_hash_free_func_t _hash_free = bpak_mbed_hash_free;
-static bpak_crypto_verify_func_t _crypto_verify = bpak_mbed_verify;
-static bpak_crypto_sign_func_t _crypto_sign = bpak_mbed_sign;
-static bpak_crypto_load_key_func_t _crypto_load_public_key =
-    bpak_mbed_load_public_key;
-static bpak_crypto_load_key_func_t _crypto_load_private_key =
-    bpak_mbed_load_private_key;
-static bpak_crypto_parse_key_func_t _crypto_parse_public_key =
-    bpak_mbed_parse_public_key;
+#define DEFAULT_FUNC(_name) bpak_mbed_##_name
 #else
-static bpak_hash_init_func_t _hash_init = NULL;
-static bpak_hash_update_func_t _hash_update = NULL;
-static bpak_hash_final_func_t _hash_final = NULL;
-static bpak_hash_free_func_t _hash_free = NULL;
-static bpak_crypto_verify_func_t _crypto_verify = NULL;
-static bpak_crypto_sign_func_t _crypto_sign = NULL;
-static bpak_crypto_load_key_func_t _crypto_load_public_key = NULL;
-static bpak_crypto_load_key_func_t _crypto_load_private_key = NULL;
-static bpak_crypto_parse_key_func_t _crypto_parse_public_key = NULL;
+#define DEFAULT_FUNC(_name) NULL
 #endif
+
+static bpak_hash_init_func_t _hash_init = DEFAULT_FUNC(hash_init);
+static bpak_hash_update_func_t _hash_update = DEFAULT_FUNC(hash_update);
+static bpak_hash_final_func_t _hash_final = DEFAULT_FUNC(hash_final);
+static bpak_hash_free_func_t _hash_free = DEFAULT_FUNC(hash_free);
+static bpak_crypto_verify_func_t _crypto_verify = DEFAULT_FUNC(verify);
+static bpak_crypto_sign_func_t _crypto_sign = DEFAULT_FUNC(sign);
+static bpak_crypto_load_key_func_t _crypto_load_public_key =
+    DEFAULT_FUNC(load_public_key);
+static bpak_crypto_load_key_func_t _crypto_load_private_key =
+    DEFAULT_FUNC(load_private_key);
+static bpak_crypto_parse_key_func_t _crypto_parse_public_key =
+    DEFAULT_FUNC(parse_public_key);
 
 BPAK_EXPORT int bpak_hash_init(struct bpak_hash_context *ctx,
                                enum bpak_hash_kind kind)

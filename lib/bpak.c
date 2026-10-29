@@ -482,9 +482,8 @@ BPAK_EXPORT int bpak_add_transport_meta(struct bpak_header *header,
     struct bpak_transport_meta *transport_meta = NULL;
     struct bpak_meta_header *meta = NULL;
 
-    /* id("bpak-transport") = 0x2d44bbfb */
     rc = bpak_add_meta(header,
-                       0x2d44bbfb,
+                       BPAK_ID_BPAK_TRANSPORT,
                        part_id,
                        sizeof(*transport_meta),
                        &meta);
