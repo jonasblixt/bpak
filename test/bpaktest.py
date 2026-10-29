@@ -2,6 +2,7 @@
 
 import enum
 import os
+import random
 import shlex
 import struct
 import subprocess
@@ -88,6 +89,11 @@ class Transport:
     part: str
     encoder: str
     decoder: str
+
+
+def random_bytes(size: int, seed: int = 0) -> bytes:
+    """Pseudo-random data that is the same in every run"""
+    return random.Random(seed).randbytes(size)
 
 
 def python_path(build_dir: Path) -> list:

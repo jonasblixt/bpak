@@ -170,6 +170,10 @@ temporary directory. Shared helpers are in `test/bpaktest.py` and fixtures in
   value and with 2 for usage errors. `bpak.create_package(...)` creates and
   signs a package with optional parts and transport rules.
 - `make_data` creates a file with a given number of KiB of test data.
+- `random_data` creates an origin and a target file of pseudo-random data
+  that differ, for transport encoding. `random_bytes()` in `bpaktest.py`
+  returns pseudo-random data that is the same in every run, generate large
+  test data with it instead of committing it to `test/data`.
 - `pybpak` is the bpak python package with the C extension from the build
   directory (`test/python` only). The `origin_pkg` and `target_pkg` fixtures
   provide signed packages to test against.

@@ -1,16 +1,23 @@
 import os
 import sys
 import uuid
+from pathlib import Path
 
 import pytest
 
 from bpaktest import (DATA_DIR, DEFAULT_SIGN_KEY, DEFAULT_VERIFY_KEY, PKG_UUID,
-                      BpakError, bpak_id, hash_tree_id)
+                      BpakError, bpak_id, hash_tree_id, random_bytes)
 
 KERNEL = DATA_DIR / "diff3_origin.bin"
 # Merkle trees need a multiple of 4 KiB
-FS = DATA_DIR / "diff2_origin.bin"
+FS_DATA = random_bytes(64 * 1024)
 KEY = DATA_DIR / "secp384r1-pub-key.der"
+
+
+def write_fs(directory: Path) -> Path:
+    path = directory / "fs.bin"
+    path.write_bytes(FS_DATA)
+    return path
 
 
 def test_create_package(pybpak, tmp_path):
@@ -41,7 +48,7 @@ def create_package_with_parts(pybpak, path):
     with pybpak.Package(str(path), "wb+") as p:
         p.add_meta(pybpak.id("bpak-package"), data=uuid.UUID(PKG_UUID).bytes)
         p.add_file("kernel", str(KERNEL))
-        p.add_file("fs", str(FS), with_merkle_tree=True)
+        p.add_file("fs", str(write_fs(path.parent)), with_merkle_tree=True)
         p.add_key("key", str(KEY))
         p.sign(str(DEFAULT_SIGN_KEY))
 
@@ -60,7 +67,7 @@ def test_parts(pybpak, bpak, tmp_path):
             bpak_id("key")]
         assert p.get_part(bpak_id("kernel")).read_data() == \
             KERNEL.read_bytes()
-        assert p.get_part(bpak_id("fs")).read_data() == FS.read_bytes()
+        assert p.get_part(bpak_id("fs")).read_data() == FS_DATA
         assert p.get_part(bpak_id("key")).read_data() == KEY.read_bytes()
         assert p.verify(str(DEFAULT_VERIFY_KEY))
 
@@ -77,7 +84,7 @@ def test_delete_part(pybpak, bpak, tmp_path):
 
     with pybpak.Package(str(path), "rb") as p:
         assert bpak_id("kernel") not in [part.id for part in p.parts]
-        assert p.get_part(bpak_id("fs")).read_data() == FS.read_bytes()
+        assert p.get_part(bpak_id("fs")).read_data() == FS_DATA
 
         with pytest.raises(KeyError):
             p.get_part(bpak_id("kernel"))
@@ -189,7 +196,7 @@ def test_part_fields(pybpak, tmp_path):
     with pybpak.Package(path, "wb+") as p:
         kernel = p.add_file("kernel", KERNEL,
                             flags=pybpak.FLAG_EXCLUDE_FROM_HASH)
-        fs = p.add_file("fs", FS)
+        fs = p.add_file("fs", write_fs(tmp_path))
 
         assert kernel.installed_size == KERNEL.stat().st_size
         assert kernel.flags == pybpak.FLAG_EXCLUDE_FROM_HASH

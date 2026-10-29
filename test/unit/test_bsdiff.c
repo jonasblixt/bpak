@@ -1,3 +1,4 @@
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -140,40 +141,39 @@ static void test_patch_file_diff1_hs(void **state)
                      BPAK_COMPRESSION_HS);
 }
 
-static void test_patch_file_diff2_hs(void **state)
+/* Pseudo-random data that is the same in every run, xorshift32 */
+static void fill_random(uint8_t *buffer, size_t length, uint32_t seed)
 {
-    (void)state;
-    check_patch_file(TEST_DATA("diff2_patch.bin"),
-                     TEST_DATA("diff2_origin.bin"),
-                     TEST_DATA("diff2_target.bin"),
-                     BPAK_COMPRESSION_HS);
-}
+    uint32_t x = seed;
 
-static void test_patch_file_diff2_no_comp(void **state)
-{
-    (void)state;
-    check_patch_file(TEST_DATA("diff2_patch_no_comp.bin"),
-                     TEST_DATA("diff2_origin.bin"),
-                     TEST_DATA("diff2_target.bin"),
-                     BPAK_COMPRESSION_NONE);
+    for (size_t i = 0; i < length; i++) {
+        x ^= x << 13;
+        x ^= x >> 17;
+        x ^= x << 5;
+        buffer[i] = x & 0xff;
+    }
 }
 
 /*
  * Round trip through both bsdiff and bspatch:
  *
- * 1. Generate origin test data
- * 2. Generate 'new' data based on origin data
+ * 1. Generate origin test data, a repeating pattern or pseudo-random data
+ * 2. Generate 'new' data based on origin data, with 'extra_length' bytes
+ *    of pseudo-random data appended
  * 3. Create patch
  * 4. Apply patch
  * 5. Verify result
  */
-static void check_diff_patch(size_t length, enum bpak_compression compression)
+static void check_diff_patch(size_t length, size_t extra_length,
+                             bool random_origin,
+                             enum bpak_compression compression)
 {
     struct bpak_bsdiff_context bsdiff;
+    size_t target_length = length + extra_length;
     uint8_t *origin = malloc(length);
-    uint8_t *target = malloc(length);
+    uint8_t *target = malloc(target_length);
     struct patch_buffer patch = {
-        .capacity = 2 * length + 4096,
+        .capacity = 2 * target_length + 4096,
     };
     int rc;
 
@@ -182,20 +182,26 @@ static void check_diff_patch(size_t length, enum bpak_compression compression)
     assert_non_null(target);
     assert_non_null(patch.data);
 
-    for (size_t i = 0; i < length; i++)
-        origin[i] = 33 + i % 200;
+    if (random_origin) {
+        fill_random(origin, length, 1);
+    } else {
+        for (size_t i = 0; i < length; i++)
+            origin[i] = 33 + i % 200;
+    }
 
     memcpy(target, origin, length);
     /* Change some data */
     memcpy(&target[500], "HELLO BSPATCH", 13);
     /* Remove a block of data */
     memset(&target[2048], 0, 512);
+    /* Add new data */
+    fill_random(&target[length], extra_length, 2);
 
     rc = bpak_bsdiff_init(&bsdiff,
                           origin,
                           length,
                           target,
-                          length,
+                          target_length,
                           write_patch_output,
                           0,
                           compression,
@@ -211,10 +217,10 @@ static void check_diff_patch(size_t length, enum bpak_compression compression)
                                   patch.length,
                                   origin,
                                   length,
-                                  length,
+                                  target_length,
                                   compression);
 
-    assert_memory_equal(output, target, length);
+    assert_memory_equal(output, target, target_length);
 
     free(output);
     free(patch.data);
@@ -225,19 +231,77 @@ static void check_diff_patch(size_t length, enum bpak_compression compression)
 static void test_diff_patch_no_comp(void **state)
 {
     (void)state;
-    check_diff_patch(16 * 1024, BPAK_COMPRESSION_NONE);
+    check_diff_patch(16 * 1024, 0, false, BPAK_COMPRESSION_NONE);
 }
 
 static void test_diff_patch_hs(void **state)
 {
     (void)state;
-    check_diff_patch(64 * 1024, BPAK_COMPRESSION_HS);
+    check_diff_patch(64 * 1024, 0, false, BPAK_COMPRESSION_HS);
+}
+
+/* Pseudo-random data does not compress, larger than the buffers of the
+ * compressor and the patch */
+static void test_diff_patch_hs_random(void **state)
+{
+    (void)state;
+    check_diff_patch(256 * 1024, 128 * 1024, true, BPAK_COMPRESSION_HS);
+}
+
+/* bspatch control data: sign and magnitude, little endian */
+static void put_ctrl(uint8_t *buf, int64_t value)
+{
+    uint64_t magnitude = value < 0 ? -(uint64_t)value : (uint64_t)value;
+
+    for (int i = 0; i < 8; i++)
+        buf[i] = (magnitude >> (8 * i)) & 0xff;
+
+    if (value < 0)
+        buf[7] |= 0x80;
+}
+
+/* A patch that copies the origin, all diff bytes are zero, and appends
+ * the extra bytes */
+static void test_patch_no_comp(void **state)
+{
+    (void)state;
+    const size_t length = 256 * 1024;
+    const size_t extra_length = 128 * 1024;
+    const size_t patch_length =
+        BPAK_BSPATCH_CTRL_BUFFER_LENGTH + length + extra_length;
+    uint8_t *origin = malloc(length);
+    uint8_t *patch = calloc(1, patch_length);
+    uint8_t *extra = &patch[BPAK_BSPATCH_CTRL_BUFFER_LENGTH + length];
+
+    assert_non_null(origin);
+    assert_non_null(patch);
+    fill_random(origin, length, 1);
+
+    /* diff, extra, adjust */
+    put_ctrl(&patch[0], length);
+    put_ctrl(&patch[8], extra_length);
+    put_ctrl(&patch[16], 0);
+    fill_random(extra, extra_length, 2);
+
+    uint8_t *output = apply_patch(patch,
+                                  patch_length,
+                                  origin,
+                                  length,
+                                  length + extra_length,
+                                  BPAK_COMPRESSION_NONE);
+
+    assert_memory_equal(output, origin, length);
+    assert_memory_equal(&output[length], extra, extra_length);
+
+    free(output);
+    free(patch);
+    free(origin);
 }
 
 static void test_diff_patch_lzma(void **state)
 {
     (void)state;
-    check_diff_patch(64 * 1024, BPAK_COMPRESSION_LZMA);
+    check_diff_patch(64 * 1024, 0, false, BPAK_COMPRESSION_LZMA);
 }
 
 /* An allocator that tags its allocations, freeing anything else fails */
@@ -278,22 +342,10 @@ static void test_lzma_allocator(void **state)
 
     /* liblzma allocates with the allocator of the stream when it is
      * initialized */
-    check_diff_patch(64 * 1024, BPAK_COMPRESSION_LZMA);
+    check_diff_patch(64 * 1024, 0, false, BPAK_COMPRESSION_LZMA);
 
     assert_int_equal(bpak_set_calloc_free(calloc, free), BPAK_OK);
     assert_int_equal(tagged_allocations, 0);
-}
-
-/* bspatch control data: sign and magnitude, little endian */
-static void put_ctrl(uint8_t *buf, int64_t value)
-{
-    uint64_t magnitude = value < 0 ? -(uint64_t)value : (uint64_t)value;
-
-    for (int i = 0; i < 8; i++)
-        buf[i] = (magnitude >> (8 * i)) & 0xff;
-
-    if (value < 0)
-        buf[7] |= 0x80;
 }
 
 static uint8_t checked_origin[16] = "0123456789abcdef";
@@ -410,10 +462,10 @@ int main(void)
 {
     const struct CMUnitTest tests[] = {
         cmocka_unit_test(test_patch_file_diff1_hs),
-        cmocka_unit_test(test_patch_file_diff2_hs),
-        cmocka_unit_test(test_patch_file_diff2_no_comp),
+        cmocka_unit_test(test_patch_no_comp),
         cmocka_unit_test(test_diff_patch_no_comp),
         cmocka_unit_test(test_diff_patch_hs),
+        cmocka_unit_test(test_diff_patch_hs_random),
         cmocka_unit_test(test_diff_patch_lzma),
         cmocka_unit_test(test_patch_bad_ctrl),
         cmocka_unit_test(test_lzma_allocator),

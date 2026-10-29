@@ -5,6 +5,8 @@ against the origin into a patch package and then decodes the patch package
 again. The decoded package must be identical to the target.
 """
 
+from pathlib import Path
+
 import pytest
 
 from bpaktest import DATA_DIR, BpakError, Header, Part, Transport, bpak_id
@@ -23,36 +25,37 @@ def merkle_tree(part):
     return Transport(f"{part}-hash-tree", "remove-data", "merkle-generate")
 
 
-# '{}' in part sources is replaced with 'origin' or 'target'
-DIFF2 = DATA_DIR / "diff2_{}.bin"
+# '{}' in part sources is replaced with 'origin' or 'target'. RANDOM is
+# created in the test directory by the random_data fixture.
+RANDOM = Path("random_{}.bin")
 DIFF3 = DATA_DIR / "diff3_{}.bin"
 DIFF4 = DATA_DIR / "diff4_{}.bin"
 
 SCENARIOS = {
     "bsdiff": (
         [bsdiff("fs"), merkle_tree("fs")],
-        [Part("fs", DIFF2, merkle=True)],
+        [Part("fs", RANDOM, merkle=True)],
     ),
     "bsdiff-lzma": (
         [bsdiff_lzma("fs"), merkle_tree("fs")],
-        [Part("fs", DIFF2, merkle=True)],
+        [Part("fs", RANDOM, merkle=True)],
     ),
     "multiple-bsdiff": (
         [bsdiff("fs"), merkle_tree("fs"),
          bsdiff("fs2"),
          bsdiff("data"),
          merkle_tree("fs2")],
-        [Part("fs", DIFF2, merkle=True),
-         Part("fs2", DIFF2, merkle=True),
+        [Part("fs", RANDOM, merkle=True),
+         Part("fs2", RANDOM, merkle=True),
          Part("data", DIFF3)],
     ),
     "mixed-encoded-and-plain-parts": (
         [bsdiff("p1"), bsdiff("p2")],
-        [Part("p1", DIFF2), Part("p2", DIFF2), Part("p3", DIFF4)],
+        [Part("p1", RANDOM), Part("p2", RANDOM), Part("p3", DIFF4)],
     ),
     "no-transport-encoding": (
         [],
-        [Part("data1", DIFF2), Part("data2", DIFF2)],
+        [Part("data1", RANDOM), Part("data2", RANDOM)],
     ),
 }
 
@@ -64,6 +67,7 @@ def create_package(bpak, version, transport, parts):
         parts=[part.for_version(version) for part in parts])
 
 
+@pytest.mark.usefixtures("random_data")
 @pytest.mark.parametrize("transport, parts",
                          SCENARIOS.values(), ids=SCENARIOS.keys())
 def test_encode_decode(bpak, transport, parts):
@@ -85,11 +89,12 @@ def test_encode_decode(bpak, transport, parts):
         assert patch.stat().st_size < target.stat().st_size
 
 
+@pytest.mark.usefixtures("random_data")
 def test_decode_without_encoding(bpak):
     """A package with transport rules that has not been transport encoded
     passes through the decode step unchanged"""
     transport = [bsdiff("p0"), bsdiff("p1"), bsdiff("p2")]
-    parts = [Part("p0", DIFF2), Part("p1", DIFF2), Part("p2", DIFF2)]
+    parts = [Part("p0", RANDOM), Part("p1", RANDOM), Part("p2", RANDOM)]
 
     origin = create_package(bpak, "origin", transport, parts)
     target = create_package(bpak, "target", transport, parts)
@@ -102,13 +107,14 @@ def test_decode_without_encoding(bpak):
     assert install.read_bytes() == target.read_bytes()
 
 
+@pytest.mark.usefixtures("random_data")
 def test_encode_decode_without_origin(bpak):
     """Encoders that do not diff against an origin, here the merkle tree is
     removed and regenerated, work without an origin package"""
     target = bpak.create_package(
         "target.bpak", transport=[merkle_tree("fs")],
-        parts=[Part("fs", DIFF2.with_name("diff2_target.bin"), merkle=True),
-               Part("data", DIFF3.with_name("diff3_target.bin"))])
+        parts=[Part("fs", RANDOM, merkle=True).for_version("target"),
+               Part("data", DIFF3).for_version("target")])
     patch = bpak.cwd / "patch.bpak"
     install = bpak.cwd / "install.bpak"
 

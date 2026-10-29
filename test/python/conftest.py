@@ -3,7 +3,7 @@ import sys
 
 import pytest
 
-from bpaktest import DATA_DIR, Part, Transport
+from bpaktest import Part, Transport
 
 
 @pytest.fixture(scope="session")
@@ -38,12 +38,12 @@ def create_merkle_package(bpak, path, source):
 
 
 @pytest.fixture
-def origin_pkg(bpak):
+def origin_pkg(bpak, random_data):
     return create_merkle_package(bpak, "origin.bpak",
-                                 DATA_DIR / "diff2_origin.bin")
+                                 str(random_data).format("origin"))
 
 
 @pytest.fixture
-def target_pkg(bpak):
+def target_pkg(bpak, random_data):
     return create_merkle_package(bpak, "target.bpak",
-                                 DATA_DIR / "diff2_target.bin")
+                                 str(random_data).format("target"))

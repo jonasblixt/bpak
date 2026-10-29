@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from bpaktest import DATA_DIR, Bpak, python_path
+from bpaktest import DATA_DIR, Bpak, python_path, random_bytes
 
 
 def pytest_addoption(parser):
@@ -62,3 +62,18 @@ def make_data(tmp_path):
         return path
 
     return _make_data
+
+
+@pytest.fixture
+def random_data(tmp_path) -> Path:
+    """Pseudo-random origin and target data in the test directory:
+    'random_origin.bin' of 128 KiB and 'random_target.bin', the origin with
+    64 KiB appended. Returns the path with a '{}' placeholder for 'origin'
+    or 'target', see Part.for_version. Both sizes are multiples of 4 KiB, as
+    merkle trees need."""
+    origin = random_bytes(128 * 1024, seed=1)
+    path = tmp_path / "random_{}.bin"
+    Path(str(path).format("origin")).write_bytes(origin)
+    Path(str(path).format("target")).write_bytes(
+        origin + random_bytes(64 * 1024, seed=2))
+    return path

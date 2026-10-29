@@ -101,15 +101,16 @@ def openssl_sign(digest: bytes, key, output) -> None:
 
 
 @requires_openssl
-def test_openssl_sign(bpak, tmp_path):
+def test_openssl_sign(bpak, make_data, tmp_path):
     """Sign the binary header hash externally and write back the signature"""
+    data = make_data("data.bin", 16)
     pkg = bpak.create_package(
         "test.bpak",
         hash_kind="sha256",
         signature_kind="prime256v1",
         sign_key=None,
-        parts=[Part("data1", DATA_DIR / "diff2_origin.bin", merkle=True),
-               Part("data2", DATA_DIR / "diff2_origin.bin")])
+        parts=[Part("data1", data, merkle=True),
+               Part("data2", data)])
 
     digest = bpak.output("show", pkg, "--binary-hash")
     openssl_sign(digest, DEFAULT_SIGN_KEY, tmp_path / "sig.data")
