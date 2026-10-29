@@ -196,6 +196,20 @@ def _parse_integer(text: str, param_hint: str) -> int:
     return value & 0xFFFFFFFFFFFFFFFF
 
 
+def _select(options: dict[str, bool], *, exclusive: bool = True) -> None:
+    """One of the options must be given, and only one if 'exclusive'."""
+    given = sum(options.values())
+    if given == 1 or (given > 1 and not exclusive):
+        return
+
+    *first, last = options
+    if first[1:]:
+        msg = f"Select one of {', '.join(first)} or {last}"
+    else:
+        msg = f"Select either {first[0]} or {last}"
+    raise click.UsageError(msg)
+
+
 def _string_data(text: str) -> bytes:
     """Strings are stored with a terminating NUL, as given on the command line."""
     return os.fsencode(text) + b"\0"
@@ -337,13 +351,8 @@ def add(
     part_ref: int,
 ) -> None:
     """Add a part or meta data to a package."""
-    if (part_name is None) == (meta_id is None):
-        msg = "Select either --part or --meta"
-        raise click.UsageError(msg)
-
-    if (from_file is None) == (from_string is None):
-        msg = "Select either --from-file or --from-string"
-        raise click.UsageError(msg)
+    _select({"--part": part_name is not None, "--meta": meta_id is not None})
+    _select({"--from-file": from_file is not None, "--from-string": from_string is not None})
 
     with bpak.Package(filename, "r+") as pkg:
         if meta_id is not None:
@@ -433,9 +442,7 @@ def delete(filename: pathlib.Path, part_id: int | None, delete_all: bool, keep_m
 
     --all deletes all parts, also when --part is given.
     """
-    if part_id is None and not delete_all:
-        msg = "Select either --part or --all"
-        raise click.UsageError(msg)
+    _select({"--part": part_id is not None, "--all": delete_all}, exclusive=False)
 
     with bpak.Package(filename, "r+") as pkg:
         if delete_all:
@@ -488,9 +495,7 @@ def transport(
     decodes it again. Encoders that create a diff need the --origin package
     that the receiver already has.
     """
-    if add_rule + encode + decode != 1:
-        msg = "Select one of --add, --encode or --decode"
-        raise click.UsageError(msg)
+    _select({"--add": add_rule, "--encode": encode, "--decode": decode})
 
     if add_rule:
         if encoder is None or decoder is None:
@@ -527,9 +532,7 @@ def transport(
 )
 def sign(filename: pathlib.Path, key: pathlib.Path | None, signature: pathlib.Path | None) -> None:
     """Sign a package."""
-    if (key is None) == (signature is None):
-        msg = "Select either --key or --signature"
-        raise click.UsageError(msg)
+    _select({"--key": key is not None, "--signature": signature is not None})
 
     with bpak.Package(filename, "r+") as pkg:
         if signature is not None:
@@ -551,9 +554,7 @@ def sign(filename: pathlib.Path, key: pathlib.Path | None, signature: pathlib.Pa
 )
 def verify(filename: pathlib.Path, key: pathlib.Path | None, keystore: pathlib.Path | None) -> None:
     """Verify the signature and the payload of a package."""
-    if (key is None) == (keystore is None):
-        msg = "Select either --key or --keystore"
-        raise click.UsageError(msg)
+    _select({"--key": key is not None, "--keystore": keystore is not None})
 
     with bpak.Package(filename, "rb") as pkg:
         if key is not None:
@@ -882,9 +883,7 @@ def extract(
 
     Transport encoded parts are extracted as they are stored, encoded.
     """
-    if (meta_id is None) == (part_id is None):
-        msg = "Select either --part or --meta"
-        raise click.UsageError(msg)
+    _select({"--part": part_id is not None, "--meta": meta_id is not None})
 
     with bpak.Package(filename, "rb") as pkg:
         if part_id is not None and output is not None:
