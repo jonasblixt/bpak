@@ -24,6 +24,30 @@ PyObject *meta_allocate(BPAKPackage *package, bpak_id_t meta_id, bpak_id_t part_
     return (PyObject *)meta;
 }
 
+struct bpak_meta_header *package_find_meta(BPAKPackage *package,
+                                           bpak_id_t meta_id,
+                                           bpak_id_t part_ref)
+{
+    struct bpak_meta_header *m;
+    int rc;
+
+    rc = bpak_get_meta(bpak_pkg_header(&package->pkg), meta_id, part_ref, &m);
+    if (rc != BPAK_OK) {
+        PyErr_Format(PyExc_KeyError,
+                     "failed to get meta: %s",
+                     bpak_error_string(rc));
+        return NULL;
+    }
+
+    return m;
+}
+
+/* The header of the meta data, or NULL with KeyError set if it was deleted */
+static struct bpak_meta_header *meta_header(BPAKMeta *meta)
+{
+    return package_find_meta(meta->package, meta->meta_id, meta->part_ref);
+}
+
 static void meta_dealloc(BPAKMeta *self)
 {
     if (self != NULL) {
@@ -35,14 +59,11 @@ static void meta_dealloc(BPAKMeta *self)
 static PyObject *meta_repr(PyObject *self)
 {
     BPAKMeta *meta = (BPAKMeta *)self;
-    struct bpak_header *h = bpak_pkg_header(&meta->package->pkg);
     struct bpak_meta_header *m;
-    int rc = 0;
 
-    rc = bpak_get_meta(h, meta->meta_id, meta->part_ref, &m);
-    if (rc != BPAK_OK) {
-        return PyErr_Format(PyExc_KeyError, "failed to get meta: %s",
-                bpak_error_string(rc));
+    m = meta_header(meta);
+    if (m == NULL) {
+        return NULL;
     }
 
     return PyUnicode_FromFormat("<bpak.Meta '0x%08x' (part_id_ref: 0x%08x, size: %d)>",
@@ -69,14 +90,11 @@ static PyObject *meta_get_size(PyObject *self, void* closure)
 {
     (void)closure;
     BPAKMeta *meta = (BPAKMeta *)self;
-    struct bpak_header *h = bpak_pkg_header(&meta->package->pkg);
     struct bpak_meta_header *m;
-    int rc = 0;
 
-    rc = bpak_get_meta(h, meta->meta_id, meta->part_ref, &m);
-    if (rc != BPAK_OK) {
-        return PyErr_Format(PyExc_KeyError, "failed to get meta: %s",
-                bpak_error_string(rc));
+    m = meta_header(meta);
+    if (m == NULL) {
+        return NULL;
     }
 
     return PyLong_FromLong(m->size);
@@ -88,12 +106,10 @@ static PyObject *meta_get_rawdata(PyObject *self, void* closure)
     BPAKMeta *meta = (BPAKMeta *)self;
     struct bpak_header *h = bpak_pkg_header(&meta->package->pkg);
     struct bpak_meta_header *m;
-    int rc = 0;
 
-    rc = bpak_get_meta(h, meta->meta_id, meta->part_ref, &m);
-    if (rc != BPAK_OK) {
-        return PyErr_Format(PyExc_KeyError, "failed to get meta: %s",
-                bpak_error_string(rc));
+    m = meta_header(meta);
+    if (m == NULL) {
+        return NULL;
     }
 
     return PyBytes_FromStringAndSize(bpak_get_meta_ptr(h, m, void), m->size);
@@ -116,11 +132,8 @@ static int meta_set_rawdata(PyObject *self, PyObject *value, void* closure)
         return -1;
     }
 
-    rc = bpak_get_meta(h, meta->meta_id, meta->part_ref, &m);
-    if (rc != BPAK_OK) {
-        PyErr_Format(PyExc_KeyError, "failed to get meta: %s",
-                bpak_error_string(rc));
-
+    m = meta_header(meta);
+    if (m == NULL) {
         return -1;
     }
 
@@ -258,12 +271,10 @@ static PyObject *meta_as_string(PyObject *self, PyObject *Py_UNUSED(ignored))
     BPAKMeta *meta = (BPAKMeta *)self;
     struct bpak_header *h = bpak_pkg_header(&meta->package->pkg);
     struct bpak_meta_header *m;
-    int rc = 0;
 
-    rc = bpak_get_meta(h, meta->meta_id, meta->part_ref, &m);
-    if (rc != BPAK_OK) {
-        return PyErr_Format(PyExc_KeyError, "failed to get meta: %s",
-                bpak_error_string(rc));
+    m = meta_header(meta);
+    if (m == NULL) {
+        return NULL;
     }
 
     char *meta_ptr = bpak_get_meta_ptr(h, m, char);
@@ -284,11 +295,9 @@ static PyObject *meta_describe(PyObject *self, PyObject *Py_UNUSED(ignored))
     char buf[BPAK_METADATA_BYTES + 1] = { 0 };
     int rc = 0;
 
-    rc = bpak_get_meta(h, meta->meta_id, meta->part_ref, &m);
-    if (rc != BPAK_OK) {
-        return PyErr_Format(PyExc_KeyError,
-                            "failed to get meta: %s",
-                            bpak_error_string(rc));
+    m = meta_header(meta);
+    if (m == NULL) {
+        return NULL;
     }
 
     rc = bpak_meta_to_string(h, m, buf, sizeof(buf));
@@ -310,10 +319,9 @@ static PyObject *meta_delete(PyObject *self, PyObject *Py_UNUSED(ignored))
         return NULL;
     }
 
-    rc = bpak_get_meta(h, meta->meta_id, meta->part_ref, &m);
-    if (rc != BPAK_OK) {
-        return PyErr_Format(PyExc_KeyError, "failed to get meta: %s",
-                bpak_error_string(rc));
+    m = meta_header(meta);
+    if (m == NULL) {
+        return NULL;
     }
 
     bpak_del_meta(h, m);

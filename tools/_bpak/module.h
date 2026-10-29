@@ -35,6 +35,13 @@ int package_write_header(BPAKPackage *package, bool update_hash);
 /* Raise ValueError and return -1 if the package is closed */
 int package_check_open(BPAKPackage *package);
 
+/* The header of a part or meta data, or NULL with KeyError set */
+struct bpak_part_header *package_find_part(BPAKPackage *package,
+                                           bpak_id_t part_id);
+struct bpak_meta_header *package_find_meta(BPAKPackage *package,
+                                           bpak_id_t meta_id,
+                                           bpak_id_t part_ref);
+
 PyObject *part_allocate(BPAKPackage *package, bpak_id_t part_id);
 PyObject *meta_allocate(BPAKPackage *package, bpak_id_t meta_id, bpak_id_t part_ref);
 

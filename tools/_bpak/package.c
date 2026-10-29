@@ -217,8 +217,6 @@ static PyObject *package_add_file(PyObject *self, PyObject *args, PyObject *kwds
                               "flags",
                               NULL };
     BPAKPackage *package = (BPAKPackage *)self;
-    struct bpak_header *h = bpak_pkg_header(&package->pkg);
-    struct bpak_part_header *part;
     int rc;
     const char *part_name = NULL;
     PyObject *filename;
@@ -264,21 +262,13 @@ static PyObject *package_add_file(PyObject *self, PyObject *args, PyObject *kwds
         return bpak_raise(rc, "Failed to add file to package");
     }
 
-    rc = bpak_get_part(h, bpak_id(part_name), &part);
-    if (rc != BPAK_OK) {
-        return PyErr_Format(PyExc_KeyError, "failed to get part: %s",
-                bpak_error_string(rc));
-    }
-
-    return part_allocate(package, part->id);
+    return part_allocate(package, bpak_id(part_name));
 }
 
 static PyObject *package_add_key(PyObject *self, PyObject *args, PyObject *kwds)
 {
     static char *kwlist[] = { "part_name", "filename", "flags", NULL };
     BPAKPackage *package = (BPAKPackage *)self;
-    struct bpak_header *h = bpak_pkg_header(&package->pkg);
-    struct bpak_part_header *part;
     int rc;
     const char *part_name = NULL;
     PyObject *filename;
@@ -314,13 +304,7 @@ static PyObject *package_add_key(PyObject *self, PyObject *args, PyObject *kwds)
         return bpak_raise(rc, "failed to add key to package");
     }
 
-    rc = bpak_get_part(h, bpak_id(part_name), &part);
-    if (rc != BPAK_OK) {
-        return PyErr_Format(PyExc_KeyError, "failed to get part: %s",
-                bpak_error_string(rc));
-    }
-
-    return part_allocate(package, part->id);
+    return part_allocate(package, bpak_id(part_name));
 }
 
 static PyObject *package_add_meta(PyObject *self, PyObject *args, PyObject *kwds)
@@ -440,8 +424,6 @@ static PyObject *package_get_part(PyObject *self, PyObject *args, PyObject *kwds
 {
     static char *kwlist[] = {"id", NULL};
     BPAKPackage *package = (BPAKPackage *)self;
-    struct bpak_header *h = bpak_pkg_header(&package->pkg);
-    struct bpak_part_header *part;
     int rc;
     bpak_id_t part_id;
 
@@ -455,21 +437,17 @@ static PyObject *package_get_part(PyObject *self, PyObject *args, PyObject *kwds
         return NULL;
     }
 
-    rc = bpak_get_part(h, part_id, &part);
-    if (rc != BPAK_OK) {
-        return PyErr_Format(PyExc_KeyError, "failed to get part: %s",
-                bpak_error_string(rc));
+    if (package_find_part(package, part_id) == NULL) {
+        return NULL;
     }
 
-    return part_allocate(package, part->id);
+    return part_allocate(package, part_id);
 }
 
 static PyObject *package_get_meta(PyObject *self, PyObject *args, PyObject *kwds)
 {
     static char *kwlist[] = {"id", "part_id_ref", NULL};
     BPAKPackage *package = (BPAKPackage *)self;
-    struct bpak_header *h = bpak_pkg_header(&package->pkg);
-    struct bpak_meta_header *meta;
     int rc;
     bpak_id_t meta_id;
     bpak_id_t part_ref = 0;
@@ -485,13 +463,11 @@ static PyObject *package_get_meta(PyObject *self, PyObject *args, PyObject *kwds
         return NULL;
     }
 
-    rc = bpak_get_meta(h, meta_id, part_ref, &meta);
-    if (rc != BPAK_OK) {
-        return PyErr_Format(PyExc_KeyError, "failed to get meta: %s",
-                bpak_error_string(rc));
+    if (package_find_meta(package, meta_id, part_ref) == NULL) {
+        return NULL;
     }
 
-    return meta_allocate(package, meta->id, meta->part_id_ref);
+    return meta_allocate(package, meta_id, part_ref);
 }
 
 static PyObject *package_update_hash(PyObject *self, PyObject *Py_UNUSED(args))

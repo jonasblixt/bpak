@@ -23,6 +23,29 @@ PyObject *part_allocate(BPAKPackage *package, bpak_id_t part_id)
     return (PyObject *)part;
 }
 
+struct bpak_part_header *package_find_part(BPAKPackage *package,
+                                           bpak_id_t part_id)
+{
+    struct bpak_part_header *p;
+    int rc;
+
+    rc = bpak_get_part(bpak_pkg_header(&package->pkg), part_id, &p);
+    if (rc != BPAK_OK) {
+        PyErr_Format(PyExc_KeyError,
+                     "failed to get part: %s",
+                     bpak_error_string(rc));
+        return NULL;
+    }
+
+    return p;
+}
+
+/* The header of the part, or NULL with KeyError set if it was deleted */
+static struct bpak_part_header *part_header(BPAKPart *part)
+{
+    return package_find_part(part->package, part->part_id);
+}
+
 static void part_dealloc(BPAKPart *self)
 {
     if (self != NULL) {
@@ -34,14 +57,11 @@ static void part_dealloc(BPAKPart *self)
 static PyObject *part_repr(PyObject *self)
 {
     BPAKPart *part = (BPAKPart *)self;
-    struct bpak_header *h = bpak_pkg_header(&part->package->pkg);
     struct bpak_part_header *p;
-    int rc = 0;
 
-    rc = bpak_get_part(h, part->part_id, &p);
-    if (rc != BPAK_OK) {
-        return PyErr_Format(PyExc_KeyError, "failed to get partition: %s",
-                bpak_error_string(rc));
+    p = part_header(part);
+    if (p == NULL) {
+        return NULL;
     }
 
     return PyUnicode_FromFormat("<bpak.Part '0x%08x' (%zu bytes)>", part->part_id,
@@ -60,14 +80,11 @@ static PyObject *part_get_size(PyObject *self, void *closure)
 {
     (void)closure;
     BPAKPart *part = (BPAKPart *)self;
-    struct bpak_header *h = bpak_pkg_header(&part->package->pkg);
     struct bpak_part_header *p;
-    int rc = 0;
 
-    rc = bpak_get_part(h, part->part_id, &p);
-    if (rc != BPAK_OK) {
-        return PyErr_Format(PyExc_KeyError, "failed to get partition: %s",
-                bpak_error_string(rc));
+    p = part_header(part);
+    if (p == NULL) {
+        return NULL;
     }
 
     return PyLong_FromSize_t(bpak_part_size(p));
@@ -79,12 +96,10 @@ static PyObject *part_get_offset(PyObject *self, void *closure)
     BPAKPart *part = (BPAKPart *)self;
     struct bpak_header *h = bpak_pkg_header(&part->package->pkg);
     struct bpak_part_header *p;
-    int rc = 0;
 
-    rc = bpak_get_part(h, part->part_id, &p);
-    if (rc != BPAK_OK) {
-        return PyErr_Format(PyExc_KeyError, "failed to get partition: %s",
-                bpak_error_string(rc));
+    p = part_header(part);
+    if (p == NULL) {
+        return NULL;
     }
 
     return PyLong_FromLongLong(bpak_part_offset(h, p));
@@ -101,15 +116,11 @@ enum part_field {
 static PyObject *part_get_field(PyObject *self, void *closure)
 {
     BPAKPart *part = (BPAKPart *)self;
-    struct bpak_header *h = bpak_pkg_header(&part->package->pkg);
     struct bpak_part_header *p;
-    int rc = 0;
 
-    rc = bpak_get_part(h, part->part_id, &p);
-    if (rc != BPAK_OK) {
-        return PyErr_Format(PyExc_KeyError,
-                            "failed to get partition: %s",
-                            bpak_error_string(rc));
+    p = part_header(part);
+    if (p == NULL) {
+        return NULL;
     }
 
     switch ((enum part_field)(intptr_t)closure) {
@@ -130,14 +141,11 @@ static PyObject *part_is_transport_encoded(PyObject *self, void *closure)
 {
     (void)closure;
     BPAKPart *part = (BPAKPart *)self;
-    struct bpak_header *h = bpak_pkg_header(&part->package->pkg);
     struct bpak_part_header *p;
-    int rc = 0;
 
-    rc = bpak_get_part(h, part->part_id, &p);
-    if (rc != BPAK_OK) {
-        return PyErr_Format(PyExc_KeyError, "failed to get partition: %s",
-                bpak_error_string(rc));
+    p = part_header(part);
+    if (p == NULL) {
+        return NULL;
     }
 
     if (p->flags & BPAK_FLAG_TRANSPORT) {
@@ -153,16 +161,14 @@ static PyObject *part_read_data(PyObject *self, PyObject *Py_UNUSED(ignored))
     struct bpak_header *h = bpak_pkg_header(&part->package->pkg);
     struct bpak_part_header *p;
     PyObject *bytes;
-    int rc = 0;
 
     if (package_check_open(part->package) < 0) {
         return NULL;
     }
 
-    rc = bpak_get_part(h, part->part_id, &p);
-    if (rc != BPAK_OK) {
-        return PyErr_Format(PyExc_KeyError, "failed to get partition: %s",
-                bpak_error_string(rc));
+    p = part_header(part);
+    if (p == NULL) {
+        return NULL;
     }
 
     size_t part_size = bpak_part_size_wo_pad(p);
