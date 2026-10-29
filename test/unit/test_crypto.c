@@ -99,6 +99,34 @@ static void test_sign_verify(void **state)
     bpak_free(public_key);
 }
 
+/* sha384 is a truncated sha512, a 48 byte buffer is enough */
+static void test_sha384_buffer(void **state)
+{
+    (void)state;
+    struct bpak_hash_context ctx;
+    uint8_t buffer[64];
+    size_t length = 0;
+    int rc;
+
+    memset(buffer, 0x55, sizeof(buffer));
+
+    rc = bpak_hash_init(&ctx, BPAK_HASH_SHA384);
+    assert_int_equal(rc, BPAK_OK);
+    rc = bpak_hash_update(&ctx, (const uint8_t *)"abc", 3);
+    assert_int_equal(rc, BPAK_OK);
+    rc = bpak_hash_final(&ctx, buffer, 48, &length);
+    assert_int_equal(rc, BPAK_OK);
+    bpak_hash_free(&ctx);
+
+    assert_int_equal(length, 48);
+    /* FIPS 180-2 test vector */
+    assert_int_equal(buffer[0], 0xcb);
+    assert_int_equal(buffer[47], 0xa7);
+
+    for (size_t i = 48; i < sizeof(buffer); i++)
+        assert_int_equal(buffer[i], 0x55);
+}
+
 static void test_static_key(void **state)
 {
     (void)state;
@@ -118,6 +146,7 @@ int main(void)
 {
     const struct CMUnitTest tests[] = {
         cmocka_unit_test(test_static_key),
+        cmocka_unit_test(test_sha384_buffer),
         cmocka_unit_test(test_sha256),
         cmocka_unit_test(test_sign_verify),
     };

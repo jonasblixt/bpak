@@ -11,116 +11,92 @@
 
 #include "crypto_mbedtls.h"
 
+#if MBEDTLS_VERSION_MAJOR < 3
+#define mbedtls_sha256_starts mbedtls_sha256_starts_ret
+#define mbedtls_sha256_update mbedtls_sha256_update_ret
+#define mbedtls_sha256_finish mbedtls_sha256_finish_ret
+#define mbedtls_sha512_starts mbedtls_sha512_starts_ret
+#define mbedtls_sha512_update mbedtls_sha512_update_ret
+#define mbedtls_sha512_finish mbedtls_sha512_finish_ret
+#endif
+
 int bpak_mbed_hash_init(struct bpak_hash_context *ctx)
 {
+    int rc;
+
     switch (ctx->kind) {
     case BPAK_HASH_SHA256:
         mbedtls_sha256_init(&ctx->backend.mbed_sha256);
-#if MBEDTLS_VERSION_MAJOR >= 3
-        mbedtls_sha256_starts(&ctx->backend.mbed_sha256, 0);
-#else
-        mbedtls_sha256_starts_ret(&ctx->backend.mbed_sha256, 0);
-#endif
+        rc = mbedtls_sha256_starts(&ctx->backend.mbed_sha256, 0);
         break;
     case BPAK_HASH_SHA384:
         mbedtls_sha512_init(&ctx->backend.mbed_sha512);
-#if MBEDTLS_VERSION_MAJOR >= 3
-        mbedtls_sha512_starts(&ctx->backend.mbed_sha512, 1);
-#else
-        mbedtls_sha512_starts_ret(&ctx->backend.mbed_sha512, 1);
-#endif
+        rc = mbedtls_sha512_starts(&ctx->backend.mbed_sha512, 1);
         break;
     case BPAK_HASH_SHA512:
         mbedtls_sha512_init(&ctx->backend.mbed_sha512);
-#if MBEDTLS_VERSION_MAJOR >= 3
-        mbedtls_sha512_starts(&ctx->backend.mbed_sha512, 0);
-#else
-        mbedtls_sha512_starts_ret(&ctx->backend.mbed_sha512, 0);
-#endif
+        rc = mbedtls_sha512_starts(&ctx->backend.mbed_sha512, 0);
         break;
     default:
         return -BPAK_UNSUPPORTED_HASH_ALG;
     }
 
-    return BPAK_OK;
+    return (rc == 0) ? BPAK_OK : -BPAK_FAILED;
 }
 
 int bpak_mbed_hash_update(struct bpak_hash_context *ctx, const uint8_t *buffer,
                           size_t length)
 {
-#if MBEDTLS_VERSION_MAJOR >= 3
-    if (ctx->kind == BPAK_HASH_SHA256)
-        mbedtls_sha256_update(&ctx->backend.mbed_sha256,
-                              (const unsigned char *)buffer,
-                              length);
-    else
-        mbedtls_sha512_update(&ctx->backend.mbed_sha512,
-                              (const unsigned char *)buffer,
-                              length);
+    int rc;
 
-#else
     if (ctx->kind == BPAK_HASH_SHA256)
-        mbedtls_sha256_update_ret(&ctx->backend.mbed_sha256,
-                                  (const unsigned char *)buffer,
-                                  length);
+        rc = mbedtls_sha256_update(&ctx->backend.mbed_sha256,
+                                   (const unsigned char *)buffer,
+                                   length);
     else
-        mbedtls_sha512_update_ret(&ctx->backend.mbed_sha512,
-                                  (const unsigned char *)buffer,
-                                  length);
-#endif
-    return BPAK_OK;
+        rc = mbedtls_sha512_update(&ctx->backend.mbed_sha512,
+                                   (const unsigned char *)buffer,
+                                   length);
+
+    return (rc == 0) ? BPAK_OK : -BPAK_FAILED;
 }
 
 int bpak_mbed_hash_final(struct bpak_hash_context *ctx, uint8_t *buffer,
                          size_t buffer_length, size_t *result_length)
 {
+    int rc;
+    size_t length;
 
     switch (ctx->kind) {
     case BPAK_HASH_SHA256:
-        if (buffer_length < 32)
-            return -BPAK_SIZE_ERROR;
-        if (result_length != NULL)
-            (*result_length) = 32;
-
-#if MBEDTLS_VERSION_MAJOR >= 3
-        mbedtls_sha256_finish(&ctx->backend.mbed_sha256,
-                              (unsigned char *)buffer);
-#else
-        mbedtls_sha256_finish_ret(&ctx->backend.mbed_sha256,
-                                  (unsigned char *)buffer);
-#endif
+        length = 32;
         break;
     case BPAK_HASH_SHA384:
-        if (buffer_length < 48)
-            return -BPAK_SIZE_ERROR;
-        if (result_length != NULL)
-            (*result_length) = 48;
-
-#if MBEDTLS_VERSION_MAJOR >= 3
-        mbedtls_sha512_finish(&ctx->backend.mbed_sha512,
-                              (unsigned char *)buffer);
-#else
-        mbedtls_sha512_finish_ret(&ctx->backend.mbed_sha512,
-                                  (unsigned char *)buffer);
-#endif
+        length = 48;
         break;
     case BPAK_HASH_SHA512:
-        if (buffer_length < 64)
-            return -BPAK_SIZE_ERROR;
-        if (result_length != NULL)
-            (*result_length) = 64;
-
-#if MBEDTLS_VERSION_MAJOR >= 3
-        mbedtls_sha512_finish(&ctx->backend.mbed_sha512,
-                              (unsigned char *)buffer);
-#else
-        mbedtls_sha512_finish_ret(&ctx->backend.mbed_sha512,
-                                  (unsigned char *)buffer);
-#endif
+        length = 64;
         break;
     default:
         return -BPAK_UNSUPPORTED_HASH_ALG;
     }
+
+    if (buffer_length < length)
+        return -BPAK_SIZE_ERROR;
+
+    if (ctx->kind == BPAK_HASH_SHA256)
+        rc = mbedtls_sha256_finish(&ctx->backend.mbed_sha256,
+                                   (unsigned char *)buffer);
+    else
+        rc = mbedtls_sha512_finish(&ctx->backend.mbed_sha512,
+                                   (unsigned char *)buffer);
+
+    if (rc != 0)
+        return -BPAK_FAILED;
+
+    if (result_length != NULL)
+        (*result_length) = length;
+
     return BPAK_OK;
 }
 
@@ -139,25 +115,23 @@ void bpak_mbed_hash_free(struct bpak_hash_context *ctx)
     }
 }
 
-static int hash_kind(int bpak_hash_kind)
+static int hash_kind(int bpak_hash_kind, mbedtls_md_type_t *md_type)
 {
-    int hash_kind = 0;
-
     switch (bpak_hash_kind) {
     case BPAK_HASH_SHA256:
-        hash_kind = MBEDTLS_MD_SHA256;
+        *md_type = MBEDTLS_MD_SHA256;
         break;
     case BPAK_HASH_SHA384:
-        hash_kind = MBEDTLS_MD_SHA384;
+        *md_type = MBEDTLS_MD_SHA384;
         break;
     case BPAK_HASH_SHA512:
-        hash_kind = MBEDTLS_MD_SHA512;
+        *md_type = MBEDTLS_MD_SHA512;
         break;
     default:
         return -BPAK_UNSUPPORTED_HASH_ALG;
     }
 
-    return hash_kind;
+    return BPAK_OK;
 }
 
 int bpak_mbed_verify(const uint8_t *signature, size_t signature_length,
@@ -167,19 +141,26 @@ int bpak_mbed_verify(const uint8_t *signature, size_t signature_length,
 {
     int rc;
     mbedtls_pk_context ctx;
+    mbedtls_md_type_t md_type;
 
     (*verified) = false;
+
+    rc = hash_kind(kind, &md_type);
+
+    if (rc != BPAK_OK)
+        return rc;
 
     mbedtls_pk_init(&ctx);
 
     rc = mbedtls_pk_parse_public_key(&ctx, key->data, key->size);
 
     if (rc != 0) {
+        mbedtls_pk_free(&ctx);
         return -BPAK_KEY_DECODE;
     }
 
     rc = mbedtls_pk_verify(&ctx,
-                           hash_kind(kind),
+                           md_type,
                            (unsigned char *)hash,
                            hash_length,
                            (unsigned char *)signature,
@@ -205,6 +186,12 @@ int bpak_mbed_sign(const uint8_t *hash, size_t hash_length,
     mbedtls_pk_context ctx;
     mbedtls_entropy_context entropy;
     mbedtls_ctr_drbg_context ctr_drbg;
+    mbedtls_md_type_t md_type;
+
+    rc = hash_kind(kind, &md_type);
+
+    if (rc != BPAK_OK)
+        return rc;
 
     mbedtls_entropy_init(&entropy);
     mbedtls_ctr_drbg_init(&ctr_drbg);
@@ -241,7 +228,7 @@ int bpak_mbed_sign(const uint8_t *hash, size_t hash_length,
 
 #if MBEDTLS_VERSION_MAJOR >= 3
     rc = mbedtls_pk_sign(&ctx,
-                         hash_kind(kind),
+                         md_type,
                          hash,
                          hash_length,
                          signature,
@@ -251,7 +238,7 @@ int bpak_mbed_sign(const uint8_t *hash, size_t hash_length,
                          &ctr_drbg);
 #else
     rc = mbedtls_pk_sign(&ctx,
-                         hash_kind(kind),
+                         md_type,
                          hash,
                          hash_length,
                          signature,
@@ -277,9 +264,14 @@ int bpak_mbed_load_public_key(const char *filename, struct bpak_key **output)
 {
     int rc = BPAK_OK;
     unsigned char tmp[1024];
+    struct bpak_key *key = NULL;
     mbedtls_pk_context ctx;
     mbedtls_pk_init(&ctx);
-    mbedtls_pk_parse_public_keyfile(&ctx, filename);
+
+    if (mbedtls_pk_parse_public_keyfile(&ctx, filename) != 0) {
+        rc = -BPAK_KEY_DECODE;
+        goto err_free_ctx;
+    }
 
     int len = mbedtls_pk_write_pubkey_der(&ctx, tmp, sizeof(tmp));
 
@@ -288,7 +280,13 @@ int bpak_mbed_load_public_key(const char *filename, struct bpak_key **output)
         goto err_free_ctx;
     }
 
-    struct bpak_key *key = bpak_calloc(sizeof(struct bpak_key) + len, 1);
+    key = bpak_calloc(sizeof(struct bpak_key) + len, 1);
+
+    if (key == NULL) {
+        rc = -BPAK_FAILED;
+        goto err_free_ctx;
+    }
+
     key->size = len;
 
     if (strcmp(mbedtls_pk_get_name(&ctx), "EC") == 0) {
@@ -365,6 +363,12 @@ int bpak_mbed_load_private_key(const char *filename, struct bpak_key **output)
     rc = mbedtls_pk_parse_keyfile(&ctx, filename, NULL);
 #endif
 
+    if (rc != 0) {
+        bpak_printf(0, "Error: Could not load private key (mbedtls: %i)\n", rc);
+        rc = -BPAK_KEY_DECODE;
+        goto err_free_ctx_out;
+    }
+
     int len = mbedtls_pk_write_key_der(&ctx, tmp, sizeof(tmp));
 
     if (len < 0) {
@@ -424,8 +428,11 @@ int bpak_mbed_load_private_key(const char *filename, struct bpak_key **output)
     goto err_free_ctx_out;
 
 err_free_key_out:
+    mbedtls_platform_zeroize(key, sizeof(struct bpak_key) + len);
     bpak_free(key);
 err_free_ctx_out:
+    /* The DER encoded private key */
+    mbedtls_platform_zeroize(tmp, sizeof(tmp));
     mbedtls_pk_free(&ctx);
 #if MBEDTLS_VERSION_MAJOR >= 3
     mbedtls_ctr_drbg_free(&ctr_drbg);

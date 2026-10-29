@@ -94,6 +94,10 @@ tool. The package format and the library ABI stay compatible, see
   file in the package, and `filename` was never set.
 - `BPAK_DECLARE_STATIC_KEY` stored the key in a byte array, which is not
   aligned for `struct bpak_key`.
+- The mbedtls backend ignored the results of the hash functions and of
+  parsing key files, did not check an allocation when it loaded a public
+  key, leaked the key when verification could not parse it and left the
+  private key in a stack buffer.
 - Python package: crashes when opening a file that is not a package, when
   using a closed package and after the log callback was released, reference
   leaks in `Package.parts` and `Package.meta`, meta data larger than the
