@@ -106,3 +106,12 @@ line-ending = "auto"
 [tool.mypy]
 strict = true
 files = ["python/bpak"]
+
+# Here and not in test/, pytest takes the value of '--bpak-build-dir build'
+# for a path and would then not find a configuration in test/
+[tool.pytest.ini_options]
+minversion = "7.0"
+testpaths = ["test/cli", "test/python"]
+pythonpath = ["test"]
+addopts = "-ra --strict-config --strict-markers --import-mode=importlib"
+xfail_strict = true
