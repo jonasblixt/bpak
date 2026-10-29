@@ -94,7 +94,7 @@ closed, also through its parts and meta data.
 | `add_meta(id, part_id_ref=0, data=None, size=-1)`      | Add meta data from bytes or a string, or `size` zero bytes |
 | `add_transport_meta(part_id, encoder_id, decoder_id)`  | Add a transport rule for a part              |
 | `get_part(id)`, `get_meta(id, part_id_ref=0)`          | Find a part or meta data, raise `KeyError` if it does not exist |
-| `delete_part(id, remove_meta=True)`, `delete_all_parts(remove_meta=True)` | Delete parts and their meta data |
+| `delete_part(id, remove_meta=True)`, `delete_all_parts(remove_meta=True)` | Delete parts, their `<name>-hash-tree` parts and their meta data |
 | `extract_file(id, filename)`                           | Write the data of a part to a file           |
 | `part_sha256(id)`                                      | SHA-256 hash of the data of a part           |
 | `sign(key_filename)`                                   | Update the payload hash and sign the package |

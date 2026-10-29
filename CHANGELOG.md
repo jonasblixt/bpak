@@ -123,6 +123,10 @@ tool. The package format and the library ABI stay compatible, see
   transport flags in the header of the input package instead of the output
   package, so the input package reported the wrong sizes, and the output
   package kept the header it was opened with until it was opened again.
+- `bpak_pkg_delete_part`, and with it `bpak delete --part` and
+  `Package.delete_part`, left the `<part>-hash-tree` part of a part added
+  with a merkle hash tree in the package. It deletes the hash tree part as
+  well.
 - Python package: crashes when opening a file that is not a package, when
   using a closed package and after the log callback was released, reference
   leaks in `Package.parts` and `Package.meta`, meta data larger than the

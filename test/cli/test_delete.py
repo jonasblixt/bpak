@@ -2,6 +2,8 @@
 
 import pytest
 
+from bpaktest import hash_tree_id
+
 # Package hash of an unsigned package with no parts or meta data
 EMPTY_PACKAGE_HASH = (
     "7d0bbb3b969c6cef24969b5e23a9de85b855784a64610243f8f0ddd5ed6773d0")
@@ -88,3 +90,25 @@ def test_delete_parts_from_the_end(bpak, pkg_two_parts):
     bpak("show", pkg_two_parts)
 
     assert package_hash(bpak, pkg_two_parts) == EMPTY_PACKAGE_HASH
+
+
+
+@pytest.mark.parametrize("keep_meta", [False, True], ids=["meta", "keep-meta"])
+def test_delete_part_with_merkle_tree(bpak, make_data, data2, pkg_one_part,
+                                      keep_meta):
+    """The hash tree of a part added with '--encoder merkle' is deleted with
+    the part"""
+    bpak("create", "merkle.bpak", "-Y")
+    bpak("add", "merkle.bpak", "--part", "test1",
+         "--from-file", make_data("merkle.bin", 136), "--encoder", "merkle")
+    bpak("add", "merkle.bpak", "--part", "test2", "--from-file", data2)
+    pkg = bpak.cwd / "merkle.bpak"
+    tree_id = f"{hash_tree_id('test1'):08x}"
+    assert tree_id in bpak.output("show", pkg).decode()
+
+    bpak("delete", pkg, "--part", "test1",
+         *(["--keep-meta"] if keep_meta else []))
+
+    assert tree_id not in bpak.output("show", pkg).decode()
+    if not keep_meta:
+        assert package_hash(bpak, pkg) == package_hash(bpak, pkg_one_part)

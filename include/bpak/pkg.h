@@ -238,7 +238,8 @@ int bpak_pkg_extract_file(struct bpak_package *pkg, bpak_id_t part_id,
                           const char *filename);
 
 /**
- * Delete a part from the archive
+ * Delete a part from the archive, and its merkle hash tree part when it has
+ *  one, see bpak_pkg_add_file_with_merkle_tree()
  *
  * @param[in] pkg Pointer to a bpak package
  * @param[in] part_id ID of part to be deleted

@@ -382,8 +382,8 @@ Other commands:
 | `bpak delete demo.bpak --all`                    | Delete all parts                             |
 
 `delete` removes the meta data of the deleted parts unless `--keep-meta` is
-given. Deleting a part with a merkle hash tree does not delete the
-`<part>-hash-tree` part, delete it as well.
+given. Deleting a part with a merkle hash tree also deletes its
+`<part>-hash-tree` part.
 
 ## Verbose output and errors
 

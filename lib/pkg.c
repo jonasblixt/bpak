@@ -527,8 +527,8 @@ static void delete_part_meta(struct bpak_header *h, bpak_id_t part_id)
     }
 }
 
-BPAK_EXPORT int bpak_pkg_delete_part(struct bpak_package *pkg,
-                                     bpak_id_t part_id, bool remove_meta)
+static int delete_part(struct bpak_package *pkg, bpak_id_t part_id,
+                       bool remove_meta)
 {
     int rc = BPAK_OK;
     struct bpak_header *h = bpak_pkg_header(pkg);
@@ -623,6 +623,25 @@ err_restore_out:
     /* The header in the file is unchanged, the data after the part may have
      * been moved */
     memcpy(h, &saved, sizeof(saved));
+    return rc;
+}
+
+BPAK_EXPORT int bpak_pkg_delete_part(struct bpak_package *pkg,
+                                     bpak_id_t part_id, bool remove_meta)
+{
+    int rc;
+    struct bpak_part_header *tree = NULL;
+
+    rc = delete_part(pkg, part_id, remove_meta);
+    if (rc != BPAK_OK)
+        return rc;
+
+    /* The hash tree of bpak_pkg_add_file_with_merkle_tree */
+    if (bpak_get_part(bpak_pkg_header(pkg),
+                      bpak_part_id_to_hash_tree_id(part_id),
+                      &tree) == BPAK_OK)
+        rc = delete_part(pkg, tree->id, remove_meta);
+
     return rc;
 }
 
