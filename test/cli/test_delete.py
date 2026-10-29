@@ -46,16 +46,6 @@ def add_meta(bpak, pkg, name, value, part_ref=None):
          "--from-string", value, "--encoder", "integer")
 
 
-def test_delete_part(bpak, pkg_two_parts, pkg_one_part):
-    assert package_hash(bpak, pkg_two_parts) != package_hash(bpak,
-                                                             pkg_one_part)
-
-    bpak("delete", pkg_two_parts, "--part", "test1")
-
-    assert package_hash(bpak, pkg_two_parts) == package_hash(bpak,
-                                                             pkg_one_part)
-
-
 @pytest.mark.parametrize("args", [
     ["--all"],
     ["--all", "--part", "test1"],

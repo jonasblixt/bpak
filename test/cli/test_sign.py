@@ -37,9 +37,8 @@ def test_sign_verify(bpak, keystore, key_name):
 def test_verify_wrong_key(bpak):
     pkg = bpak.create_package("test.bpak")
 
-    result = bpak("verify", pkg, "--key", DATA_DIR / "secp384r1-pub-key.der",
-                  check=False)
-    assert result.returncode != 0
+    bpak.fails("verify", pkg, "--key", DATA_DIR / "secp384r1-pub-key.der",
+               error=BpakError.VERIFY_FAIL)
 
 
 def test_verify_unsigned(bpak):
@@ -81,16 +80,19 @@ def test_dont_hash(bpak):
     bpak("verify", pkg, "--key", DEFAULT_VERIFY_KEY)
 
 
-def openssl_sign(digest: bytes, key, output) -> None:
+def openssl_sign(bpak, pkg, tmp_path) -> None:
+    """Sign the binary header hash with openssl and write back the
+    signature"""
+    digest = bpak.output("show", pkg, "--binary-hash")
     subprocess.run(["openssl", "pkeyutl", "-sign",
-                    "-inkey", str(key), "-keyform", "PEM",
-                    "-out", str(output)],
+                    "-inkey", str(DEFAULT_SIGN_KEY), "-keyform", "PEM",
+                    "-out", str(tmp_path / "sig.data")],
                    input=digest, check=True)
+    bpak("sign", pkg, "--signature", tmp_path / "sig.data")
 
 
 @requires_openssl
 def test_openssl_sign(bpak, make_data, tmp_path):
-    """Sign the binary header hash externally and write back the signature"""
     data = make_data("data.bin", 16)
     pkg = bpak.create_package(
         "test.bpak",
@@ -100,28 +102,12 @@ def test_openssl_sign(bpak, make_data, tmp_path):
         parts=[Part("data1", data, merkle=True),
                Part("data2", data)])
 
-    digest = bpak.output("show", pkg, "--binary-hash")
-    openssl_sign(digest, DEFAULT_SIGN_KEY, tmp_path / "sig.data")
-    bpak("sign", pkg, "--signature", tmp_path / "sig.data")
-
+    openssl_sign(bpak, pkg, tmp_path)
     bpak("show", pkg)
     bpak("verify", pkg, "--key", DEFAULT_VERIFY_KEY)
 
-
-@requires_openssl
-def test_openssl_resign(bpak, tmp_path):
-    """Change key-id and keystore-id of a signed package and re-sign it"""
-    pkg = bpak.create_package("test.bpak",
-                              hash_kind="sha256",
-                              signature_kind="prime256v1")
-    bpak("verify", pkg, "--key", DEFAULT_VERIFY_KEY)
-
+    # Change key-id and keystore-id of the signed package and re-sign it
     bpak("set", pkg, "--key-id", "the-new-id",
          "--keystore-id", "some-other-keystore")
-
-    digest = bpak.output("show", pkg, "--binary-hash")
-    openssl_sign(digest, DEFAULT_SIGN_KEY, tmp_path / "sig.data")
-    bpak("sign", pkg, "--signature", tmp_path / "sig.data")
-
-    bpak("show", pkg)
+    openssl_sign(bpak, pkg, tmp_path)
     bpak("verify", pkg, "--key", DEFAULT_VERIFY_KEY)

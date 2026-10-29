@@ -20,7 +20,8 @@ def test_help(bpak, command):
     assert bpak.output(*args, "--help")
 
 
-@pytest.mark.parametrize("args", [[], ["-V"], ["--version"], ["-h"]])
+# --version is tested by test_version_matches_version_txt
+@pytest.mark.parametrize("args", [[], ["-V"], ["-h"]])
 def test_no_action(bpak, args):
     bpak(*args, verbose=False)
 
