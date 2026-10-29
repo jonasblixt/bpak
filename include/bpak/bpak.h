@@ -35,6 +35,14 @@ typedef char bpak_off_t_has_the_size_of_the_library
 
 #define BPAK_EXPORT __attribute__((visibility("default")))
 
+/* Lets the compiler check the arguments of printf like functions */
+#if defined(__GNUC__)
+#define BPAK_PRINTF_FORMAT(_fmt, _args)                                        \
+    __attribute__((format(printf, _fmt, _args)))
+#else
+#define BPAK_PRINTF_FORMAT(_fmt, _args)
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -530,7 +538,7 @@ const char *bpak_hash_kind(uint8_t hash_kind);
  *
  * @return BPAK_OK on success
  */
-int bpak_printf(int verbosity, const char *fmt, ...);
+int bpak_printf(int verbosity, const char *fmt, ...) BPAK_PRINTF_FORMAT(2, 3);
 
 /**
  * Sets key id which is used when verifying the package as a key hint to select

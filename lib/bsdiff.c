@@ -666,8 +666,8 @@ BPAK_EXPORT int bpak_bsdiff_init(struct bpak_bsdiff_context *ctx,
 
     bpak_printf(2,
                 "Initializing sais array: %p %p %zu\n",
-                ctx->origin_data,
-                ctx->suffix_array,
+                (void *)ctx->origin_data,
+                (void *)ctx->suffix_array,
                 origin_length);
 
     rc = sais(ctx->origin_data, ctx->suffix_array, origin_length);

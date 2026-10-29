@@ -30,6 +30,8 @@ tool. The package format and the library ABI stay compatible, see
   code, see `LICENSES/`.
 - Programs that are compiled with other mbedtls headers than the library
   fail to compile, `struct bpak_hash_context` contains the mbedtls contexts.
+- `bpak_printf` is declared with the `format(printf)` attribute, compilers
+  check the arguments of calls to it.
 
 ### Fixed
 
