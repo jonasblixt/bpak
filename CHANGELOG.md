@@ -135,6 +135,10 @@ tool. The package format and the library ABI stay compatible, see
   `Package.delete_part`, left the `<part>-hash-tree` part of a part added
   with a merkle hash tree in the package. It deletes the hash tree part as
   well.
+- `bpak_transport_encode`, and with it `bpak transport --encode --origin`,
+  crashed when the origin or the input package had no `bpak-package` meta
+  data, and read past a `bpak-package` that is smaller than a UUID. It fails
+  with `BPAK_NOT_FOUND` and `BPAK_SIZE_ERROR` like transport decoding.
 - Python package: crashes when opening a file that is not a package, when
   using a closed package and after the log callback was released, reference
   leaks in `Package.parts` and `Package.meta`, meta data larger than the

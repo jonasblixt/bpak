@@ -378,20 +378,26 @@ bpak_transport_encode(FILE *input_fp, struct bpak_header *input_header,
                            0,
                            &meta);
 
-        origin_package_uuid = bpak_get_meta_ptr(origin_header, meta, uint8_t);
-
         if (rc != BPAK_OK)
             return rc;
+
+        if (meta->size < 16)
+            return -BPAK_SIZE_ERROR;
+
+        origin_package_uuid = bpak_get_meta_ptr(origin_header, meta, uint8_t);
 
         rc = bpak_get_meta(input_header,
                            BPAK_ID_BPAK_PACKAGE,
                            0,
                            &meta);
 
-        patch_package_uuid = bpak_get_meta_ptr(input_header, meta, uint8_t);
-
         if (rc != BPAK_OK)
             return rc;
+
+        if (meta->size < 16)
+            return -BPAK_SIZE_ERROR;
+
+        patch_package_uuid = bpak_get_meta_ptr(input_header, meta, uint8_t);
 
         if (memcmp(origin_package_uuid, patch_package_uuid, 16) != 0)
             return -BPAK_PACKAGE_UUID_MISMATCH;

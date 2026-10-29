@@ -299,6 +299,57 @@ static void test_merkle_bad_meta(void **state)
     assert_int_equal(decode_merkle(tree_size, 32, true), -BPAK_BAD_ROOT_HASH);
 }
 
+/* bpak_transport_encode compares the package uuids of the input and the
+ * origin, a missing or short uuid is an error */
+static void test_encode_without_package_uuid(void **state)
+{
+    (void)state;
+    static struct bpak_header input_header;
+    static struct bpak_header origin_header;
+    static struct bpak_header output_header;
+    struct bpak_meta_header *meta;
+    FILE *fp = tmpfile();
+
+    assert_non_null(fp);
+
+    init_package(&input_header);
+    bpak_init_header(&origin_header);
+    assert_int_equal(bpak_transport_encode(fp,
+                                           &input_header,
+                                           fp,
+                                           &output_header,
+                                           fp,
+                                           &origin_header),
+                     -BPAK_NOT_FOUND);
+    assert_int_equal(bpak_transport_encode(fp,
+                                           &origin_header,
+                                           fp,
+                                           &output_header,
+                                           fp,
+                                           &input_header),
+                     -BPAK_NOT_FOUND);
+
+    assert_int_equal(
+        bpak_add_meta(&origin_header, BPAK_ID_BPAK_PACKAGE, 0, 8, &meta),
+        BPAK_OK);
+    assert_int_equal(bpak_transport_encode(fp,
+                                           &input_header,
+                                           fp,
+                                           &output_header,
+                                           fp,
+                                           &origin_header),
+                     -BPAK_SIZE_ERROR);
+    assert_int_equal(bpak_transport_encode(fp,
+                                           &origin_header,
+                                           fp,
+                                           &output_header,
+                                           fp,
+                                           &input_header),
+                     -BPAK_SIZE_ERROR);
+
+    fclose(fp);
+}
+
 int main(void)
 {
     const struct CMUnitTest tests[] = {
@@ -309,6 +360,7 @@ int main(void)
         cmocka_unit_test(test_copy_too_much),
         cmocka_unit_test(test_merkle_tree_too_small),
         cmocka_unit_test(test_merkle_bad_meta),
+        cmocka_unit_test(test_encode_without_package_uuid),
     };
 
     return cmocka_run_group_tests(tests, NULL, NULL);
