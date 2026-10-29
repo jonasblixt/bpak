@@ -8,6 +8,7 @@ BPAK_FAILED and usage errors with 2.
 
 from __future__ import annotations
 
+import io
 import os
 import pathlib
 import re
@@ -921,6 +922,12 @@ def completion() -> None:
 
 def main() -> None:
     """Entry point of the bpak tool."""
+    # File names that are not valid in the file system encoding are printed
+    # as the bytes they are, like the C tool did
+    for stream in (sys.stdout, sys.stderr):
+        if isinstance(stream, io.TextIOWrapper):
+            stream.reconfigure(errors="surrogateescape")
+
     cli(prog_name="bpak")
 
 

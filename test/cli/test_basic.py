@@ -1,6 +1,7 @@
 """Basic command line handling: help, version, id generation and inspection"""
 
 import hashlib
+import os
 import re
 import uuid
 
@@ -101,6 +102,17 @@ def test_non_ascii_path(bpak, make_data):
     pkg = bpak.create_package("påket.bpak", parts=[Part("fs", data)])
 
     bpak("verify", pkg, "--key", DEFAULT_VERIFY_KEY)
+
+
+def test_non_utf8_path(bpak, make_data):
+    """File names that are not UTF-8 are printed as they are"""
+    data = make_data("data.bin", 4)
+    pkg = bpak.create_package(os.fsdecode(b"\xff.bpak"),
+                              parts=[Part("fs", data)])
+
+    name = os.fsencode(pkg)
+    assert bpak.output("show", pkg).startswith(b"BPAK File: " + name + b"\n")
+    assert b"2: '" + name + b"'\n" in bpak.output("compare", pkg, pkg)
 
 
 def test_extract_to_stdout(bpak, make_data):
