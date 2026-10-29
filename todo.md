@@ -12,21 +12,6 @@ move it to **Done** with the commit that resolved it.
 - [ ] `bpak generate keystore` writes a line with only spaces after the last
       byte of a key whose size is a multiple of 8, for example a secp384r1
       key (120 bytes), `generate_keystore` in `tools/bpak/cli.py`.
-- [ ] `bpak_transport_encode` dereferences NULL when the origin or the
-      input package has no `bpak-package` meta data: `bpak_get_meta_ptr` is
-      called before `rc` is checked, and the size is not checked against
-      the 16 bytes that are compared (`lib/transport_encode.c:375-396`).
-      `transport_decode.c` does the same check correctly.
-- [ ] Deleting an int attribute of the python wrapper segfaults, for
-      example `del pkg.key_id`: the setters in `tools/_bpak/package.c`,
-      `part.c` and `meta.c` call `PyLong_Check(value)` on NULL. They also
-      truncate values that do not fit, `pkg.hash_kind = 256` reads back as
-      0 and `pkg.key_id = 2**32 + 5` as 5; the `(uint32_t)x != x` checks in
-      `part.c` and `meta.c` can never fail.
-- [ ] Python wrapper details: `sign()` reports argument errors as
-      `verify()` (`"O&:verify"` in `package.c`), `uuid_ctor` is not checked
-      for NULL in `meta.c` and the docstring of `Package.meta` says "List of
-      all parts".
 
 ## Release
 
@@ -53,10 +38,6 @@ move it to **Done** with the commit that resolved it.
       it again, so the extracted data is only covered when nothing changes
       the file in between (documented in 64da07b). Consider a function that
       verifies the parts while it extracts them.
-- [ ] `lib/pkg.c`, `lib/pkg_verify.c` and `lib/keystore_file.c` each have
-      their own read callbacks for the same file reads
-      (`pkg_read_payload`, `verify_payload_read`, `read_payload`,
-      `decode_read_*`), merge them.
 
 ## Tests
 
@@ -77,10 +58,10 @@ move it to **Done** with the commit that resolved it.
 
 - [ ] Show test results in the GitHub UI. The JUnit reports in
       `build/test/junit/` are only uploaded as an artifact when tests fail.
-- [ ] Add clang to the CI test matrix. Needs the python wrapper to build
-      with clang's `-Wextra -Werror`: `-Wmissing-field-initializers` on the
-      `{NULL}` sentinels in the method/getset tables and an unused `idx` in
-      `tools/_bpak/package.c`. Also install `libclang-rt-dev` for ASan.
+- [ ] Add clang to the CI test matrix, install `libclang-rt-dev` for ASan.
+      The `{NULL}` sentinels and the unused `idx` that broke clang's
+      `-Wextra -Werror` in the python wrapper are fixed (0e618ed, 2b4f76b),
+      but the build is not yet tested with clang.
 - [ ] Run the tests on Windows (MSYS2); the Windows job only builds the
       minimal library today.
 
@@ -216,3 +197,24 @@ move it to **Done** with the commit that resolved it.
 - [x] Checked both library reviews against the fixes: bsdiff truncated
       matches longer than 2 GiB (9d95826), documented what verification
       and transport decoding cover (64da07b)
+- [x] `bpak_transport_encode` dereferenced NULL without `bpak-package` meta
+      data (47075f7) and returned -1 instead of error codes (233eb43), wrong
+      printf formats in log messages (f0a32a8), the public headers were not
+      installed when built as a subproject (999aaaf), `key.h` did not
+      include the headers it uses (1743589)
+- [x] Deleting an int attribute of the python wrapper segfaulted and
+      values that did not fit were truncated (68fd06c), `sign()` errors
+      named `verify()` and an unchecked `uuid_ctor` (0ae02d7), ids and sizes
+      were converted with `long` (3517de9)
+- [x] Code review for things to drop or de-duplicate:
+      - tests: generated transport test data instead of 4.8 MB of committed
+        files, duplicated tests, fuzz corpus and helpers removed
+        (52016e2..71eca9c)
+      - library: shared helpers in `lib/internal.h`, merged read and write
+        callbacks (af1dfd2), dead heatshrink code, sources compiled once
+        (aa40ee0..49b778a)
+      - python: shared getters, setters, lookups and conversions in the
+        extension, `Part.id`, `Meta.id` and `Meta.part_id_ref` read-only,
+        star import in `__init__.py`, shared options in `cli.py`
+        (5170215..850c80a)
+      - CI: the pip-install job tests the sdist in python-package (216fb38)
