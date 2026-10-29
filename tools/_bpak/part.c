@@ -76,23 +76,19 @@ static PyObject *part_get_id(PyObject *self, void *closure)
     return PyLong_FromUnsignedLong(part->part_id);
 }
 
-static PyObject *part_get_size(PyObject *self, void *closure)
+/* Attributes of the part, the closure of part_get_field */
+enum part_field {
+    PART_SIZE,
+    PART_INSTALLED_SIZE,
+    PART_TRANSPORT_SIZE,
+    PART_PAD_BYTES,
+    PART_FLAGS,
+    PART_OFFSET,
+    PART_IS_TRANSPORT_ENCODED,
+};
+
+static PyObject *part_get_field(PyObject *self, void *closure)
 {
-    (void)closure;
-    BPAKPart *part = (BPAKPart *)self;
-    struct bpak_part_header *p;
-
-    p = part_header(part);
-    if (p == NULL) {
-        return NULL;
-    }
-
-    return PyLong_FromSize_t(bpak_part_size(p));
-}
-
-static PyObject *part_get_offset(PyObject *self, void *closure)
-{
-    (void)closure;
     BPAKPart *part = (BPAKPart *)self;
     struct bpak_header *h = bpak_pkg_header(&part->package->pkg);
     struct bpak_part_header *p;
@@ -102,28 +98,9 @@ static PyObject *part_get_offset(PyObject *self, void *closure)
         return NULL;
     }
 
-    return PyLong_FromLongLong(bpak_part_offset(h, p));
-}
-
-/* Fields of the part header, returned by the getters below */
-enum part_field {
-    PART_INSTALLED_SIZE,
-    PART_TRANSPORT_SIZE,
-    PART_PAD_BYTES,
-    PART_FLAGS,
-};
-
-static PyObject *part_get_field(PyObject *self, void *closure)
-{
-    BPAKPart *part = (BPAKPart *)self;
-    struct bpak_part_header *p;
-
-    p = part_header(part);
-    if (p == NULL) {
-        return NULL;
-    }
-
     switch ((enum part_field)(intptr_t)closure) {
+    case PART_SIZE:
+        return PyLong_FromSize_t(bpak_part_size(p));
     case PART_INSTALLED_SIZE:
         return PyLong_FromUnsignedLongLong(p->size);
     case PART_TRANSPORT_SIZE:
@@ -132,27 +109,13 @@ static PyObject *part_get_field(PyObject *self, void *closure)
         return PyLong_FromLong(p->pad_bytes);
     case PART_FLAGS:
         return PyLong_FromLong(p->flags);
+    case PART_OFFSET:
+        return PyLong_FromLongLong(bpak_part_offset(h, p));
+    case PART_IS_TRANSPORT_ENCODED:
+        return PyBool_FromLong(p->flags & BPAK_FLAG_TRANSPORT);
     }
 
     Py_RETURN_NONE;
-}
-
-static PyObject *part_is_transport_encoded(PyObject *self, void *closure)
-{
-    (void)closure;
-    BPAKPart *part = (BPAKPart *)self;
-    struct bpak_part_header *p;
-
-    p = part_header(part);
-    if (p == NULL) {
-        return NULL;
-    }
-
-    if (p->flags & BPAK_FLAG_TRANSPORT) {
-        Py_RETURN_TRUE;
-    }
-
-    Py_RETURN_FALSE;
 }
 
 static PyObject *part_read_data(PyObject *self, PyObject *Py_UNUSED(ignored))
@@ -254,11 +217,11 @@ static PyGetSetDef part_getset[] = {
       NULL },
 
     { "size",
-      (getter)part_get_size,
+      (getter)part_get_field,
       (setter)NULL,
       "Size of the part in the package including padding, or the transport "
       "size if the part is transport encoded",
-      NULL },
+      (void *)PART_SIZE },
 
     { "installed_size",
       (getter)part_get_field,
@@ -285,16 +248,16 @@ static PyGetSetDef part_getset[] = {
       (void *)PART_FLAGS },
 
     { "offset",
-      (getter)part_get_offset,
+      (getter)part_get_field,
       (setter)NULL,
       "Part size offset in the unencoded bytestream, including header",
-      NULL },
+      (void *)PART_OFFSET },
 
     { "is_transport_encoded",
-      (getter)part_is_transport_encoded,
+      (getter)part_get_field,
       (setter)NULL,
       "If part is transport encoded",
-      NULL },
+      (void *)PART_IS_TRANSPORT_ENCODED },
 
     { NULL }
 };
