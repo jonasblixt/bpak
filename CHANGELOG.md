@@ -141,6 +141,8 @@ tool. The package format and the library ABI stay compatible, see
   with `BPAK_NOT_FOUND` and `BPAK_SIZE_ERROR` like transport decoding.
 - Log messages of the library used printf formats that do not match their
   arguments, they printed wrong values, for example in 32-bit builds.
+- The public headers were not installed when the library is built as a
+  CMake subproject with `add_subdirectory`.
 - Python package: crashes when opening a file that is not a package, when
   using a closed package and after the log callback was released, reference
   leaks in `Package.parts` and `Package.meta`, meta data larger than the

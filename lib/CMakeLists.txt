@@ -36,7 +36,7 @@ set(LIB_SRC_FILES
 )
 
 # Every .h -file in include/bpak/ is a public header
-file(GLOB_RECURSE LIB_PUBLIC_HEADERS "${CMAKE_SOURCE_DIR}/include/bpak/*.h")
+file(GLOB_RECURSE LIB_PUBLIC_HEADERS "${PROJECT_SOURCE_DIR}/include/bpak/*.h")
 
 set(LIB_PUBLIC_HEADERS
     ${LIB_PUBLIC_HEADERS}
