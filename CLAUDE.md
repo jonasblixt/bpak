@@ -89,7 +89,8 @@ generated from `lib/version.h.in` into the build directory, never add a
 version number anywhere else, except the release headings in
 `CHANGELOG.md`. Add changes that affect users to `CHANGELOG.md` with the
 change. Releases: update `version.txt` and the release heading in
-`CHANGELOG.md`, commit as `Version X.Y.Z` and tag `vX.Y.Z`.
+`CHANGELOG.md`, commit as `Version X.Y.Z` and tag `vX.Y.Z`. Pushing the tag uploads the python
+package to PyPI (`.github/workflows/wheels.yml`).
 
 ## Conventions
 

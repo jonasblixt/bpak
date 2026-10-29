@@ -1,4 +1,4 @@
-<img src="docs/bitpacker.svg" width="60" alt="bitpacker logo">
+<img src="https://raw.githubusercontent.com/jonasblixt/bpak/master/docs/bitpacker.svg" width="60" alt="bitpacker logo">
 
 # Bitpacker
 
@@ -38,17 +38,20 @@ to the system that uses them.
 
 ## Installation
 
-The `bpak` tool is part of the bpak python package. Install it from the
-repository root with [uv](https://docs.astral.sh/uv), which puts it in an
-isolated environment, or with pip:
+The `bpak` tool is part of the bpak python package on
+[PyPI](https://pypi.org/project/bpak). Install it with
+[uv](https://docs.astral.sh/uv), which puts it in an isolated environment,
+or with pip:
 
 ```
-$ uv tool install .
-$ pip install .
+$ uv tool install bpak
+$ pip install bpak
 ```
 
-The package is built with CMake and includes the library. The build needs
-Python 3.10 or later, a C compiler and the mbedtls and liblzma development
+The package includes the library and requires Python 3.10 or later. There
+are wheels for Linux on x86_64 and aarch64. On other platforms, and when
+installed from the repository root with `pip install .`, the package is built
+with CMake, which needs a C compiler and the mbedtls and liblzma development
 packages, for example `libmbedtls-dev` and `liblzma-dev` on Debian and
 Ubuntu.
 
@@ -73,18 +76,18 @@ Verification OK
 
 ## Documentation
 
-- [User guide](docs/user-guide.md): the `bpak` tool, step by step
-- [Package format](docs/format.md): parts, meta data, ids, signing and
+- [User guide](https://github.com/jonasblixt/bpak/blob/master/docs/user-guide.md): the `bpak` tool, step by step
+- [Package format](https://github.com/jonasblixt/bpak/blob/master/docs/format.md): parts, meta data, ids, signing and
   transport encoding
-- [C library](docs/c-library.md): architecture, building and using the
+- [C library](https://github.com/jonasblixt/bpak/blob/master/docs/c-library.md): architecture, building and using the
   library
-- [Python package](docs/python.md): the python API
-- [Development](docs/development.md): building, testing and contributing
+- [Python package](https://github.com/jonasblixt/bpak/blob/master/docs/python.md): the python API
+- [Development](https://github.com/jonasblixt/bpak/blob/master/docs/development.md): building, testing and contributing
 
 ## License
 
-BSD-3-Clause, see [LICENSE](LICENSE). The library includes third-party code
-under other licenses, see [LICENSES](LICENSES):
+BSD-3-Clause, see [LICENSE](https://github.com/jonasblixt/bpak/blob/master/LICENSE). The library includes third-party code
+under other licenses, see [LICENSES](https://github.com/jonasblixt/bpak/tree/master/LICENSES):
 
 - binary diff and patch (`lib/bsdiff.c`, `lib/bspatch.c`), based on bsdiff
   by Colin Percival and Matthew Endsley: BSD-2-Clause

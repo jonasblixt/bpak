@@ -5,17 +5,20 @@ command line tool. It requires Python 3.10 or later.
 
 ## Installation
 
-Install the package from the repository root with pip, or add it to a
-[uv](https://docs.astral.sh/uv) project:
+Install the package from [PyPI](https://pypi.org/project/bpak) with pip, or
+add it to a [uv](https://docs.astral.sh/uv) project:
 
 ```
-$ pip install .
-$ uv add /path/to/bpak
+$ pip install bpak
+$ uv add bpak
 ```
 
-The package is built from source with CMake and includes the library, so the
-build needs a C compiler and the mbedtls and liblzma development packages,
-for example `libmbedtls-dev` and `liblzma-dev` on Debian and Ubuntu.
+The package includes the library. The wheels for Linux on x86_64 and aarch64
+link mbedtls statically and include liblzma. On other platforms, and when
+installed from the repository root with `pip install .`, the package is built
+from source with CMake, which needs a C compiler and the mbedtls and liblzma
+development packages, for example `libmbedtls-dev` and `liblzma-dev` on
+Debian and Ubuntu.
 
 ## Example
 

@@ -1,0 +1,92 @@
+name: Build python package
+
+on:
+  push:
+    branches: [master]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+# The sdist and Linux wheels for x86_64 and aarch64, glibc and musl, see
+# [tool.cibuildwheel] in pyproject.toml. cibuildwheel tests every wheel with
+# test/python and test/golden. Other platforms build the sdist from source.
+
+permissions:
+  contents: read
+
+jobs:
+  sdist:
+    name: Build source distribution
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v6
+
+      - name: Build
+        run: uv build --sdist
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: bpak-sdist
+          path: dist/*.tar.gz
+
+  wheels:
+    name: Build wheels on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-24.04, ubuntu-24.04-arm]
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pypa/cibuildwheel@v4.3.1
+        with:
+          output-dir: dist
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: bpak-wheels-${{ matrix.os }}
+          path: dist/*.whl
+
+  upload_pypi_test:
+    name: Upload to PyPi (Test)
+    needs: [sdist, wheels]
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+    if: github.repository == 'jonasblixt/bpak' && github.event_name == 'workflow_dispatch'
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: bpak-*
+          merge-multiple: true
+          path: dist
+      - uses: pypa/gh-action-pypi-publish@v1.13.0
+        with:
+          user: __token__
+          password: ${{ secrets.TEST_PYPI_API_TOKEN }}
+          repository-url: https://test.pypi.org/legacy/
+          skip-existing: true
+          packages-dir: dist/
+
+  upload_pypi:
+    name: Upload to PyPi
+    needs: [sdist, wheels]
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+    if: github.repository == 'jonasblixt/bpak' && github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: bpak-*
+          merge-multiple: true
+          path: dist
+      - uses: pypa/gh-action-pypi-publish@v1.13.0
+        with:
+          user: __token__
+          password: ${{ secrets.PYPI_API_TOKEN }}
+          skip-existing: true
+          packages-dir: dist/

@@ -68,6 +68,23 @@ Build a source distribution and a wheel of the python package into `dist/`:
 $ uv build
 ```
 
+The wheels on PyPI are built with
+[cibuildwheel](https://cibuildwheel.pypa.io), configured in
+`[tool.cibuildwheel]` in `pyproject.toml`. `tools/wheels/install-deps.sh`
+builds mbedtls from source, which the wheels link statically, and
+auditwheel copies liblzma into them. cibuildwheel tests every wheel with
+`test/python` and `test/golden`. Build them locally with docker:
+
+```
+$ uvx cibuildwheel --platform linux
+$ CIBW_BUILD=cp313-manylinux_x86_64 uvx cibuildwheel --platform linux
+```
+
+`.github/workflows/wheels.yml` builds the sdist and the wheels. A run that
+is started manually (`workflow_dispatch`) uploads them to TestPyPI, a `v*`
+tag uploads them to PyPI. The uploads use the `TEST_PYPI_API_TOKEN` and
+`PYPI_API_TOKEN` secrets of the `pypi` environment.
+
 ## Running tests
 
 Run the complete test suite:
@@ -369,4 +386,6 @@ own `bpak/version.h`, see `lib/version.h.in`.
 
 To make a release, update `version.txt` and the heading of the release in
 `CHANGELOG.md`, commit them as `Version X.Y.Z` and tag the commit `vX.Y.Z`.
+Pushing the tag uploads the python package to PyPI, see
+[Building](#building).
 Add changes that affect users to `CHANGELOG.md` when they are made.

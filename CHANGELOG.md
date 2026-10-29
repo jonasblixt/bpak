@@ -8,6 +8,8 @@ tool. The package format and the library ABI stay compatible, see
 
 ### Added
 
+- The python package with the `bpak` tool is published on PyPI,
+  `pip install bpak`, with wheels for Linux on x86_64 and aarch64.
 - `bpak set --part-ref` changes meta data that refers to a part, for
   example `pb-load-addr`. `set` could only change meta data without a part
   reference.
