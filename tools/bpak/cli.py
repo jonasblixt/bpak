@@ -244,20 +244,12 @@ def _describe(meta: bpak.Meta) -> str:
         return "<invalid>"
 
 
-def _print_version(ctx: click.Context, _param: click.Parameter, value: bool) -> None:
-    if value and not ctx.resilient_parsing:
-        click.echo(f"BitPacker {bpak.version()}")
-        ctx.exit()
-
-
 @click.group(cls=BpakGroup, invoke_without_command=True, context_settings=CONTEXT_SETTINGS)
-@click.option(
+@click.version_option(
+    bpak.version(),
     "-V",
     "--version",
-    is_flag=True,
-    is_eager=True,
-    expose_value=False,
-    callback=_print_version,
+    message="BitPacker %(version)s",
     help="Display version and exit.",
 )
 @click.pass_context
