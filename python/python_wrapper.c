@@ -22,7 +22,23 @@ int bpak_printf(int verbosity, const char *fmt, ...)
     va_end(args);
 
     if (log_func != Py_None) {
-        Py_XDECREF(PyObject_CallFunction(log_func, "(is)", verbosity, log_buf));
+        /* Messages contain file names, which need not be UTF-8 */
+        PyObject *message =
+            PyUnicode_DecodeUTF8(log_buf, strlen(log_buf), "backslashreplace");
+        PyObject *result = NULL;
+
+        if (message != NULL) {
+            result =
+                PyObject_CallFunction(log_func, "(iN)", verbosity, message);
+        }
+
+        /* The library continues after logging, an exception left set here
+         * surfaces later as a SystemError */
+        if (result == NULL) {
+            PyErr_WriteUnraisable(log_func);
+        }
+
+        Py_XDECREF(result);
     }
 
     return BPAK_OK;

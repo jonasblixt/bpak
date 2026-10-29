@@ -1,3 +1,4 @@
+import os
 import sys
 import uuid
 
@@ -131,6 +132,38 @@ def test_read_empty_part(pybpak, tmp_path):
 
         assert part.installed_size == 0
         assert part.read_data() == b""
+
+
+def test_log_func_raises(pybpak, set_log_func, origin_pkg, monkeypatch):
+    """An exception in the log function is reported as unraisable and the
+    library continues, it was left set and surfaced as a SystemError"""
+    unraisable = []
+    monkeypatch.setattr(sys, "unraisablehook", unraisable.append)
+
+    def log(level, message):
+        raise BrokenPipeError
+
+    set_log_func(log)
+
+    with pybpak.Package(origin_pkg, "rb") as p:
+        assert len(p.parts) == 2
+
+    assert unraisable
+    assert all(isinstance(u.exc_value, BrokenPipeError) for u in unraisable)
+
+
+def test_log_non_utf8_path(pybpak, set_log_func, tmp_path):
+    """Log messages with file names that are not UTF-8 reach the log
+    function"""
+    path = tmp_path / os.fsdecode(b"\xff.bpak")
+    create_package_with_parts(pybpak, path)
+    messages = []
+    set_log_func(lambda level, message: messages.append(message))
+
+    with pybpak.Package(path, "rb") as p:
+        assert len(p.parts) == 4
+
+    assert any("\\xff.bpak" in m for m in messages)
 
 
 def test_part_fields(pybpak, tmp_path):
