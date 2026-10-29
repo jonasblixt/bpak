@@ -85,7 +85,6 @@ select = ["ALL"]
 ignore = [
     "COM812",   # Conflicts with the formatter
     "ISC001",   # Conflicts with the formatter
-    "PLE0605",  # ruff does not handle += in __all__
     "FBT",      # click passes flags as boolean arguments
     "CPY001",   # Copyright notices are not used in the python sources
 ]
