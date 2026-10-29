@@ -24,6 +24,8 @@
 #include <bpak/bsdiff.h>
 #include <bpak/transport.h>
 
+#include "internal.h"
+
 static int transport_copy(struct bpak_header *input_hdr,
                           struct bpak_header *output_hdr, uint32_t id,
                           FILE *input_fp, FILE *output_fp)
@@ -364,39 +366,12 @@ bpak_transport_encode(FILE *input_fp, struct bpak_header *input_header,
     struct bpak_transport_meta *tm = NULL;
     ssize_t written;
 
+    /* Origin and input package should have the same package-uuid */
     if ((origin_fp != NULL) && (origin_header != NULL)) {
-        uint8_t *origin_package_uuid;
-        uint8_t *patch_package_uuid;
-
-        /* Origin and input package should have the same package-uuid */
-        rc = bpak_get_meta(origin_header,
-                           BPAK_ID_BPAK_PACKAGE,
-                           0,
-                           &meta);
+        rc = bpak_same_package_uuid(origin_header, input_header);
 
         if (rc != BPAK_OK)
             return rc;
-
-        if (meta->size < 16)
-            return -BPAK_SIZE_ERROR;
-
-        origin_package_uuid = bpak_get_meta_ptr(origin_header, meta, uint8_t);
-
-        rc = bpak_get_meta(input_header,
-                           BPAK_ID_BPAK_PACKAGE,
-                           0,
-                           &meta);
-
-        if (rc != BPAK_OK)
-            return rc;
-
-        if (meta->size < 16)
-            return -BPAK_SIZE_ERROR;
-
-        patch_package_uuid = bpak_get_meta_ptr(input_header, meta, uint8_t);
-
-        if (memcmp(origin_package_uuid, patch_package_uuid, 16) != 0)
-            return -BPAK_PACKAGE_UUID_MISMATCH;
     }
 
     /* Initialize output header by copying the input header */

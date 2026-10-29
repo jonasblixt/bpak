@@ -15,6 +15,8 @@
 #include <bpak/crypto.h>
 #include <bpak/verify.h>
 
+#include "internal.h"
+
 static ssize_t read_payload(off_t offset, uint8_t *buffer, size_t length,
                             void *user)
 {
@@ -37,7 +39,7 @@ BPAK_EXPORT int bpak_keystore_load_key_from_file(const char *filename,
     uint8_t key_buffer[1024];
     struct bpak_package pkg;
     struct bpak_part_header *key_part = NULL;
-    struct bpak_meta_header *meta = NULL;
+    uint8_t *provider_id = NULL;
     size_t key_length;
     bpak_id_t keystore_provider_id;
 
@@ -64,19 +66,17 @@ BPAK_EXPORT int bpak_keystore_load_key_from_file(const char *filename,
             goto err_close_pkg_out;
     }
 
-    rc = bpak_get_meta(&pkg.header, BPAK_ID_KEYSTORE_PROVIDER_ID, 0, &meta);
+    rc = bpak_get_meta_value(&pkg.header,
+                             BPAK_ID_KEYSTORE_PROVIDER_ID,
+                             0,
+                             sizeof(keystore_provider_id),
+                             SIZE_MAX,
+                             &provider_id);
 
     if (rc != BPAK_OK)
         goto err_close_pkg_out;
 
-    if (meta->size < sizeof(keystore_provider_id)) {
-        rc = -BPAK_SIZE_ERROR;
-        goto err_close_pkg_out;
-    }
-
-    memcpy(&keystore_provider_id,
-           bpak_get_meta_ptr(&pkg.header, meta, uint8_t),
-           sizeof(keystore_provider_id));
+    memcpy(&keystore_provider_id, provider_id, sizeof(keystore_provider_id));
 
     if (keystore_provider_id != keystore_id) {
         rc = -BPAK_KEYSTORE_ID_MISMATCH;

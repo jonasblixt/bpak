@@ -9,6 +9,9 @@
 
 #include <string.h>
 #include <bpak/bpak.h>
+#include <bpak/id.h>
+
+#include "internal.h"
 
 /* BPAK_META_ALIGN is a power-of-2 */
 #define BPAK_META_ALIGN_SIZE(_x) \
@@ -52,6 +55,45 @@ BPAK_EXPORT int bpak_get_meta_anyref(struct bpak_header *hdr, bpak_id_t id,
                                      struct bpak_meta_header **meta)
 {
     return bpak_get_meta_int(hdr, id, 0, false, meta);
+}
+
+int bpak_get_meta_value(struct bpak_header *hdr, bpak_id_t id,
+                        bpak_id_t part_id_ref, size_t min_size, size_t max_size,
+                        uint8_t **value)
+{
+    struct bpak_meta_header *meta;
+    int rc = bpak_get_meta(hdr, id, part_id_ref, &meta);
+
+    if (rc != BPAK_OK)
+        return rc;
+
+    if (meta->size < min_size || meta->size > max_size)
+        return -BPAK_SIZE_ERROR;
+
+    *value = bpak_get_meta_ptr(hdr, meta, uint8_t);
+    return BPAK_OK;
+}
+
+int bpak_same_package_uuid(struct bpak_header *a, struct bpak_header *b)
+{
+    uint8_t *uuid_a;
+    uint8_t *uuid_b;
+    int rc;
+
+    rc = bpak_get_meta_value(a, BPAK_ID_BPAK_PACKAGE, 0, 16, SIZE_MAX, &uuid_a);
+
+    if (rc != BPAK_OK)
+        return rc;
+
+    rc = bpak_get_meta_value(b, BPAK_ID_BPAK_PACKAGE, 0, 16, SIZE_MAX, &uuid_b);
+
+    if (rc != BPAK_OK)
+        return rc;
+
+    if (memcmp(uuid_a, uuid_b, 16) != 0)
+        return -BPAK_PACKAGE_UUID_MISMATCH;
+
+    return BPAK_OK;
 }
 
 BPAK_EXPORT int bpak_add_meta(struct bpak_header *hdr, bpak_id_t id,

@@ -17,6 +17,8 @@
 #include <bpak/id.h>
 #include <bpak/utils.h>
 
+#include "internal.h"
+
 /* True if [offset, offset + length) is within [start, start + size) */
 static bool range_within(off_t offset, size_t length, off_t start,
                          uint64_t size)
@@ -71,10 +73,10 @@ static ssize_t merkle_generate(struct bpak_transport_decode *ctx)
 {
     int rc;
     struct bpak_part_header *fs_part;
-    struct bpak_meta_header *meta;
     uint8_t chunk_buffer[BPAK_CHUNK_BUFFER_LENGTH];
     uint32_t fs_id = 0;
     uint8_t *salt = NULL;
+    uint8_t *expected_root_hash = NULL;
     size_t bytes_to_process;
     size_t chunk_length;
 
@@ -88,10 +90,12 @@ static ssize_t merkle_generate(struct bpak_transport_decode *ctx)
     }
 
     /* Load the salt that should be used */
-    rc = bpak_get_meta(ctx->patch_header,
-                       BPAK_ID_MERKLE_SALT,
-                       fs_id,
-                       &meta);
+    rc = bpak_get_meta_value(ctx->patch_header,
+                             BPAK_ID_MERKLE_SALT,
+                             fs_id,
+                             BPAK_MERKLE_HASH_BYTES,
+                             BPAK_MERKLE_HASH_BYTES,
+                             &salt);
 
     if (rc != BPAK_OK) {
         bpak_printf(0,
@@ -99,11 +103,6 @@ static ssize_t merkle_generate(struct bpak_transport_decode *ctx)
                     fs_id);
         return rc;
     }
-
-    if (meta->size != BPAK_MERKLE_HASH_BYTES)
-        return -BPAK_SIZE_ERROR;
-
-    salt = bpak_get_meta_ptr(ctx->patch_header, meta, uint8_t);
 
     /* Get filesystem header */
     fs_part = NULL;
@@ -193,20 +192,19 @@ static ssize_t merkle_generate(struct bpak_transport_decode *ctx)
 
     /* The signed root hash, the header is verified after decoding but a
      * mismatch is found here already */
-    rc = bpak_get_meta(ctx->patch_header,
-                       BPAK_ID_MERKLE_ROOT_HASH,
-                       fs_id,
-                       &meta);
+    rc = bpak_get_meta_value(ctx->patch_header,
+                             BPAK_ID_MERKLE_ROOT_HASH,
+                             fs_id,
+                             BPAK_MERKLE_HASH_BYTES,
+                             BPAK_MERKLE_HASH_BYTES,
+                             &expected_root_hash);
 
-    if (rc != BPAK_OK)
+    if (rc == -BPAK_NOT_FOUND)
         return -BPAK_MISSING_META_DATA;
+    if (rc != BPAK_OK)
+        return rc;
 
-    if (meta->size != BPAK_MERKLE_HASH_BYTES)
-        return -BPAK_SIZE_ERROR;
-
-    if (memcmp(roothash,
-               bpak_get_meta_ptr(ctx->patch_header, meta, uint8_t),
-               BPAK_MERKLE_HASH_BYTES) != 0) {
+    if (memcmp(roothash, expected_root_hash, BPAK_MERKLE_HASH_BYTES) != 0) {
         bpak_printf(0, "Error: The merkle root hash does not match\n");
         return -BPAK_BAD_ROOT_HASH;
     }
@@ -251,9 +249,6 @@ bpak_transport_decode_set_origin(struct bpak_transport_decode *ctx,
                                  bpak_io_t read_origin, off_t origin_offset)
 {
     int rc;
-    struct bpak_meta_header *meta;
-    uint8_t *origin_package_uuid;
-    uint8_t *patch_package_uuid;
 
     rc = bpak_valid_header(origin_header);
 
@@ -265,36 +260,7 @@ bpak_transport_decode_set_origin(struct bpak_transport_decode *ctx,
     ctx->origin_offset = origin_offset;
 
     /* Origin and input package should have the same package-uuid */
-    rc = bpak_get_meta(origin_header,
-                       BPAK_ID_BPAK_PACKAGE,
-                       0,
-                       &meta);
-
-    if (rc != BPAK_OK)
-        return rc;
-
-    if (meta->size < 16)
-        return -BPAK_SIZE_ERROR;
-
-    origin_package_uuid = bpak_get_meta_ptr(origin_header, meta, uint8_t);
-
-    rc = bpak_get_meta(ctx->patch_header,
-                       BPAK_ID_BPAK_PACKAGE,
-                       0,
-                       &meta);
-
-    if (rc != BPAK_OK)
-        return rc;
-
-    if (meta->size < 16)
-        return -BPAK_SIZE_ERROR;
-
-    patch_package_uuid = bpak_get_meta_ptr(ctx->patch_header, meta, uint8_t);
-
-    if (memcmp(origin_package_uuid, patch_package_uuid, 16) != 0)
-        return -BPAK_PACKAGE_UUID_MISMATCH;
-
-    return BPAK_OK;
+    return bpak_same_package_uuid(origin_header, ctx->patch_header);
 }
 
 /* Free the state of the decoder of the current part. bspatch can be freed
