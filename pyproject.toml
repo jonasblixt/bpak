@@ -7,8 +7,8 @@ name = "bpak"
 dynamic = ["version"]
 description = "Bitpacker, a tool and library for signed firmware archives"
 readme = "README.md"
-license = "BSD-3-Clause AND ISC"
-license-files = ["LICENSE", "heatshrink.LICENSE"]
+license = "BSD-3-Clause AND BSD-2-Clause AND ISC AND MIT"
+license-files = ["LICENSE", "LICENSES/*.txt"]
 authors = [{ name = "Jonas Blixt", email = "jonpe960@gmail.com" }]
 requires-python = ">=3.10"
 dependencies = ["click>=8.1,<9"]
