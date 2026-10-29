@@ -362,72 +362,66 @@ static PyModuleDef module = { PyModuleDef_HEAD_INIT,
                               .m_size = -1,
                               .m_methods = module_methods };
 
+#define INT_CONSTANT(name) { #name, BPAK_##name }
+
+static const struct {
+    const char *name;
+    long value;
+} int_constants[] = {
+    INT_CONSTANT(HASH_SHA256),
+    INT_CONSTANT(HASH_SHA384),
+    INT_CONSTANT(HASH_SHA512),
+
+    INT_CONSTANT(SIGN_RSA4096),
+    INT_CONSTANT(SIGN_PRIME256v1),
+    INT_CONSTANT(SIGN_SECP384r1),
+    INT_CONSTANT(SIGN_SECP521r1),
+
+    INT_CONSTANT(KEY_PUB_RSA4096),
+    INT_CONSTANT(KEY_PUB_PRIME256v1),
+    INT_CONSTANT(KEY_PUB_SECP384r1),
+    INT_CONSTANT(KEY_PUB_SECP521r1),
+
+    INT_CONSTANT(FLAG_EXCLUDE_FROM_HASH),
+    INT_CONSTANT(FLAG_TRANSPORT),
+
+    INT_CONSTANT(METADATA_BYTES),
+    INT_CONSTANT(SIGNATURE_MAX_BYTES),
+};
+
 PyMODINIT_FUNC PyInit__bpak(void)
 {
+    /* PyModule_AddType adds the types by the name after the last dot of
+     * tp_name, bpak.Package is _bpak.Package */
+    PyTypeObject *types[] = { &BPAKPackageType, &BPAKPartType, &BPAKMetaType };
     PyObject *m_p;
 
-    if (PyType_Ready(&BPAKPackageType) < 0)
-        return NULL;
-    if (PyType_Ready(&BPAKPartType) < 0)
-        return NULL;
-    if (PyType_Ready(&BPAKMetaType) < 0)
-        return NULL;
-
-    /* Module creation. */
     m_p = PyModule_Create(&module);
-
     if (m_p == NULL) {
         return NULL;
     }
 
     if (bpak_exceptions_init(m_p) < 0) {
-        Py_DECREF(m_p);
-        return NULL;
+        goto err_out;
     }
 
-    Py_INCREF(&BPAKPackageType);
-    if (PyModule_AddObject(m_p, "Package", (PyObject *)&BPAKPackageType) < 0) {
-        Py_DECREF(&BPAKPackageType);
-        Py_DECREF(m_p);
-        return NULL;
+    for (unsigned int i = 0; i < membersof(types); i++) {
+        if (PyModule_AddType(m_p, types[i]) < 0) {
+            goto err_out;
+        }
     }
 
-    Py_INCREF(&BPAKPartType);
-    if (PyModule_AddObject(m_p, "Part", (PyObject *)&BPAKPartType) < 0) {
-        Py_DECREF(&BPAKPartType);
-        Py_DECREF(m_p);
-        return NULL;
+    for (unsigned int i = 0; i < membersof(int_constants); i++) {
+        if (PyModule_AddIntConstant(m_p,
+                                    int_constants[i].name,
+                                    int_constants[i].value) < 0) {
+            goto err_out;
+        }
     }
 
-    Py_INCREF(&BPAKMetaType);
-    if (PyModule_AddObject(m_p, "Meta", (PyObject *)&BPAKMetaType) < 0) {
-        Py_DECREF(&BPAKMetaType);
-        Py_DECREF(m_p);
-        return NULL;
-    }
+    return m_p;
 
-    PyModule_AddIntConstant(m_p, "HASH_SHA256", BPAK_HASH_SHA256);
-    PyModule_AddIntConstant(m_p, "HASH_SHA384", BPAK_HASH_SHA384);
-    PyModule_AddIntConstant(m_p, "HASH_SHA512", BPAK_HASH_SHA512);
-
-    PyModule_AddIntConstant(m_p, "SIGN_RSA4096", BPAK_SIGN_RSA4096);
-    PyModule_AddIntConstant(m_p, "SIGN_PRIME256v1", BPAK_SIGN_PRIME256v1);
-    PyModule_AddIntConstant(m_p, "SIGN_SECP384r1", BPAK_SIGN_SECP384r1);
-    PyModule_AddIntConstant(m_p, "SIGN_SECP521r1", BPAK_SIGN_SECP521r1);
-
-    PyModule_AddIntConstant(m_p, "KEY_PUB_RSA4096", BPAK_KEY_PUB_RSA4096);
-    PyModule_AddIntConstant(m_p, "KEY_PUB_PRIME256v1", BPAK_KEY_PUB_PRIME256v1);
-    PyModule_AddIntConstant(m_p, "KEY_PUB_SECP384r1", BPAK_KEY_PUB_SECP384r1);
-    PyModule_AddIntConstant(m_p, "KEY_PUB_SECP521r1", BPAK_KEY_PUB_SECP521r1);
-
-    PyModule_AddIntConstant(m_p,
-                            "FLAG_EXCLUDE_FROM_HASH",
-                            BPAK_FLAG_EXCLUDE_FROM_HASH);
-    PyModule_AddIntConstant(m_p, "FLAG_TRANSPORT", BPAK_FLAG_TRANSPORT);
-
-    PyModule_AddIntConstant(m_p, "METADATA_BYTES", BPAK_METADATA_BYTES);
-    PyModule_AddIntConstant(m_p,
-                            "SIGNATURE_MAX_BYTES",
-                            BPAK_SIGNATURE_MAX_BYTES);
-    return (m_p);
+err_out:
+    Py_DECREF(m_p);
+    return NULL;
 }

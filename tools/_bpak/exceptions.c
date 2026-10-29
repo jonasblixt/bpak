@@ -73,27 +73,22 @@ static PyObject *new_exception(const char *name, PyObject *base, int code)
 
 int bpak_exceptions_init(PyObject *module)
 {
+    /* The module and the variables here hold a reference each */
     BPAKPackageError = new_exception("Error", NULL, BPAK_FAILED);
-    if (BPAKPackageError == NULL)
-        return -1;
-
-    Py_INCREF(BPAKPackageError);
-    if (PyModule_AddObject(module, "Error", BPAKPackageError) < 0) {
-        Py_DECREF(BPAKPackageError);
+    if (BPAKPackageError == NULL ||
+        PyModule_AddObjectRef(module, "Error", BPAKPackageError) < 0) {
         return -1;
     }
 
     for (unsigned int i = 0; i < membersof(exception_names); i++) {
-        if (exception_names[i] == NULL)
+        const char *name = exception_names[i];
+
+        if (name == NULL)
             continue;
 
-        exceptions[i] = new_exception(exception_names[i], BPAKPackageError, i);
-        if (exceptions[i] == NULL)
-            return -1;
-
-        Py_INCREF(exceptions[i]);
-        if (PyModule_AddObject(module, exception_names[i], exceptions[i]) < 0) {
-            Py_DECREF(exceptions[i]);
+        exceptions[i] = new_exception(name, BPAKPackageError, i);
+        if (exceptions[i] == NULL ||
+            PyModule_AddObjectRef(module, name, exceptions[i]) < 0) {
             return -1;
         }
     }
