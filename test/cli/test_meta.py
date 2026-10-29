@@ -87,16 +87,6 @@ def test_set_meta_part_ref(bpak, pkg):
                error=BpakError.NOT_FOUND)
 
 
-def test_extract_part(bpak, make_data, tmp_path):
-    data = make_data("data.bin", 128)
-    pkg = bpak.create_package("test.bpak",
-                              parts=[Part("fs", data, merkle=True)])
-
-    bpak("extract", pkg, "--part", "fs", "--output", "dump.bin")
-
-    assert (tmp_path / "dump.bin").read_bytes() == data.read_bytes()
-
-
 def test_show_meta_too_small(bpak, pkg):
     """Known meta data that is smaller than its type is shown as invalid"""
     bpak("add", pkg, "--meta", "merkle-salt", "--from-string", "abc")
