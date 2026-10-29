@@ -89,6 +89,7 @@ static void create_package(struct bpak_package *pkg, char *path)
 
     rc = bpak_pkg_open(pkg, path, "r+b");
     assert_int_equal(rc, BPAK_OK);
+    assert_ptr_equal(pkg->filename, path);
 }
 
 static void test_add_key_allocator(void **state)
@@ -228,6 +229,155 @@ static void test_add_file_after_transport_part(void **state)
     unlink(data_path);
 }
 
+/* A package with parts 'a' and 'b' of 1000 bytes and meta data of 'b' */
+static void create_package_ab(struct bpak_package *pkg, char *path,
+                              char *data_path)
+{
+    struct bpak_meta_header *meta;
+    int rc;
+
+    create_package(pkg, path);
+    create_file(data_path, 1000);
+
+    rc = bpak_pkg_add_file(pkg, data_path, "a", 0);
+    assert_int_equal(rc, BPAK_OK);
+    rc = bpak_pkg_add_file(pkg, data_path, "b", 0);
+    assert_int_equal(rc, BPAK_OK);
+
+    for (unsigned int i = 0; i < 3; i++) {
+        rc = bpak_add_meta(&pkg->header, i + 1, bpak_id("b"), 8, &meta);
+        assert_int_equal(rc, BPAK_OK);
+    }
+
+    rc = bpak_add_meta(&pkg->header, 4, 0, 8, &meta);
+    assert_int_equal(rc, BPAK_OK);
+}
+
+static void test_delete_part(void **state)
+{
+    (void)state;
+    struct bpak_package pkg;
+    struct bpak_part_header *a;
+    struct bpak_meta_header *meta;
+    char path[] = "/tmp/bpak-test-XXXXXX";
+    char data_path[] = "/tmp/bpak-test-XXXXXX";
+    int rc;
+
+    create_package_ab(&pkg, path, data_path);
+
+    /* Trailing data after the last part looped forever */
+    assert_int_equal(fseeko(pkg.fp, 0, SEEK_END), 0);
+    assert_int_equal(fwrite("trailing", 1, 8, pkg.fp), 8);
+
+    rc = bpak_pkg_delete_part(&pkg, bpak_id("a"), true);
+    assert_int_equal(rc, BPAK_OK);
+    assert_int_equal(file_size(path), sizeof(struct bpak_header) + 1024);
+
+    rc = bpak_get_part(&pkg.header, bpak_id("a"), &a);
+    assert_int_equal(rc, -BPAK_NOT_FOUND);
+
+    /* All meta data of the part */
+    rc = bpak_pkg_delete_part(&pkg, bpak_id("b"), true);
+    assert_int_equal(rc, BPAK_OK);
+    assert_int_equal(file_size(path), sizeof(struct bpak_header));
+    assert_int_equal(pkg.header.meta[0].id, 4);
+    assert_int_equal(pkg.header.meta[1].id, 0);
+    rc = bpak_get_meta_anyref(&pkg.header, 1, &meta);
+    assert_int_equal(rc, -BPAK_NOT_FOUND);
+
+    bpak_pkg_close(&pkg);
+    unlink(path);
+    unlink(data_path);
+}
+
+static void test_delete_part_truncated(void **state)
+{
+    (void)state;
+    struct bpak_package pkg;
+    struct bpak_header before;
+    char path[] = "/tmp/bpak-test-XXXXXX";
+    char data_path[] = "/tmp/bpak-test-XXXXXX";
+    int rc;
+
+    create_package_ab(&pkg, path, data_path);
+    memcpy(&before, &pkg.header, sizeof(before));
+
+    /* The file ends in part 'b', the copy looped forever */
+    rc = ftruncate(fileno(pkg.fp), sizeof(struct bpak_header) + 1500);
+    assert_int_equal(rc, 0);
+
+    rc = bpak_pkg_delete_part(&pkg, bpak_id("a"), true);
+    assert_int_equal(rc, -BPAK_READ_ERROR);
+    assert_memory_equal(&pkg.header, &before, sizeof(before));
+
+    bpak_pkg_close(&pkg);
+    unlink(path);
+    unlink(data_path);
+}
+
+/* The offsets of the following parts move by the decoded size of a
+ * transport encoded part, the data by its transport size */
+static void test_delete_transport_part(void **state)
+{
+    (void)state;
+    struct bpak_package pkg;
+    struct bpak_part_header *a;
+    struct bpak_part_header *b;
+    char path[] = "/tmp/bpak-test-XXXXXX";
+    char data_path[] = "/tmp/bpak-test-XXXXXX";
+    uint8_t data[1000];
+    int rc;
+
+    create_package(&pkg, path);
+    create_file(data_path, sizeof(data));
+
+    rc = bpak_pkg_add_file(&pkg, data_path, "a", 0);
+    assert_int_equal(rc, BPAK_OK);
+    rc = bpak_get_part(&pkg.header, bpak_id("a"), &a);
+    assert_int_equal(rc, BPAK_OK);
+    a->flags |= BPAK_FLAG_TRANSPORT;
+    a->transport_size = 100;
+    rc = ftruncate(fileno(pkg.fp), sizeof(struct bpak_header) + 100);
+    assert_int_equal(rc, 0);
+    rc = bpak_pkg_add_file(&pkg, data_path, "b", 0);
+    assert_int_equal(rc, BPAK_OK);
+
+    rc = bpak_pkg_delete_part(&pkg, bpak_id("a"), true);
+    assert_int_equal(rc, BPAK_OK);
+
+    rc = bpak_get_part(&pkg.header, bpak_id("b"), &b);
+    assert_int_equal(rc, BPAK_OK);
+    assert_int_equal(b->offset, sizeof(struct bpak_header));
+    assert_int_equal(file_size(path), sizeof(struct bpak_header) + 1024);
+
+    assert_int_equal(fseeko(pkg.fp, sizeof(struct bpak_header), SEEK_SET), 0);
+    assert_int_equal(fread(data, 1, sizeof(data), pkg.fp), sizeof(data));
+    for (size_t i = 0; i < sizeof(data); i++)
+        assert_int_equal(data[i], 'x');
+
+    bpak_pkg_close(&pkg);
+    unlink(path);
+    unlink(data_path);
+}
+
+/* A failed open does not leave the file for bpak_pkg_close */
+static void test_open_failure(void **state)
+{
+    (void)state;
+    struct bpak_package pkg;
+    char path[] = "/tmp/bpak-test-XXXXXX";
+    int rc;
+
+    create_file(path, 4096);
+
+    rc = bpak_pkg_open(&pkg, path, "rb");
+    assert_int_equal(rc, -BPAK_BAD_MAGIC);
+    assert_null(pkg.fp);
+    bpak_pkg_close(&pkg);
+
+    unlink(path);
+}
+
 int main(void)
 {
     const struct CMUnitTest tests[] = {
@@ -236,6 +386,10 @@ int main(void)
         cmocka_unit_test(test_add_key_allocator),
         cmocka_unit_test(test_add_file_failure),
         cmocka_unit_test(test_add_file_after_transport_part),
+        cmocka_unit_test(test_delete_part),
+        cmocka_unit_test(test_delete_part_truncated),
+        cmocka_unit_test(test_delete_transport_part),
+        cmocka_unit_test(test_open_failure),
     };
 
     return cmocka_run_group_tests(tests, NULL, NULL);

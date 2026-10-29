@@ -87,6 +87,11 @@ tool. The package format and the library ABI stay compatible, see
   failed add left the part in the package. `bpak add --encoder merkle`
   computed the hash tree from the file instead of the added data, which
   overflowed a buffer when the file grew.
+- Deleting a part looped forever when the file had data after the last part
+  or ended before it, moved the offsets of the following parts by the
+  transport size of a transport encoded part, and left the in-memory
+  header changed when it failed. A failed `bpak_pkg_open` left the closed
+  file in the package, and `filename` was never set.
 - Python package: crashes when opening a file that is not a package, when
   using a closed package and after the log callback was released, reference
   leaks in `Package.parts` and `Package.meta`, meta data larger than the

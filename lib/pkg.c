@@ -39,6 +39,8 @@ BPAK_EXPORT int bpak_pkg_open(struct bpak_package *pkg, const char *filename,
     if (pkg->fp == NULL)
         return -BPAK_NOT_FOUND;
 
+    pkg->filename = filename;
+
     if (fseek(pkg->fp, 0, SEEK_SET) != 0) {
         rc = -BPAK_SEEK_ERROR;
         goto err_close_io;
@@ -91,6 +93,7 @@ BPAK_EXPORT int bpak_pkg_open(struct bpak_package *pkg, const char *filename,
 
 err_close_io:
     fclose(pkg->fp);
+    pkg->fp = NULL;
     return rc;
 }
 
@@ -494,14 +497,29 @@ err_close_fp_out:
     return rc;
 }
 
+/* Delete the meta data of part 'part_id', or of all parts when it is 0 */
+static void delete_part_meta(struct bpak_header *h, bpak_id_t part_id)
+{
+    /* bpak_del_meta moves the following meta data down */
+    for (unsigned int i = 0; i < BPAK_MAX_META;) {
+        struct bpak_meta_header *meta = &h->meta[i];
+
+        if (meta->id != 0 && meta->part_id_ref != 0 &&
+            (part_id == 0 || meta->part_id_ref == part_id))
+            bpak_del_meta(h, meta);
+        else
+            i++;
+    }
+}
+
 BPAK_EXPORT int bpak_pkg_delete_part(struct bpak_package *pkg,
                                      bpak_id_t part_id, bool remove_meta)
 {
     int rc = BPAK_OK;
-    uint64_t p_offset;
-    size_t p_size;
     struct bpak_header *h = bpak_pkg_header(pkg);
+    struct bpak_header saved;
     struct bpak_part_header *part = NULL;
+    char copy_buffer[BPAK_CHUNK_BUFFER_LENGTH];
 
     bpak_printf(1, "Deleting 0x%08x\n", part_id);
 
@@ -511,101 +529,86 @@ BPAK_EXPORT int bpak_pkg_delete_part(struct bpak_package *pkg,
         return rc;
     }
 
-    p_offset = bpak_part_offset(h, part);
-    p_size = bpak_part_size(part);
+    memcpy(&saved, h, sizeof(saved));
+
+    /* The data is stored with bpak_part_size, the offsets are offsets in the
+     * decoded package */
+    uint64_t stored_offset = bpak_part_offset(h, part);
+    uint64_t stored_size = bpak_part_size(part);
+    uint64_t decoded_size = part->size + part->pad_bytes;
+    uint64_t bytes_to_process = 0;
 
     bpak_del_part(h, part);
-    uint64_t bytes_to_process = 0;
 
     /* Part now points to what previously was the part after the one we remove */
     for (; part != &(h->parts[BPAK_MAX_PARTS]); part++) {
         if (!part->id)
             break;
 
-        part->offset -= p_size;
+        part->offset -= decoded_size;
         bytes_to_process += bpak_part_size(part);
     }
 
     /* Remove any meta-data that points to the part */
-    if (remove_meta) {
-        bpak_foreach_meta(h, meta) {
-            if (meta->part_id_ref == part_id) {
-                bpak_del_meta(h, meta);
-                /* Need to step back as "meta" now points to one beyond the removed element */
-                meta--;
-            }
-        }
-    }
+    if (remove_meta)
+        delete_part_meta(h, part_id);
 
     /* Move the actual data, range [p_offset+p_size  end) to [p_offset  end-p_size)
      * and then truncate the file
      */
-    uint64_t write_offset = p_offset;
-    uint64_t read_offset = p_offset + p_size;
-    char copy_buffer[BPAK_CHUNK_BUFFER_LENGTH];
+    uint64_t write_offset = stored_offset;
+    uint64_t read_offset = stored_offset + stored_size;
 
     while (bytes_to_process > 0) {
-        if (fseek(pkg->fp, read_offset, SEEK_SET) != 0) {
-            bpak_printf(0, "%s: Error: Couldn't read file: %s\n",
-                        __func__, strerror(errno));
-            return -BPAK_READ_ERROR;
+        size_t chunk_length = BPAK_MIN(bytes_to_process, sizeof(copy_buffer));
+
+        if (fseeko(pkg->fp, (off_t)read_offset, SEEK_SET) != 0 ||
+            fread(copy_buffer, 1, chunk_length, pkg->fp) != chunk_length) {
+            bpak_printf(0, "%s: Error: Couldn't read file\n", __func__);
+            rc = -BPAK_READ_ERROR;
+            goto err_restore_out;
         }
 
-        size_t chunk_length =
-            BPAK_MIN(bytes_to_process, sizeof(copy_buffer));
-        size_t chunk_read = fread(copy_buffer, 1, BPAK_CHUNK_BUFFER_LENGTH, pkg->fp);
-
-        if (chunk_read != chunk_length) {
-            rc = ferror(pkg->fp);
-            if (rc != 0) {
-                bpak_printf(0, "%s: Error: Couldn't read file: %d\n",
-                            __func__, rc);
-                return -BPAK_READ_ERROR;
-            }
-        }
-
-        if (fseek(pkg->fp, write_offset, SEEK_SET) != 0 ||
-            fwrite(copy_buffer, 1, chunk_read, pkg->fp) != chunk_read) {
+        if (fseeko(pkg->fp, (off_t)write_offset, SEEK_SET) != 0 ||
+            fwrite(copy_buffer, 1, chunk_length, pkg->fp) != chunk_length) {
             bpak_printf(0, "%s: Error: Couldn't write file: %s\n",
                         __func__, strerror(errno));
-            return -BPAK_WRITE_ERROR;
+            rc = -BPAK_WRITE_ERROR;
+            goto err_restore_out;
         }
 
-        bytes_to_process -= chunk_read;
-        read_offset += chunk_read;
-        write_offset += chunk_read;
+        bytes_to_process -= chunk_length;
+        read_offset += chunk_length;
+        write_offset += chunk_length;
     }
 
     rc = bpak_pkg_update_hash(pkg, NULL, NULL);
     if (rc != BPAK_OK) {
         bpak_printf(0, "%s: Error: Could not update payload hash\n", __func__);
-        return rc;
+        goto err_restore_out;
     }
 
     rc = bpak_pkg_write_header(pkg);
     if (rc != BPAK_OK) {
         bpak_printf(0, "%s: Error: Could not write header\n", __func__);
-        return rc;
+        goto err_restore_out;
     }
 
     fflush(pkg->fp);
 
-    size_t new_size = sizeof(struct bpak_header);
-
-    bpak_foreach_part(h, p) {
-        if (p->id == 0)
-            break;
-
-        new_size += bpak_part_size(p);
-    }
-
-    if (ftruncate(fileno(pkg->fp), new_size) != 0) {
+    if (ftruncate(fileno(pkg->fp), (off_t)write_offset) != 0) {
         bpak_printf(0, "%s: Error: Couldn't truncate file: %s\n",
                     __func__, strerror(errno));
         return -BPAK_WRITE_ERROR;
     }
 
     return BPAK_OK;
+
+err_restore_out:
+    /* The header in the file is unchanged, the data after the part may have
+     * been moved */
+    memcpy(h, &saved, sizeof(saved));
+    return rc;
 }
 
 BPAK_EXPORT int bpak_pkg_delete_all_parts(struct bpak_package *pkg, bool remove_meta)
@@ -617,15 +620,8 @@ BPAK_EXPORT int bpak_pkg_delete_all_parts(struct bpak_package *pkg, bool remove_
     memset(h->parts, 0, sizeof(h->parts));
 
     /* Remove any meta-data that points to any part */
-    if (remove_meta) {
-        bpak_foreach_meta(h, meta) {
-            if (meta->part_id_ref != 0) {
-                bpak_del_meta(h, meta);
-                /* Need to step back as "meta" now points to one beyond the removed element */
-                meta--;
-            }
-        }
-    }
+    if (remove_meta)
+        delete_part_meta(h, 0);
 
     rc = bpak_pkg_update_hash(pkg, NULL, NULL);
     if (rc != BPAK_OK) {
