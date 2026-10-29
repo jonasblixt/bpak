@@ -16,6 +16,55 @@
 #include <bpak/id.h>
 #include <bpak/utils.h>
 
+/* True if [offset, offset + length) is within [start, start + size) */
+static bool range_within(off_t offset, size_t length, off_t start,
+                         uint64_t size)
+{
+    if (offset < start)
+        return false;
+
+    uint64_t relative = (uint64_t)(offset - start);
+
+    return relative <= size && length <= size - relative;
+}
+
+/* Patches are not authenticated, the output of bspatch must stay within the
+ * part and the origin reads within the origin part */
+static ssize_t bspatch_write_output(off_t offset, uint8_t *buffer,
+                                    size_t length, void *user)
+{
+    struct bpak_transport_decode *ctx = (struct bpak_transport_decode *)user;
+
+    if (!range_within(offset,
+                      length,
+                      ctx->decoders.bspatch.output_offset,
+                      ctx->part->size + ctx->part->pad_bytes)) {
+        bpak_printf(0, "Error: Patch writes outside of the part\n");
+        return -BPAK_PATCH_WRITE_ERROR;
+    }
+
+    return ctx->write_output(offset, buffer, length, ctx->user);
+}
+
+static ssize_t bspatch_read_origin(off_t offset, uint8_t *buffer, size_t length,
+                                   void *user)
+{
+    struct bpak_transport_decode *ctx = (struct bpak_transport_decode *)user;
+    struct bpak_part_header *origin_part = NULL;
+
+    if (bpak_get_part(ctx->origin_header, ctx->part->id, &origin_part) !=
+            BPAK_OK ||
+        !range_within(offset,
+                      length,
+                      ctx->decoders.bspatch.origin_offset,
+                      bpak_part_size(origin_part))) {
+        bpak_printf(0, "Error: Patch reads outside of the origin part\n");
+        return -BPAK_PATCH_READ_ORIGIN_ERROR;
+    }
+
+    return ctx->read_origin(offset, buffer, length, ctx->user);
+}
+
 #if BPAK_CONFIG_MERKLE == 1
 static ssize_t merkle_generate(struct bpak_transport_decode *ctx)
 {
@@ -58,6 +107,17 @@ static ssize_t merkle_generate(struct bpak_transport_decode *ctx)
     if (rc != BPAK_OK) {
         bpak_printf(0, "Error: Could not read filesystem header\n");
         return rc;
+    }
+
+    /* The tree must fit the part before it is written */
+    ssize_t tree_size = bpak_merkle_compute_size(bpak_part_size(fs_part));
+
+    if (tree_size < 0)
+        return tree_size;
+
+    if ((uint64_t)tree_size != ctx->part->size + ctx->part->pad_bytes) {
+        bpak_printf(0, "Error: The hash tree does not fit the part\n");
+        return -BPAK_SIZE_ERROR;
     }
 
     off_t output_offset = bpak_part_offset(ctx->patch_header, ctx->part) -
@@ -253,6 +313,15 @@ BPAK_EXPORT int bpak_transport_decode_start(struct bpak_transport_decode *ctx,
             return -BPAK_PATCH_READ_ORIGIN_ERROR;
         }
 
+        struct bpak_part_header *origin_part = NULL;
+
+        rc = bpak_get_part(ctx->origin_header, part->id, &origin_part);
+
+        if (rc != BPAK_OK) {
+            bpak_printf(0, "Error: The origin has no part %08x\n", part->id);
+            return rc;
+        }
+
         size_t patch_input_length = bpak_part_size(part);
         bpak_printf(2, "Patch input length: %zu\n", patch_input_length);
 
@@ -278,12 +347,12 @@ BPAK_EXPORT int bpak_transport_decode_start(struct bpak_transport_decode *ctx,
                                ctx->buffer,
                                ctx->buffer_length,
                                patch_input_length,
-                               ctx->read_origin,
+                               bspatch_read_origin,
                                origin_offset,
-                               ctx->write_output,
+                               bspatch_write_output,
                                output_offset,
                                compression,
-                               ctx->user);
+                               ctx);
 
     } break;
 #if BPAK_CONFIG_MERKLE == 1
@@ -319,6 +388,14 @@ bpak_transport_decode_write_chunk(struct bpak_transport_decode *ctx,
     } break;
     case 0: /* Copy data */
     {
+        uint64_t part_size = ctx->part->size + ctx->part->pad_bytes;
+
+        if ((uint64_t)ctx->copy_offset > part_size ||
+            length > part_size - ctx->copy_offset) {
+            bpak_printf(0, "Error: Too much data for the part\n");
+            return -BPAK_SIZE_ERROR;
+        }
+
         off_t write_offset = bpak_part_offset(ctx->patch_header, ctx->part) -
                              sizeof(struct bpak_header) + ctx->output_offset +
                              ctx->copy_offset;

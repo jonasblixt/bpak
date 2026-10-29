@@ -55,6 +55,10 @@ struct bpak_transport_decode {
  *  for io callbacks. The transport decode layer assumes that
  *  reading/writing at offset zero means where the data starts.
  *
+ * The patch header is validated with bpak_valid_header(). The decoders write
+ *  only within the part being decoded and read the origin only within the
+ *  part with the same id, a patch that does not fails.
+ *
  * @param[in] ctx Pointer to a transport decode context
  * @param[in] buffer Work buffer
  * @param[in] buffer_length Length of work buffer

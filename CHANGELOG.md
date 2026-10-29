@@ -54,6 +54,9 @@ tool. The package format and the library ABI stay compatible, see
   empty slots.
 - bspatch computed offsets that overflow `off_t` from large lengths in a
   patch, such patches fail with `BPAK_SIZE_ERROR`.
+- Transport decoding wrote past the part that it decoded and read past the
+  origin part when the patch, the copied data or the merkle hash tree was
+  larger than the part.
 - Python package: crashes when opening a file that is not a package, when
   using a closed package and after the log callback was released, reference
   leaks in `Package.parts` and `Package.meta`, meta data larger than the

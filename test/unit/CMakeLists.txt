@@ -11,6 +11,7 @@ set(UNIT_TESTS
     test_meta
     test_part
     test_pkg
+    test_transport
     test_utils
     test_verify
 )
