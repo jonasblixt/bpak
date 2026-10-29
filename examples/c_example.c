@@ -3,11 +3,17 @@
 
 int main(int argc, char **argv)
 {
-    const char *filename = "a-1.0.0.bpak";
+    const char *filename;
     FILE *fp = NULL;
     struct bpak_header header;
     int rc = 0;
 
+    if (argc != 2) {
+        printf("Usage: %s <package>\n", argv[0]);
+        return -1;
+    }
+
+    filename = argv[1];
     printf("Reading '%s'...\n", filename);
     fp = fopen(filename, "r");
 

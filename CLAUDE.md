@@ -16,7 +16,7 @@ them to Done, with the commit hash, when they are resolved.
 cmake -B build -DBPAK_BUILD_TESTS=1
 cmake --build build -j$(nproc)
 ctest --test-dir build --output-on-failure -j$(nproc)
-ctest --test-dir build -L unit                     # or: cli, python, golden
+ctest --test-dir build -L unit                     # or: cli, python, golden, examples
 pytest test --bpak-build-dir build -k <pattern>    # tool/python tests directly
 PYTHONPATH=build/python python3 -m bpak           # run the tool from the build
 

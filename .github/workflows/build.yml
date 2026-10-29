@@ -86,6 +86,25 @@ jobs:
         wheel-venv/bin/bpak create test.bpak
         wheel-venv/bin/bpak show test.bpak
 
+  pip-install:
+    # Install from source with pip in a clean image, without uv or CMake
+    runs-on: ubuntu-latest
+    container: python:3.13-slim
+    steps:
+    - uses: actions/checkout@v5
+    - name: Install dependencies
+      run: |
+        apt-get update
+        apt-get install -y --no-install-recommends \
+          gcc libc6-dev libmbedtls-dev liblzma-dev
+    - name: Install
+      run: pip install .
+    - name: Run the python example
+      run: |
+        bpak --version
+        python3 examples/python/package.py \
+          test/data/secp256r1-key-pair.pem test/data/secp256r1-pub-key.der
+
   build-windows:
     runs-on: windows-latest
     defaults:

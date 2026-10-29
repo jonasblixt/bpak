@@ -72,7 +72,7 @@ CMake options:
 | Option               | Description                                                          |
 |----------------------|----------------------------------------------------------------------|
 | `BPAK_BUILD_MINIMAL` | Build only the core: header, ids, keystores and utilities, without dependencies |
-| `BPAK_BUILD_TESTS`   | Build the tests and the C extension of the python package, see [Development](development.md) |
+| `BPAK_BUILD_TESTS`   | Build the tests, the examples and the C extension of the python package, see [Development](development.md) |
 | `BPAK_WERROR`        | Treat compiler warnings as errors, ON by default                     |
 
 `BPAK_CHUNK_BUFFER_LENGTH` sets the size of the buffers that are used to read
@@ -124,7 +124,7 @@ bpak_foreach_part (&header, part) {
 ```
 
 [`examples/c_example.c`](../examples/c_example.c) is a complete program that
-lists the meta data of a package.
+lists the meta data of a package, `c_example <package>`.
 
 ### Verifying a package file
 

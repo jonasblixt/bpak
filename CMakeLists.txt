@@ -50,5 +50,6 @@ if (BPAK_BUILD_TESTS OR SKBUILD)
 endif()
 
 if (BPAK_BUILD_TESTS)
+    add_subdirectory("examples")
     add_subdirectory("test")
 endif()

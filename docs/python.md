@@ -16,8 +16,6 @@ $ uv add /path/to/bpak
 The package is built from source with CMake and includes the library, so the
 build needs a C compiler and the mbedtls and liblzma development packages,
 for example `libmbedtls-dev` and `liblzma-dev` on Debian and Ubuntu.
-[`examples/python/Dockerfile`](../examples/python/Dockerfile) installs the
-package in a container.
 
 ## Example
 

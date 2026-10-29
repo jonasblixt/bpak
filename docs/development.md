@@ -83,6 +83,7 @@ tests are labeled by group, use `ctest -L <label>` to run one group:
 | `cli`    | Tests of the bpak tool (pytest)              | `test/cli`    |
 | `python` | Tests of the python package (pytest)         | `test/python` |
 | `golden` | Golden sample packages and exported symbols  | `test/golden` |
+| `examples` | Build and run the examples                 | `examples`    |
 
 The pytest based tests can be run directly against a build directory, which
 gives access to all pytest options:
