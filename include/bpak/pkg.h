@@ -125,7 +125,8 @@ int bpak_pkg_sign(struct bpak_package *pkg, const char *key_filename);
  * @param[in] key Verification key
  *
  * @return BPAK_OK on success, -BPAK_VERIFY_FAIL if the signature does not
- *         match or another negative error code
+ *         match, -BPAK_SIZE_ERROR if the signature size is larger than the
+ *         signature field or another negative error code
  */
 int bpak_pkg_verify(struct bpak_package *pkg, struct bpak_key *key);
 

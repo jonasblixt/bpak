@@ -42,6 +42,8 @@ tool. The package format and the library ABI stay compatible, see
 - A patch with negative lengths in its control data overflowed buffers when
   it was applied, for example with `bpak transport --decode`. Such patches
   fail with `BPAK_SIZE_ERROR`, as do patches that seek before the origin.
+- `bpak_pkg_verify` read past the signature field when the signature size in
+  the header was larger than the field, it fails with `BPAK_SIZE_ERROR`.
 - Python package: crashes when opening a file that is not a package, when
   using a closed package and after the log callback was released, reference
   leaks in `Package.parts` and `Package.meta`, meta data larger than the

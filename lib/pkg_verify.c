@@ -41,6 +41,10 @@ BPAK_EXPORT int bpak_pkg_verify(struct bpak_package *pkg,
     size_t hash_size = sizeof(hash_output);
     bool header_verified = false;
 
+    /* The signature size is not covered by the header hash */
+    if (pkg->header.signature_sz > sizeof(pkg->header.signature))
+        return -BPAK_SIZE_ERROR;
+
     rc = bpak_verify_compute_header_hash(&pkg->header, hash_output, &hash_size);
 
     if (rc != BPAK_OK)
