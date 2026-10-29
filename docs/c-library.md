@@ -1,8 +1,8 @@
 # C library
 
-`libbpak` reads, creates, signs, verifies and transport encodes and decodes
-packages. The public headers in [`include/bpak/`](../include/bpak) document
-every function, this page gives an overview.
+`libbpak` reads, creates, signs and verifies packages, and transport encodes
+and decodes them. The public headers in [`include/bpak/`](../include/bpak)
+document every function. This page gives an overview.
 
 ## Architecture
 
@@ -28,13 +28,12 @@ flowchart TD
     crypto --> mbedtls["mbedtls (optional)"]
 ```
 
-The lower layers do not depend on files or on a particular crypto library.
+The lower layers depend neither on files nor on a particular crypto library.
 A bootloader typically uses the core and the verify and transport layers
-with I/O callbacks and its own hash and signature implementation, while the
-`pkg` layer works on files and is used by tools. A bootloader compiles the
-sources it needs, see
+with I/O callbacks and its own hash and signature implementation, and
+compiles only the sources it needs, see
 [Building the library into another project](#building-the-library-into-another-project).
-The CMake option `BPAK_BUILD_MINIMAL` builds only the core.
+The `pkg` layer works on files and is used by tools.
 
 | Header       | Contents                                                                 |
 |--------------|--------------------------------------------------------------------------|
@@ -73,20 +72,21 @@ CMake options:
 |----------------------|----------------------------------------------------------------------|
 | `BPAK_BUILD_MINIMAL` | Build only the core: header, ids, keystores and utilities, without dependencies |
 | `BPAK_BUILD_TESTS`   | Build the tests, the examples and the C extension of the python package, see [Development](development.md) |
+| `BPAK_BUILD_FUZZERS` | Build the fuzz targets, requires clang, see [Development](development.md#fuzz-targets) |
 | `BPAK_WERROR`        | Treat compiler warnings as errors, ON by default                     |
 
-`BPAK_CHUNK_BUFFER_LENGTH` sets the size of the buffers that are used to read
-part data, 4096 bytes by default, and `BPAK_BSPATCH_LZMA_MEMLIMIT` the memory
-that the lzma decoder of bspatch may use, 64 MiB by default. Define them on
-the compiler command line to change them.
+`BPAK_CHUNK_BUFFER_LENGTH` sets the size of the buffers that read part data,
+4096 bytes by default, and `BPAK_BSPATCH_LZMA_MEMLIMIT` sets how much memory
+the lzma decoder of bspatch may use, 64 MiB by default. Define them on the
+compiler command line to change them.
 
-`off_t` is part of the API, its size depends on `_FILE_OFFSET_BITS` on 32-bit
-targets. Programs must use the `_FILE_OFFSET_BITS` that the library was built
-with, `bpak/build_config.h` records the size of `off_t` and `bpak/bpak.h` fails
-to compile when it is different. In the same way `struct bpak_hash_context`
-contains the mbedtls hash contexts, programs must use the mbedtls headers of
-the library and `bpak/crypto.h` fails to compile when the contexts have other
-sizes.
+`off_t` is part of the API, and on 32-bit targets its size depends on
+`_FILE_OFFSET_BITS`. Programs must use the same `_FILE_OFFSET_BITS` as the
+library: `bpak/build_config.h` records the size of `off_t` that the library
+was built with, and `bpak/bpak.h` fails to compile when it differs. In the
+same way, `struct bpak_hash_context` contains the mbedtls hash contexts, so
+programs must use the mbedtls headers that the library was built with, and
+`bpak/crypto.h` fails to compile when the contexts have other sizes.
 
 ### Building the library into another project
 
@@ -95,18 +95,18 @@ in `lib/` and `lib/vendor/` directly. Define `BPAK_HAVE_USER_SETTINGS` and
 provide two headers in the include path:
 
 - `bpak_user_settings.h`, which replaces the generated
-  `bpak/build_config.h` and defines `BPAK_CONFIG_MERKLE`, `BPAK_CONFIG_LZMA`
-  and `BPAK_CONFIG_MBEDTLS` to 0 or 1, and optionally `BPAK_SIZEOF_OFF_T`
-- `bpak/version.h`, see [`lib/version.h.in`](../lib/version.h.in)
+  `bpak/build_config.h`. It defines `BPAK_CONFIG_MERKLE`, `BPAK_CONFIG_LZMA`
+  and `BPAK_CONFIG_MBEDTLS` to 0 or 1, and optionally `BPAK_SIZEOF_OFF_T`.
+- `bpak/version.h`, see [`lib/version.h.in`](../lib/version.h.in).
 
-The CMake build prefixes the functions of heatshrink and sais in `lib/vendor/`
-with `bpak_`, see `bpak-vendor-names` in
+The CMake build prefixes the functions of heatshrink and sais in
+`lib/vendor/` with `bpak_`, see `bpak-vendor-names` in
 [`lib/CMakeLists.txt`](../lib/CMakeLists.txt). Projects that also use
-heatshrink define the same names.
+heatshrink must define the same prefixes.
 
 Without mbedtls, register a hash and signature implementation with
-`bpak_hash_setup()` and `bpak_crypto_setup()` from `crypto.h`, for example one
-that uses a hardware crypto accelerator. Without LZMA, `bsdiff-lzma` and
+`bpak_hash_setup()` and `bpak_crypto_setup()` from `crypto.h`, for example
+one that uses a hardware crypto accelerator. Without LZMA, `bsdiff-lzma` and
 `bspatch-lzma` are not available.
 
 ## Using the library
@@ -114,6 +114,7 @@ that uses a hardware crypto accelerator. Without LZMA, `bsdiff-lzma` and
 ### Reading a header
 
 ```c
+#include <stdio.h>
 #include <bpak/bpak.h>
 #include <bpak/id.h>
 
@@ -126,16 +127,24 @@ if (bpak_valid_header(&header) != BPAK_OK)
     return -1;
 
 if (bpak_get_meta(&header, BPAK_ID_BPAK_VERSION, 0, &meta) == BPAK_OK)
-    printf("Version: %s\n", bpak_get_meta_ptr(&header, meta, char));
+    printf("Version: %.*s\n", (int)meta->size,
+           bpak_get_meta_ptr(&header, meta, char));
 
 bpak_foreach_part (&header, part) {
     if (part->id == 0)
-        continue;
+        break;
     printf("Part %08x: %zu bytes at offset %lld\n", part->id,
            bpak_part_size_wo_pad(part),
            (long long)bpak_part_offset(&header, part));
 }
 ```
+
+`bpak_valid_header()` checks that the header can be used safely before it is
+verified: the magic number, that the parts and the meta data end at the
+first empty slot, their sizes and alignment, and the signature size. It does
+not check the signature. The values of meta data are not necessarily NUL terminated, so
+the example limits the string to the size of the value. `bpak_meta_to_string()`
+in `utils.h` formats the values of known meta data.
 
 [`examples/c_example.c`](../examples/c_example.c) is a complete program that
 lists the meta data of a package, `c_example <package>`.
@@ -143,7 +152,7 @@ lists the meta data of a package, `c_example <package>`.
 ### Verifying a package file
 
 ```c
-#include <stdlib.h>
+#include <stdio.h>
 #include <bpak/bpak.h>
 #include <bpak/crypto.h>
 #include <bpak/pkg.h>
@@ -163,31 +172,46 @@ if (rc == BPAK_OK) {
 }
 
 printf("%s\n", bpak_error_string(rc));
-free(key); /* Allocated with bpak_calloc(), calloc() by default */
+bpak_free(key);
 ```
 
-`bpak_pkg_verify()` is implemented with the functions in `verify.h`, which a
-bootloader can use directly on a header in memory and a read callback:
+`bpak_pkg_verify()` returns `BPAK_OK` only when both the signature and the
+payload are valid. It is implemented with the functions in `verify.h`, which
+a bootloader can use directly with a header in memory and a read callback:
 
 1. `bpak_verify_compute_header_hash()` computes the header hash.
 2. `bpak_crypto_verify()` checks the signature in the header against the
-   hash, with a key that is selected with `key_id` and `keystore_id`, for
-   example from a keystore that was generated with `bpak generate keystore`
-   and `bpak_keystore_get()`.
+   hash. It returns `BPAK_OK` when it could check the signature and sets
+   `verified` to the result, so check both. The key is selected with
+   `key_id` and `keystore_id`, for example from a keystore that was
+   generated with `bpak generate keystore`, with `bpak_keystore_get()`.
 3. `bpak_verify_payload()` reads the parts through the callback, compares
    the payload hash and checks the merkle hash trees.
 
 Verification covers the data as it is read during the verification. Data
 that is read again afterwards, for example with `bpak_pkg_extract_file()`,
-is only covered when nothing can change it in between, so verify packages
-in storage that an attacker can not write, or verify a copy and use that
-copy. The `signature_kind` in the header is informational, the signature
-is checked with the algorithm of the key.
+is only covered when nothing can change it in between. Verify packages in
+storage that an attacker can not write to, or verify a copy and use that
+copy.
+
+The `signature_kind` in the header is informational, the signature is
+checked with the algorithm of the key.
+
+### Keystores
+
+`bpak_keystore_get()` gets a key from a keystore in memory, for example one
+that `bpak generate keystore` generated, and only returns keys of a
+keystore that has `verified` set. `bpak_keystore_load_key_from_file()` loads
+a key from a keystore package. It checks the `keystore-provider-id` and the
+payload hash of the keystore, but not its signature, so verify the keystore
+package first when it is not stored in trusted storage. Free the key with
+`bpak_free()`.
 
 ### Transport decoding on a device
 
-`transport.h` decodes a transport encoded package as a stream, so a device can
-apply an update while it is downloaded without storing the encoded package:
+`transport.h` decodes a transport encoded package as a stream, so a device
+can apply an update while it is downloaded, without storing the encoded
+package:
 
 1. `bpak_transport_decode_init()` with a work buffer, the header of the
    encoded package and callbacks that write and read the output.
@@ -196,7 +220,7 @@ apply an update while it is downloaded without storing the encoded package:
 3. For every part: `bpak_transport_decode_start()`, then
    `bpak_transport_decode_write_chunk()` with the encoded part data as it
    arrives, then `bpak_transport_decode_finish()`.
-4. `bpak_transport_decode_free()`.
+4. `bpak_transport_decode_free()`, also when decoding stopped with an error.
 
 The decoder checks that the patch stays within the parts, but the patch is
 not authenticated: the header of a transport encoded package can not be
@@ -209,8 +233,9 @@ Functions return `BPAK_OK` (0) or a negative `enum bpak_errors` value, and
 `bpak_error_string()` describes an error.
 
 The library logs through `bpak_printf(level, fmt, ...)`. The default
-implementation is a weak symbol that discards the messages, define
+implementation is a weak symbol that discards the messages. Define
 `bpak_printf` in the application to print them.
 
-Memory is allocated with `calloc` and `free` unless other functions are set
-with `bpak_set_calloc_free()`.
+The library allocates memory with `calloc` and `free`, unless other
+functions are set with `bpak_set_calloc_free()`. Free memory that the library
+allocated, like keys, with `bpak_free()`.

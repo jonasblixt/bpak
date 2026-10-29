@@ -1,12 +1,12 @@
 # User guide
 
-This guide uses the `bpak` command line tool to build a firmware package step
-by step: parts, meta data, a dm-verity hash tree, signing, transport encoding
-for updates and keystores. See [Package format](format.md) for a description
-of the concepts and the [README](../README.md#installation) for how to
-install the tool.
+This guide builds a firmware package step by step with the `bpak` command
+line tool: parts, meta data, a dm-verity hash tree, signing, transport
+encoding for updates and keystores. [Package format](format.md) describes the
+concepts behind the commands, and the [README](../README.md#installation)
+describes how to install the tool.
 
-Every command has a `--help` option, `bpak --help` lists the commands.
+Every command has a `--help` option, and `bpak --help` lists the commands.
 
 ## Creating a package
 
@@ -32,31 +32,32 @@ Parts:
     49b58fc2   98304        0      --------       98304
     ec103b08   307200       0      --------       307200
 
-Header hash:  cf3dc6ba927e2498d1d2fbaa99fff048cf6be0da8e958428ac534da8a3155825
-Payload hash: 4023cc5eab6b4fd0903e7383f6d5caecbbfe4fe39dcc09946519b47c36e5f3c5
+Header hash:  b2fb80fe2212d5d04d94b16bfbce24bb5e72217d71982417441b36bd5cdf6793
+Payload hash: 9802a9080720269ebad173a57b738db67697893657f78aa206919be86b17bb09
 ```
 
-The package now holds the two files. Parts are listed by their id, which is
-computed from the name with a CRC32, see [IDs](format.md#ids):
+`show` lists the parts by their ids. The id of a part is computed from its
+name, see [IDs](format.md#ids), and `generate id` prints it:
 
 ```
 $ bpak generate id kernel
 id("kernel") = 0xec103b08
 ```
 
-All options that take a part or meta data id accept a name, or an id written
-as hex with a `0x` prefix: `--part kernel` and `--part 0xec103b08` are the
-same.
+The package stores only the id, not the name. Every option that takes the
+id of a part or of meta data accepts either the name or the id in hex with a
+`0x` prefix, so `--part kernel` and `--part 0xec103b08` are the same.
 
-`create` selects the hash and signature algorithms of the package, sha256 and
-prime256v1 by default:
+`create` sets the hash algorithm of the package, sha256 by default:
 
 ```
 $ bpak create demo384.bpak --hash-kind sha384 --signature-kind secp384r1
 ```
 
-The signature algorithm must match the key that signs the package. `create`
-asks before it overwrites an existing file, `-Y` overwrites without asking.
+`bpak sign` sets the signature algorithm from the key, so
+`--signature-kind` only matters for packages that are signed with an
+external tool. `create` asks before it overwrites an existing file, `-Y`
+overwrites it without asking.
 
 ## Meta data
 
@@ -82,19 +83,19 @@ Metadata:
 ...
 ```
 
-The `bpak-package` UUID tells which kind of package this is. All versions of
-the same firmware should use the same UUID. `--part-ref` attaches meta data
-to a part, here the load address of the kernel.
+The `bpak-package` UUID identifies the kind of package, so all versions of
+the same firmware use the same UUID. `--part-ref` attaches meta data to a
+part, here the load address of the kernel.
 
-The value is given with `--from-string` or read from a file with
-`--from-file`. Without an encoder a string is stored as it is, with a
-terminating NUL byte. The encoders store:
+`--from-string` gives the value on the command line and `--from-file` reads
+it from a file. Without an encoder, a string is stored as it is, followed by
+a NUL byte. The encoders store:
 
-| Encoder   | Value                                                    |
-|-----------|----------------------------------------------------------|
-| `uuid`    | A UUID as 16 bytes                                       |
-| `integer` | A 64 bit integer, decimal, hex with `0x` or octal with `0` |
-| `id`      | The id of a name, 4 bytes                                |
+| Encoder   | Value                                                       |
+|-----------|-------------------------------------------------------------|
+| `uuid`    | A UUID, 16 bytes                                            |
+| `integer` | A 64 bit integer: decimal, hex with `0x` or octal with `0`  |
+| `id`      | The id of a name, 4 bytes                                   |
 
 Show or extract a single value:
 
@@ -104,12 +105,15 @@ $ bpak show demo.bpak --meta bpak-version
 $ bpak extract demo.bpak --meta bpak-version --output version.bin
 ```
 
-Change an existing value with `set`, which takes the same `--encoder` for
-integers and ids as `add`. Meta data that refers to a part is selected with
-`--part-ref`, like `--meta pb-load-addr --part-ref kernel`:
+`set` changes an existing value and takes the same `--encoder` and
+`--part-ref` options as `add`. Here the kernel moves to another load
+address. `show` selects the part of the meta data with `--part`:
 
 ```
-$ bpak set demo.bpak --meta bpak-version --from-string 1.1.1
+$ bpak set demo.bpak --meta pb-load-addr --part-ref kernel \
+                     --from-string 0x80008000 --encoder integer
+$ bpak show demo.bpak --meta pb-load-addr --part kernel
+Entry: 0x80008000
 ```
 
 ## File systems and dm-verity
@@ -125,9 +129,9 @@ Metadata:
     ID         Size   Meta ID              Part Ref   Data
     fb2f1f3f   16     bpak-package                    74a53c6d-3556-49f5-a9cd-481ebf22baab
     9a5bab69   6      bpak-version                    1.1.0
-    d1e64a4b   8      pb-load-addr         ec103b08   Entry: 0x80000000
-    7c9b2f93   32     merkle-salt          979e8728   67458b6bc6237b3269983c647348336651dcb074ff5c49194a94e82aec585562
-    e68fc9be   32     merkle-root-hash     979e8728   019eb4419ec51fed3fe89fc52e18e65cd7aa14edbb5dc752349a6744d5570082
+    d1e64a4b   8      pb-load-addr         ec103b08   Entry: 0x80008000
+    7c9b2f93   32     merkle-salt          979e8728   5300a2a1f1737bbbbc82dfc2bf3648b5fc1d31c58ef2b0e13d30c2eccf545eb2
+    e68fc9be   32     merkle-root-hash     979e8728   2b222fc294e69af7b9e10302283f82193063a8ffa59d42a5c389537bf7eb3577
 
 Parts:
     ID         Size         Z-pad  Flags          Transport Size
@@ -137,20 +141,23 @@ Parts:
 ...
 ```
 
-The merkle encoder adds a second part, `rootfs-hash-tree` (998ee6de), with a
-hash tree that is compatible with the dm-verity device mapper target of the
-Linux kernel, and stores the salt and the root hash as meta data of the
-`rootfs` part.
+The merkle encoder adds a second part, `rootfs-hash-tree` (998ee6de). It
+holds a hash tree that is compatible with the dm-verity device mapper target
+of the Linux kernel. The salt and the root hash of the tree are stored as
+meta data of the `rootfs` part. The salt is random, so it is different every
+time a file is added. The size of the file must be a multiple of 4 KiB, the
+block size of the tree.
 
-`--set-flag dont-hash` excludes both parts from the payload hash, which is
-shown by the `h` flag. The root hash is part of the signed header and
-dm-verity verifies the data when it is read, so hashing the whole file system
-again when the package is verified is not needed. `bpak verify` still checks
-the hash tree and its root hash.
+`--set-flag dont-hash` excludes both parts from the payload hash, which `show`
+marks with the `h` flag. The root hash is in the signed header, and dm-verity
+checks the data when it is read, so the package does not need to hash the
+whole file system again when it is verified. `bpak verify` still checks the
+hash tree against the data and the root hash.
 
 ## Signing and verifying
 
-Set the key id and the keystore id and sign the package with a private key:
+Set the key id and the keystore id, then sign the package with a private
+key:
 
 ```
 $ bpak set demo.bpak --key-id demo-key --keystore-id demo-keystore
@@ -159,19 +166,19 @@ $ bpak verify demo.bpak --key prime256v1-public-key.der
 Verification OK
 ```
 
-The key id and keystore id are optional. A verifier uses them to select the
-key, see [Keystores](#keystores). They are part of the signed header and must
-be set before the package is signed.
+The key id and the keystore id are optional. A verifier uses them to select
+the key, see [Keystores](#keystores). They are part of the signed header, so
+set them before the package is signed.
 
-Keys are read in PEM or DER format. A key pair can be created with openssl:
+Keys are read in PEM or DER format. Create a key pair with openssl:
 
 ```
 $ openssl ecparam -name prime256v1 -genkey -noout -out prime256v1-key-pair.pem
 $ openssl ec -in prime256v1-key-pair.pem -pubout -outform DER -out prime256v1-public-key.der
 ```
 
-Any change to the package after it was signed makes the verification fail,
-the tool then exits with an error:
+Any change to a signed package makes the verification fail, and the tool
+exits with an error:
 
 ```
 $ bpak set demo.bpak --meta bpak-version --from-string 1.1.1
@@ -187,8 +194,8 @@ Sign the package again after every change.
 
 Updates are usually small changes to large files. Transport encoding replaces
 parts with a binary diff against the version that is already installed, the
-*origin*. Add transport rules to the package that select the encoder and the
-decoder of each part:
+*origin*. Transport rules in the package select the encoder and the decoder
+of each part:
 
 ```
 $ bpak transport demo.bpak --add --part rootfs \
@@ -198,11 +205,11 @@ $ bpak transport demo.bpak --add --part rootfs-hash-tree \
 $ bpak sign demo.bpak --key prime256v1-key-pair.pem
 ```
 
-The rules are meta data, so the package must be signed again after they are
-added. The `rootfs` part is sent as a diff, and the hash tree is not sent at
-all: the device generates it again from the file system, and the result is
-checked against the signed root hash. See [Transport encoding](format.md#transport-encoding) for
-the available encoders.
+The rules are meta data, so sign the package again after adding them. The
+`rootfs` part is sent as a diff. The hash tree is not sent at all, the device
+generates it again from the file system and checks it against the signed root
+hash. [Transport encoding](format.md#transport-encoding) lists the available
+encoders.
 
 Build the previous version, `demo-1.0.0.bpak`, in the same way and with the
 same `bpak-package` UUID. Then encode the new version against it:
@@ -214,15 +221,15 @@ $ bpak show demo-patch.bpak
 Parts:
     ID         Size         Z-pad  Flags          Transport Size
     ec103b08   307200       0      --------       307200
-    979e8728   1048576      0      hT------       16620
+    979e8728   1048576      0      hT------       26387
     998ee6de   12288        0      hT------       0
 ...
 ```
 
-The `T` flag marks the parts that are transport encoded, the size of the patch
-is the header and the sum of the *Transport Size* column, 327916 bytes instead
-of 1372160. The kernel did not change, but it is sent in full because it has
-no transport rule.
+The `T` flag marks the transport encoded parts. The patch is the header plus
+the sum of the *Transport Size* column, 337683 bytes instead of the 1372160
+bytes of the package. The kernel did not change, but it is sent in full
+because it has no transport rule.
 
 The device decodes the patch with its installed package as the origin:
 
@@ -234,14 +241,16 @@ Verification OK
 
 The decoded package is identical to `demo.bpak`, including the signature.
 The patch itself does not verify, because the transport flags and sizes are
-part of its header.
+part of its header. A package whose rules only use `merkle-generate` can be
+decoded without `--origin`.
 
 ## Keystores
 
 A keystore is a package of public keys, one key per part. It lets a device
-choose the verification key from the key id and keystore id of a package. The
-`bpak-package` UUID `5df103ef-e774-450b-95c5-1fef51ceec28` marks a package as
-a keystore, and `keystore-provider-id` is the id that packages refer to with
+choose the key that verifies a package from the key id and the keystore id
+of the package. The `bpak-package` UUID
+`5df103ef-e774-450b-95c5-1fef51ceec28` marks a package as a keystore, and
+`keystore-provider-id` is the id that packages refer to with
 `--keystore-id`:
 
 ```
@@ -259,16 +268,24 @@ $ bpak sign keystore.bpak --key root-key-pair.pem
 ```
 
 The part names are the key ids. `demo.bpak` was signed with the key id
-`demo-key` and the keystore id `demo-keystore`, so it can be verified with the
-keystore:
+`demo-key` and the keystore id `demo-keystore`, so the keystore can verify
+it:
 
 ```
 $ bpak verify demo.bpak --keystore keystore.bpak
 Verification OK
 ```
 
-A signed keystore can be loaded at runtime to extend the root of trust of a
-device. A keystore can also be built into a bootloader as C code:
+`--keystore` checks that the keystore is intact with its payload hash, but
+not its signature. Verify the keystore itself with the root key:
+
+```
+$ bpak verify keystore.bpak --key root-public-key.der
+Verification OK
+```
+
+A device can load a signed keystore at runtime to extend its root of trust.
+A keystore can also be built into a bootloader as C code:
 
 ```
 $ bpak generate keystore keystore.bpak --name demo
@@ -310,15 +327,15 @@ const struct bpak_keystore keystore_demo =
 
 ## Signing with an external tool
 
-Release candidates often go through a long test cycle, and once one is
-approved it should be released as it is instead of being built again. The
-signature of a package can be replaced without changing anything else, so a
-release candidate signed with a development key can be signed again with the
-production key, for example in a separate signing environment with a hardware
-security module.
+Release candidates often go through a long test cycle. Once one is approved,
+it should be released as it is instead of being built again. The signature
+of a package can be replaced without changing anything else, so a release
+candidate that was signed with a development key can be signed again with
+the production key, for example in a separate signing environment with a
+hardware security module.
 
 Set the production key id and keystore id, then write the binary header hash
-to a file. This is what gets signed:
+to a file. This hash is what gets signed:
 
 ```
 $ bpak set demo.bpak --key-id release-key --keystore-id production-keystore
@@ -331,7 +348,8 @@ Sign the hash, here with openssl:
 $ openssl pkeyutl -sign -inkey release-key-pair.pem -in hash.bin -out signature.der
 ```
 
-and write the signature to the package:
+For an RSA key, also give the hash algorithm of the package, for example
+`-pkeyopt digest:sha256`. Then write the signature to the package:
 
 ```
 $ bpak sign demo.bpak --signature signature.der
@@ -358,9 +376,9 @@ Metadata:
     ID         Size   Meta ID              Data
 =   fb2f1f3f   16     bpak-package         74a53c6d-3556-49f5-a9cd-481ebf22baab
 *   9a5bab69   6      bpak-version         1.0.0
-=   d1e64a4b   8      pb-load-addr         Entry: 0x80000000
-=   7c9b2f93   32     merkle-salt          67458b6bc6237b3269983c647348336651dcb074ff5c49194a94e82aec585562
-*   e68fc9be   32     merkle-root-hash     71223a77595a1ae09ce2d0793874350108c139da7b0485a4852bfe03916203b4
+=   d1e64a4b   8      pb-load-addr         Entry: 0x80008000
+*   7c9b2f93   32     merkle-salt          887edf5a8a2f019f81aa0739c424cc65b0991231175dc2429961da8fd1d4ce7e
+*   e68fc9be   32     merkle-root-hash     8105f54a5dcf1a50d70385c26485e22cd6e196ee6bba640dee5c5af45781e35a
 =   2d44bbfb   32     bpak-transport       Encode: 9f7aacf9, Decode: b5964388
 =   2d44bbfb   32     bpak-transport       Encode: 57004cd0, Decode: b5bcc58f
 
@@ -371,26 +389,31 @@ Parts:
 *   998ee6de   12288        0      h-------       12288
 ```
 
+The data column shows the values of the first package.
+
 Other commands:
 
-| Command                                          | Description                                  |
-|--------------------------------------------------|----------------------------------------------|
-| `bpak show demo.bpak --hash`                     | Print the header hash                        |
-| `bpak show demo.bpak --part-hash kernel`         | Print the SHA-256 hash of a part             |
-| `bpak extract demo.bpak --part kernel -o k.bin`  | Write the data of a part to a file           |
-| `bpak delete demo.bpak --part kernel`            | Delete a part and its meta data              |
-| `bpak delete demo.bpak --all`                    | Delete all parts                             |
+| Command                                                        | Description                                  |
+|----------------------------------------------------------------|----------------------------------------------|
+| `bpak show demo.bpak --hash`                                   | Print the header hash                        |
+| `bpak show demo.bpak --part kernel`                            | Print the size of a part                     |
+| `bpak show demo.bpak --part-hash kernel`                       | Print the SHA-256 hash of a part             |
+| `bpak extract demo.bpak --part kernel -o k.bin`                | Write the data of a part to a file           |
+| `bpak extract demo.bpak --meta pb-load-addr --part-ref kernel` | Write the value of meta data to stdout       |
+| `bpak delete demo.bpak --part kernel`                          | Delete a part and its meta data              |
+| `bpak delete demo.bpak --all`                                  | Delete all parts                             |
 
-`delete` removes the meta data of the deleted parts unless `--keep-meta` is
-given. Deleting a part with a merkle hash tree also deletes its
-`<part>-hash-tree` part.
+`delete` also deletes the meta data of the deleted parts, unless
+`--keep-meta` is given. Deleting a part with a merkle hash tree also deletes
+its `<part>-hash-tree` part.
 
 ## Verbose output and errors
 
-`-v` prints more details, repeat it for even more: `bpak show demo.bpak -vv`.
-The option can be given before or after the command.
+`-v` prints more details, and repeating it prints even more:
+`bpak show demo.bpak -vv`. The option can be given before or after the
+command.
 
-Errors are printed on stderr. The exit code is 2 for invalid options and
+Errors are printed on stderr. The exit code is 2 for invalid options, and
 otherwise the negated error code of the library, `enum bpak_errors` in
 [`include/bpak/bpak.h`](../include/bpak/bpak.h), as an unsigned byte. For
 example, a failed verification (`BPAK_VERIFY_FAIL`, 20) exits with 236.

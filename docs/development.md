@@ -8,12 +8,13 @@ can be installed with:
 ```
 $ sudo apt install build-essential cmake pkg-config \
       libmbedtls-dev liblzma-dev \
-      libcmocka-dev python3-dev python3-pytest python3-click openssl lcov
+      libcmocka-dev python3-dev python3-pytest python3-click openssl lcov \
+      clang-format
 ```
 
 Other distributions provide the same libraries under similar names: mbedtls,
-liblzma, cmocka, click and the python3 development headers. Python
-3.10 or later is required.
+liblzma, cmocka, click and the python3 development headers. Python 3.10 or
+later is required.
 
 The python package is developed with [uv](https://docs.astral.sh/uv).
 `uv sync` creates a virtual environment in `.venv` with the pinned
@@ -48,7 +49,8 @@ $ cmake --build build -j$(nproc)
 
 `BPAK_BUILD_TESTS` also builds `bpak._bpak`, the C extension of the python
 package, and compiles the library with coverage instrumentation. The C unit
-tests are built with AddressSanitizer, which includes leak detection.
+tests are built with AddressSanitizer, which includes leak detection, but the
+library and the C extension are built without sanitizers.
 
 The `bpak` tool is implemented in python, in `tools/bpak/cli.py`. It uses
 the python package in `tools/bpak`, which wraps the C extension
@@ -290,9 +292,13 @@ that command examples and their output match the current tool.
 
 1. Fork the repository and create a branch from `master`.
 2. Implement the feature or bug fix, with tests that make sure that later
-   changes do not break it.
+   changes do not break it. Describe changes that affect users in
+   `CHANGELOG.md` and update the documentation.
 3. Run the tests and the linters.
 4. Create a pull request.
+
+Open tasks and known bugs are tracked in `todo.md`. Add the tasks you find
+there, and move a task to *Done* with the commit that resolves it.
 
 ## Commit messages
 

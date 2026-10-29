@@ -5,8 +5,8 @@
 [![Build](https://github.com/jonasblixt/bpak/actions/workflows/build.yml/badge.svg)](https://github.com/jonasblixt/bpak/actions/workflows/build.yml)
 [![Coverity](https://scan.coverity.com/projects/20419/badge.svg)](https://scan.coverity.com/projects/jonasblixt-bpak)
 
-Bitpacker, or bpak, is a C library and a command line tool for signed
-firmware packages, primarily for embedded systems.
+Bitpacker, or bpak, is a C library, a python package and a command line tool
+for signed firmware packages, primarily for embedded systems.
 
 An embedded system is often composed of several software components: a
 bootloader, a kernel, file systems, device configuration and applications,
@@ -28,13 +28,13 @@ together with meta data, in a format that a bootloader can verify:
 - **Keystores.** Sets of public keys in a package, which can be compiled into
   a bootloader or loaded at runtime to extend the root of trust.
 
-The library is small and does not depend on a file system or a particular
-crypto library, which makes it suitable for bootloaders, for example
-[punchboot](https://github.com/jonasblixt/punchboot).
+The library is small and depends neither on a file system nor on a
+particular crypto library, which makes it suitable for bootloaders, for
+example [punchboot](https://github.com/jonasblixt/punchboot).
 
 bpak is not a package manager. It provides the package format and the
-primitives to verify and update packages, how packages are installed is up to
-the system that uses it.
+primitives to verify and update packages. How packages are installed is up
+to the system that uses them.
 
 ## Installation
 
@@ -47,10 +47,10 @@ $ uv tool install .
 $ pip install .
 ```
 
-The package is built with CMake and includes the library. The build needs a
-C compiler and the mbedtls and liblzma development packages, for example
-`libmbedtls-dev` and `liblzma-dev` on Debian and Ubuntu, and Python 3.10 or
-later.
+The package is built with CMake and includes the library. The build needs
+Python 3.10 or later, a C compiler and the mbedtls and liblzma development
+packages, for example `libmbedtls-dev` and `liblzma-dev` on Debian and
+Ubuntu.
 
 Build and install the C library:
 
