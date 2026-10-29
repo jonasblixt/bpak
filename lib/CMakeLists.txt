@@ -3,6 +3,13 @@ include(GNUInstallDirs)
 # @ONLY "Restrict variable replacement to references of the form @VAR@"
 configure_file(${PROJECT_NAME}.pc.in ${PROJECT_NAME}.pc @ONLY)
 
+# off_t is part of the ABI, its size depends on _FILE_OFFSET_BITS. bpak.h
+# checks that programs use the same size, see build_config.h.in.
+include(CheckTypeSize)
+set(CMAKE_EXTRA_INCLUDE_FILES sys/types.h)
+check_type_size(off_t BPAK_SIZEOF_OFF_T)
+unset(CMAKE_EXTRA_INCLUDE_FILES)
+
 # Generated public headers, next to the public headers in include/bpak/ when
 # installed
 set(LIB_GENERATED_INCLUDE_DIR ${${PROJECT_NAME}_BINARY_DIR}/include)

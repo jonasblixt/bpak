@@ -15,6 +15,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include <sys/types.h>
 #include <unistd.h>
 #include <bpak/version.h>
 
@@ -22,6 +23,14 @@
 #include "bpak_user_settings.h"
 #else
 #include <bpak/build_config.h>
+#endif
+
+#ifdef BPAK_SIZEOF_OFF_T
+/* off_t is part of the ABI, a program must be compiled with the
+ * _FILE_OFFSET_BITS that the library was built with. The array has a negative
+ * size, and the compilation fails, when off_t has another size. */
+typedef char bpak_off_t_has_the_size_of_the_library
+    [(sizeof(off_t) == BPAK_SIZEOF_OFF_T) ? 1 : -1];
 #endif
 
 #define BPAK_EXPORT __attribute__((visibility("default")))

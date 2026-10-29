@@ -108,6 +108,11 @@ tool. The package format and the library ABI stay compatible, see
   `BPAK_KEY_NOT_FOUND` instead of `BPAK_NOT_FOUND` when the keystore does
   not contain the key. `bpak verify --keystore` exits with the code of
   `BPAK_KEY_NOT_FOUND` (228) for an unknown key instead of 254.
+- File offsets were passed to `fseek` as `long`, packages larger than 2 GiB
+  did not work on targets with a 32-bit `long`. Programs that are compiled
+  with another size of `off_t` than the library fail to compile, see
+  [the C library](docs/c-library.md), and `bpak/bpak.h` compiles with
+  `-std=c99`.
 - Python package: crashes when opening a file that is not a package, when
   using a closed package and after the log callback was released, reference
   leaks in `Package.parts` and `Package.meta`, meta data larger than the

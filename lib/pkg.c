@@ -41,7 +41,7 @@ BPAK_EXPORT int bpak_pkg_open(struct bpak_package *pkg, const char *filename,
 
     pkg->filename = filename;
 
-    if (fseek(pkg->fp, 0, SEEK_SET) != 0) {
+    if (fseeko(pkg->fp, 0, SEEK_SET) != 0) {
         rc = -BPAK_SEEK_ERROR;
         goto err_close_io;
     }
@@ -68,7 +68,7 @@ BPAK_EXPORT int bpak_pkg_open(struct bpak_package *pkg, const char *filename,
             goto err_close_io;
         }
 
-        if (fseek(pkg->fp, 0, SEEK_SET) != 0) {
+        if (fseeko(pkg->fp, 0, SEEK_SET) != 0) {
             rc = -BPAK_SEEK_ERROR;
             goto err_close_io;
         }
@@ -84,7 +84,7 @@ BPAK_EXPORT int bpak_pkg_open(struct bpak_package *pkg, const char *filename,
         goto err_close_io;
     }
 
-    if (fseek(pkg->fp, 0, SEEK_SET) != 0) {
+    if (fseeko(pkg->fp, 0, SEEK_SET) != 0) {
         rc = -BPAK_SEEK_ERROR;
         goto err_close_io;
     }
@@ -110,7 +110,7 @@ static ssize_t pkg_read_payload(off_t offset, uint8_t *buf, size_t length,
                                 void *user)
 {
     FILE *fp = (FILE *)user;
-    if (fseek(fp, offset, SEEK_SET) != 0)
+    if (fseeko(fp, offset, SEEK_SET) != 0)
         return -BPAK_SEEK_ERROR;
     size_t read_bytes = fread(buf, 1, length, fp);
 
@@ -182,7 +182,7 @@ BPAK_EXPORT struct bpak_header *bpak_pkg_header(struct bpak_package *pkg)
 
 BPAK_EXPORT int bpak_pkg_write_header(struct bpak_package *pkg)
 {
-    if (fseek(pkg->fp, 0, SEEK_SET) != 0) {
+    if (fseeko(pkg->fp, 0, SEEK_SET) != 0) {
         return -BPAK_SEEK_ERROR;
     }
 
@@ -225,7 +225,7 @@ static ssize_t decode_write_output(off_t offset, uint8_t *buffer, size_t length,
 {
     struct decode_private *priv = (struct decode_private *)user;
 
-    if (fseek(priv->output_fp, offset, SEEK_SET) != 0) {
+    if (fseeko(priv->output_fp, offset, SEEK_SET) != 0) {
         return -BPAK_SEEK_ERROR;
     }
 
@@ -237,7 +237,7 @@ static ssize_t decode_read_output(off_t offset, uint8_t *buffer, size_t length,
 {
     struct decode_private *priv = (struct decode_private *)user;
 
-    if (fseek(priv->output_fp, offset, SEEK_SET) != 0) {
+    if (fseeko(priv->output_fp, offset, SEEK_SET) != 0) {
         return -BPAK_SEEK_ERROR;
     }
 
@@ -253,7 +253,7 @@ static ssize_t decode_write_output_header(off_t offset, uint8_t *buffer,
     if (length != sizeof(struct bpak_header))
         return -BPAK_SIZE_ERROR;
 
-    if (fseek(priv->output_fp, 0, SEEK_SET) != 0) {
+    if (fseeko(priv->output_fp, 0, SEEK_SET) != 0) {
         return -BPAK_SEEK_ERROR;
     }
 
@@ -265,7 +265,7 @@ static ssize_t decode_read_origin(off_t offset, uint8_t *buffer, size_t length,
 {
     struct decode_private *priv = (struct decode_private *)user;
 
-    if (fseek(priv->origin_fp, offset, SEEK_SET) != 0) {
+    if (fseeko(priv->origin_fp, offset, SEEK_SET) != 0) {
         return -BPAK_SEEK_ERROR;
     }
 
@@ -328,7 +328,7 @@ BPAK_EXPORT int bpak_pkg_transport_decode(struct bpak_package *input,
         }
     }
 
-    if (fseek(input->fp, sizeof(struct bpak_header), SEEK_SET) != 0) {
+    if (fseeko(input->fp, sizeof(struct bpak_header), SEEK_SET) != 0) {
         bpak_printf(0, "%s: Error, could not seek input stream", __func__);
         rc = -BPAK_SEEK_ERROR;
         goto err_out;
@@ -446,7 +446,7 @@ BPAK_EXPORT int bpak_pkg_extract_file(struct bpak_package *pkg,
 
     p_offset = bpak_part_offset(h, part);
 
-    if (fseek(pkg->fp, p_offset, SEEK_SET) != 0) {
+    if (fseeko(pkg->fp, p_offset, SEEK_SET) != 0) {
         return -BPAK_SEEK_ERROR;
     }
 

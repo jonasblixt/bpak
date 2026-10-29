@@ -22,7 +22,7 @@ static ssize_t verify_payload_read(off_t offset, uint8_t *buf, size_t size,
 {
     FILE *fp = (FILE *)user;
 
-    if (fseek(fp, offset, SEEK_SET) != 0)
+    if (fseeko(fp, offset, SEEK_SET) != 0)
         return -BPAK_SEEK_ERROR;
 
     size_t read_bytes = fread(buf, 1, size, fp);
@@ -105,7 +105,7 @@ BPAK_EXPORT int bpak_pkg_part_sha256(struct bpak_package *pkg,
     if (rc != BPAK_OK)
         return rc;
 
-    if (fseek(pkg->fp, offset, SEEK_SET) != 0) {
+    if (fseeko(pkg->fp, offset, SEEK_SET) != 0) {
         rc = -BPAK_SEEK_ERROR;
         goto err_free_hash_ctx_out;
     }

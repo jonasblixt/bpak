@@ -41,14 +41,14 @@ static int transport_copy(struct bpak_header *input_hdr,
 
     part_offset = bpak_part_offset(input_hdr, p);
 
-    rc = fseek(input_fp, part_offset, SEEK_SET);
+    rc = fseeko(input_fp, part_offset, SEEK_SET);
 
     if (rc != 0) {
         bpak_printf(0, "%s: Could not seek input stream\n", __func__);
         return -BPAK_SEEK_ERROR;
     }
 
-    rc = fseek(output_fp, bpak_part_offset(output_hdr, p), SEEK_SET);
+    rc = fseeko(output_fp, bpak_part_offset(output_hdr, p), SEEK_SET);
 
     if (rc != 0) {
         bpak_printf(0, "%s: Error, could not seek output stream", __func__);
@@ -134,13 +134,17 @@ static ssize_t transport_bsdiff(FILE *target, off_t target_offset,
 
     /* Map the entrire file because mmap's offset must be page aligned and
      * we need to handle non page aligned offsets */
-    if (fseek(target, 0, SEEK_END) != 0)
+    if (fseeko(target, 0, SEEK_END) != 0)
         return -BPAK_SEEK_ERROR;
 
-    long target_file_sz = ftell(target);
+    off_t target_file_sz = ftello(target);
 
     if (target_file_sz == -1)
         return -BPAK_SEEK_ERROR;
+
+    /* mmap takes a size_t */
+    if ((uint64_t)target_file_sz > SIZE_MAX)
+        return -BPAK_SIZE_ERROR;
 
     target_data_mmap =
         mmap(NULL, target_file_sz, PROT_READ, MAP_SHARED, target_fd, 0);
@@ -155,15 +159,20 @@ static ssize_t transport_bsdiff(FILE *target, off_t target_offset,
     /* Calculate pointer to where the needed data starts */
     target_data = target_data_mmap + target_offset;
 
-    if (fseek(origin, 0, SEEK_END) != 0) {
+    if (fseeko(origin, 0, SEEK_END) != 0) {
         rc = -BPAK_SEEK_ERROR;
         goto err_munmap_target;
     }
 
-    long origin_file_sz = ftell(origin);
+    off_t origin_file_sz = ftello(origin);
 
     if (origin_file_sz == -1) {
         rc = -BPAK_SEEK_ERROR;
+        goto err_munmap_target;
+    }
+
+    if ((uint64_t)origin_file_sz > SIZE_MAX) {
+        rc = -BPAK_SIZE_ERROR;
         goto err_munmap_target;
     }
 
@@ -267,9 +276,9 @@ transport_encode_part(struct bpak_transport_meta *tm, uint32_t part_ref_id,
                 bpak_part_size(input_part));
 
     if (origin_header != NULL && origin_fp != NULL) {
-        rc = fseek(origin_fp,
-                   bpak_part_offset(origin_header, origin_part),
-                   SEEK_SET);
+        rc = fseeko(origin_fp,
+                    bpak_part_offset(origin_header, origin_part),
+                    SEEK_SET);
 
         if (rc != 0) {
             bpak_printf(0, "%s: Error, could not seek origin stream", __func__);
@@ -277,16 +286,16 @@ transport_encode_part(struct bpak_transport_meta *tm, uint32_t part_ref_id,
         }
     }
 
-    rc = fseek(input_fp, bpak_part_offset(input_header, input_part), SEEK_SET);
+    rc = fseeko(input_fp, bpak_part_offset(input_header, input_part), SEEK_SET);
 
     if (rc != BPAK_OK) {
         bpak_printf(0, "%s: Error, could not seek input stream", __func__);
         return rc;
     }
 
-    rc = fseek(output_fp,
-               bpak_part_offset(output_header, output_part),
-               SEEK_SET);
+    rc = fseeko(output_fp,
+                bpak_part_offset(output_header, output_part),
+                SEEK_SET);
 
     if (rc != 0) {
         bpak_printf(0, "%s: Error, could not seek output stream", __func__);
@@ -432,7 +441,7 @@ bpak_transport_encode(FILE *input_fp, struct bpak_header *input_header,
         goto err_out;
     }
 
-    rc = fseek(output_fp, 0, SEEK_SET);
+    rc = fseeko(output_fp, 0, SEEK_SET);
 
     if (rc != 0) {
         bpak_printf(0, "Error: Could not seek\n");

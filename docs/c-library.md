@@ -76,8 +76,14 @@ CMake options:
 | `BPAK_WERROR`        | Treat compiler warnings as errors, ON by default                     |
 
 `BPAK_CHUNK_BUFFER_LENGTH` sets the size of the buffers that are used to read
-part data, 4096 bytes by default. Define it on the compiler command line to
-change it.
+part data, 4096 bytes by default, and `BPAK_BSPATCH_LZMA_MEMLIMIT` the memory
+that the lzma decoder of bspatch may use, 64 MiB by default. Define them on
+the compiler command line to change them.
+
+`off_t` is part of the API, its size depends on `_FILE_OFFSET_BITS` on 32-bit
+targets. Programs must use the `_FILE_OFFSET_BITS` that the library was built
+with, `bpak/build_config.h` records the size of `off_t` and `bpak/bpak.h` fails
+to compile when it is different.
 
 ### Building the library into another project
 
@@ -87,7 +93,7 @@ provide two headers in the include path:
 
 - `bpak_user_settings.h`, which replaces the generated
   `bpak/build_config.h` and defines `BPAK_CONFIG_MERKLE`, `BPAK_CONFIG_LZMA`
-  and `BPAK_CONFIG_MBEDTLS` to 0 or 1
+  and `BPAK_CONFIG_MBEDTLS` to 0 or 1, and optionally `BPAK_SIZEOF_OFF_T`
 - `bpak/version.h`, see [`lib/version.h.in`](../lib/version.h.in)
 
 Without mbedtls, register a hash and signature implementation with

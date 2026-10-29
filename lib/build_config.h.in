@@ -5,4 +5,7 @@
 #define BPAK_CONFIG_LZMA    @BPAK_CONFIG_LZMA@
 #define BPAK_CONFIG_MBEDTLS @BPAK_CONFIG_MBEDTLS@
 
+/* Size of off_t when the library was built */
+#define BPAK_SIZEOF_OFF_T @BPAK_SIZEOF_OFF_T@
+
 #endif
