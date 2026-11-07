@@ -5,6 +5,17 @@ tool. The package format and the library ABI stay compatible, see
 [Compatibility](docs/development.md#compatibility). The SONAME of the
 shared library follows the major version.
 
+## 1.0.1 (unreleased)
+
+The upload of 1.0.0 to PyPI failed, 1.0.1 is the first release on PyPI.
+
+### Fixed
+
+- `bpak extract` to stdout and `bpak show --binary-hash` exited with 120
+  and printed `Exception ignored ... BrokenPipeError` when the reader of the
+  output exited, for example in `bpak extract demo.bpak --part fs | head -c
+  16`. They exit with 1 without a message, like the other commands.
+
 ## 1.0.0 (2026-10-29)
 
 ### Added
