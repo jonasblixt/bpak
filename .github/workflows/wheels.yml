@@ -64,7 +64,7 @@ jobs:
           path: dist
       # Trusted publishing, without a password the action authenticates
       # with the OIDC token of the job, see docs/development.md
-      - uses: pypa/gh-action-pypi-publish@v1.13.0
+      - uses: pypa/gh-action-pypi-publish@v1.14.3
         with:
           repository-url: https://test.pypi.org/legacy/
           skip-existing: true
@@ -85,7 +85,7 @@ jobs:
           merge-multiple: true
           path: dist
       # Trusted publishing, see upload_pypi_test
-      - uses: pypa/gh-action-pypi-publish@v1.13.0
+      - uses: pypa/gh-action-pypi-publish@v1.14.3
         with:
           skip-existing: true
           packages-dir: dist/
