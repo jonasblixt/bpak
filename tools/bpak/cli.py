@@ -174,6 +174,16 @@ class BpakGroup(click.Group):
             raise CommandError(bpak.FailedError(str(e))) from e
 
 
+def _write_stdout(data: bytes) -> None:
+    """Write binary data to stdout.
+
+    The data is flushed, so that a closed pipe raises BrokenPipeError in the
+    command, which click handles, instead of at interpreter shutdown.
+    """
+    sys.stdout.buffer.write(data)
+    sys.stdout.buffer.flush()
+
+
 def _parse_integer(text: str, param_hint: str) -> int:
     """Parse an integer and return it as an unsigned 64 bit value."""
     m = _INTEGER_RE.fullmatch(text)
@@ -616,7 +626,7 @@ def show(
         elif part_hash is not None:
             click.echo(pkg.part_sha256(part_hash).hex())
         elif binary_hash:
-            sys.stdout.buffer.write(pkg.update_hash())
+            _write_stdout(pkg.update_hash())
         elif text_hash:
             click.echo(pkg.update_hash().hex())
         else:
@@ -900,7 +910,7 @@ def extract(
     if output is not None:
         output.write_bytes(data)
     else:
-        sys.stdout.buffer.write(data)
+        _write_stdout(data)
 
 
 @cli.command()

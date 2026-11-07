@@ -141,10 +141,12 @@ def test_extract_write_error(bpak, make_data):
     assert "Traceback" not in stderr
 
 
-@pytest.mark.parametrize("args", [["show"], ["extract", "--part", "fs"]])
+@pytest.mark.parametrize("args", [["show"], ["show", "--binary-hash"],
+                                  ["extract", "--part", "fs"]])
 def test_closed_output_pipe(bpak, make_data, args):
     """Output into a pipe whose reader has exited, like 'bpak show | head',
-    exits without an error message"""
+    exits without an error message. Binary output that fits the buffer of
+    stdout fails only when it is flushed."""
     data = make_data("data.bin", 4)
     pkg = bpak.create_package("test.bpak", parts=[Part("fs", data)])
 
