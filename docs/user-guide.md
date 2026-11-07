@@ -289,7 +289,7 @@ A keystore can also be built into a bootloader as C code:
 
 ```
 $ bpak generate keystore keystore.bpak --name demo
-/* Automatically generated with bpak 1.0.0 */
+/* Automatically generated with bpak 1.0.1 */
 #include <bpak/bpak.h>
 #include <bpak/keystore.h>
 

@@ -5,7 +5,7 @@ tool. The package format and the library ABI stay compatible, see
 [Compatibility](docs/development.md#compatibility). The SONAME of the
 shared library follows the major version.
 
-## 1.0.1 (unreleased)
+## 1.0.1 (2026-11-08)
 
 The upload of 1.0.0 to PyPI failed, 1.0.1 is the first release on PyPI.
 
