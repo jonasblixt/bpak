@@ -82,8 +82,13 @@ $ CIBW_BUILD=cp313-manylinux_x86_64 uvx cibuildwheel --platform linux
 
 `.github/workflows/wheels.yml` builds the sdist and the wheels. A run that
 is started manually (`workflow_dispatch`) uploads them to TestPyPI, a `v*`
-tag uploads them to PyPI. The uploads use the `TEST_PYPI_API_TOKEN` and
-`PYPI_API_TOKEN` secrets of the `pypi` environment.
+tag uploads them to PyPI. The uploads use
+[trusted publishing](https://docs.pypi.org/trusted-publishers/), PyPI and
+TestPyPI accept uploads from the jobs of `wheels.yml` in the `pypi`
+environment of `jonasblixt/bpak`, there are no API tokens. The publishers
+are configured in the settings of the `bpak` project on pypi.org and on
+test.pypi.org, with the workflow name `wheels.yml` and the environment name
+`pypi`.
 
 ## Running tests
 
