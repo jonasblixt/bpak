@@ -10,14 +10,14 @@ move it to **Done** with the commit that resolved it.
 
 ## Build
 
-- [ ] Before the first upload: create the `pypi` environment with the
-      `PYPI_API_TOKEN` and `TEST_PYPI_API_TOKEN` secrets in the GitHub
-      repository. The project does not exist on PyPI yet, so the first
-      upload needs a token scoped to the account; replace it with a
-      project-scoped token afterwards. Try the upload with a manual run of
-      `wheels.yml` (TestPyPI) first.
-- [ ] Use trusted publishing for the PyPI uploads instead of API tokens,
-      in `wheels.yml` and in punchboot.
+- [ ] Before the first upload: add the pending trusted publishers of
+      `bpak` on pypi.org and test.pypi.org (owner `jonasblixt`, repository
+      `bpak`, workflow `wheels.yml`, environment `pypi`) and delete the
+      `PYPI_API_TOKEN` and `TEST_PYPI_API_TOKEN` secrets. The workflow of
+      v1.0.0 still passes the secrets, a re-run of its upload only uses
+      trusted publishing when they are gone. Try the upload with a manual
+      run of `wheels.yml` (TestPyPI) first.
+- [ ] Use trusted publishing for the PyPI uploads of punchboot.
 - [ ] Build wheels for macOS and Windows. The wheels are Linux only, other
       platforms build the sdist and need mbedtls and liblzma installed.
       `tools/wheels/install-deps.sh` builds mbedtls from source and could do
@@ -217,3 +217,5 @@ move it to **Done** with the commit that resolved it.
 - [x] Wheels with cibuildwheel and uploads to PyPI, absolute links in
       `README.md` for the description on PyPI (aaefdbd)
 - [x] Release 1.0.0, tag `v1.0.0`
+- [x] Publish to PyPI and TestPyPI with trusted publishing instead of API
+      tokens (61ce319)
