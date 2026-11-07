@@ -221,3 +221,4 @@ move it to **Done** with the commit that resolved it.
       tokens (61ce319)
 - [x] `bpak extract` to stdout and `bpak show --binary-hash` exited with 120
       and printed a `BrokenPipeError` when the reader had exited (0960a31)
+- [x] Release 1.0.1, tag `v1.0.1`, the first release on PyPI
