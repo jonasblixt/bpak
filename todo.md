@@ -219,3 +219,5 @@ move it to **Done** with the commit that resolved it.
 - [x] Release 1.0.0, tag `v1.0.0`
 - [x] Publish to PyPI and TestPyPI with trusted publishing instead of API
       tokens (61ce319)
+- [x] `bpak extract` to stdout and `bpak show --binary-hash` exited with 120
+      and printed a `BrokenPipeError` when the reader had exited (0960a31)
