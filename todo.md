@@ -10,13 +10,6 @@ move it to **Done** with the commit that resolved it.
 
 ## Build
 
-- [ ] Before the first upload: add the pending trusted publishers of
-      `bpak` on pypi.org and test.pypi.org (owner `jonasblixt`, repository
-      `bpak`, workflow `wheels.yml`, environment `pypi`) and delete the
-      `PYPI_API_TOKEN` and `TEST_PYPI_API_TOKEN` secrets. The workflow of
-      v1.0.0 still passes the secrets, a re-run of its upload only uses
-      trusted publishing when they are gone. Try the upload with a manual
-      run of `wheels.yml` (TestPyPI) first.
 - [ ] Use trusted publishing for the PyPI uploads of punchboot.
 - [ ] Build wheels for macOS and Windows. The wheels are Linux only, other
       platforms build the sdist and need mbedtls and liblzma installed.
@@ -221,4 +214,7 @@ move it to **Done** with the commit that resolved it.
       tokens (61ce319)
 - [x] `bpak extract` to stdout and `bpak show --binary-hash` exited with 120
       and printed a `BrokenPipeError` when the reader had exited (0960a31)
-- [x] Release 1.0.1, tag `v1.0.1`, the first release on PyPI
+- [x] Trusted publishers on pypi.org and test.pypi.org, the token secrets
+      are deleted, TestPyPI run 42426349545
+- [x] Release 1.0.1, tag `v1.0.1`, the first release on PyPI (run
+      42427553488) and GitHub
