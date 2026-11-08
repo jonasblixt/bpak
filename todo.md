@@ -6,7 +6,24 @@ move it to **Done** with the commit that resolved it.
 
 ## Bugs
 
+- [ ] The mbedtls backend never calls `psa_crypto_init()`. With an mbedtls
+      3.6 built with `MBEDTLS_USE_PSA_CRYPTO`, PK uses PSA: signing fails
+      (`mbedtls: -16000`) and valid signatures are reported as "Verification
+      failed" (14 of 30 test suites fail). Call it before the PK functions in
+      `lib/crypto_mbedtls.c` when `MBEDTLS_PSA_CRYPTO_C` is defined.
+- [ ] `bpak_mbed_verify` reports every error of `mbedtls_pk_verify`, also
+      a failed allocation or an uninitialized PSA, as a signature that does
+      not match. Only a mismatching or malformed signature should be.
+- [ ] `key_from_pk` checks only "EC" and the bit length, so secp256k1,
+      brainpoolP256r1 and brainpoolP384r1 keys are accepted and recorded as
+      prime256v1 and secp384r1. Check that EC keys are on the NIST P curves.
+- [ ] `bpak_merkle_finish` initializes the hash of every block without
+      freeing the previous one (`lib/merkle.c`). Harmless with the mbedtls
+      contexts, but a hash backend from `bpak_hash_setup()` that allocates
+      leaks a context per block.
+
 ## Release
+
 
 ## Build
 
@@ -26,13 +43,29 @@ move it to **Done** with the commit that resolved it.
 
 ## Library
 
+- [ ] Support TF-PSA-Crypto 1.x (Mbed TLS 4), Mbed TLS 3.6 LTS ends in
+      March 2027. `mbedtls/sha256.h`, `sha512.h`, `entropy.h`, `ctr_drbg.h`,
+      `version.h` and `mbedtls_pk_get_name()` are gone, PK no longer takes
+      an RNG. `psa_hash_operation_t` (232 bytes) does not fit the 216 byte
+      union of `struct bpak_hash_context`, keep the union size and allocate
+      the operation. psa_hash_finish fills the rest of the output buffer with
+      '!', pass the exact hash length. Interrupted merkle contexts then leak
+      their hash, add `bpak_merkle_free()`. Also needed: the wheels
+      (`tools/wheels/install-deps.sh`), CI and the docs. No distribution
+      packages TF-PSA-Crypto yet.
 - [ ] `bpak_pkg_verify` verifies the file and `bpak_pkg_extract_file` reads
       it again, so the extracted data is only covered when nothing changes
       the file in between (documented in fcfdca9). Consider a function that
       verifies the parts while it extracts them.
 
+- [ ] Remove use of dynamic memory if possbile (fopen/fread/fwrite, malloc, etc...)
+
 ## Tests
 
+- [ ] `test/golden/0.9.3` was generated after d4a0373, so its keystore has
+      zero padding, which v0.8.0 to v0.9.3 did not write. No test covers a
+      keystore with stack data in the padding. Add one made by the real
+      v0.9.3 tool, in a new set, the existing sets stay as they are.
 - [ ] `cli.test_transport` takes ~17 s and dominates the test run. Every
       `bpak` command starts python and imports click (~55 ms), so the cli
       tests are ~2.5x slower than with the C tool. Consider pytest-xdist,
@@ -41,6 +74,11 @@ move it to **Done** with the commit that resolved it.
 
 ## CI
 
+- [ ] `build.yml` runs on master and pull requests only, so v1.0.0 was
+      tagged without the test, python-package, abi and Windows jobs. Run it
+      on `v*` tags or open a pull request for release branches.
+- [ ] cibuildwheel only runs `test/python` and `test/golden`, add `test/cli`
+      to test the tool on every python version.
 - [ ] Show test results in the GitHub UI. The JUnit reports in
       `build/test/junit/` are only uploaded as an artifact when tests fail.
 - [ ] Add clang to the CI test matrix, install `libclang-rt-dev` for ASan.
