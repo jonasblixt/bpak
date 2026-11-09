@@ -117,6 +117,7 @@ HSE_sink_res heatshrink_encoder_sink(heatshrink_encoder *hse, uint8_t *in_buf,
 static uint16_t find_longest_match(heatshrink_encoder *hse, uint16_t start,
                                    uint16_t end, const uint16_t maxlen,
                                    uint16_t *match_length);
+static void do_indexing(heatshrink_encoder *hse);
 
 static HSE_state st_step_search(heatshrink_encoder *hse);
 static HSE_state st_yield_tag_bit(heatshrink_encoder *hse, output_info *oi);
@@ -150,6 +151,7 @@ HSE_poll_res heatshrink_encoder_poll(heatshrink_encoder *hse, uint8_t *out_buf,
         case HSES_NOT_FULL:
             return HSER_POLL_EMPTY;
         case HSES_FILLED:
+            do_indexing(hse);
             hse->state = HSES_SEARCH;
             break;
         case HSES_SEARCH:
@@ -337,6 +339,42 @@ static uint16_t get_lookahead_size(heatshrink_encoder *hse)
     (void)hse;
 }
 
+static void do_indexing(heatshrink_encoder *hse)
+{
+    /* Build an index array I that contains flattened linked lists
+     * for the previous instances of every byte in the buffer.
+     *
+     * For example, if buf[200] == 'x', then index[200] will either
+     * be an offset i such that buf[i] == 'x', or a negative offset
+     * to indicate end-of-list. This significantly speeds up matching,
+     * while only using sizeof(uint16_t)*sizeof(buffer) bytes of RAM.
+     *
+     * Future optimization options:
+     * 1. Since any negative value represents end-of-list, the other
+     *    15 bits could be used to improve the index dynamically.
+     *
+     * 2. Likewise, the last lookahead_sz bytes of the index will
+     *    not be usable, so temporary data could be stored there to
+     *    dynamically improve the index.
+     * */
+    struct hs_index *hsi = HEATSHRINK_ENCODER_INDEX(hse);
+    int16_t last[256];
+    memset(last, 0xFF, sizeof(last));
+
+    uint8_t *const data = hse->buffer;
+    int16_t *const index = hsi->index;
+
+    const uint16_t input_offset = get_input_offset(hse);
+    const uint16_t end = input_offset + hse->input_size;
+
+    for (uint16_t i = 0; i < end; i++) {
+        uint8_t v = data[i];
+        int16_t lv = last[v];
+        index[i] = lv;
+        last[v] = i;
+    }
+}
+
 static int is_finishing(heatshrink_encoder *hse)
 {
     return hse->flags & FLAG_IS_FINISHING;
@@ -359,26 +397,37 @@ static uint16_t find_longest_match(heatshrink_encoder *hse, uint16_t start,
     uint16_t len = 0;
     uint8_t *const needlepoint = &buf[end];
 
-    for (int16_t pos = end - 1; pos - (int16_t)start >= 0; pos--) {
+    struct hs_index *hsi = HEATSHRINK_ENCODER_INDEX(hse);
+    int16_t pos = hsi->index[end];
+
+    while (pos - (int16_t)start >= 0) {
         uint8_t *const pospoint = &buf[pos];
+        len = 0;
 
-        if ((pospoint[match_maxlen] == needlepoint[match_maxlen]) &&
-            (*pospoint == *needlepoint)) {
-            for (len = 1; len < maxlen; len++) {
-                if (pospoint[len] != needlepoint[len]) {
-                    break;
-                }
-            }
+        /* Only check matches that will potentially beat the current maxlen.
+         * This is redundant with the index if match_maxlen is 0, but the
+         * added branch overhead to check if it == 0 seems to be worse. */
+        if (pospoint[match_maxlen] != needlepoint[match_maxlen]) {
+            pos = hsi->index[pos];
+            continue;
+        }
 
-            if (len > match_maxlen) {
-                match_maxlen = len;
-                match_index = pos;
-
-                if (len == maxlen) {
-                    break;
-                } /* don't keep searching */
+        for (len = 1; len < maxlen; len++) {
+            if (pospoint[len] != needlepoint[len]) {
+                break;
             }
         }
+
+        if (len > match_maxlen) {
+            match_maxlen = len;
+            match_index = pos;
+
+            if (len == maxlen) {
+                break;
+            } /* won't find better */
+        }
+
+        pos = hsi->index[pos];
     }
 
     const size_t break_even_point = (1 + HEATSHRINK_ENCODER_WINDOW_BITS(hse) +

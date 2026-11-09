@@ -27,6 +27,8 @@ the major version.
   bsdiff must be compiled again.
 - bsdiff searches the suffix array about 2-3 times faster. The patches are
   unchanged.
+- The heatshrink compression of the `bsdiff` encoder uses a search index and
+  is faster. The patches are unchanged.
 
 ## 1.0.1 (2026-11-08)
 
