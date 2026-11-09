@@ -109,6 +109,210 @@ static int64_t search(const void *sa_p, uint8_t sa_width, uint8_t *from_p,
     }
 }
 
+#if defined(__GNUC__)
+#define BSDIFF_PREFETCH(addr) __builtin_prefetch(addr)
+#else
+#define BSDIFF_PREFETCH(addr) ((void)(addr))
+#endif
+
+/* Maximum number of searches that run interleaved */
+#define BSDIFF_SEARCH_BATCH 32
+
+/* The prefixes of the suffixes that the first levels of the binary search
+ * compare against are stored in a tree, in breadth first order. They are
+ * few and stored close together, so they are mostly in the cache, unlike
+ * the suffix array and origin data. Node n has the children 2n and 2n + 1.
+ *
+ * A prefix is the first 7 bytes of a suffix, big endian, followed by the
+ * number of valid bytes. Comparing prefixes as numbers orders them like
+ * memcmp() does, up to the valid length. */
+#define BSDIFF_PREFIX_BYTES 7
+
+static uint64_t prefix_get(const uint8_t *data, int64_t size)
+{
+    int64_t valid = BPAK_MIN(size, BSDIFF_PREFIX_BYTES);
+    uint64_t prefix = 0;
+
+    for (int64_t i = 0; i < BSDIFF_PREFIX_BYTES; i++)
+        prefix = (prefix << 8) | ((i < valid) ? data[i] : 0);
+
+    return (prefix << 8) | (uint64_t)valid;
+}
+
+/* Compare the prefixes of an origin suffix and the target. Returns a
+ * negative number if the suffix is less than the target, compared like
+ * search() does, a positive number if it is not and 0 if the prefixes are
+ * equal and the rest of the suffix needs to be compared. */
+static int prefix_compare(uint64_t suffix, uint64_t target)
+{
+    uint64_t valid = BPAK_MIN(suffix & 0xff, target & 0xff);
+    uint64_t mask = (valid == 0) ? 0 : ~(uint64_t)0 << (64 - 8 * valid);
+
+    if ((suffix & mask) != (target & mask))
+        return ((suffix & mask) < (target & mask)) ? -1 : 1;
+
+    /* The compared length is shorter than a prefix, everything is equal */
+    if (valid < BSDIFF_PREFIX_BYTES)
+        return 1;
+
+    return 0;
+}
+
+static void search_tree_fill(struct bpak_bsdiff_context *ctx, size_t node,
+                             int64_t begin, int64_t end, int level)
+{
+    int64_t x;
+    int64_t y;
+
+    if ((level == ctx->search_tree_levels) || (end - begin < 2))
+        return;
+
+    x = begin + (end - begin) / 2;
+    y = sa_get(ctx->suffix_array, ctx->suffix_array_width, x);
+    ctx->search_tree[node] =
+        prefix_get(ctx->origin_data + y, ctx->origin_length - y);
+
+    search_tree_fill(ctx, 2 * node, begin, x, level + 1);
+    search_tree_fill(ctx, 2 * node + 1, x, end, level + 1);
+}
+
+static int search_tree_build(struct bpak_bsdiff_context *ctx)
+{
+    /* Limit the tree to about a quarter of the origin length in bytes */
+    size_t max_nodes = ctx->origin_length / (4 * sizeof(uint64_t));
+    int levels = 0;
+
+    while (((size_t)2 << levels) <= max_nodes)
+        levels++;
+
+    size_t nodes = (size_t)1 << levels;
+
+    if (ctx->search_tree_size < nodes) {
+        if (ctx->search_tree != NULL)
+            bpak_free(ctx->search_tree);
+
+        ctx->search_tree = bpak_calloc(nodes, sizeof(uint64_t));
+
+        if (ctx->search_tree == NULL) {
+            ctx->search_tree_size = 0;
+            return -BPAK_FAILED;
+        }
+
+        ctx->search_tree_size = nodes;
+    }
+
+    ctx->search_tree_levels = levels;
+    search_tree_fill(ctx, 1, 0, ctx->origin_length, 0);
+
+    return BPAK_OK;
+}
+
+/* Run search() for 'count' consecutive target positions, starting at
+ * 'scan'. Every step of a search reads a suffix array entry and then the
+ * origin data it points to, which are mostly cache misses. Stepping the
+ * searches in lockstep lets the memory accesses of different searches
+ * overlap. The results are the same as calling search() for each position. */
+static void search_batch(const struct bpak_bsdiff_context *ctx, int64_t scan,
+                         int count, int64_t *len_p, int64_t *pos_p)
+{
+    const uint8_t *from_p = ctx->origin_data;
+    int64_t from_size = ctx->origin_length;
+    int64_t begin[BSDIFF_SEARCH_BATCH];
+    int64_t end[BSDIFF_SEARCH_BATCH];
+    int64_t x[BSDIFF_SEARCH_BATCH];
+    int64_t y[BSDIFF_SEARCH_BATCH];
+    uint64_t target[BSDIFF_SEARCH_BATCH];
+    size_t node[BSDIFF_SEARCH_BATCH];
+    bool active = true;
+
+    for (int i = 0; i < count; i++) {
+        begin[i] = 0;
+        end[i] = from_size;
+        node[i] = 1;
+        target[i] =
+            prefix_get(ctx->new_data + scan + i, ctx->new_length - (scan + i));
+    }
+
+    for (int level = 0; level < ctx->search_tree_levels; level++) {
+        for (int i = 0; i < count; i++) {
+            if (end[i] - begin[i] >= 2)
+                BSDIFF_PREFETCH(&ctx->search_tree[node[i]]);
+        }
+
+        for (int i = 0; i < count; i++) {
+            if (end[i] - begin[i] < 2)
+                continue;
+
+            int cmp = prefix_compare(ctx->search_tree[node[i]], target[i]);
+
+            x[i] = begin[i] + (end[i] - begin[i]) / 2;
+
+            if (cmp == 0) {
+                int64_t to_size = ctx->new_length - (scan + i);
+
+                y[i] = sa_get(ctx->suffix_array, ctx->suffix_array_width, x[i]);
+                cmp = memcmp(from_p + y[i],
+                             ctx->new_data + scan + i,
+                             BPAK_MIN(from_size - y[i], to_size));
+            }
+
+            if (cmp < 0) {
+                begin[i] = x[i];
+                node[i] = 2 * node[i] + 1;
+            } else {
+                end[i] = x[i];
+                node[i] = 2 * node[i];
+            }
+        }
+    }
+
+    while (active) {
+        active = false;
+
+        for (int i = 0; i < count; i++) {
+            if (end[i] - begin[i] >= 2) {
+                x[i] = begin[i] + (end[i] - begin[i]) / 2;
+                BSDIFF_PREFETCH((const uint8_t *)ctx->suffix_array +
+                                x[i] * ctx->suffix_array_width);
+                active = true;
+            }
+        }
+
+        for (int i = 0; i < count; i++) {
+            if (end[i] - begin[i] >= 2) {
+                y[i] = sa_get(ctx->suffix_array, ctx->suffix_array_width, x[i]);
+                BSDIFF_PREFETCH(from_p + y[i]);
+            }
+        }
+
+        for (int i = 0; i < count; i++) {
+            if (end[i] - begin[i] >= 2) {
+                int64_t to_size = ctx->new_length - (scan + i);
+
+                if (memcmp(from_p + y[i],
+                           ctx->new_data + scan + i,
+                           BPAK_MIN(from_size - y[i], to_size)) < 0) {
+                    begin[i] = x[i];
+                } else {
+                    end[i] = x[i];
+                }
+            }
+        }
+    }
+
+    for (int i = 0; i < count; i++) {
+        len_p[i] = search(ctx->suffix_array,
+                          ctx->suffix_array_width,
+                          ctx->origin_data,
+                          ctx->origin_length,
+                          ctx->new_data + scan + i,
+                          ctx->new_length - (scan + i),
+                          begin[i],
+                          end[i],
+                          &pos_p[i]);
+    }
+}
+
 /* Sign and magnitude, little endian */
 static void offtout(int64_t x, uint8_t *buf)
 {
@@ -626,6 +830,11 @@ static int suffix_array_build(struct bpak_bsdiff_context *ctx)
         return -BPAK_FAILED;
     }
 
+    rc = search_tree_build(ctx);
+
+    if (rc != BPAK_OK)
+        return rc;
+
     ctx->sa_origin_base = ctx->origin_base;
     ctx->sa_origin_length = ctx->origin_length;
 
@@ -704,6 +913,14 @@ BPAK_EXPORT ssize_t bpak_bsdiff(struct bpak_bsdiff_context *ctx)
         if (rc != BPAK_OK)
             return rc;
 
+        /* Results of search_batch() for target positions batch_start to
+         * batch_start + batch_count */
+        int64_t batch_len[BSDIFF_SEARCH_BATCH];
+        int64_t batch_pos[BSDIFF_SEARCH_BATCH];
+        int64_t batch_start = 0;
+        int64_t batch_count = 0;
+        int batch_size = 1;
+
         /* The scan starts over in every chunk, aligned with the offset of
          * the previous chunk's latest match */
         ctx->scan = 0;
@@ -720,15 +937,30 @@ BPAK_EXPORT ssize_t bpak_bsdiff(struct bpak_bsdiff_context *ctx)
             for (int64_t scsc = ctx->scan; ctx->scan < (int64_t)ctx->new_length;
                  ctx->scan++) {
 
-                ctx->len = search(ctx->suffix_array,
-                                  ctx->suffix_array_width,
-                                  ctx->origin_data,
-                                  ctx->origin_length,
-                                  ctx->new_data + ctx->scan,
-                                  ctx->new_length - ctx->scan,
-                                  0,
-                                  ctx->origin_length,
-                                  &(ctx->pos));
+                if ((ctx->scan < batch_start) ||
+                    (ctx->scan >= batch_start + batch_count)) {
+                    /* Searches are mostly for consecutive positions. Grow
+                     * the batch while they are, so that few results are
+                     * thrown away when the scan jumps ahead. */
+                    if (ctx->scan == batch_start + batch_count)
+                        batch_size =
+                            BPAK_MIN(batch_size * 2, BSDIFF_SEARCH_BATCH);
+                    else
+                        batch_size = 1;
+
+                    batch_start = ctx->scan;
+                    batch_count =
+                        BPAK_MIN((int64_t)batch_size,
+                                 (int64_t)ctx->new_length - ctx->scan);
+                    search_batch(ctx,
+                                 batch_start,
+                                 batch_count,
+                                 batch_len,
+                                 batch_pos);
+                }
+
+                ctx->len = batch_len[ctx->scan - batch_start];
+                ctx->pos = batch_pos[ctx->scan - batch_start];
 
                 for (; scsc < ctx->scan + ctx->len; scsc++) {
                     if ((scsc + ctx->last_offset <
@@ -778,6 +1010,11 @@ BPAK_EXPORT void bpak_bsdiff_free(struct bpak_bsdiff_context *ctx)
     if (ctx->suffix_array != NULL) {
         bpak_free(ctx->suffix_array);
         ctx->suffix_array = NULL;
+    }
+
+    if (ctx->search_tree != NULL) {
+        bpak_free(ctx->search_tree);
+        ctx->search_tree = NULL;
     }
 
     compressor_free(ctx);

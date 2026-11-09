@@ -25,6 +25,8 @@ the major version.
   2 GiB, which halves its memory usage. The patches are unchanged.
 - ABI: `struct bpak_bsdiff_context` has new members, programs that use
   bsdiff must be compiled again.
+- bsdiff searches the suffix array about 2-3 times faster. The patches are
+  unchanged.
 
 ## 1.0.1 (2026-11-08)
 

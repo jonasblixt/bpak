@@ -58,6 +58,9 @@ struct bpak_bsdiff_context {
     size_t next_origin_length; /*!< Origin window length of next chunk */
     size_t sa_origin_length;   /*!< Window length the suffix array is for */
     int64_t sa_origin_base;    /*!< Window offset the suffix array is for */
+    uint64_t *search_tree;     /*!< Prefixes for the first search levels */
+    size_t search_tree_size;   /*!< Allocated number of search tree nodes */
+    int search_tree_levels;    /*!< Number of levels in the search tree */
 };
 
 /**
