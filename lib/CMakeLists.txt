@@ -67,6 +67,10 @@ if (NOT BPAK_BUILD_MINIMAL)
     list(APPEND LIB_LIBS ${LZMA_LIBRARY} ${MBEDCRYPTO_LIBRARY})
 endif()
 
+if (BPAK_CONFIG_THREADS)
+    list(APPEND LIB_LIBS Threads::Threads)
+endif()
+
 SET(CMAKE_C_VISIBILITY_PRESET hidden)
 
 # The functions of the third-party code are prefixed with bpak_, so that the
@@ -111,6 +115,11 @@ set_target_properties(${PROJECT_NAME} PROPERTIES SOVERSION ${PROJECT_VERSION_MAJ
 set_target_properties(${PROJECT_NAME}-static PROPERTIES OUTPUT_NAME ${PROJECT_NAME})
 
 target_link_libraries(${PROJECT_NAME} ${LIB_LIBS})
+
+# Programs that link the static library also need pthreads
+if (BPAK_CONFIG_THREADS)
+    target_link_libraries(${PROJECT_NAME}-static Threads::Threads)
+endif()
 
 # Coverage of the library when the tests run, see docs/development.md
 if (BPAK_BUILD_TESTS)

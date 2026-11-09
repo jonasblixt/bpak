@@ -21,6 +21,12 @@
 extern "C" {
 #endif
 
+/** Maximum number of threads for bpak_bsdiff_set_threads */
+#define BPAK_BSDIFF_MAX_THREADS 64
+
+/** Default segment size when diffing with threads */
+#define BPAK_BSDIFF_DEFAULT_SEGMENT_SIZE (1024 * 1024)
+
 struct bpak_bsdiff_context {
     int origin_fd;
     uint8_t *origin_data;
@@ -61,6 +67,8 @@ struct bpak_bsdiff_context {
     uint64_t *search_tree;     /*!< Prefixes for the first search levels */
     size_t search_tree_size;   /*!< Allocated number of search tree nodes */
     int search_tree_levels;    /*!< Number of levels in the search tree */
+    unsigned int threads;      /*!< Number of threads for diffing segments */
+    size_t segment_size;       /*!< Segment size, 0 = no segments */
 };
 
 /**
@@ -108,6 +116,32 @@ int bpak_bsdiff_init(struct bpak_bsdiff_context *ctx, uint8_t *origin_data,
  */
 int bpak_bsdiff_set_chunking(struct bpak_bsdiff_context *ctx, size_t chunk_size,
                              size_t window_margin);
+
+/**
+ * Diff segments of the target in parallel
+ *
+ * Every chunk (see bpak_bsdiff_set_chunking) is split into segments of
+ * segment_size bytes that are diffed independently, by 'threads' threads,
+ * while the output of finished segments is compressed in order. The patch
+ * only depends on the segment size, not on the number of threads, and has
+ * the same format as other patches. Every segment boundary costs a few bytes
+ * of patch size.
+ *
+ * A custom allocator set with bpak_set_calloc_free must be thread safe when
+ * more than one thread is used. Threads are only available when the library
+ * is built with BPAK_CONFIG_THREADS, otherwise the segments are diffed one at
+ * a time.
+ *
+ * Must be called after bpak_bsdiff_init and before bpak_bsdiff.
+ *
+ * @param[in] ctx The bsdiff context
+ * @param[in] threads Number of threads, at most BPAK_BSDIFF_MAX_THREADS
+ * @param[in] segment_size Segment size in bytes, 0 disables segments
+ *
+ * @return BPAK_OK on success or a negative number
+ */
+int bpak_bsdiff_set_threads(struct bpak_bsdiff_context *ctx,
+                            unsigned int threads, size_t segment_size);
 
 /**
  * Perform the diff process

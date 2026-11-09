@@ -18,6 +18,9 @@ the major version.
   `bsdiff_window_margin`, which diff in chunks. The C library has
   `bpak_transport_encode_ex()` and `bpak_pkg_transport_encode_ex()` with
   `struct bpak_transport_encode_opts`.
+- `bpak_bsdiff_set_threads()` diffs segments of the target in parallel. The
+  patch depends on the segment size, not on the number of threads. The
+  library uses pthreads when they are available, `BPAK_CONFIG_THREADS`.
 
 ### Changed
 

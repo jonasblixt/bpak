@@ -96,7 +96,8 @@ provide two headers in the include path:
 
 - `bpak_user_settings.h`, which replaces the generated
   `bpak/build_config.h`. It defines `BPAK_CONFIG_MERKLE`, `BPAK_CONFIG_LZMA`
-  and `BPAK_CONFIG_MBEDTLS` to 0 or 1, and optionally `BPAK_SIZEOF_OFF_T`.
+  and `BPAK_CONFIG_MBEDTLS` to 0 or 1, and optionally `BPAK_CONFIG_THREADS`
+  to 1 for pthreads in bsdiff and `BPAK_SIZEOF_OFF_T`.
 - `bpak/version.h`, see [`lib/version.h.in`](../lib/version.h.in).
 
 The CMake build prefixes the functions of heatshrink and sais in
@@ -241,6 +242,15 @@ the window. The window follows the offset of the latest match. Chunked
 patches have the same format as other patches and are applied by
 bspatch as usual. Data that moved further than the margin is not found,
 which results in a larger, but still correct, patch.
+
+`bpak_bsdiff_set_threads()` diffs with several threads. The target, or each
+chunk of it, is split into segments that are diffed in parallel against the
+shared suffix array, while the finished segments are compressed in order.
+The patch depends on the segment size but not on the number of threads, so
+the same input always gives the same patch. Every segment boundary costs a
+few bytes of patch size. Each thread needs memory for the output of up to
+two segments. Threads need a library built with `BPAK_CONFIG_THREADS`,
+otherwise the segments are diffed one at a time.
 
 `bpak_transport_encode_ex()` and `bpak_pkg_transport_encode_ex()` take the
 chunk size and margin in `struct bpak_transport_encode_opts`. `bpak transport

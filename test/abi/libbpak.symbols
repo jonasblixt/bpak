@@ -8,6 +8,7 @@ bpak_bsdiff
 bpak_bsdiff_free
 bpak_bsdiff_init
 bpak_bsdiff_set_chunking
+bpak_bsdiff_set_threads
 bpak_bspatch_final
 bpak_bspatch_free
 bpak_bspatch_init
