@@ -25,6 +25,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <inttypes.h>
 #include <string.h>
 #include <bpak/bpak.h>
 #include <bpak/bsdiff.h>
@@ -47,40 +48,47 @@ static int64_t matchlen(uint8_t *from_p, int64_t from_size, uint8_t *to_p,
     return (i);
 }
 
-static int64_t search(int64_t *sa_p, uint8_t *from_p, int64_t from_size,
-                      uint8_t *to_p, int64_t to_size, int64_t from_begin,
-                      int64_t from_end, int64_t *pos_p)
+static inline int64_t sa_get(const void *sa_p, uint8_t sa_width, int64_t i)
+{
+    if (sa_width == sizeof(int32_t))
+        return ((const int32_t *)sa_p)[i];
+
+    return ((const int64_t *)sa_p)[i];
+}
+
+static int64_t search(const void *sa_p, uint8_t sa_width, uint8_t *from_p,
+                      int64_t from_size, uint8_t *to_p, int64_t to_size,
+                      int64_t from_begin, int64_t from_end, int64_t *pos_p)
 {
     int64_t x;
     int64_t y;
+    int64_t sa_begin;
+    int64_t sa_end;
 
     if (from_end - from_begin < 2) {
-        x = matchlen(from_p + sa_p[from_begin],
-                     from_size - sa_p[from_begin],
-                     to_p,
-                     to_size);
+        sa_begin = sa_get(sa_p, sa_width, from_begin);
+        sa_end = sa_get(sa_p, sa_width, from_end);
 
-        y = matchlen(from_p + sa_p[from_end],
-                     from_size - sa_p[from_end],
-                     to_p,
-                     to_size);
+        x = matchlen(from_p + sa_begin, from_size - sa_begin, to_p, to_size);
+        y = matchlen(from_p + sa_end, from_size - sa_end, to_p, to_size);
 
         if (x > y) {
-            *pos_p = sa_p[from_begin];
+            *pos_p = sa_begin;
 
             return (x);
         } else {
-            *pos_p = sa_p[from_end];
+            *pos_p = sa_end;
 
             return (y);
         }
     }
 
     x = (from_begin + (from_end - from_begin) / 2);
+    y = sa_get(sa_p, sa_width, x);
 
-    if (memcmp(from_p + sa_p[x], to_p, BPAK_MIN(from_size - sa_p[x], to_size)) <
-        0) {
+    if (memcmp(from_p + y, to_p, BPAK_MIN(from_size - y, to_size)) < 0) {
         return search(sa_p,
+                      sa_width,
                       from_p,
                       from_size,
                       to_p,
@@ -90,6 +98,7 @@ static int64_t search(int64_t *sa_p, uint8_t *from_p, int64_t from_size,
                       pos_p);
     } else {
         return search(sa_p,
+                      sa_width,
                       from_p,
                       from_size,
                       to_p,
@@ -356,6 +365,54 @@ static void compressor_free(struct bpak_bsdiff_context *ctx)
     ctx->compressor_priv = NULL;
 }
 
+static size_t chunk_length(const struct bpak_bsdiff_context *ctx,
+                           int64_t new_base)
+{
+    size_t remaining = ctx->new_full_length - new_base;
+
+    if ((ctx->chunk_size == 0) || (remaining <= ctx->chunk_size))
+        return remaining;
+
+    /* Avoid a short last chunk by merging it with the one before */
+    if (remaining - ctx->chunk_size < ctx->chunk_size / 2)
+        return remaining;
+
+    return ctx->chunk_size;
+}
+
+static bool more_chunks(const struct bpak_bsdiff_context *ctx)
+{
+    return (ctx->new_base + ctx->new_length) < ctx->new_full_length;
+}
+
+/* Select the origin window for the chunk starting at new_base. drift is
+ * the offset of origin data relative to target data at the latest match. */
+static void window_select(struct bpak_bsdiff_context *ctx, int64_t new_base,
+                          int64_t drift)
+{
+    size_t margin = BPAK_MIN(ctx->window_margin, ctx->origin_full_length);
+    size_t length;
+    int64_t base;
+
+    if (ctx->chunk_size == 0) {
+        ctx->next_origin_base = 0;
+        ctx->next_origin_length = ctx->origin_full_length;
+        return;
+    }
+
+    length = BPAK_MIN(chunk_length(ctx, new_base), ctx->origin_full_length);
+    length = BPAK_MIN(length + 2 * margin, ctx->origin_full_length);
+    base = new_base + drift - (int64_t)margin;
+
+    if (base > (int64_t)(ctx->origin_full_length - length))
+        base = ctx->origin_full_length - length;
+    if (base < 0)
+        base = 0;
+
+    ctx->next_origin_base = base;
+    ctx->next_origin_length = length;
+}
+
 static int write_diff_extra_and_adjustment(struct bpak_bsdiff_context *ctx)
 {
     int64_t s;
@@ -371,6 +428,11 @@ static int write_diff_extra_and_adjustment(struct bpak_bsdiff_context *ctx)
     int64_t i;
     int64_t last_scan;
     int64_t last_pos;
+    int64_t adjust_to;
+    int64_t drift = 0;
+    int64_t next_new_base = 0;
+    int64_t next_offset = 0;
+    bool chunk_end;
     uint64_t chunk_len = 0;
     int rc;
     uint8_t buffer[BPAK_CHUNK_BUFFER_LENGTH];
@@ -445,10 +507,33 @@ static int write_diff_extra_and_adjustment(struct bpak_bsdiff_context *ctx)
     extra_pos = (last_scan + diff_size);
     extra_size = (ctx->scan - lenb - extra_pos);
 
+    adjust_to = ctx->pos - lenb;
+    chunk_end = (ctx->scan == (int64_t)ctx->new_length) && more_chunks(ctx);
+
+    if (chunk_end) {
+        /* The next chunk continues with the offset of the latest match,
+         * in its window's coordinates. It is clamped to the window since
+         * only the end of the window is checked when it is used. */
+        next_new_base = ctx->new_base + ctx->new_length;
+        drift = ctx->last_offset + ctx->origin_base - ctx->new_base;
+        window_select(ctx, next_new_base, drift);
+        next_offset = drift + next_new_base - ctx->next_origin_base;
+
+        if (next_offset < 0)
+            next_offset = 0;
+        if (next_offset > (int64_t)ctx->next_origin_length)
+            next_offset = ctx->next_origin_length;
+
+        /* bspatch moves the origin position by a relative adjustment after
+         * every record. Let the last record of this chunk move it to where
+         * the next chunk starts. */
+        adjust_to = ctx->next_origin_base + next_offset - ctx->origin_base;
+    }
+
     /* Write control data*/
     offtout(diff_size, &buffer[0]);
     offtout(extra_size, &buffer[8]);
-    offtout((ctx->pos - lenb) - (last_pos + diff_size), &buffer[16]);
+    offtout(adjust_to - (last_pos + diff_size), &buffer[16]);
 
     rc = compressor_write(ctx, buffer, 24);
 
@@ -488,6 +573,62 @@ static int write_diff_extra_and_adjustment(struct bpak_bsdiff_context *ctx)
     ctx->last_pos = (ctx->pos - lenb);
     ctx->last_offset = (ctx->pos - ctx->scan);
 
+    if (chunk_end)
+        ctx->last_offset = next_offset;
+
+    return BPAK_OK;
+}
+
+static int suffix_array_build(struct bpak_bsdiff_context *ctx)
+{
+    /* search() may read one entry past the last suffix, the extra entry
+     * is zeroed so that it refers to the first suffix. */
+    size_t entries = ctx->origin_length + 1;
+    uint8_t width =
+        (ctx->origin_length < INT32_MAX) ? sizeof(int32_t) : sizeof(int64_t);
+    int rc;
+
+    if ((ctx->suffix_array != NULL) &&
+        (ctx->sa_origin_base == ctx->origin_base) &&
+        (ctx->sa_origin_length == ctx->origin_length))
+        return BPAK_OK;
+
+    if ((ctx->suffix_array == NULL) || (ctx->suffix_array_width != width) ||
+        (ctx->suffix_array_size < entries)) {
+        if (ctx->suffix_array != NULL)
+            bpak_free(ctx->suffix_array);
+
+        ctx->suffix_array = bpak_calloc(entries, width);
+
+        if (ctx->suffix_array == NULL) {
+            ctx->suffix_array_size = 0;
+            return -BPAK_FAILED;
+        }
+
+        ctx->suffix_array_size = entries;
+        ctx->suffix_array_width = width;
+    }
+
+    if (width == sizeof(int32_t)) {
+        ((int32_t *)ctx->suffix_array)[ctx->origin_length] = 0;
+        rc = sais32(ctx->origin_data,
+                    (int32_t *)ctx->suffix_array,
+                    (int32_t)ctx->origin_length);
+    } else {
+        ((int64_t *)ctx->suffix_array)[ctx->origin_length] = 0;
+        rc = sais64(ctx->origin_data,
+                    (int64_t *)ctx->suffix_array,
+                    (int64_t)ctx->origin_length);
+    }
+
+    if (rc != 0) {
+        bpak_printf(0, "SAIS computation failed (%i)\n", rc);
+        return -BPAK_FAILED;
+    }
+
+    ctx->sa_origin_base = ctx->origin_base;
+    ctx->sa_origin_length = ctx->origin_length;
+
     return BPAK_OK;
 }
 
@@ -509,10 +650,10 @@ BPAK_EXPORT int bpak_bsdiff_init(struct bpak_bsdiff_context *ctx,
     ctx->write_output = write_output;
     ctx->output_offset = output_offset;
     ctx->user_priv = user_priv;
-    ctx->origin_length = origin_length;
-    ctx->origin_data = origin_data;
-    ctx->new_length = new_length;
-    ctx->new_data = new_data;
+    ctx->origin_full_length = origin_length;
+    ctx->origin_full = origin_data;
+    ctx->new_full_length = new_length;
+    ctx->new_full = new_data;
     ctx->compression = compression;
 
     rc = compressor_init(ctx);
@@ -520,81 +661,109 @@ BPAK_EXPORT int bpak_bsdiff_init(struct bpak_bsdiff_context *ctx,
     if (rc != BPAK_OK)
         return rc;
 
-    ctx->suffix_array = bpak_calloc(origin_length, sizeof(int64_t));
+    /* The suffix array is built by bpak_bsdiff, once the origin window is
+     * known */
+    return BPAK_OK;
+}
 
-    if (!ctx->suffix_array) {
-        rc = -BPAK_FAILED;
-        goto err_free_compressor_out;
-    }
+BPAK_EXPORT int bpak_bsdiff_set_chunking(struct bpak_bsdiff_context *ctx,
+                                         size_t chunk_size,
+                                         size_t window_margin)
+{
+    if (ctx->suffix_array != NULL)
+        return -BPAK_FAILED;
 
-    rc = sais(ctx->origin_data, ctx->suffix_array, origin_length);
-
-    if (rc != 0) {
-        bpak_printf(0, "SAIS computation failed (%i)\n", rc);
-        rc = -BPAK_FAILED;
-        goto err_free_suffix_array_out;
-    }
+    ctx->chunk_size = chunk_size;
+    ctx->window_margin = window_margin;
 
     return BPAK_OK;
-
-err_free_suffix_array_out:
-    bpak_free(ctx->suffix_array);
-    ctx->suffix_array = NULL;
-err_free_compressor_out:
-    compressor_free(ctx);
-    return rc;
 }
 
 BPAK_EXPORT ssize_t bpak_bsdiff(struct bpak_bsdiff_context *ctx)
 {
     int rc;
 
-    while (ctx->scan < (int64_t)ctx->new_length) {
-        int64_t from_score = 0;
+    window_select(ctx, 0, 0);
 
-        ctx->scan += ctx->len;
+    do {
+        ctx->new_data = ctx->new_full + ctx->new_base;
+        ctx->new_length = chunk_length(ctx, ctx->new_base);
+        ctx->origin_base = ctx->next_origin_base;
+        ctx->origin_length = ctx->next_origin_length;
+        ctx->origin_data = ctx->origin_full + ctx->origin_base;
 
-        for (int64_t scsc = ctx->scan; ctx->scan < (int64_t)ctx->new_length;
-             ctx->scan++) {
+        bpak_printf(2,
+                    "bsdiff chunk: target %" PRIi64 "+%zu, origin %" PRIi64 "+%zu\n",
+                    ctx->new_base,
+                    ctx->new_length,
+                    ctx->origin_base,
+                    ctx->origin_length);
 
-            ctx->len = search(ctx->suffix_array,
-                              ctx->origin_data,
-                              ctx->origin_length,
-                              ctx->new_data + ctx->scan,
-                              ctx->new_length - ctx->scan,
-                              0,
-                              ctx->origin_length,
-                              &(ctx->pos));
+        rc = suffix_array_build(ctx);
 
-            for (; scsc < ctx->scan + ctx->len; scsc++) {
-                if ((scsc + ctx->last_offset < (int64_t)ctx->origin_length) &&
-                    (ctx->origin_data[scsc + ctx->last_offset] ==
-                     ctx->new_data[scsc])) {
-                    from_score++;
+        if (rc != BPAK_OK)
+            return rc;
+
+        /* The scan starts over in every chunk, aligned with the offset of
+         * the previous chunk's latest match */
+        ctx->scan = 0;
+        ctx->len = 0;
+        ctx->pos = 0;
+        ctx->last_scan = 0;
+        ctx->last_pos = ctx->last_offset;
+
+        while (ctx->scan < (int64_t)ctx->new_length) {
+            int64_t from_score = 0;
+
+            ctx->scan += ctx->len;
+
+            for (int64_t scsc = ctx->scan; ctx->scan < (int64_t)ctx->new_length;
+                 ctx->scan++) {
+
+                ctx->len = search(ctx->suffix_array,
+                                  ctx->suffix_array_width,
+                                  ctx->origin_data,
+                                  ctx->origin_length,
+                                  ctx->new_data + ctx->scan,
+                                  ctx->new_length - ctx->scan,
+                                  0,
+                                  ctx->origin_length,
+                                  &(ctx->pos));
+
+                for (; scsc < ctx->scan + ctx->len; scsc++) {
+                    if ((scsc + ctx->last_offset <
+                         (int64_t)ctx->origin_length) &&
+                        (ctx->origin_data[scsc + ctx->last_offset] ==
+                         ctx->new_data[scsc])) {
+                        from_score++;
+                    }
+                }
+
+                if (((ctx->len == from_score) && (ctx->len != 0)) ||
+                    (ctx->len > from_score + 8)) {
+                    break;
+                }
+
+                if ((ctx->scan + ctx->last_offset <
+                     (int64_t)ctx->origin_length) &&
+                    (ctx->origin_data[ctx->scan + ctx->last_offset] ==
+                     ctx->new_data[ctx->scan])) {
+                    from_score--;
                 }
             }
 
-            if (((ctx->len == from_score) && (ctx->len != 0)) ||
-                (ctx->len > from_score + 8)) {
-                break;
-            }
+            if ((ctx->len != from_score) ||
+                (ctx->scan == (int64_t)ctx->new_length)) {
+                rc = write_diff_extra_and_adjustment(ctx);
 
-            if ((ctx->scan + ctx->last_offset < (int64_t)ctx->origin_length) &&
-                (ctx->origin_data[ctx->scan + ctx->last_offset] ==
-                 ctx->new_data[ctx->scan])) {
-                from_score--;
+                if (rc != 0) {
+                    return rc;
+                }
             }
         }
 
-        if ((ctx->len != from_score) ||
-            (ctx->scan == (int64_t)ctx->new_length)) {
-            rc = write_diff_extra_and_adjustment(ctx);
-
-            if (rc != 0) {
-                return rc;
-            }
-        }
-    }
+        ctx->new_base += ctx->new_length;
+    } while (ctx->new_base < (int64_t)ctx->new_full_length);
 
     rc = compressor_final(ctx);
 

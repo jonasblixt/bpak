@@ -6,6 +6,21 @@ tool. The package format stays compatible, see
 ABI are listed with the release. The SONAME of the shared library follows
 the major version.
 
+## Unreleased
+
+### Added
+
+- `bpak_bsdiff_set_chunking()` diffs the target in chunks against a window
+  of the origin, which bounds the memory usage of bsdiff for large parts.
+  The patches are applied as before.
+
+### Changed
+
+- bsdiff uses a suffix array with 32-bit entries for origins smaller than
+  2 GiB, which halves its memory usage. The patches are unchanged.
+- ABI: `struct bpak_bsdiff_context` has new members, programs that use
+  bsdiff must be compiled again.
+
 ## 1.0.1 (2026-11-08)
 
 The upload of 1.0.0 to PyPI failed, 1.0.1 is the first release on PyPI.

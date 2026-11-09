@@ -61,7 +61,8 @@ if (NOT BPAK_BUILD_MINIMAL)
         keystore_file.c
         vendor/heatshrink/heatshrink_decoder.c
         vendor/heatshrink/heatshrink_encoder.c
-        vendor/sais/sais.c
+        vendor/sais/sais32.c
+        vendor/sais/sais64.c
     )
     list(APPEND LIB_LIBS ${LZMA_LIBRARY} ${MBEDCRYPTO_LIBRARY})
 endif()
@@ -82,7 +83,8 @@ target_compile_definitions(${PROJECT_NAME}-vendor-names INTERFACE
     heatshrink_encoder_poll=bpak_heatshrink_encoder_poll
     heatshrink_encoder_reset=bpak_heatshrink_encoder_reset
     heatshrink_encoder_sink=bpak_heatshrink_encoder_sink
-    sais=bpak_sais
+    sais32=bpak_sais32
+    sais64=bpak_sais64
 )
 
 # The sources are compiled once for the shared and the static library

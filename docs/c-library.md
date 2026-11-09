@@ -227,6 +227,21 @@ not authenticated: the header of a transport encoded package can not be
 verified before it is decoded. Verify the output package as described above
 before it is used.
 
+### Memory usage of bsdiff
+
+bsdiff, which the `bsdiff`, `bsdiff-lzma` and `bsdiff-no-comp` encoders
+use, builds a suffix array over the origin data. It needs 4 bytes per
+origin byte when the origin is smaller than 2 GiB and 8 bytes per origin
+byte otherwise, plus temporary memory while the array is built.
+
+To bound the memory usage for large inputs, `bpak_bsdiff_set_chunking()`
+diffs the target in chunks. Each chunk is diffed against an origin window
+of `chunk_size + 2 * window_margin` bytes, so the suffix array only covers
+the window. The window follows the offset of the latest match. Chunked
+patches have the same format as other patches and are applied by
+bspatch as usual. Data that moved further than the margin is not found,
+which results in a larger, but still correct, patch.
+
 ### Errors and logging
 
 Functions return `BPAK_OK` (0) or a negative `enum bpak_errors` value, and
