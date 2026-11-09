@@ -87,6 +87,8 @@ def test_not_a_package(bpak, tmp_path, command, content, error):
     ["verify", "test.bpak"],
     ["transport", "test.bpak"],
     ["transport", "test.bpak", "--encode"],
+    ["transport", "test.bpak", "--encode", "--output", "out.bpak",
+     "--bsdiff-chunk-size", "16X"],
     ["set", "test.bpak"],
 ], ids=lambda args: "-".join(args[0:1] + args[2:3]))
 def test_usage_error(bpak, args):

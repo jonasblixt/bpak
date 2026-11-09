@@ -24,6 +24,8 @@ extern "C" {
  * BPAK Package
  *
  */
+struct bpak_transport_encode_opts;
+
 struct bpak_package {
     FILE *fp;                  /*!< I/O Stream  for package */
     const char *filename;      /*!< Filename */
@@ -160,6 +162,21 @@ int bpak_pkg_part_sha256(struct bpak_package *pkg,
 int bpak_pkg_transport_encode(struct bpak_package *input,
                               struct bpak_package *output,
                               struct bpak_package *origin);
+
+/**
+ * Transport encode package with encoder options
+ *
+ * @param[in] input BPAK Package input stream
+ * @param[in] output BPAK Package output, the result
+ * @param[in] origin BPAK Package origin data
+ * @param[in] opts Encoder options or NULL for defaults
+ *
+ * @return BPAK_OK on success
+ */
+int bpak_pkg_transport_encode_ex(struct bpak_package *input,
+                                 struct bpak_package *output,
+                                 struct bpak_package *origin,
+                                 const struct bpak_transport_encode_opts *opts);
 
 /**
  * Transport decode package. The header of 'output' is set to the decoded

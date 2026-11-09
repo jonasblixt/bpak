@@ -162,3 +162,28 @@ def test_extract_encoded_part(bpak):
     part = Header.read(patch).part(bpak_id("p1"))
     assert part.pad_bytes > 0
     assert output.stat().st_size == part.transport_size
+
+
+@pytest.mark.usefixtures("random_data")
+@pytest.mark.parametrize("transport", [bsdiff("fs"), bsdiff_lzma("fs")],
+                         ids=["bsdiff", "bsdiff-lzma"])
+@pytest.mark.parametrize("options", [
+    ["--bsdiff-chunk-size", "16K", "--bsdiff-margin", "8K"],
+    ["--bsdiff-chunk-size", "0x5000"],
+    ["--bsdiff-chunk-size", "1M"],
+], ids=["margin", "default-margin", "larger-than-part"])
+def test_encode_decode_chunked(bpak, transport, options):
+    """Patches that bsdiff creates in chunks are decoded as usual"""
+    parts = [Part("fs", RANDOM)]
+    origin = create_package(bpak, "origin", [transport], parts)
+    target = create_package(bpak, "target", [transport], parts)
+    patch = bpak.cwd / "patch.bpak"
+    install = bpak.cwd / "install.bpak"
+
+    bpak("transport", target, "--encode", "--origin", origin,
+         "--output", patch, *options)
+    bpak("transport", patch, "--decode", "--origin", origin,
+         "--output", install)
+
+    assert install.read_bytes() == target.read_bytes()
+    assert patch.stat().st_size < target.stat().st_size

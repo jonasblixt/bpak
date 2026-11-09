@@ -52,6 +52,8 @@ ID_SIZE = 4
 # leading '0', otherwise decimal
 _INTEGER_RE = re.compile(r"\s*([+-]?)(0[xX][0-9a-fA-F]+|0[0-7]*|[1-9][0-9]*)\s*")
 _HEX_ID_RE = re.compile(r"0x([0-9a-fA-F]+)")
+_SIZE_RE = re.compile(r"(0[xX][0-9a-fA-F]+|[1-9][0-9]*|0)([kKmMgG]?)")
+_SIZE_SHIFTS = {"": 0, "K": 10, "M": 20, "G": 30}
 
 
 @dataclass
@@ -119,7 +121,29 @@ class BpakIdType(_IntParamType):
         return int(bpak.id(value))
 
 
+class SizeType(_IntParamType):
+    """A size in bytes with an optional K, M or G suffix."""
+
+    name = "size"
+
+    def convert(
+        self,
+        value: Any,  # noqa: ANN401
+        param: click.Parameter | None,
+        ctx: click.Context | None,
+    ) -> int:
+        """Convert a size with an optional suffix to bytes."""
+        if isinstance(value, int):
+            return value
+
+        m = _SIZE_RE.fullmatch(value)
+        if m is None:
+            self.fail(f"{value!r} is not a size", param, ctx)
+        return int(m.group(1), 0) << _SIZE_SHIFTS[m.group(2).upper()]
+
+
 BPAK_ID = BpakIdType()
+SIZE = SizeType()
 PATH = click.Path(dir_okay=False, path_type=pathlib.Path)
 EXISTING_PATH = click.Path(exists=True, dir_okay=False, path_type=pathlib.Path)
 
@@ -493,7 +517,19 @@ def delete(filename: pathlib.Path, part_id: int | None, delete_all: bool, keep_m
     help="Package that the encoder diffs against and the decoder patches.",
 )
 @click.option("-o", "--output", type=PATH, help="Output package of --encode and --decode.")
-def transport(
+@click.option(
+    "--bsdiff-chunk-size",
+    type=SIZE,
+    default=0,
+    help="Diff the target in chunks of this size to limit the memory usage of "
+    "--encode, with a suffix K, M or G.",
+)
+@click.option(
+    "--bsdiff-margin",
+    type=SIZE,
+    help="Origin data to search before and after each chunk, by default half the chunk size.",
+)
+def transport(  # noqa: PLR0913, PLR0917
     filename: pathlib.Path,
     add_rule: bool,
     encode: bool,
@@ -503,6 +539,8 @@ def transport(
     decoder: int | None,
     origin: pathlib.Path | None,
     output: pathlib.Path | None,
+    bsdiff_chunk_size: int,
+    bsdiff_margin: int | None,
 ) -> None:
     """Transport encoding and decoding.
 
@@ -511,7 +549,8 @@ def transport(
 
     --encode encodes a package for transport according to its rules, --decode
     decodes it again. Encoders that create a diff need the --origin package
-    that the receiver already has.
+    that the receiver already has. The bsdiff options only change how
+    --encode creates the patch, the decoder does not need them.
     """
     _select({"--add": add_rule, "--encode": encode, "--decode": decode})
 
@@ -528,7 +567,6 @@ def transport(
         msg = "--encode and --decode require --output"
         raise click.UsageError(msg)
 
-    func = bpak.transport_encode if encode else bpak.transport_decode
     with (
         bpak.Package(filename, "rb+") as input_pkg,
         bpak.Package(origin, "rb+")
@@ -536,7 +574,16 @@ def transport(
         else contextlib.nullcontext() as origin_pkg,
         bpak.Package(output, "wb+") as output_pkg,
     ):
-        func(input_pkg, output_pkg, origin_pkg)
+        if encode:
+            bpak.transport_encode(
+                input_pkg,
+                output_pkg,
+                origin_pkg,
+                bsdiff_chunk_size=bsdiff_chunk_size,
+                bsdiff_window_margin=-1 if bsdiff_margin is None else bsdiff_margin,
+            )
+        else:
+            bpak.transport_decode(input_pkg, output_pkg, origin_pkg)
 
 
 @cli.command()

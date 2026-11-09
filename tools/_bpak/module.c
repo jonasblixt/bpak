@@ -8,6 +8,7 @@
 #include <bpak/utils.h>
 #include <bpak/id.h>
 #include <bpak/crypto.h>
+#include <bpak/transport.h>
 
 #include "module.h"
 
@@ -191,11 +192,60 @@ static PyObject *m_transport_encode(PyObject *Py_UNUSED(module),
                                     PyObject *args,
                                     PyObject *kwds)
 {
-    return transport(args,
-                     kwds,
-                     "O!O!|O&:transport_encode",
-                     bpak_pkg_transport_encode,
-                     "Transport encoding failed");
+    int rc;
+    static char *kwlist[] = { "input",
+                              "output",
+                              "origin",
+                              "bsdiff_chunk_size",
+                              "bsdiff_window_margin",
+                              NULL };
+    BPAKPackage *input = NULL;
+    BPAKPackage *origin = NULL;
+    BPAKPackage *output = NULL;
+    Py_ssize_t chunk_size = 0;
+    Py_ssize_t window_margin = -1;
+    struct bpak_transport_encode_opts opts;
+
+    rc = PyArg_ParseTupleAndKeywords(args,
+                                     kwds,
+                                     "O!O!|O&$nn:transport_encode",
+                                     kwlist,
+                                     &BPAKPackageType,
+                                     &input,
+                                     &BPAKPackageType,
+                                     &output,
+                                     convert_optional_package,
+                                     &origin,
+                                     &chunk_size,
+                                     &window_margin);
+    if (!rc) {
+        return NULL;
+    }
+
+    if (chunk_size < 0) {
+        return PyErr_Format(PyExc_ValueError,
+                            "bsdiff_chunk_size must not be negative");
+    }
+
+    if (package_check_open(input) < 0 || package_check_open(output) < 0 ||
+        (origin && package_check_open(origin) < 0)) {
+        return NULL;
+    }
+
+    /* The margin defaults to half the chunk size */
+    opts.bsdiff_chunk_size = chunk_size;
+    opts.bsdiff_window_margin =
+        (window_margin < 0) ? (size_t)chunk_size / 2 : (size_t)window_margin;
+
+    rc = bpak_pkg_transport_encode_ex(&input->pkg,
+                                      &output->pkg,
+                                      origin ? &origin->pkg : NULL,
+                                      &opts);
+    if (rc != BPAK_OK) {
+        return bpak_raise(rc, "Transport encoding failed");
+    }
+
+    Py_RETURN_NONE;
 }
 
 static PyObject *m_transport_decode(PyObject *Py_UNUSED(module),
@@ -335,7 +385,10 @@ static PyMethodDef module_methods[] = {
     { "transport_encode",
       KWARGS_METHOD(m_transport_encode),
       METH_VARARGS | METH_KEYWORDS,
-      "Transport encode from input to output, using origin for diff origin" },
+      "Transport encode from input to output, using origin for diff origin.\n"
+      "bsdiff_chunk_size limits the memory usage of bsdiff by diffing in "
+      "chunks, bsdiff_window_margin (default chunk size / 2) is the origin "
+      "data searched before and after each chunk" },
 
     { "transport_decode",
       KWARGS_METHOD(m_transport_decode),

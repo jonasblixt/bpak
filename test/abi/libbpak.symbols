@@ -66,6 +66,7 @@ bpak_pkg_sign
 bpak_pkg_size
 bpak_pkg_transport_decode
 bpak_pkg_transport_encode
+bpak_pkg_transport_encode_ex
 bpak_pkg_update_hash
 bpak_pkg_verify
 bpak_pkg_write_header
@@ -82,6 +83,7 @@ bpak_transport_decode_set_origin
 bpak_transport_decode_start
 bpak_transport_decode_write_chunk
 bpak_transport_encode
+bpak_transport_encode_ex
 bpak_uuid_to_string
 bpak_valid_header
 bpak_verify_compute_header_hash

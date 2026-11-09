@@ -242,6 +242,10 @@ patches have the same format as other patches and are applied by
 bspatch as usual. Data that moved further than the margin is not found,
 which results in a larger, but still correct, patch.
 
+`bpak_transport_encode_ex()` and `bpak_pkg_transport_encode_ex()` take the
+chunk size and margin in `struct bpak_transport_encode_opts`. `bpak transport
+--encode` sets them with `--bsdiff-chunk-size` and `--bsdiff-margin`.
+
 ### Errors and logging
 
 Functions return `BPAK_OK` (0) or a negative `enum bpak_errors` value, and

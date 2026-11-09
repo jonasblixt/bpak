@@ -13,6 +13,11 @@ the major version.
 - `bpak_bsdiff_set_chunking()` diffs the target in chunks against a window
   of the origin, which bounds the memory usage of bsdiff for large parts.
   The patches are applied as before.
+- `bpak transport --encode` takes `--bsdiff-chunk-size` and `--bsdiff-margin`,
+  and `bpak.transport_encode` the keyword arguments `bsdiff_chunk_size` and
+  `bsdiff_window_margin`, which diff in chunks. The C library has
+  `bpak_transport_encode_ex()` and `bpak_pkg_transport_encode_ex()` with
+  `struct bpak_transport_encode_opts`.
 
 ### Changed
 

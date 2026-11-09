@@ -120,7 +120,8 @@ static ssize_t transport_bsdiff(FILE *target, off_t target_offset,
                                 size_t target_length, FILE *origin,
                                 off_t origin_offset, size_t origin_length,
                                 FILE *output, off_t output_offset,
-                                enum bpak_compression compression)
+                                enum bpak_compression compression,
+                                const struct bpak_transport_encode_opts *opts)
 {
     ssize_t rc;
     struct bsdiff_private priv;
@@ -158,6 +159,17 @@ static ssize_t transport_bsdiff(FILE *target, off_t target_offset,
         goto err_munmap_origin;
     }
 
+    if (opts != NULL) {
+        rc = bpak_bsdiff_set_chunking(&bsdiff,
+                                      opts->bsdiff_chunk_size,
+                                      opts->bsdiff_window_margin);
+
+        if (rc != BPAK_OK) {
+            bpak_printf(0, "Error: bpak_bsdiff_set_chunking failed (%zd)\n", rc);
+            goto err_bsdiff_free;
+        }
+    }
+
     rc = bpak_bsdiff(&bsdiff);
 
     if (rc < 0) {
@@ -180,7 +192,8 @@ static int
 transport_encode_part(struct bpak_transport_meta *tm, uint32_t part_ref_id,
                       FILE *input_fp, struct bpak_header *input_header,
                       FILE *output_fp, struct bpak_header *output_header,
-                      FILE *origin_fp, struct bpak_header *origin_header)
+                      FILE *origin_fp, struct bpak_header *origin_header,
+                      const struct bpak_transport_encode_opts *opts)
 {
     int rc = 0;
     struct bpak_part_header *input_part = NULL;
@@ -257,7 +270,8 @@ transport_encode_part(struct bpak_transport_meta *tm, uint32_t part_ref_id,
                              bpak_part_size(origin_part),
                              output_fp,
                              bpak_part_offset(output_header, output_part),
-                             compression);
+                             compression,
+                             opts);
     } break;
     case BPAK_ID_REMOVE_DATA:
         /* No data is produced for this part */
@@ -290,6 +304,21 @@ bpak_transport_encode(FILE *input_fp, struct bpak_header *input_header,
                       FILE *output_fp, struct bpak_header *output_header,
                       FILE *origin_fp, struct bpak_header *origin_header)
 {
+    return bpak_transport_encode_ex(input_fp,
+                                    input_header,
+                                    output_fp,
+                                    output_header,
+                                    origin_fp,
+                                    origin_header,
+                                    NULL);
+}
+
+BPAK_EXPORT int
+bpak_transport_encode_ex(FILE *input_fp, struct bpak_header *input_header,
+                         FILE *output_fp, struct bpak_header *output_header,
+                         FILE *origin_fp, struct bpak_header *origin_header,
+                         const struct bpak_transport_encode_opts *opts)
+{
     int rc = BPAK_OK;
     struct bpak_meta_header *meta = NULL;
     struct bpak_transport_meta *tm = NULL;
@@ -321,7 +350,8 @@ bpak_transport_encode(FILE *input_fp, struct bpak_header *input_header,
                                        output_fp,
                                        output_header,
                                        origin_fp,
-                                       origin_header);
+                                       origin_header,
+                                       opts);
 
             if (rc != BPAK_OK)
                 break;

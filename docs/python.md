@@ -68,6 +68,10 @@ API with types.
 | `version()`                                | Version of the library                              |
 
 `origin` can be left out or `None` when no part uses a diff based encoder.
+The keyword arguments `bsdiff_chunk_size` and `bsdiff_window_margin` of
+`transport_encode` limit the memory usage of bsdiff, like
+`--bsdiff-chunk-size` and `--bsdiff-margin` of `bpak transport`. The margin
+defaults to half the chunk size.
 After `transport_encode` and `transport_decode`, `output` describes the
 encoded or decoded package, and `input` is unchanged.
 
