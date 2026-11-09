@@ -529,6 +529,19 @@ def delete(filename: pathlib.Path, part_id: int | None, delete_all: bool, keep_m
     type=SIZE,
     help="Origin data to search before and after each chunk, by default half the chunk size.",
 )
+@click.option(
+    "--bsdiff-threads",
+    type=click.IntRange(0, bpak.BSDIFF_MAX_THREADS),
+    default=0,
+    help="Diff segments of the target with this number of threads.",
+)
+@click.option(
+    "--bsdiff-segment-size",
+    type=SIZE,
+    default=0,
+    help="Size of the segments, by default 1M with threads. The patch depends on "
+    "the segment size but not on the number of threads.",
+)
 def transport(  # noqa: PLR0913, PLR0917
     filename: pathlib.Path,
     add_rule: bool,
@@ -541,6 +554,8 @@ def transport(  # noqa: PLR0913, PLR0917
     output: pathlib.Path | None,
     bsdiff_chunk_size: int,
     bsdiff_margin: int | None,
+    bsdiff_threads: int,
+    bsdiff_segment_size: int,
 ) -> None:
     """Transport encoding and decoding.
 
@@ -581,6 +596,8 @@ def transport(  # noqa: PLR0913, PLR0917
                 origin_pkg,
                 bsdiff_chunk_size=bsdiff_chunk_size,
                 bsdiff_window_margin=-1 if bsdiff_margin is None else bsdiff_margin,
+                bsdiff_threads=bsdiff_threads,
+                bsdiff_segment_size=bsdiff_segment_size,
             )
         else:
             bpak.transport_decode(input_pkg, output_pkg, origin_pkg)

@@ -168,6 +168,20 @@ static ssize_t transport_bsdiff(FILE *target, off_t target_offset,
             bpak_printf(0, "Error: bpak_bsdiff_set_chunking failed (%zd)\n", rc);
             goto err_bsdiff_free;
         }
+
+        size_t segment_size = opts->bsdiff_segment_size;
+
+        if ((segment_size == 0) && (opts->bsdiff_threads > 1))
+            segment_size = BPAK_BSDIFF_DEFAULT_SEGMENT_SIZE;
+
+        rc = bpak_bsdiff_set_threads(&bsdiff,
+                                     opts->bsdiff_threads,
+                                     segment_size);
+
+        if (rc != BPAK_OK) {
+            bpak_printf(0, "Error: bpak_bsdiff_set_threads failed (%zd)\n", rc);
+            goto err_bsdiff_free;
+        }
     }
 
     rc = bpak_bsdiff(&bsdiff);

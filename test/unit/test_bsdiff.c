@@ -509,11 +509,12 @@ static uint8_t *create_modified_data(uint8_t *origin, size_t origin_length,
     return output;
 }
 
-static size_t chunked_diff_patch(uint8_t *origin, size_t origin_length,
-                                 uint8_t *target, size_t target_length,
-                                 enum bpak_compression compression,
-                                 size_t chunk_size, size_t window_margin,
-                                 uint8_t **patch_out)
+static size_t threaded_diff_patch(uint8_t *origin, size_t origin_length,
+                                  uint8_t *target, size_t target_length,
+                                  enum bpak_compression compression,
+                                  size_t chunk_size, size_t window_margin,
+                                  unsigned int threads, size_t segment_size,
+                                  uint8_t **patch_out)
 {
     int rc;
     struct bpak_bsdiff_context bsdiff;
@@ -543,6 +544,9 @@ static size_t chunked_diff_patch(uint8_t *origin, size_t origin_length,
     assert_int_equal(rc, BPAK_OK);
 
     rc = bpak_bsdiff_set_chunking(&bsdiff, chunk_size, window_margin);
+    assert_int_equal(rc, BPAK_OK);
+
+    rc = bpak_bsdiff_set_threads(&bsdiff, threads, segment_size);
     assert_int_equal(rc, BPAK_OK);
 
     ssize_t patch_length = bpak_bsdiff(&bsdiff);
@@ -590,6 +594,24 @@ static size_t chunked_diff_patch(uint8_t *origin, size_t origin_length,
         free(priv.patch_data);
 
     return patch_length;
+}
+
+static size_t chunked_diff_patch(uint8_t *origin, size_t origin_length,
+                                 uint8_t *target, size_t target_length,
+                                 enum bpak_compression compression,
+                                 size_t chunk_size, size_t window_margin,
+                                 uint8_t **patch_out)
+{
+    return threaded_diff_patch(origin,
+                               origin_length,
+                               target,
+                               target_length,
+                               compression,
+                               chunk_size,
+                               window_margin,
+                               1,
+                               0,
+                               patch_out);
 }
 
 #define CHUNK_TEST_LEN    (512 * 1024)
@@ -752,6 +774,92 @@ static void test_diff_patch_chunk_larger_than_target(void **state)
     free(origin);
 }
 
+/* Segments of the target are diffed by threads. The patch only depends on
+ * the segment size, not on the number of threads. */
+static void threaded_test(enum bpak_compression compression, size_t chunk_size,
+                          size_t window_margin)
+{
+    uint8_t *patch_single;
+    uint8_t *patch_threads;
+    size_t new_length;
+
+    prng_state = 0x5eed;
+    uint8_t *origin = create_binary_data(CHUNK_TEST_LEN);
+    uint8_t *target =
+        create_modified_data(origin, CHUNK_TEST_LEN, 10000, 5000, &new_length);
+
+    size_t unsegmented = threaded_diff_patch(origin,
+                                             CHUNK_TEST_LEN,
+                                             target,
+                                             new_length,
+                                             compression,
+                                             chunk_size,
+                                             window_margin,
+                                             1,
+                                             0,
+                                             NULL);
+    size_t single_length = threaded_diff_patch(origin,
+                                               CHUNK_TEST_LEN,
+                                               target,
+                                               new_length,
+                                               compression,
+                                               chunk_size,
+                                               window_margin,
+                                               1,
+                                               16 * 1024,
+                                               &patch_single);
+
+    for (unsigned int threads = 2; threads <= 8; threads *= 2) {
+        size_t threads_length = threaded_diff_patch(origin,
+                                                    CHUNK_TEST_LEN,
+                                                    target,
+                                                    new_length,
+                                                    compression,
+                                                    chunk_size,
+                                                    window_margin,
+                                                    threads,
+                                                    16 * 1024,
+                                                    &patch_threads);
+
+        assert_int_equal(threads_length, single_length);
+        assert_memory_equal(patch_threads, patch_single, single_length);
+        free(patch_threads);
+    }
+
+    /* Every segment boundary costs a few bytes */
+    assert_true(single_length < unsegmented + unsegmented / 50 + 1024);
+
+    free(patch_single);
+    free(target);
+    free(origin);
+}
+
+static void test_diff_patch_threads_no_comp(void **state)
+{
+    (void)state;
+    threaded_test(BPAK_COMPRESSION_NONE, 0, 0);
+}
+
+static void test_diff_patch_threads_hs(void **state)
+{
+    (void)state;
+    threaded_test(BPAK_COMPRESSION_HS, 0, 0);
+}
+
+static void test_diff_patch_threads_lzma(void **state)
+{
+    (void)state;
+    threaded_test(BPAK_COMPRESSION_LZMA, 0, 0);
+}
+
+/* Segments within chunks, the last chunk is not a multiple of the segment
+ * size */
+static void test_diff_patch_threads_chunked(void **state)
+{
+    (void)state;
+    threaded_test(BPAK_COMPRESSION_HS, 100 * 1000, 16 * 1024);
+}
+
 int main(void)
 {
     const struct CMUnitTest tests[] = {
@@ -769,6 +877,10 @@ int main(void)
         cmocka_unit_test(test_diff_patch_chunked_shrink_beyond_margin),
         cmocka_unit_test(test_diff_patch_chunked_small_origin),
         cmocka_unit_test(test_diff_patch_chunk_larger_than_target),
+        cmocka_unit_test(test_diff_patch_threads_no_comp),
+        cmocka_unit_test(test_diff_patch_threads_hs),
+        cmocka_unit_test(test_diff_patch_threads_lzma),
+        cmocka_unit_test(test_diff_patch_threads_chunked),
     };
 
     return cmocka_run_group_tests(tests, NULL, NULL);

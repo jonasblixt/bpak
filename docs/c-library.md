@@ -253,8 +253,11 @@ two segments. Threads need a library built with `BPAK_CONFIG_THREADS`,
 otherwise the segments are diffed one at a time.
 
 `bpak_transport_encode_ex()` and `bpak_pkg_transport_encode_ex()` take the
-chunk size and margin in `struct bpak_transport_encode_opts`. `bpak transport
---encode` sets them with `--bsdiff-chunk-size` and `--bsdiff-margin`.
+chunk size, margin, threads and segment size in `struct
+bpak_transport_encode_opts`. With threads, the segment size defaults to
+`BPAK_BSDIFF_DEFAULT_SEGMENT_SIZE`, 1 MiB. `bpak transport --encode` sets them
+with `--bsdiff-chunk-size`, `--bsdiff-margin`, `--bsdiff-threads` and
+`--bsdiff-segment-size`.
 
 ### Errors and logging
 

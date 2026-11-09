@@ -178,6 +178,12 @@ struct bpak_transport_encode_opts {
     size_t bsdiff_chunk_size;    /*!< bsdiff target chunk size, 0 = no chunking,
                                       see bpak_bsdiff_set_chunking */
     size_t bsdiff_window_margin; /*!< bsdiff origin window margin */
+    unsigned int bsdiff_threads; /*!< bsdiff threads, 0 or 1 = no threads,
+                                      see bpak_bsdiff_set_threads */
+    size_t bsdiff_segment_size;  /*!< bsdiff segment size, 0 = no segments
+                                      without threads and
+                                      BPAK_BSDIFF_DEFAULT_SEGMENT_SIZE with
+                                      threads */
 };
 
 /**

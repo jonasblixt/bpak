@@ -9,6 +9,7 @@
 #include <bpak/id.h>
 #include <bpak/crypto.h>
 #include <bpak/transport.h>
+#include <bpak/bsdiff.h>
 
 #include "module.h"
 
@@ -198,17 +199,21 @@ static PyObject *m_transport_encode(PyObject *Py_UNUSED(module),
                               "origin",
                               "bsdiff_chunk_size",
                               "bsdiff_window_margin",
+                              "bsdiff_threads",
+                              "bsdiff_segment_size",
                               NULL };
     BPAKPackage *input = NULL;
     BPAKPackage *origin = NULL;
     BPAKPackage *output = NULL;
     Py_ssize_t chunk_size = 0;
     Py_ssize_t window_margin = -1;
-    struct bpak_transport_encode_opts opts;
+    Py_ssize_t threads = 0;
+    Py_ssize_t segment_size = 0;
+    struct bpak_transport_encode_opts opts = { 0 };
 
     rc = PyArg_ParseTupleAndKeywords(args,
                                      kwds,
-                                     "O!O!|O&$nn:transport_encode",
+                                     "O!O!|O&$nnnn:transport_encode",
                                      kwlist,
                                      &BPAKPackageType,
                                      &input,
@@ -217,7 +222,9 @@ static PyObject *m_transport_encode(PyObject *Py_UNUSED(module),
                                      convert_optional_package,
                                      &origin,
                                      &chunk_size,
-                                     &window_margin);
+                                     &window_margin,
+                                     &threads,
+                                     &segment_size);
     if (!rc) {
         return NULL;
     }
@@ -225,6 +232,17 @@ static PyObject *m_transport_encode(PyObject *Py_UNUSED(module),
     if (chunk_size < 0) {
         return PyErr_Format(PyExc_ValueError,
                             "bsdiff_chunk_size must not be negative");
+    }
+
+    if ((threads < 0) || (threads > BPAK_BSDIFF_MAX_THREADS)) {
+        return PyErr_Format(PyExc_ValueError,
+                            "bsdiff_threads must be between 0 and %i",
+                            BPAK_BSDIFF_MAX_THREADS);
+    }
+
+    if (segment_size < 0) {
+        return PyErr_Format(PyExc_ValueError,
+                            "bsdiff_segment_size must not be negative");
     }
 
     if (package_check_open(input) < 0 || package_check_open(output) < 0 ||
@@ -236,6 +254,8 @@ static PyObject *m_transport_encode(PyObject *Py_UNUSED(module),
     opts.bsdiff_chunk_size = chunk_size;
     opts.bsdiff_window_margin =
         (window_margin < 0) ? (size_t)chunk_size / 2 : (size_t)window_margin;
+    opts.bsdiff_threads = threads;
+    opts.bsdiff_segment_size = segment_size;
 
     rc = bpak_pkg_transport_encode_ex(&input->pkg,
                                       &output->pkg,
@@ -388,7 +408,9 @@ static PyMethodDef module_methods[] = {
       "Transport encode from input to output, using origin for diff origin.\n"
       "bsdiff_chunk_size limits the memory usage of bsdiff by diffing in "
       "chunks, bsdiff_window_margin (default chunk size / 2) is the origin "
-      "data searched before and after each chunk" },
+      "data searched before and after each chunk. bsdiff_threads diffs "
+      "segments of bsdiff_segment_size bytes (default 1 MiB with threads) in "
+      "parallel" },
 
     { "transport_decode",
       KWARGS_METHOD(m_transport_decode),
@@ -429,6 +451,8 @@ static const struct {
 
     INT_CONSTANT(METADATA_BYTES),
     INT_CONSTANT(SIGNATURE_MAX_BYTES),
+
+    INT_CONSTANT(BSDIFF_MAX_THREADS),
 };
 
 PyMODINIT_FUNC PyInit__bpak(void)

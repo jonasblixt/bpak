@@ -21,6 +21,12 @@ the major version.
 - `bpak_bsdiff_set_threads()` diffs segments of the target in parallel. The
   patch depends on the segment size, not on the number of threads. The
   library uses pthreads when they are available, `BPAK_CONFIG_THREADS`.
+- `bpak transport --encode` takes `--bsdiff-threads` and
+  `--bsdiff-segment-size`, `bpak.transport_encode` the keyword arguments
+  `bsdiff_threads` and `bsdiff_segment_size`, and
+  `struct bpak_transport_encode_opts` the threads and the segment size. With
+  threads, the segment size defaults to 1 MiB. `bpak.BSDIFF_MAX_THREADS` is
+  the maximum number of threads.
 
 ### Changed
 

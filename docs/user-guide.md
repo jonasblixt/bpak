@@ -257,6 +257,11 @@ of the origin part, `--bsdiff-margin` before and after it, by default half the
 chunk size. Data that moved further than the margin is sent in full, which
 makes the patch larger. The patch is decoded as usual.
 
+`--bsdiff-threads` diffs segments of the new part in parallel, the segments
+are 1M by default or `--bsdiff-segment-size`. The patch depends on the
+segment size but not on the number of threads, and is a few bytes larger for
+every segment.
+
 ## Keystores
 
 A keystore is a package of public keys, one key per part. It lets a device

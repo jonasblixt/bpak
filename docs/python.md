@@ -71,7 +71,9 @@ API with types.
 The keyword arguments `bsdiff_chunk_size` and `bsdiff_window_margin` of
 `transport_encode` limit the memory usage of bsdiff, like
 `--bsdiff-chunk-size` and `--bsdiff-margin` of `bpak transport`. The margin
-defaults to half the chunk size.
+defaults to half the chunk size. `bsdiff_threads`, at most
+`BSDIFF_MAX_THREADS`, and `bsdiff_segment_size` diff segments in parallel,
+like `--bsdiff-threads` and `--bsdiff-segment-size`.
 After `transport_encode` and `transport_decode`, `output` describes the
 encoded or decoded package, and `input` is unchanged.
 
@@ -84,6 +86,7 @@ Constants:
 | `KEY_PUB_PRIME256v1`, `KEY_PUB_SECP384r1`, `KEY_PUB_SECP521r1`, `KEY_PUB_RSA4096` | Kinds of public keys, from `parse_public_key` |
 | `FLAG_EXCLUDE_FROM_HASH`, `FLAG_TRANSPORT` | Part flags, `Part.flags`                            |
 | `METADATA_BYTES`, `SIGNATURE_MAX_BYTES`    | Size of the meta data storage and of the signature field |
+| `BSDIFF_MAX_THREADS`                       | Maximum of `bsdiff_threads` of `transport_encode`   |
 
 ### Package
 
