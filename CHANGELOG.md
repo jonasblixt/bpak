@@ -6,7 +6,7 @@ tool. The package format stays compatible, see
 ABI are listed with the release. The SONAME of the shared library follows
 the major version.
 
-## Unreleased
+## 1.1.0 (2026-11-10)
 
 ### Added
 
