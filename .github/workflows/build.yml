@@ -94,7 +94,7 @@ jobs:
         done
 
   abi:
-    # Compare the ABI of the library with the last release
+    # Report the ABI changes of the library since the last release
     runs-on: ubuntu-24.04
     steps:
     - uses: actions/checkout@v5

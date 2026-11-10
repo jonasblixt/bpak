@@ -268,9 +268,11 @@ $ docker run --rm -it -v $PWD:/src -w /src debian:trixie sh -c \
 
 Packages, patches and keystores live for a long time. Devices in the field
 run old versions of bpak, bootloaders are rarely updated and patches are
-created by newer versions than the ones that apply them. The package format
-and the ABI of the library must never change in an incompatible way. These
-tests guard this:
+created by newer versions than the ones that apply them. The package format,
+patches and keystores must never change in an incompatible way. The ABI of
+the library may change for now, for example structs in the public headers
+that get new members, but exported functions are not removed. Describe ABI
+changes in `CHANGELOG.md`. These tests guard this:
 
 - `test/unit/test_abi.c` checks the layout of the structs in the public
   headers and the values of all enums, constants and predefined ids.
@@ -279,9 +281,9 @@ tests guard this:
   nothing that is not listed.
 - `test/abi/abidiff.sh` builds the last release and the working tree and
   compares the ABI of the shared libraries with `abidiff` from libabigail,
-  including the function signatures and all types they use. It fails for
-  everything but added functions and a new SONAME. CI runs it, locally it
-  needs `abigail-tools`:
+  including the function signatures and all types they use. It reports all
+  changes and fails only for removed functions. CI runs it, locally it needs
+  `abigail-tools`:
 
   ```
   $ test/abi/abidiff.sh          # the last release tag before HEAD

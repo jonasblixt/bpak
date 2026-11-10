@@ -1,9 +1,10 @@
 # Changelog
 
 Changes that affect users of the library, the python package and the `bpak`
-tool. The package format and the library ABI stay compatible, see
-[Compatibility](docs/development.md#compatibility). The SONAME of the
-shared library follows the major version.
+tool. The package format stays compatible, see
+[Compatibility](docs/development.md#compatibility). Changes to the library
+ABI are listed with the release. The SONAME of the shared library follows
+the major version.
 
 ## 1.0.1 (2026-11-08)
 

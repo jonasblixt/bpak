@@ -69,15 +69,18 @@ Things that are easy to get wrong in the pytest tests:
 
 ## Compatibility
 
-The package format and the library ABI must never break: old packages,
-patches and keystores must keep working with new versions and new patches
-must work with old decoders. The options of the `bpak` tool must stay
+The package format must never break: old packages, patches and keystores
+must keep working with new versions and new patches must work with old
+decoders. The library ABI may change for now, for example new members in
+public structs, list such changes in `CHANGELOG.md`, but never remove
+exported functions. The options of the `bpak` tool must stay
 compatible, `test/golden` replays recorded command lines.
 `test/unit/test_abi.c` checks struct layouts, enums and ids, `test/golden/`
 checks committed packages from earlier releases and `test/abi/` the exported
 symbols (`libbpak.symbols`).
-`test/abi/abidiff.sh` compares the full ABI with the last release (CI, needs
-abigail-tools). Never update expected values or golden sets to
+`test/abi/abidiff.sh` reports the ABI changes since the last release and
+fails for removed functions (CI, needs abigail-tools). Never update expected
+values or golden sets to
 make these tests pass. Add a new golden set with `test/golden/generate.py`
 when a release extends the format, and add new exported functions to
 `test/abi/libbpak.symbols`.

@@ -7,9 +7,9 @@
 # from the working tree with debug information and compares them with
 # abidiff from libabigail. Both are built with the same compiler and mbedtls
 # headers, so that struct bpak_hash_context, which embeds the mbedtls
-# contexts, is compared too. Added functions and a new SONAME, which comes
-# with a new major version, are reported but do not fail, removed or changed
-# functions and types do.
+# contexts, is compared too. All changes are reported, but only removed
+# functions fail the check. Changed types, for example a struct with new
+# members, are allowed, see "Compatibility" in docs/development.md.
 
 set -eu
 
@@ -51,15 +51,25 @@ dump "$WORK_DIR/old" "$WORK_DIR/old-build"
 build "$SOURCE_DIR" "$WORK_DIR/new-build"
 dump "$SOURCE_DIR" "$WORK_DIR/new-build"
 
-# Report all changes, but only fail for changes other than added functions
-# and the SONAME. abidiff sets bit 3 of the exit status only for removed
-# functions and a changed SONAME, type changes set bit 2 like added
-# functions do.
+# Report all changes, but only fail for removed functions. abidiff sets bit
+# 3 of the exit status for removed functions and a changed SONAME, which is
+# ignored, type changes set bit 2 like added functions do.
 abidiff "$WORK_DIR/old-build.abi" "$WORK_DIR/new-build.abi" || true
 
-if ! abidiff --no-added-syms --ignore-soname "$WORK_DIR/old-build.abi" \
-        "$WORK_DIR/new-build.abi" > /dev/null; then
-    echo "The ABI is not compatible with $REF" >&2
+status=0
+abidiff --no-added-syms --ignore-soname "$WORK_DIR/old-build.abi" \
+    "$WORK_DIR/new-build.abi" > /dev/null || status=$?
+
+if [ $((status & 8)) -ne 0 ]; then
+    echo "Functions of $REF were removed" >&2
     exit 1
 fi
-echo "The ABI is compatible with $REF"
+if [ $((status & 3)) -ne 0 ]; then
+    echo "abidiff failed" >&2
+    exit 1
+fi
+if [ "$status" -ne 0 ]; then
+    echo "The ABI changed since $REF, see the report above"
+else
+    echo "The ABI is compatible with $REF"
+fi
