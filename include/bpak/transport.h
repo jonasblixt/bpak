@@ -168,6 +168,36 @@ int bpak_transport_encode(FILE *input_fp, struct bpak_header *input_header,
                           FILE *output_fp, struct bpak_header *output_header,
                           FILE *origin_fp, struct bpak_header *origin_header);
 
+/**
+ * Encoder options for bpak_transport_encode_ex
+ *
+ * These only affect how the encoding is done, the decoder does not need to
+ * know about them.
+ */
+struct bpak_transport_encode_opts {
+    size_t bsdiff_chunk_size;    /*!< bsdiff target chunk size, 0 = no chunking,
+                                      see bpak_bsdiff_set_chunking */
+    size_t bsdiff_window_margin; /*!< bsdiff origin window margin */
+    unsigned int bsdiff_threads; /*!< bsdiff threads, 0 or 1 = no threads,
+                                      see bpak_bsdiff_set_threads */
+    size_t bsdiff_segment_size;  /*!< bsdiff segment size, 0 = no segments
+                                      without threads and
+                                      BPAK_BSDIFF_DEFAULT_SEGMENT_SIZE with
+                                      threads */
+};
+
+/**
+ * Transport encode with options, see bpak_transport_encode
+ *
+ * @param[in] opts Encoder options or NULL for defaults
+ *
+ * @return BPAK_OK on success or a negative number on failure
+ */
+int bpak_transport_encode_ex(FILE *input_fp, struct bpak_header *input_header,
+                             FILE *output_fp, struct bpak_header *output_header,
+                             FILE *origin_fp, struct bpak_header *origin_header,
+                             const struct bpak_transport_encode_opts *opts);
+
 #ifdef __cplusplus
 } // extern "C"
 #endif

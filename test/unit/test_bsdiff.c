@@ -406,6 +406,460 @@ static void test_patch_bad_ctrl(void **state)
     assert_memory_equal(checked_output, "01230123\0\0", 10);
 }
 
+/* Chunked diff tests. The patches are applied with the regular bspatch, which
+ * must not need to know that the patch was created in chunks. */
+
+struct chunk_test_priv {
+    uint8_t *origin_data;
+    size_t origin_length;
+    uint8_t *output_data;
+    size_t output_length;
+    uint8_t *patch_data;
+    size_t patch_capacity;
+    size_t patch_length;
+};
+
+static ssize_t chunk_test_read_origin(off_t offset, uint8_t *buffer,
+                                      size_t length, void *user_priv)
+{
+    struct chunk_test_priv *priv = (struct chunk_test_priv *)user_priv;
+
+    assert_true(offset >= 0);
+    assert_true((size_t)offset + length <= priv->origin_length);
+    memcpy(buffer, &priv->origin_data[offset], length);
+    return length;
+}
+
+static ssize_t chunk_test_write_output(off_t offset, uint8_t *buffer,
+                                       size_t length, void *user_priv)
+{
+    struct chunk_test_priv *priv = (struct chunk_test_priv *)user_priv;
+
+    assert_true(offset >= 0);
+    assert_true((size_t)offset + length <= priv->output_length);
+    memcpy(&priv->output_data[offset], buffer, length);
+    return length;
+}
+
+static ssize_t chunk_test_write_patch(off_t offset, uint8_t *buffer,
+                                      size_t length, void *user_priv)
+{
+    struct chunk_test_priv *priv = (struct chunk_test_priv *)user_priv;
+
+    assert_true((size_t)offset + length <= priv->patch_capacity);
+    memcpy(&priv->patch_data[offset], buffer, length);
+    priv->patch_length = offset + length;
+    return length;
+}
+
+static uint32_t prng_state;
+
+static uint8_t prng(void)
+{
+    prng_state ^= prng_state << 13;
+    prng_state ^= prng_state >> 17;
+    prng_state ^= prng_state << 5;
+    return prng_state & 0xff;
+}
+
+/* Data that compresses somewhat, like a binary, with repeated sequences */
+static uint8_t *create_binary_data(size_t length)
+{
+    uint8_t *output = malloc(length);
+    assert_true(output != NULL);
+
+    for (size_t i = 0; i < length; i++) {
+        if ((i > 64) && (prng() < 64))
+            output[i] = output[i - 1 - (prng() % 64)];
+        else
+            output[i] = prng();
+    }
+
+    return output;
+}
+
+/* Copy origin to a new buffer with an insertion, a deletion and edits */
+static uint8_t *create_modified_data(uint8_t *origin, size_t origin_length,
+                                     size_t insert_length, size_t delete_length,
+                                     size_t *new_length)
+{
+    size_t insert_at = origin_length / 3;
+    size_t delete_at = (origin_length * 2) / 3;
+    size_t length = origin_length + insert_length - delete_length;
+    uint8_t *output = malloc(length);
+    uint8_t *p = output;
+    assert_true(output != NULL);
+
+    memcpy(p, origin, insert_at);
+    p += insert_at;
+
+    for (size_t i = 0; i < insert_length; i++)
+        *p++ = prng();
+
+    memcpy(p, &origin[insert_at], delete_at - insert_at);
+    p += delete_at - insert_at;
+    memcpy(p,
+           &origin[delete_at + delete_length],
+           origin_length - delete_at - delete_length);
+
+    for (size_t i = 0; i < 100; i++)
+        output[prng_state % length] ^= 0x55;
+
+    *new_length = length;
+    return output;
+}
+
+static size_t threaded_diff_patch(uint8_t *origin, size_t origin_length,
+                                  uint8_t *target, size_t target_length,
+                                  enum bpak_compression compression,
+                                  size_t chunk_size, size_t window_margin,
+                                  unsigned int threads, size_t segment_size,
+                                  uint8_t **patch_out)
+{
+    int rc;
+    struct bpak_bsdiff_context bsdiff;
+    struct bpak_bspatch_context bspatch;
+    struct chunk_test_priv priv;
+    uint8_t decode_buffer[BPAK_CHUNK_BUFFER_LENGTH];
+
+    memset(&priv, 0, sizeof(priv));
+    priv.origin_data = origin;
+    priv.origin_length = origin_length;
+    priv.output_data = malloc(target_length);
+    priv.output_length = target_length;
+    priv.patch_capacity = target_length * 2 + 64 * 1024;
+    priv.patch_data = malloc(priv.patch_capacity);
+    assert_true(priv.output_data != NULL);
+    assert_true(priv.patch_data != NULL);
+
+    rc = bpak_bsdiff_init(&bsdiff,
+                          origin,
+                          origin_length,
+                          target,
+                          target_length,
+                          chunk_test_write_patch,
+                          0,
+                          compression,
+                          &priv);
+    assert_int_equal(rc, BPAK_OK);
+
+    rc = bpak_bsdiff_set_chunking(&bsdiff, chunk_size, window_margin);
+    assert_int_equal(rc, BPAK_OK);
+
+    rc = bpak_bsdiff_set_threads(&bsdiff, threads, segment_size);
+    assert_int_equal(rc, BPAK_OK);
+
+    ssize_t patch_length = bpak_bsdiff(&bsdiff);
+    assert_true(patch_length > 0);
+    assert_int_equal((size_t)patch_length, priv.patch_length);
+    bpak_bsdiff_free(&bsdiff);
+
+    printf("Chunked patch: chunk %zu, margin %zu, compression %i: %zi bytes\n",
+           chunk_size,
+           window_margin,
+           compression,
+           patch_length);
+
+    rc = bpak_bspatch_init(&bspatch,
+                           decode_buffer,
+                           sizeof(decode_buffer),
+                           patch_length,
+                           chunk_test_read_origin,
+                           0,
+                           chunk_test_write_output,
+                           0,
+                           compression,
+                           &priv);
+    assert_int_equal(rc, BPAK_OK);
+
+    /* Feed the patch in pieces, like a device receiving it would */
+    for (ssize_t pos = 0; pos < patch_length; pos += 4096) {
+        rc = bpak_bspatch_write(&bspatch,
+                                &priv.patch_data[pos],
+                                BPAK_MIN(4096, patch_length - pos));
+        assert_int_equal(rc, BPAK_OK);
+    }
+
+    ssize_t output_length = bpak_bspatch_final(&bspatch);
+    bpak_bspatch_free(&bspatch);
+
+    assert_int_equal((size_t)output_length, target_length);
+    assert_memory_equal(priv.output_data, target, target_length);
+
+    free(priv.output_data);
+
+    if (patch_out != NULL)
+        *patch_out = priv.patch_data;
+    else
+        free(priv.patch_data);
+
+    return patch_length;
+}
+
+static size_t chunked_diff_patch(uint8_t *origin, size_t origin_length,
+                                 uint8_t *target, size_t target_length,
+                                 enum bpak_compression compression,
+                                 size_t chunk_size, size_t window_margin,
+                                 uint8_t **patch_out)
+{
+    return threaded_diff_patch(origin,
+                               origin_length,
+                               target,
+                               target_length,
+                               compression,
+                               chunk_size,
+                               window_margin,
+                               1,
+                               0,
+                               patch_out);
+}
+
+#define CHUNK_TEST_LEN    (512 * 1024)
+#define CHUNK_TEST_CHUNK  (64 * 1024)
+#define CHUNK_TEST_MARGIN (16 * 1024)
+
+static void chunked_test(enum bpak_compression compression,
+                         size_t insert_length, size_t delete_length,
+                         bool tiny_chunks)
+{
+    size_t new_length;
+
+    prng_state = 0x12345678;
+    uint8_t *origin = create_binary_data(CHUNK_TEST_LEN);
+    uint8_t *target = create_modified_data(origin,
+                                           CHUNK_TEST_LEN,
+                                           insert_length,
+                                           delete_length,
+                                           &new_length);
+
+    size_t unchunked = chunked_diff_patch(origin,
+                                          CHUNK_TEST_LEN,
+                                          target,
+                                          new_length,
+                                          compression,
+                                          0,
+                                          0,
+                                          NULL);
+    size_t chunked = chunked_diff_patch(origin,
+                                        CHUNK_TEST_LEN,
+                                        target,
+                                        new_length,
+                                        compression,
+                                        CHUNK_TEST_CHUNK,
+                                        CHUNK_TEST_MARGIN,
+                                        NULL);
+    /* A chunk size that does not divide the target, without margin */
+    chunked_diff_patch(origin,
+                       CHUNK_TEST_LEN,
+                       target,
+                       new_length,
+                       compression,
+                       100 * 1000,
+                       0,
+                       NULL);
+
+    if (tiny_chunks) {
+        chunked_diff_patch(origin,
+                           CHUNK_TEST_LEN,
+                           target,
+                           new_length,
+                           compression,
+                           1000,
+                           100,
+                           NULL);
+    }
+
+    /* Data that moved less than the margin is still found since the window
+     * follows the data. Data that moved further is not, the patch is still
+     * correct but larger. */
+    if ((insert_length < CHUNK_TEST_MARGIN) &&
+        (delete_length < CHUNK_TEST_MARGIN)) {
+        assert_true(chunked < unchunked + unchunked / 20 + 256);
+    }
+
+    free(target);
+    free(origin);
+}
+
+static void test_diff_patch_chunked_no_comp(void **state)
+{
+    (void)state;
+    chunked_test(BPAK_COMPRESSION_NONE, 10000, 5000, true);
+}
+
+static void test_diff_patch_chunked_hs(void **state)
+{
+    (void)state;
+    chunked_test(BPAK_COMPRESSION_HS, 10000, 5000, false);
+}
+
+static void test_diff_patch_chunked_lzma(void **state)
+{
+    (void)state;
+    chunked_test(BPAK_COMPRESSION_LZMA, 10000, 5000, false);
+}
+
+static void test_diff_patch_chunked_grow_beyond_margin(void **state)
+{
+    (void)state;
+    chunked_test(BPAK_COMPRESSION_HS, 4 * CHUNK_TEST_MARGIN, 0, false);
+}
+
+static void test_diff_patch_chunked_shrink_beyond_margin(void **state)
+{
+    (void)state;
+    chunked_test(BPAK_COMPRESSION_HS, 0, 4 * CHUNK_TEST_MARGIN, false);
+}
+
+static void test_diff_patch_chunked_small_origin(void **state)
+{
+    (void)state;
+    /* Origin smaller than the window, target much larger */
+    prng_state = 0xcafe;
+    uint8_t *origin = create_binary_data(10000);
+    uint8_t *target = create_binary_data(300000);
+
+    memcpy(&target[1000], origin, 10000);
+    memcpy(&target[250000], origin, 10000);
+
+    chunked_diff_patch(origin,
+                       10000,
+                       target,
+                       300000,
+                       BPAK_COMPRESSION_HS,
+                       64 * 1024,
+                       16 * 1024,
+                       NULL);
+
+    free(target);
+    free(origin);
+}
+
+static void test_diff_patch_chunk_larger_than_target(void **state)
+{
+    (void)state;
+    /* A chunk size larger than the target is the same as no chunking */
+    uint8_t *patch_unchunked;
+    uint8_t *patch_chunked;
+    size_t new_length;
+
+    prng_state = 0xbeef;
+    uint8_t *origin = create_binary_data(CHUNK_TEST_LEN);
+    uint8_t *target =
+        create_modified_data(origin, CHUNK_TEST_LEN, 1000, 1000, &new_length);
+
+    size_t unchunked_length = chunked_diff_patch(origin,
+                                                 CHUNK_TEST_LEN,
+                                                 target,
+                                                 new_length,
+                                                 BPAK_COMPRESSION_NONE,
+                                                 0,
+                                                 0,
+                                                 &patch_unchunked);
+    size_t chunked_length = chunked_diff_patch(origin,
+                                               CHUNK_TEST_LEN,
+                                               target,
+                                               new_length,
+                                               BPAK_COMPRESSION_NONE,
+                                               4 * CHUNK_TEST_LEN,
+                                               1024,
+                                               &patch_chunked);
+
+    assert_int_equal(unchunked_length, chunked_length);
+    assert_memory_equal(patch_unchunked, patch_chunked, unchunked_length);
+
+    free(patch_chunked);
+    free(patch_unchunked);
+    free(target);
+    free(origin);
+}
+
+/* Segments of the target are diffed by threads. The patch only depends on
+ * the segment size, not on the number of threads. */
+static void threaded_test(enum bpak_compression compression, size_t chunk_size,
+                          size_t window_margin)
+{
+    uint8_t *patch_single;
+    uint8_t *patch_threads;
+    size_t new_length;
+
+    prng_state = 0x5eed;
+    uint8_t *origin = create_binary_data(CHUNK_TEST_LEN);
+    uint8_t *target =
+        create_modified_data(origin, CHUNK_TEST_LEN, 10000, 5000, &new_length);
+
+    size_t unsegmented = threaded_diff_patch(origin,
+                                             CHUNK_TEST_LEN,
+                                             target,
+                                             new_length,
+                                             compression,
+                                             chunk_size,
+                                             window_margin,
+                                             1,
+                                             0,
+                                             NULL);
+    size_t single_length = threaded_diff_patch(origin,
+                                               CHUNK_TEST_LEN,
+                                               target,
+                                               new_length,
+                                               compression,
+                                               chunk_size,
+                                               window_margin,
+                                               1,
+                                               16 * 1024,
+                                               &patch_single);
+
+    for (unsigned int threads = 2; threads <= 8; threads *= 2) {
+        size_t threads_length = threaded_diff_patch(origin,
+                                                    CHUNK_TEST_LEN,
+                                                    target,
+                                                    new_length,
+                                                    compression,
+                                                    chunk_size,
+                                                    window_margin,
+                                                    threads,
+                                                    16 * 1024,
+                                                    &patch_threads);
+
+        assert_int_equal(threads_length, single_length);
+        assert_memory_equal(patch_threads, patch_single, single_length);
+        free(patch_threads);
+    }
+
+    /* Every segment boundary costs a few bytes */
+    assert_true(single_length < unsegmented + unsegmented / 50 + 1024);
+
+    free(patch_single);
+    free(target);
+    free(origin);
+}
+
+static void test_diff_patch_threads_no_comp(void **state)
+{
+    (void)state;
+    threaded_test(BPAK_COMPRESSION_NONE, 0, 0);
+}
+
+static void test_diff_patch_threads_hs(void **state)
+{
+    (void)state;
+    threaded_test(BPAK_COMPRESSION_HS, 0, 0);
+}
+
+static void test_diff_patch_threads_lzma(void **state)
+{
+    (void)state;
+    threaded_test(BPAK_COMPRESSION_LZMA, 0, 0);
+}
+
+/* Segments within chunks, the last chunk is not a multiple of the segment
+ * size */
+static void test_diff_patch_threads_chunked(void **state)
+{
+    (void)state;
+    threaded_test(BPAK_COMPRESSION_HS, 100 * 1000, 16 * 1024);
+}
+
 int main(void)
 {
     const struct CMUnitTest tests[] = {
@@ -416,6 +870,17 @@ int main(void)
         cmocka_unit_test(test_diff_patch_hs_random),
         cmocka_unit_test(test_patch_bad_ctrl),
         cmocka_unit_test(test_lzma_allocator),
+        cmocka_unit_test(test_diff_patch_chunked_no_comp),
+        cmocka_unit_test(test_diff_patch_chunked_hs),
+        cmocka_unit_test(test_diff_patch_chunked_lzma),
+        cmocka_unit_test(test_diff_patch_chunked_grow_beyond_margin),
+        cmocka_unit_test(test_diff_patch_chunked_shrink_beyond_margin),
+        cmocka_unit_test(test_diff_patch_chunked_small_origin),
+        cmocka_unit_test(test_diff_patch_chunk_larger_than_target),
+        cmocka_unit_test(test_diff_patch_threads_no_comp),
+        cmocka_unit_test(test_diff_patch_threads_hs),
+        cmocka_unit_test(test_diff_patch_threads_lzma),
+        cmocka_unit_test(test_diff_patch_threads_chunked),
     };
 
     return cmocka_run_group_tests(tests, NULL, NULL);

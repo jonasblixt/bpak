@@ -49,6 +49,12 @@ typedef enum {
 
 #define HEATSHRINK_ENCODER_WINDOW_BITS(_)    (HEATSHRINK_STATIC_WINDOW_BITS)
 #define HEATSHRINK_ENCODER_LOOKAHEAD_BITS(_) (HEATSHRINK_STATIC_LOOKAHEAD_BITS)
+#define HEATSHRINK_ENCODER_INDEX(HSE)        (&(HSE)->search_index)
+
+/* Search index, links the previous positions of each byte value */
+struct hs_index {
+    int16_t index[2 << HEATSHRINK_STATIC_WINDOW_BITS];
+};
 
 typedef struct {
     uint16_t input_size; /* bytes in input buffer */
@@ -61,6 +67,7 @@ typedef struct {
     uint8_t state;        /* current state machine node */
     uint8_t current_byte; /* current byte of output */
     uint8_t bit_index;    /* current bit index */
+    struct hs_index search_index;
     /* input buffer and / sliding window for expansion */
     uint8_t buffer[2 << HEATSHRINK_ENCODER_WINDOW_BITS(_)];
 } heatshrink_encoder;

@@ -25,16 +25,21 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <inttypes.h>
 #include <string.h>
 #include <bpak/bpak.h>
 #include <bpak/bsdiff.h>
+
+#if BPAK_CONFIG_THREADS == 1
+#include <pthread.h>
+#endif
 
 #include "internal.h"
 #include "vendor/sais/sais.h"
 #include "vendor/heatshrink/heatshrink_encoder.h"
 
-static int64_t matchlen(uint8_t *from_p, int64_t from_size, uint8_t *to_p,
-                        int64_t to_size)
+static int64_t matchlen(const uint8_t *from_p, int64_t from_size,
+                        const uint8_t *to_p, int64_t to_size)
 {
     int64_t i;
 
@@ -47,40 +52,47 @@ static int64_t matchlen(uint8_t *from_p, int64_t from_size, uint8_t *to_p,
     return (i);
 }
 
-static int64_t search(int64_t *sa_p, uint8_t *from_p, int64_t from_size,
-                      uint8_t *to_p, int64_t to_size, int64_t from_begin,
-                      int64_t from_end, int64_t *pos_p)
+static inline int64_t sa_get(const void *sa_p, uint8_t sa_width, int64_t i)
+{
+    if (sa_width == sizeof(int32_t))
+        return ((const int32_t *)sa_p)[i];
+
+    return ((const int64_t *)sa_p)[i];
+}
+
+static int64_t search(const void *sa_p, uint8_t sa_width, const uint8_t *from_p,
+                      int64_t from_size, const uint8_t *to_p, int64_t to_size,
+                      int64_t from_begin, int64_t from_end, int64_t *pos_p)
 {
     int64_t x;
     int64_t y;
+    int64_t sa_begin;
+    int64_t sa_end;
 
     if (from_end - from_begin < 2) {
-        x = matchlen(from_p + sa_p[from_begin],
-                     from_size - sa_p[from_begin],
-                     to_p,
-                     to_size);
+        sa_begin = sa_get(sa_p, sa_width, from_begin);
+        sa_end = sa_get(sa_p, sa_width, from_end);
 
-        y = matchlen(from_p + sa_p[from_end],
-                     from_size - sa_p[from_end],
-                     to_p,
-                     to_size);
+        x = matchlen(from_p + sa_begin, from_size - sa_begin, to_p, to_size);
+        y = matchlen(from_p + sa_end, from_size - sa_end, to_p, to_size);
 
         if (x > y) {
-            *pos_p = sa_p[from_begin];
+            *pos_p = sa_begin;
 
             return (x);
         } else {
-            *pos_p = sa_p[from_end];
+            *pos_p = sa_end;
 
             return (y);
         }
     }
 
     x = (from_begin + (from_end - from_begin) / 2);
+    y = sa_get(sa_p, sa_width, x);
 
-    if (memcmp(from_p + sa_p[x], to_p, BPAK_MIN(from_size - sa_p[x], to_size)) <
-        0) {
+    if (memcmp(from_p + y, to_p, BPAK_MIN(from_size - y, to_size)) < 0) {
         return search(sa_p,
+                      sa_width,
                       from_p,
                       from_size,
                       to_p,
@@ -90,6 +102,7 @@ static int64_t search(int64_t *sa_p, uint8_t *from_p, int64_t from_size,
                       pos_p);
     } else {
         return search(sa_p,
+                      sa_width,
                       from_p,
                       from_size,
                       to_p,
@@ -97,6 +110,211 @@ static int64_t search(int64_t *sa_p, uint8_t *from_p, int64_t from_size,
                       from_begin,
                       x,
                       pos_p);
+    }
+}
+
+#if defined(__GNUC__)
+#define BSDIFF_PREFETCH(addr) __builtin_prefetch(addr)
+#else
+#define BSDIFF_PREFETCH(addr) ((void)(addr))
+#endif
+
+/* Maximum number of searches that run interleaved */
+#define BSDIFF_SEARCH_BATCH 32
+
+/* The prefixes of the suffixes that the first levels of the binary search
+ * compare against are stored in a tree, in breadth first order. They are
+ * few and stored close together, so they are mostly in the cache, unlike
+ * the suffix array and origin data. Node n has the children 2n and 2n + 1.
+ *
+ * A prefix is the first 7 bytes of a suffix, big endian, followed by the
+ * number of valid bytes. Comparing prefixes as numbers orders them like
+ * memcmp() does, up to the valid length. */
+#define BSDIFF_PREFIX_BYTES 7
+
+static uint64_t prefix_get(const uint8_t *data, int64_t size)
+{
+    int64_t valid = BPAK_MIN(size, BSDIFF_PREFIX_BYTES);
+    uint64_t prefix = 0;
+
+    for (int64_t i = 0; i < BSDIFF_PREFIX_BYTES; i++)
+        prefix = (prefix << 8) | ((i < valid) ? data[i] : 0);
+
+    return (prefix << 8) | (uint64_t)valid;
+}
+
+/* Compare the prefixes of an origin suffix and the target. Returns a
+ * negative number if the suffix is less than the target, compared like
+ * search() does, a positive number if it is not and 0 if the prefixes are
+ * equal and the rest of the suffix needs to be compared. */
+static int prefix_compare(uint64_t suffix, uint64_t target)
+{
+    uint64_t valid = BPAK_MIN(suffix & 0xff, target & 0xff);
+    uint64_t mask = (valid == 0) ? 0 : ~(uint64_t)0 << (64 - 8 * valid);
+
+    if ((suffix & mask) != (target & mask))
+        return ((suffix & mask) < (target & mask)) ? -1 : 1;
+
+    /* The compared length is shorter than a prefix, everything is equal */
+    if (valid < BSDIFF_PREFIX_BYTES)
+        return 1;
+
+    return 0;
+}
+
+static void search_tree_fill(struct bpak_bsdiff_context *ctx, size_t node,
+                             int64_t begin, int64_t end, int level)
+{
+    int64_t x;
+    int64_t y;
+
+    if ((level == ctx->search_tree_levels) || (end - begin < 2))
+        return;
+
+    x = begin + (end - begin) / 2;
+    y = sa_get(ctx->suffix_array, ctx->suffix_array_width, x);
+    ctx->search_tree[node] =
+        prefix_get(ctx->origin_data + y, ctx->origin_length - y);
+
+    search_tree_fill(ctx, 2 * node, begin, x, level + 1);
+    search_tree_fill(ctx, 2 * node + 1, x, end, level + 1);
+}
+
+static int search_tree_build(struct bpak_bsdiff_context *ctx)
+{
+    /* Limit the tree to about a quarter of the origin length in bytes */
+    size_t max_nodes = ctx->origin_length / (4 * sizeof(uint64_t));
+    int levels = 0;
+
+    while (((size_t)2 << levels) <= max_nodes)
+        levels++;
+
+    size_t nodes = (size_t)1 << levels;
+
+    if (ctx->search_tree_size < nodes) {
+        if (ctx->search_tree != NULL)
+            bpak_free(ctx->search_tree);
+
+        ctx->search_tree = bpak_calloc(nodes, sizeof(uint64_t));
+
+        if (ctx->search_tree == NULL) {
+            ctx->search_tree_size = 0;
+            return -BPAK_FAILED;
+        }
+
+        ctx->search_tree_size = nodes;
+    }
+
+    ctx->search_tree_levels = levels;
+    search_tree_fill(ctx, 1, 0, ctx->origin_length, 0);
+
+    return BPAK_OK;
+}
+
+/* Run search() for 'count' consecutive target positions, starting at
+ * 'scan'. Every step of a search reads a suffix array entry and then the
+ * origin data it points to, which are mostly cache misses. Stepping the
+ * searches in lockstep lets the memory accesses of different searches
+ * overlap. The results are the same as calling search() for each position. */
+static void search_batch(const struct bpak_bsdiff_context *ctx,
+                         const uint8_t *new_data, int64_t new_length,
+                         int64_t scan, int count, int64_t *len_p,
+                         int64_t *pos_p)
+{
+    const uint8_t *from_p = ctx->origin_data;
+    int64_t from_size = ctx->origin_length;
+    int64_t begin[BSDIFF_SEARCH_BATCH];
+    int64_t end[BSDIFF_SEARCH_BATCH];
+    int64_t x[BSDIFF_SEARCH_BATCH];
+    int64_t y[BSDIFF_SEARCH_BATCH];
+    uint64_t target[BSDIFF_SEARCH_BATCH];
+    size_t node[BSDIFF_SEARCH_BATCH];
+    bool active = true;
+
+    for (int i = 0; i < count; i++) {
+        begin[i] = 0;
+        end[i] = from_size;
+        node[i] = 1;
+        target[i] = prefix_get(new_data + scan + i, new_length - (scan + i));
+    }
+
+    for (int level = 0; level < ctx->search_tree_levels; level++) {
+        for (int i = 0; i < count; i++) {
+            if (end[i] - begin[i] >= 2)
+                BSDIFF_PREFETCH(&ctx->search_tree[node[i]]);
+        }
+
+        for (int i = 0; i < count; i++) {
+            if (end[i] - begin[i] < 2)
+                continue;
+
+            int cmp = prefix_compare(ctx->search_tree[node[i]], target[i]);
+
+            x[i] = begin[i] + (end[i] - begin[i]) / 2;
+
+            if (cmp == 0) {
+                int64_t to_size = new_length - (scan + i);
+
+                y[i] = sa_get(ctx->suffix_array, ctx->suffix_array_width, x[i]);
+                cmp = memcmp(from_p + y[i],
+                             new_data + scan + i,
+                             BPAK_MIN(from_size - y[i], to_size));
+            }
+
+            if (cmp < 0) {
+                begin[i] = x[i];
+                node[i] = 2 * node[i] + 1;
+            } else {
+                end[i] = x[i];
+                node[i] = 2 * node[i];
+            }
+        }
+    }
+
+    while (active) {
+        active = false;
+
+        for (int i = 0; i < count; i++) {
+            if (end[i] - begin[i] >= 2) {
+                x[i] = begin[i] + (end[i] - begin[i]) / 2;
+                BSDIFF_PREFETCH((const uint8_t *)ctx->suffix_array +
+                                x[i] * ctx->suffix_array_width);
+                active = true;
+            }
+        }
+
+        for (int i = 0; i < count; i++) {
+            if (end[i] - begin[i] >= 2) {
+                y[i] = sa_get(ctx->suffix_array, ctx->suffix_array_width, x[i]);
+                BSDIFF_PREFETCH(from_p + y[i]);
+            }
+        }
+
+        for (int i = 0; i < count; i++) {
+            if (end[i] - begin[i] >= 2) {
+                int64_t to_size = new_length - (scan + i);
+
+                if (memcmp(from_p + y[i],
+                           new_data + scan + i,
+                           BPAK_MIN(from_size - y[i], to_size)) < 0) {
+                    begin[i] = x[i];
+                } else {
+                    end[i] = x[i];
+                }
+            }
+        }
+    }
+
+    for (int i = 0; i < count; i++) {
+        len_p[i] = search(ctx->suffix_array,
+                          ctx->suffix_array_width,
+                          ctx->origin_data,
+                          ctx->origin_length,
+                          new_data + scan + i,
+                          new_length - (scan + i),
+                          begin[i],
+                          end[i],
+                          &pos_p[i]);
     }
 }
 
@@ -356,8 +574,119 @@ static void compressor_free(struct bpak_bsdiff_context *ctx)
     ctx->compressor_priv = NULL;
 }
 
-static int write_diff_extra_and_adjustment(struct bpak_bsdiff_context *ctx)
+static size_t chunk_length(const struct bpak_bsdiff_context *ctx,
+                           int64_t new_base)
 {
+    size_t remaining = ctx->new_full_length - new_base;
+
+    if ((ctx->chunk_size == 0) || (remaining <= ctx->chunk_size))
+        return remaining;
+
+    /* Avoid a short last chunk by merging it with the one before */
+    if (remaining - ctx->chunk_size < ctx->chunk_size / 2)
+        return remaining;
+
+    return ctx->chunk_size;
+}
+
+static bool more_chunks(const struct bpak_bsdiff_context *ctx)
+{
+    return (ctx->new_base + ctx->new_length) < ctx->new_full_length;
+}
+
+/* Select the origin window for the chunk starting at new_base. drift is
+ * the offset of origin data relative to target data at the latest match. */
+static void window_select(struct bpak_bsdiff_context *ctx, int64_t new_base,
+                          int64_t drift)
+{
+    size_t margin = BPAK_MIN(ctx->window_margin, ctx->origin_full_length);
+    size_t length;
+    int64_t base;
+
+    if (ctx->chunk_size == 0) {
+        ctx->next_origin_base = 0;
+        ctx->next_origin_length = ctx->origin_full_length;
+        return;
+    }
+
+    length = BPAK_MIN(chunk_length(ctx, new_base), ctx->origin_full_length);
+    length = BPAK_MIN(length + 2 * margin, ctx->origin_full_length);
+    base = new_base + drift - (int64_t)margin;
+
+    if (base > (int64_t)(ctx->origin_full_length - length))
+        base = ctx->origin_full_length - length;
+    if (base < 0)
+        base = 0;
+
+    ctx->next_origin_base = base;
+    ctx->next_origin_length = length;
+}
+
+/* Diff state for a part of the target chunk. A chunk is split into segments
+ * that are diffed independently, possibly in parallel, and are output in
+ * order. The last record of a segment moves the origin position to where the
+ * next segment starts. */
+struct bsdiff_segment {
+    struct bpak_bsdiff_context *ctx;
+    uint8_t *new_data;  /* Target data of the segment */
+    int64_t new_start;  /* Offset of the segment in the chunk */
+    int64_t new_length; /* Length of the segment */
+    int64_t end_pos;    /* Origin position, in window coordinates, that the
+                           next segment starts at, or -1 for the last one */
+    bool direct;        /* Write to the compressor instead of the buffer */
+    int64_t scan;
+    int64_t len;
+    int64_t pos;
+    int64_t last_scan;
+    int64_t last_pos;
+    int64_t last_offset;
+    uint8_t *buffer; /* Output of a segment that is not written directly */
+    size_t buffer_length;
+    size_t buffer_capacity;
+    bool done;
+    int rc;
+};
+
+static int segment_write(struct bsdiff_segment *seg, uint8_t *data,
+                         size_t length)
+{
+    if (seg->direct)
+        return compressor_write(seg->ctx, data, length);
+
+    if (seg->buffer_length + length > seg->buffer_capacity) {
+        /* The output is about as large as the target data */
+        size_t capacity = seg->buffer_capacity * 2;
+        size_t initial = seg->new_length + seg->new_length / 16 + 1024;
+        uint8_t *buffer;
+
+        if (capacity < initial)
+            capacity = initial;
+        if (capacity < seg->buffer_length + length)
+            capacity = seg->buffer_length + length;
+
+        buffer = bpak_calloc(capacity, 1);
+
+        if (buffer == NULL)
+            return -BPAK_FAILED;
+
+        if (seg->buffer != NULL) {
+            memcpy(buffer, seg->buffer, seg->buffer_length);
+            bpak_free(seg->buffer);
+        }
+
+        seg->buffer = buffer;
+        seg->buffer_capacity = capacity;
+    }
+
+    memcpy(seg->buffer + seg->buffer_length, data, length);
+    seg->buffer_length += length;
+
+    return BPAK_OK;
+}
+
+static int write_diff_extra_and_adjustment(struct bsdiff_segment *seg)
+{
+    struct bpak_bsdiff_context *ctx = seg->ctx;
     int64_t s;
     int64_t sf;
     int64_t diff_size;
@@ -371,19 +700,24 @@ static int write_diff_extra_and_adjustment(struct bpak_bsdiff_context *ctx)
     int64_t i;
     int64_t last_scan;
     int64_t last_pos;
+    int64_t adjust_to;
+    int64_t drift = 0;
+    int64_t next_new_base = 0;
+    int64_t next_offset = 0;
+    bool chunk_end;
     uint64_t chunk_len = 0;
     int rc;
     uint8_t buffer[BPAK_CHUNK_BUFFER_LENGTH];
 
-    last_scan = ctx->last_scan;
-    last_pos = ctx->last_pos;
+    last_scan = seg->last_scan;
+    last_pos = seg->last_pos;
     s = 0;
     sf = 0;
     diff_size = 0;
 
-    for (i = 0; (last_scan + i < ctx->scan) &&
+    for (i = 0; (last_scan + i < seg->scan) &&
                 (last_pos + i < (int64_t)ctx->origin_length);) {
-        if (ctx->origin_data[last_pos + i] == ctx->new_data[last_scan + i]) {
+        if (ctx->origin_data[last_pos + i] == seg->new_data[last_scan + i]) {
             s++;
         }
 
@@ -397,13 +731,13 @@ static int write_diff_extra_and_adjustment(struct bpak_bsdiff_context *ctx)
 
     lenb = 0;
 
-    if (ctx->scan < (int64_t)ctx->new_length) {
+    if (seg->scan < (int64_t)seg->new_length) {
         s = 0;
         sb = 0;
 
-        for (i = 1; (ctx->scan >= last_scan + i) && (ctx->pos >= i); i++) {
-            if (ctx->origin_data[ctx->pos - i] ==
-                ctx->new_data[ctx->scan - i]) {
+        for (i = 1; (seg->scan >= last_scan + i) && (seg->pos >= i); i++) {
+            if (ctx->origin_data[seg->pos - i] ==
+                seg->new_data[seg->scan - i]) {
                 s++;
             }
 
@@ -414,7 +748,7 @@ static int write_diff_extra_and_adjustment(struct bpak_bsdiff_context *ctx)
         }
     }
 
-    overlap = (last_scan + diff_size) - (ctx->scan - lenb);
+    overlap = (last_scan + diff_size) - (seg->scan - lenb);
 
     if (overlap > 0) {
         s = 0;
@@ -422,13 +756,13 @@ static int write_diff_extra_and_adjustment(struct bpak_bsdiff_context *ctx)
         lens = 0;
 
         for (i = 0; i < overlap; i++) {
-            if (ctx->new_data[last_scan + diff_size - overlap + i] ==
+            if (seg->new_data[last_scan + diff_size - overlap + i] ==
                 ctx->origin_data[last_pos + diff_size - overlap + i]) {
                 s++;
             }
 
-            if (ctx->new_data[ctx->scan - lenb + i] ==
-                ctx->origin_data[ctx->pos - lenb + i]) {
+            if (seg->new_data[seg->scan - lenb + i] ==
+                ctx->origin_data[seg->pos - lenb + i]) {
                 s--;
             }
 
@@ -443,14 +777,43 @@ static int write_diff_extra_and_adjustment(struct bpak_bsdiff_context *ctx)
     }
 
     extra_pos = (last_scan + diff_size);
-    extra_size = (ctx->scan - lenb - extra_pos);
+    extra_size = (seg->scan - lenb - extra_pos);
 
-    /* Write control data*/
+    adjust_to = seg->pos - lenb;
+    chunk_end = false;
+
+    if ((seg->scan == seg->new_length) && (seg->end_pos >= 0)) {
+        /* bspatch moves the origin position by a relative adjustment after
+         * every record. Let the last record of this segment move it to
+         * where the next segment starts. */
+        adjust_to = seg->end_pos;
+    } else if ((seg->scan == seg->new_length) && more_chunks(ctx)) {
+        /* The next chunk continues with the offset of the latest match,
+         * in its window's coordinates. It is clamped to the window since
+         * only the end of the window is checked when it is used. */
+        chunk_end = true;
+        next_new_base = ctx->new_base + ctx->new_length;
+        drift = seg->last_offset + ctx->origin_base -
+                (ctx->new_base + seg->new_start);
+        window_select(ctx, next_new_base, drift);
+        next_offset = drift + next_new_base - ctx->next_origin_base;
+
+        if (next_offset < 0)
+            next_offset = 0;
+        if (next_offset > (int64_t)ctx->next_origin_length)
+            next_offset = ctx->next_origin_length;
+
+        /* Let the last record of this chunk move the origin position to
+         * where the next chunk starts. */
+        adjust_to = ctx->next_origin_base + next_offset - ctx->origin_base;
+    }
+
+    /* Write control data */
     offtout(diff_size, &buffer[0]);
     offtout(extra_size, &buffer[8]);
-    offtout((ctx->pos - lenb) - (last_pos + diff_size), &buffer[16]);
+    offtout(adjust_to - (last_pos + diff_size), &buffer[16]);
 
-    rc = compressor_write(ctx, buffer, 24);
+    rc = segment_write(seg, buffer, 24);
 
     if (rc != BPAK_OK)
         return rc;
@@ -465,11 +828,11 @@ static int write_diff_extra_and_adjustment(struct bpak_bsdiff_context *ctx)
 
         for (uint64_t n = 0; n < chunk_len; n++) {
             buffer[n] =
-                (ctx->new_data[last_scan + i] - ctx->origin_data[last_pos + i]);
+                (seg->new_data[last_scan + i] - ctx->origin_data[last_pos + i]);
             i++;
         }
 
-        rc = compressor_write(ctx, buffer, chunk_len);
+        rc = segment_write(seg, buffer, chunk_len);
 
         if (rc != BPAK_OK)
             return rc;
@@ -478,15 +841,76 @@ static int write_diff_extra_and_adjustment(struct bpak_bsdiff_context *ctx)
 
     /* Extra data. */
     if (extra_size) {
-        rc = compressor_write(ctx, &ctx->new_data[extra_pos], extra_size);
+        rc = segment_write(seg, &seg->new_data[extra_pos], extra_size);
 
         if (rc != BPAK_OK)
             return rc;
     }
 
-    ctx->last_scan = (ctx->scan - lenb);
-    ctx->last_pos = (ctx->pos - lenb);
-    ctx->last_offset = (ctx->pos - ctx->scan);
+    seg->last_scan = (seg->scan - lenb);
+    seg->last_pos = (seg->pos - lenb);
+    seg->last_offset = (seg->pos - seg->scan);
+
+    if (chunk_end)
+        ctx->last_offset = next_offset;
+
+    return BPAK_OK;
+}
+
+static int suffix_array_build(struct bpak_bsdiff_context *ctx)
+{
+    /* search() may read one entry past the last suffix, the extra entry
+     * is zeroed so that it refers to the first suffix. */
+    size_t entries = ctx->origin_length + 1;
+    uint8_t width =
+        (ctx->origin_length < INT32_MAX) ? sizeof(int32_t) : sizeof(int64_t);
+    int rc;
+
+    if ((ctx->suffix_array != NULL) &&
+        (ctx->sa_origin_base == ctx->origin_base) &&
+        (ctx->sa_origin_length == ctx->origin_length))
+        return BPAK_OK;
+
+    if ((ctx->suffix_array == NULL) || (ctx->suffix_array_width != width) ||
+        (ctx->suffix_array_size < entries)) {
+        if (ctx->suffix_array != NULL)
+            bpak_free(ctx->suffix_array);
+
+        ctx->suffix_array = bpak_calloc(entries, width);
+
+        if (ctx->suffix_array == NULL) {
+            ctx->suffix_array_size = 0;
+            return -BPAK_FAILED;
+        }
+
+        ctx->suffix_array_size = entries;
+        ctx->suffix_array_width = width;
+    }
+
+    if (width == sizeof(int32_t)) {
+        ((int32_t *)ctx->suffix_array)[ctx->origin_length] = 0;
+        rc = sais32(ctx->origin_data,
+                    (int32_t *)ctx->suffix_array,
+                    (int32_t)ctx->origin_length);
+    } else {
+        ((int64_t *)ctx->suffix_array)[ctx->origin_length] = 0;
+        rc = sais64(ctx->origin_data,
+                    (int64_t *)ctx->suffix_array,
+                    (int64_t)ctx->origin_length);
+    }
+
+    if (rc != 0) {
+        bpak_printf(0, "SAIS computation failed (%i)\n", rc);
+        return -BPAK_FAILED;
+    }
+
+    rc = search_tree_build(ctx);
+
+    if (rc != BPAK_OK)
+        return rc;
+
+    ctx->sa_origin_base = ctx->origin_base;
+    ctx->sa_origin_length = ctx->origin_length;
 
     return BPAK_OK;
 }
@@ -509,10 +933,10 @@ BPAK_EXPORT int bpak_bsdiff_init(struct bpak_bsdiff_context *ctx,
     ctx->write_output = write_output;
     ctx->output_offset = output_offset;
     ctx->user_priv = user_priv;
-    ctx->origin_length = origin_length;
-    ctx->origin_data = origin_data;
-    ctx->new_length = new_length;
-    ctx->new_data = new_data;
+    ctx->origin_full_length = origin_length;
+    ctx->origin_full = origin_data;
+    ctx->new_full_length = new_length;
+    ctx->new_full = new_data;
     ctx->compression = compression;
 
     rc = compressor_init(ctx);
@@ -520,81 +944,336 @@ BPAK_EXPORT int bpak_bsdiff_init(struct bpak_bsdiff_context *ctx,
     if (rc != BPAK_OK)
         return rc;
 
-    ctx->suffix_array = bpak_calloc(origin_length, sizeof(int64_t));
-
-    if (!ctx->suffix_array) {
-        rc = -BPAK_FAILED;
-        goto err_free_compressor_out;
-    }
-
-    rc = sais(ctx->origin_data, ctx->suffix_array, origin_length);
-
-    if (rc != 0) {
-        bpak_printf(0, "SAIS computation failed (%i)\n", rc);
-        rc = -BPAK_FAILED;
-        goto err_free_suffix_array_out;
-    }
-
+    /* The suffix array is built by bpak_bsdiff, once the origin window is
+     * known */
     return BPAK_OK;
-
-err_free_suffix_array_out:
-    bpak_free(ctx->suffix_array);
-    ctx->suffix_array = NULL;
-err_free_compressor_out:
-    compressor_free(ctx);
-    return rc;
 }
 
-BPAK_EXPORT ssize_t bpak_bsdiff(struct bpak_bsdiff_context *ctx)
+BPAK_EXPORT int bpak_bsdiff_set_chunking(struct bpak_bsdiff_context *ctx,
+                                         size_t chunk_size,
+                                         size_t window_margin)
 {
+    if (ctx->suffix_array != NULL)
+        return -BPAK_FAILED;
+
+    ctx->chunk_size = chunk_size;
+    ctx->window_margin = window_margin;
+
+    return BPAK_OK;
+}
+
+static int segment_run(struct bsdiff_segment *seg)
+{
+    const struct bpak_bsdiff_context *ctx = seg->ctx;
     int rc;
 
-    while (ctx->scan < (int64_t)ctx->new_length) {
+    /* Results of search_batch() for target positions batch_start to
+     * batch_start + batch_count */
+    int64_t batch_len[BSDIFF_SEARCH_BATCH];
+    int64_t batch_pos[BSDIFF_SEARCH_BATCH];
+    int64_t batch_start = 0;
+    int64_t batch_count = 0;
+    int batch_size = 1;
+
+    while (seg->scan < seg->new_length) {
         int64_t from_score = 0;
 
-        ctx->scan += ctx->len;
+        seg->scan += seg->len;
 
-        for (int64_t scsc = ctx->scan; ctx->scan < (int64_t)ctx->new_length;
-             ctx->scan++) {
+        for (int64_t scsc = seg->scan; seg->scan < seg->new_length;
+             seg->scan++) {
 
-            ctx->len = search(ctx->suffix_array,
-                              ctx->origin_data,
-                              ctx->origin_length,
-                              ctx->new_data + ctx->scan,
-                              ctx->new_length - ctx->scan,
-                              0,
-                              ctx->origin_length,
-                              &(ctx->pos));
+            if ((seg->scan < batch_start) ||
+                (seg->scan >= batch_start + batch_count)) {
+                /* Searches are mostly for consecutive positions. Grow the
+                 * batch while they are, so that few results are thrown away
+                 * when the scan jumps ahead. */
+                if (seg->scan == batch_start + batch_count)
+                    batch_size = BPAK_MIN(batch_size * 2, BSDIFF_SEARCH_BATCH);
+                else
+                    batch_size = 1;
 
-            for (; scsc < ctx->scan + ctx->len; scsc++) {
-                if ((scsc + ctx->last_offset < (int64_t)ctx->origin_length) &&
-                    (ctx->origin_data[scsc + ctx->last_offset] ==
-                     ctx->new_data[scsc])) {
+                batch_start = seg->scan;
+                batch_count =
+                    BPAK_MIN((int64_t)batch_size, seg->new_length - seg->scan);
+                search_batch(ctx,
+                             seg->new_data,
+                             seg->new_length,
+                             batch_start,
+                             batch_count,
+                             batch_len,
+                             batch_pos);
+            }
+
+            seg->len = batch_len[seg->scan - batch_start];
+            seg->pos = batch_pos[seg->scan - batch_start];
+
+            for (; scsc < seg->scan + seg->len; scsc++) {
+                if ((scsc + seg->last_offset < (int64_t)ctx->origin_length) &&
+                    (ctx->origin_data[scsc + seg->last_offset] ==
+                     seg->new_data[scsc])) {
                     from_score++;
                 }
             }
 
-            if (((ctx->len == from_score) && (ctx->len != 0)) ||
-                (ctx->len > from_score + 8)) {
+            if (((seg->len == from_score) && (seg->len != 0)) ||
+                (seg->len > from_score + 8)) {
                 break;
             }
 
-            if ((ctx->scan + ctx->last_offset < (int64_t)ctx->origin_length) &&
-                (ctx->origin_data[ctx->scan + ctx->last_offset] ==
-                 ctx->new_data[ctx->scan])) {
+            if ((seg->scan + seg->last_offset < (int64_t)ctx->origin_length) &&
+                (ctx->origin_data[seg->scan + seg->last_offset] ==
+                 seg->new_data[seg->scan])) {
                 from_score--;
             }
         }
 
-        if ((ctx->len != from_score) ||
-            (ctx->scan == (int64_t)ctx->new_length)) {
-            rc = write_diff_extra_and_adjustment(ctx);
+        if ((seg->len != from_score) || (seg->scan == seg->new_length)) {
+            rc = write_diff_extra_and_adjustment(seg);
 
             if (rc != 0) {
                 return rc;
             }
         }
     }
+
+    return BPAK_OK;
+}
+
+#if BPAK_CONFIG_THREADS == 1
+/* Segments are diffed by worker threads, while the calling thread writes
+ * the finished segments, in order, to the compressor. */
+struct bsdiff_workers {
+    pthread_mutex_t lock;
+    pthread_cond_t cond;
+    struct bsdiff_segment *segments;
+    size_t count;
+    size_t next;      /* Next segment to diff */
+    size_t output;    /* Next segment to write to the compressor */
+    size_t max_ahead; /* Limits the memory used for segment output */
+    bool abort;
+};
+
+static void *segment_worker(void *arg)
+{
+    struct bsdiff_workers *w = (struct bsdiff_workers *)arg;
+
+    pthread_mutex_lock(&w->lock);
+
+    while (true) {
+        while (!w->abort && (w->next < w->count) &&
+               (w->next >= w->output + w->max_ahead)) {
+            pthread_cond_wait(&w->cond, &w->lock);
+        }
+
+        if (w->abort || (w->next >= w->count))
+            break;
+
+        struct bsdiff_segment *seg = &w->segments[w->next++];
+
+        pthread_mutex_unlock(&w->lock);
+        int rc = segment_run(seg);
+        pthread_mutex_lock(&w->lock);
+
+        seg->rc = rc;
+        seg->done = true;
+        pthread_cond_broadcast(&w->cond);
+    }
+
+    pthread_mutex_unlock(&w->lock);
+    return NULL;
+}
+
+static int segments_run_parallel(struct bpak_bsdiff_context *ctx,
+                                 struct bsdiff_segment *segments, size_t count)
+{
+    struct bsdiff_workers w;
+    pthread_t threads[BPAK_BSDIFF_MAX_THREADS];
+    size_t n_threads = BPAK_MIN((size_t)ctx->threads, count);
+    size_t started = 0;
+    int rc = BPAK_OK;
+
+    memset(&w, 0, sizeof(w));
+    w.segments = segments;
+    w.count = count;
+    w.max_ahead = 2 * n_threads;
+
+    if (pthread_mutex_init(&w.lock, NULL) != 0)
+        return -BPAK_FAILED;
+
+    if (pthread_cond_init(&w.cond, NULL) != 0) {
+        pthread_mutex_destroy(&w.lock);
+        return -BPAK_FAILED;
+    }
+
+    for (started = 0; started < n_threads; started++) {
+        if (pthread_create(&threads[started], NULL, segment_worker, &w) != 0)
+            break;
+    }
+
+    if (started == 0) {
+        rc = -BPAK_FAILED;
+        goto err_destroy;
+    }
+
+    for (size_t i = 0; i < count; i++) {
+        struct bsdiff_segment *seg = &segments[i];
+
+        pthread_mutex_lock(&w.lock);
+        while (!seg->done)
+            pthread_cond_wait(&w.cond, &w.lock);
+        pthread_mutex_unlock(&w.lock);
+
+        rc = seg->rc;
+
+        if (rc == BPAK_OK)
+            rc = compressor_write(ctx, seg->buffer, seg->buffer_length);
+
+        if (seg->buffer != NULL) {
+            bpak_free(seg->buffer);
+            seg->buffer = NULL;
+        }
+
+        pthread_mutex_lock(&w.lock);
+        w.output = i + 1;
+        w.abort = (rc != BPAK_OK);
+        pthread_cond_broadcast(&w.cond);
+        pthread_mutex_unlock(&w.lock);
+
+        if (rc != BPAK_OK)
+            break;
+    }
+
+    for (size_t i = 0; i < started; i++)
+        pthread_join(threads[i], NULL);
+
+err_destroy:
+    pthread_cond_destroy(&w.cond);
+    pthread_mutex_destroy(&w.lock);
+    return rc;
+}
+#endif
+
+/* Diff the current chunk against the current origin window */
+static int chunk_diff(struct bpak_bsdiff_context *ctx)
+{
+    size_t segment_size = ctx->new_length;
+    size_t count = 1;
+    struct bsdiff_segment *segments;
+    int rc = BPAK_OK;
+
+    if ((ctx->segment_size > 0) && (ctx->segment_size < ctx->new_length)) {
+        segment_size = ctx->segment_size;
+        count = (ctx->new_length + segment_size - 1) / segment_size;
+    }
+
+    segments = bpak_calloc(count, sizeof(*segments));
+
+    if (segments == NULL)
+        return -BPAK_FAILED;
+
+    /* The chunk starts at the offset of the previous chunk's latest match.
+     * The following segments assume that the offset is the same, since the
+     * previous segment is not necessarily diffed yet. */
+    for (size_t i = 0; i < count; i++) {
+        struct bsdiff_segment *seg = &segments[i];
+        int64_t start_pos = i * segment_size + ctx->last_offset;
+
+        if (start_pos > (int64_t)ctx->origin_length)
+            start_pos = ctx->origin_length;
+
+        seg->ctx = ctx;
+        seg->new_start = i * segment_size;
+        seg->new_length =
+            BPAK_MIN(segment_size, ctx->new_length - seg->new_start);
+        seg->new_data = ctx->new_data + seg->new_start;
+        seg->last_pos = start_pos;
+        seg->last_offset = start_pos;
+        seg->end_pos = -1;
+
+        if (i > 0)
+            segments[i - 1].end_pos = start_pos;
+    }
+
+#if BPAK_CONFIG_THREADS == 1
+    if ((ctx->threads > 1) && (count > 1)) {
+        rc = segments_run_parallel(ctx, segments, count);
+        goto out_free;
+    }
+#endif
+
+    for (size_t i = 0; i < count; i++) {
+        segments[i].direct = true;
+        rc = segment_run(&segments[i]);
+
+        if (rc != BPAK_OK)
+            break;
+    }
+
+#if BPAK_CONFIG_THREADS == 1
+out_free:
+#endif
+    for (size_t i = 0; i < count; i++) {
+        if (segments[i].buffer != NULL)
+            bpak_free(segments[i].buffer);
+    }
+
+    bpak_free(segments);
+    return rc;
+}
+
+BPAK_EXPORT int bpak_bsdiff_set_threads(struct bpak_bsdiff_context *ctx,
+                                        unsigned int threads,
+                                        size_t segment_size)
+{
+    if (ctx->suffix_array != NULL)
+        return -BPAK_FAILED;
+
+#if BPAK_CONFIG_THREADS == 1
+    if (threads > BPAK_BSDIFF_MAX_THREADS)
+        threads = BPAK_BSDIFF_MAX_THREADS;
+#else
+    threads = 1;
+#endif
+
+    ctx->threads = (threads == 0) ? 1 : threads;
+    ctx->segment_size = segment_size;
+
+    return BPAK_OK;
+}
+
+BPAK_EXPORT ssize_t bpak_bsdiff(struct bpak_bsdiff_context *ctx)
+{
+    int rc;
+
+    window_select(ctx, 0, 0);
+
+    do {
+        ctx->new_data = ctx->new_full + ctx->new_base;
+        ctx->new_length = chunk_length(ctx, ctx->new_base);
+        ctx->origin_base = ctx->next_origin_base;
+        ctx->origin_length = ctx->next_origin_length;
+        ctx->origin_data = ctx->origin_full + ctx->origin_base;
+
+        bpak_printf(2,
+                    "bsdiff chunk: target %" PRIi64 "+%zu, origin %" PRIi64 "+%zu\n",
+                    ctx->new_base,
+                    ctx->new_length,
+                    ctx->origin_base,
+                    ctx->origin_length);
+
+        rc = suffix_array_build(ctx);
+
+        if (rc != BPAK_OK)
+            return rc;
+
+        rc = chunk_diff(ctx);
+
+        if (rc != BPAK_OK)
+            return rc;
+
+        ctx->new_base += ctx->new_length;
+    } while (ctx->new_base < (int64_t)ctx->new_full_length);
 
     rc = compressor_final(ctx);
 
@@ -609,6 +1288,11 @@ BPAK_EXPORT void bpak_bsdiff_free(struct bpak_bsdiff_context *ctx)
     if (ctx->suffix_array != NULL) {
         bpak_free(ctx->suffix_array);
         ctx->suffix_array = NULL;
+    }
+
+    if (ctx->search_tree != NULL) {
+        bpak_free(ctx->search_tree);
+        ctx->search_tree = NULL;
     }
 
     compressor_free(ctx);

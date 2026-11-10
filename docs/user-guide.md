@@ -244,6 +244,24 @@ The patch itself does not verify, because the transport flags and sizes are
 part of its header. A package whose rules only use `merkle-generate` can be
 decoded without `--origin`.
 
+bsdiff needs 4 bytes of memory per byte of the origin part, 8 bytes for parts
+of 2 GiB or more. To encode large parts with less memory, diff them in chunks:
+
+```
+$ bpak transport demo.bpak --encode --origin demo-1.0.0.bpak --output demo-patch.bpak \
+                 --bsdiff-chunk-size 64M --bsdiff-margin 16M
+```
+
+Each chunk of the new part is compared with the data around the same offset
+of the origin part, `--bsdiff-margin` before and after it, by default half the
+chunk size. Data that moved further than the margin is sent in full, which
+makes the patch larger. The patch is decoded as usual.
+
+`--bsdiff-threads` diffs segments of the new part in parallel, the segments
+are 1M by default or `--bsdiff-segment-size`. The patch depends on the
+segment size but not on the number of threads, and is a few bytes larger for
+every segment.
+
 ## Keystores
 
 A keystore is a package of public keys, one key per part. It lets a device

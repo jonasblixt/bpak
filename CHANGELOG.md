@@ -1,9 +1,43 @@
 # Changelog
 
 Changes that affect users of the library, the python package and the `bpak`
-tool. The package format and the library ABI stay compatible, see
-[Compatibility](docs/development.md#compatibility). The SONAME of the
-shared library follows the major version.
+tool. The package format stays compatible, see
+[Compatibility](docs/development.md#compatibility). Changes to the library
+ABI are listed with the release. The SONAME of the shared library follows
+the major version.
+
+## Unreleased
+
+### Added
+
+- `bpak_bsdiff_set_chunking()` diffs the target in chunks against a window
+  of the origin, which bounds the memory usage of bsdiff for large parts.
+  The patches are applied as before.
+- `bpak transport --encode` takes `--bsdiff-chunk-size` and `--bsdiff-margin`,
+  and `bpak.transport_encode` the keyword arguments `bsdiff_chunk_size` and
+  `bsdiff_window_margin`, which diff in chunks. The C library has
+  `bpak_transport_encode_ex()` and `bpak_pkg_transport_encode_ex()` with
+  `struct bpak_transport_encode_opts`.
+- `bpak_bsdiff_set_threads()` diffs segments of the target in parallel. The
+  patch depends on the segment size, not on the number of threads. The
+  library uses pthreads when they are available, `BPAK_CONFIG_THREADS`.
+- `bpak transport --encode` takes `--bsdiff-threads` and
+  `--bsdiff-segment-size`, `bpak.transport_encode` the keyword arguments
+  `bsdiff_threads` and `bsdiff_segment_size`, and
+  `struct bpak_transport_encode_opts` the threads and the segment size. With
+  threads, the segment size defaults to 1 MiB. `bpak.BSDIFF_MAX_THREADS` is
+  the maximum number of threads.
+
+### Changed
+
+- bsdiff uses a suffix array with 32-bit entries for origins smaller than
+  2 GiB, which halves its memory usage. The patches are unchanged.
+- ABI: `struct bpak_bsdiff_context` has new members, programs that use
+  bsdiff must be compiled again.
+- bsdiff searches the suffix array about 2-3 times faster. The patches are
+  unchanged.
+- The heatshrink compression of the `bsdiff` encoder uses a search index and
+  is faster. The patches are unchanged.
 
 ## 1.0.1 (2026-11-08)
 

@@ -29,6 +29,8 @@ FLAG_TRANSPORT: int
 METADATA_BYTES: int
 SIGNATURE_MAX_BYTES: int
 
+BSDIFF_MAX_THREADS: int
+
 class Error(Exception):
     code: ClassVar[int]
 
@@ -165,10 +167,20 @@ def signature_kind_to_string(kind: int) -> str: ...
 # Parse a DER encoded public key, returns its KEY_ kind and DER data.
 def parse_public_key(data: bytes) -> tuple[int, bytes]: ...
 def set_log_func(log_func: Callable[[int, str], object] | None) -> None: ...
+
+# bsdiff_chunk_size limits the memory usage of bsdiff by diffing in chunks,
+# bsdiff_window_margin defaults to half the chunk size. bsdiff_threads diffs
+# segments of bsdiff_segment_size bytes in parallel, by default 1 MiB with
+# threads.
 def transport_encode(
     input: Package,  # noqa: A002
     output: Package,
     origin: Package | None = None,
+    *,
+    bsdiff_chunk_size: int = 0,
+    bsdiff_window_margin: int = -1,
+    bsdiff_threads: int = 0,
+    bsdiff_segment_size: int = 0,
 ) -> None: ...
 def transport_decode(
     input: Package,  # noqa: A002
