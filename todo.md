@@ -74,6 +74,10 @@ move it to **Done** with the commit that resolved it.
 
 ## CI
 
+- [ ] Update `pypa/gh-action-pypi-publish` from v1.13.0 to v1.14.3 or later
+      in `.github/workflows/wheels.yml`. Versions before 1.14.2 bundle the
+      revoked emSign root CA in the trust store of Sigstore (Dependabot
+      alert 2, critical). 1.1.0 was uploaded with v1.13.0.
 - [ ] `build.yml` runs on master and pull requests only, so v1.0.0 was
       tagged without the test, python-package, abi and Windows jobs. Run it
       on `v*` tags or open a pull request for release branches.
@@ -256,3 +260,4 @@ move it to **Done** with the commit that resolved it.
       are deleted, TestPyPI run 42426349545
 - [x] Release 1.0.1, tag `v1.0.1`, the first release on PyPI (run
       42427553488) and GitHub
+- [x] Release 1.1.0, tag `v1.1.0`, on PyPI (run 42881057449) and GitHub
